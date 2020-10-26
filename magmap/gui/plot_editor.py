@@ -739,7 +739,7 @@ class PlotEditor:
             # hover movements over image
             if 0 <= x < self.img3d.shape[2] and 0 <= y < self.img3d.shape[1]:
 
-                if self.enable_painting:
+                if self.enable_painting and self.edit_mode:
                     if self.circle:
                         # update pen circle position
                         self.circle.center = x, y

@@ -307,6 +307,11 @@ class RegionOptions(Enum):
     INCL_CHILDREN = "Include children"
 
 
+class AtlasEditorOptions(Enum):
+    """Enumerations for Atlas Editor options."""
+    SHOW_LABELS = "Labels"
+
+
 class ControlsTabs(Enum):
     """Enumerations for controls tabs."""
     ROI = auto()
@@ -512,6 +517,9 @@ class Visualization(HasTraits):
     _DEFAULTS_PLANES_2D = ["xy", "xz", "yz"]
     _circles_2d = List  # ROI editor circle styles
     _styles_2d = List
+    _atlas_ed_options = List(
+        tooltip="Labels: show a description when hovering over an atlas label"
+                "in\nboth the ROI and Atlas Editors")
     # select to zoom Atlas Ed into the ROI, with crosshairs at center of ROI
     # if ROI Center box also selected; unselect to zoom out to whole image
     _atlas_ed_zoom = Bool(
@@ -615,7 +623,11 @@ class Visualization(HasTraits):
                          format_func=lambda x: x)),
             ),
             HGroup(
-                Item(label="Atlas Editor:"),
+                Item("_atlas_ed_options", style="custom", label="Atlas Editor",
+                     editor=CheckListEditor(
+                         values=[e.value for e in AtlasEditorOptions],
+                         cols=4, format_func=lambda x: x)),
+                # Item(label="Atlas Editor:"),
                 Item("_atlas_ed_zoom", label="Zoom to ROI",
                      editor=BooleanEditor()),
             ),
@@ -860,6 +872,7 @@ class Visualization(HasTraits):
         # Matplotlib 3.2
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
+        self._atlas_ed_options = [AtlasEditorOptions.SHOW_LABELS.value]
         
         # set up rest of image adjustment during image setup
         self._img3ds = None
@@ -2037,6 +2050,7 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
+        roi_ed.set_show_labels(self._get_show_labels())
         self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[ViewerTabs.ROI_ED] = False
@@ -2061,6 +2075,7 @@ class Visualization(HasTraits):
         self.atlas_eds.append(atlas_ed)
         atlas_ed.fn_update_coords = self.set_offset
         atlas_ed.show_atlas()
+        atlas_ed.set_show_labels(self._get_show_labels())
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[ViewerTabs.ATLAS_ED] = False
 
@@ -2076,6 +2091,24 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
     
+    def _get_show_labels(self):
+        """Get the current value of the show atlas labels option.
+        
+        Returns:
+            bool: True if the box is selected, False otherwise.
+
+        """
+        return AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options
+    
+    @on_trait_change("_atlas_ed_options")
+    def _atlas_ed_options_changed(self):
+        """Respond to atlas editor option changes."""
+        # toggle atlas show labels attributes in ROI and Atlas Editors
+        show_labels = self._get_show_labels()
+        if self.roi_ed:
+            self.roi_ed.set_show_labels(show_labels)
+        if self.atlas_eds:
+            self.atlas_eds[0].set_show_labels(show_labels)
     
     @on_trait_change("_atlas_ed_zoom")
     def _zoom_atlas_ed(self):

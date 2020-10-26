@@ -166,6 +166,7 @@ class PlotEditor:
         self._channels = None  # displayed channels list
         # track label editing during mouse click/movement for plane interp
         self._editing = False
+        self._show_labels = True  # show atlas labels on mouseover
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -790,37 +791,40 @@ class PlotEditor:
                         self.fn_update_coords(self.coord, self.plane)
                 
                 if self.img3d_labels is not None and config.labels_ref_lookup:
-                    # show atlas label name
-                    atlas_label = ontology.get_label(
-                        coord, self.img3d_labels, config.labels_ref_lookup, 
-                        self.scaling)
+                    # show atlas label description
                     name = ""
-                    if atlas_label is not None:
-                        # extract name and ID from label dict
-                        name = "{} ({})".format(
-                            ontology.get_label_name(atlas_label),
-                            ontology.get_label_item(
-                                atlas_label, config.ABAKeys.ABA_ID.value))
-
-                    # minimize chance of text overflowing out of axes by
-                    # word-wrapping and switching sides at midlines
-                    name = "\n".join(textwrap.wrap(name, 30))
+                    if self._show_labels:
+                        # get name from labels reference corresponding to
+                        # labels image value under mouse pointer
+                        atlas_label = ontology.get_label(
+                            coord, self.img3d_labels, config.labels_ref_lookup,
+                            self.scaling)
+                        if atlas_label is not None:
+                            # extract name and ID from label dict
+                            name = "{} ({})".format(
+                                ontology.get_label_name(atlas_label),
+                                ontology.get_label_item(
+                                    atlas_label, config.ABAKeys.ABA_ID.value))
+                            
+                            # minimize chance of text overflowing out of axes by
+                            # word-wrapping and switching sides at midlines
+                            name = "\n".join(textwrap.wrap(name, 30))
+                            if x > self.img3d_labels.shape[2] / 2:
+                                alignment_x = "right"
+                                label_x = x - 20
+                            else:
+                                alignment_x = "left"
+                                label_x = x + 20
+                            if y > self.img3d_labels.shape[1] / 2:
+                                alignment_y = "top"
+                                label_y = y - 20
+                            else:
+                                alignment_y = "bottom"
+                                label_y = y + 20
+                            self.region_label.set_horizontalalignment(alignment_x)
+                            self.region_label.set_verticalalignment(alignment_y)
+                            self.region_label.set_position((label_x, label_y))
                     self.region_label.set_text(name)
-                    if x > self.img3d_labels.shape[2] / 2:
-                        alignment_x = "right"
-                        label_x = x - 20
-                    else:
-                        alignment_x = "left"
-                        label_x = x + 20
-                    if y > self.img3d_labels.shape[1] / 2:
-                        alignment_y = "top"
-                        label_y = y - 20
-                    else:
-                        alignment_y = "bottom"
-                        label_y = y + 20
-                    self.region_label.set_horizontalalignment(alignment_x)
-                    self.region_label.set_verticalalignment(alignment_y)
-                    self.region_label.set_position((label_x, label_y))
 
             # need explicit draw call for figs embedded in TraitsUI
             self.axes.figure.canvas.draw_idle()

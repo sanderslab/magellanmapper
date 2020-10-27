@@ -154,13 +154,20 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
 
 
 def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
-    """Read files through SimpleITK and export to Numpy array format, 
-    loading associated metadata.
+    """Read an image file through SimpleITK and export to Numpy array format,
+    with support for combining multiple registered image files into a single
+    image.
+    
+    Also sets up spacing from the first loaded image in
+    :attr:`magmap.settings.config.resolutions` if not already set.
 
     Args:
-        filename_sitk: Path to file in a format that can be read by SimpleITK.
-        reg_names: Path or sequence of paths of registered names. Can 
-            be a registered suffix or a full path. Defaults to None.
+        filename_sitk (str): Path to file in a format that can be read by
+            SimpleITK.
+        reg_names (Union[str, List[str]]): Path or sequence of paths of
+            registered names. Can be a registered suffix or a full path.
+            Defaults to None to open ``filename_sitk`` as-is through
+            :meth:`read_sitk`.
         return_sitk (bool): True to return the loaded SimpleITK Image object.
 
     Returns:

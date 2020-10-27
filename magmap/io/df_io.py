@@ -545,31 +545,48 @@ def print_data_frame(df, sep=" ", index=False, header=True):
         print(df.to_csv(sep=sep, index=index, header=header, na_rep="NaN"))
 
 
-def dict_to_data_frame(dict_import, path=None, sort_cols=None, show=None):
+def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
+                       records_cols=None):
     """Import dictionary to data frame, with option to export to CSV.
     
     Args:
-        dict_import: Dictionary to import. If dictionary keys are enums, 
-            their names will be used instead to shorten column names.
-        path: Output path to export data frame to CSV file; defaults to 
+        to_import (Union[dict, list[list]]): Dictionary to import. May
+            also be list of lists to import as records if ``records_cols``
+            is given. If column name are enums, their names will be
+            used instead to shorten column names.
+        path (str): Output path to export data frame to CSV file; defaults to
             None for no export.
-        sort_cols: Column as a string of list of columns by which to sort; 
-            defaults to None for no sorting.
-        show: True or " " to print the data frame with a space-separated 
+        sort_cols (Union[str, list[str]]): Column as a string or list of
+            columns by which to sort; defaults to None for no sorting.
+        show (bool): True or " " to print the data frame with a space-separated
             table, or can provide an alternate separator. Defaults to None 
             to not print the data frame.
+        records_cols (Union[list, tuple]): Import from records, where
+            ``to_import`` is a list of rows rather than a dictionary, using
+            this sequence of record column names instead of dictionary keys;
+            defaults to None.
+            
     
     Returns:
-        The imported data frame.
-    """
-    df = pd.DataFrame(dict_import)
+        :class:`pandas.DataFrame`: The imported data frame.
     
-    keys = dict_import.keys()
+    """
+    if records_cols:
+        # import as records
+        df = pd.DataFrame.from_records(to_import, columns=records_cols)
+        keys = records_cols
+    else:
+        # standard import
+        df = pd.DataFrame(to_import)
+        keys = to_import.keys()
+    
     if len(keys) > 0 and isinstance(next(iter(keys)), Enum):
         # convert enum keys to names of enums
         cols = {}
         for key in keys: cols[key] = key.value
         df.rename(columns=cols, inplace=True)
+    
+    # further processing including CSV export, sorting, and display
     df = data_frames_to_csv(df, path, sort_cols, show)
     return df
 

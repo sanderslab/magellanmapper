@@ -425,7 +425,7 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
     return transformed_img, transformix_img_filter
 
 
-def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
+def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
              name_prefix=None, new_atlas=False):
     """Register an atlas and associated labels to a sample image 
     using the SimpleElastix library.
@@ -435,8 +435,11 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     Args:
         fixed_file: The image to register, given as a Numpy archive file to 
             be read by :importer:`read_file`.
-        moving_file_dir: Directory of the atlas images, including the 
-            main image and labels. The atlas was chosen as the moving file
+        moving_img_path (str): Moving image base path from which an intensity
+            and a labels image will be loaded using registered image suffixes.
+            Falls back to atlas volume for the intensity image and annotation
+            for the labels image. The intensity image will be used for
+            registration. The atlas is currently used as the moving file
             since it is likely to be lower resolution than the Numpy file.
         show_imgs: True if the output images should be displayed; defaults to 
             True.
@@ -465,11 +468,18 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = sitk_io.replace_sitk_with_numpy(fixed_img, img_np)
     
-    # load moving image, assumed to be atlas, and labels, then transform
-    moving_file = os.path.join(moving_file_dir, config.RegNames.IMG_ATLAS.value)
-    moving_img = sitk.ReadImage(moving_file)
-    labels_img = sitk.ReadImage(os.path.join(
-        moving_file_dir, config.RegNames.IMG_LABELS.value))
+    # load moving images based on registered image suffixes, falling back to
+    # atlas volume and labels suffixes
+    moving_atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
+    if not moving_atlas_suffix:
+        moving_atlas_suffix = config.RegNames.IMG_ATLAS.value
+    moving_img = sitk_io.load_registered_img(
+        moving_img_path, moving_atlas_suffix, get_sitk=True)
+    moving_labels_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+    if not moving_labels_suffix:
+        moving_labels_suffix = config.RegNames.IMG_LABELS.value
+    labels_img = sitk_io.load_registered_img(
+        moving_img_path, moving_labels_suffix, get_sitk=True)
 
     # TODO: implement mask option
     fixed_mask = None

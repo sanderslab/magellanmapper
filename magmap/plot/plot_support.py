@@ -324,10 +324,12 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             # they otherwise fail to update on subsequent imshow calls
             # for unknown reasons
             img[-1, -1] += 1
+        # use nearest neighbor interpolation for consistency across backends;
+        # "none" would fallback to this method, but PDF would use no interp
         ax_img = imshow_multichannel(
-            ax, img, channels[i], cmap, aspect, alpha, vmin,
-            vmax, origin, interpolation="none", norms=norm,
-            nan_color=nan_color, ignore_invis=ignore_invis)
+            ax, img, channels[i], cmap, aspect, alpha, vmin, vmax, origin,
+            interpolation="nearest", norms=norm, nan_color=nan_color,
+            ignore_invis=ignore_invis)
         ax_imgs.append(ax_img)
     return ax_imgs
 

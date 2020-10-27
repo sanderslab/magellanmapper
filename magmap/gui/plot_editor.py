@@ -446,13 +446,12 @@ class PlotEditor:
     def update_plane_slider(self, val):
         self._update_overview(int(val))
 
-    def view_subimg(self, offset, size, reverse_y=False):
+    def view_subimg(self, offset, size):
         """View a sub-image.
 
         Args:
             offset (List[int]): Sub-image offset in ``y, x``.
             size (List[int]): Sub-image size in ``y, x``.
-            reverse_y (bool): Flip y-limit order; defaults to False.
 
         """
         coord_slice = slice(0, None)
@@ -462,8 +461,9 @@ class PlotEditor:
         #       "size", size, "translated size", size_trans)
         self.axes.set_xlim(off_trans[1], off_trans[1] + size_trans[1] - 1)
         ylim = (off_trans[0], off_trans[0] + size_trans[0] - 1)
-        if reverse_y:
-            # set "bottom" first, which is higher y-values
+        ylim_orig = self.axes.get_ylim()
+        if ylim_orig[1] - ylim_orig[0] < 0:
+            # set "bottom" first (higher y-values) if originally flipped
             ylim = ylim[::-1]
         self.axes.set_ylim(*ylim)
         self.xlim = self.axes.get_xlim()

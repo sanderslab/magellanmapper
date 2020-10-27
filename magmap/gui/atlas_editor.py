@@ -284,10 +284,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         for i, plane in enumerate(config.PLANE):
             offset_tr = libmag.transpose_1d(list(offset), plane)
             shape_tr = libmag.transpose_1d(list(shape), plane)
-            # flip y-axis for xy-plane
-            reverse_y = plane == config.PLANE[0]
-            self.plot_eds[plane].view_subimg(
-                offset_tr[1:], shape_tr[1:], reverse_y=reverse_y)
+            self.plot_eds[plane].view_subimg(offset_tr[1:], shape_tr[1:])
         self.fig.canvas.draw_idle()
 
     def refresh_images(self, plot_ed=None, update_atlas_eds=False):

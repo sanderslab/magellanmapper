@@ -31,12 +31,16 @@ tryCatch({
     parser <- optparse::add_option(
       parser, c("-p", "--profiles"), type="character",
       help="Profile names delimited by comma")
+    parser <- optparse::add_option(
+      parser, c("-m", "--meas"), type="character",
+      help="Names of measurent columns on which to perform stats")
     args.parsed <- optparse::parse_args(parser)
   }
   cat("Parsed arguments:", paste(args.parsed), "\n")
 
   # run main statistics
-  runStats(args.parsed$file, args.parsed$profiles)
+  print(args.parsed$meas)
+  runStats(args.parsed$file, args.parsed$profiles, args.parsed$meas)
 }, finally={
   # return to original directory
   setwd(dir.start)

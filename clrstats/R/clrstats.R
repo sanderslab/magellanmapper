@@ -876,7 +876,8 @@ setupConfig <- function(name=NULL) {
   }
 }
 
-runStats <- function(path=NULL, profiles=NULL, stat.type=NULL) {
+runStats <- function(path=NULL, profiles=NULL, measurements=NULL,
+                     stat.type=NULL) {
   # Load data and run full stats.
   #
   # Args:
@@ -884,6 +885,8 @@ runStats <- function(path=NULL, profiles=NULL, stat.type=NULL) {
   #     defaults to NULL to use ``StatsPathIn`` in the environment profile.
   #   profiles: Profile names, where multiple profiles can be given
   #     separated by commas; defaults to NULL.
+  #   measurements: Measurements names, where multiple measurements can be
+  #     given separated by commas; defaults to NULL.
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
 
@@ -909,6 +912,14 @@ runStats <- function(path=NULL, profiles=NULL, stat.type=NULL) {
     path <- config.env$StatsPathIn
   }
 
+  if (is.null(measurements)) {
+    # default to use measurements from profile
+    measurements.split <- config.env$Measurements
+  } else {
+    measurements.split <- strsplit(measurements, ",")[[1]]
+  }
+  cat("Measurements:", paste(measurements.split), "\n")
+
   if (is.null(stat.type) || stat.type == kStatTypes[1]) {
     # default, general stats
     
@@ -926,7 +937,7 @@ runStats <- function(path=NULL, profiles=NULL, stat.type=NULL) {
     # reset graphics to ensure consistent layout
     while (!is.null(dev.list())) dev.off()
     
-    for (meas in config.env$Measurements) {
+    for (meas in measurements.split) {
       print(paste("Calculating stats for", meas))
       # calculate stats or retrieve from file
       path.out <- paste0(kStatsPathOut, "_", meas, ".csv")

@@ -36,9 +36,7 @@ tryCatch({
   cat("Parsed arguments:", paste(args.parsed), "\n")
 
   # run main statistics
-  runStats()
-}, error=function(e) {
-  message(e)
+  runStats(args.parsed$file, args.parsed$profiles)
 }, finally={
   # return to original directory
   setwd(dir.start)

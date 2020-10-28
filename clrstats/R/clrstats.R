@@ -836,13 +836,14 @@ setupConfig <- function(name=NULL) {
     config.env$Model <- kModel[6]
     
   } else if (name == "compare.sex") {
-    # compare sex instead of genotype
+    # compare sex instead of genotype; M vs F unpaired stats
     setupConfig("geno")
     config.env$GroupCol <- "Sex"
     
   } else if (name == "compare.laterality") {
     # compare left/right hemispheres instead of genotype; assumes that
-    # the samples will be in the same order after splitting by side
+    # the samples will be in the same order after splitting by side;
+    # L vs R paired stats
     setupConfig("geno")
     config.env$GroupCol <- "Side"
     config.env$Model <- kModel[8]
@@ -875,10 +876,14 @@ setupConfig <- function(name=NULL) {
   }
 }
 
-runStats <- function(stat.type=NULL) {
+runStats <- function(path=NULL, profiles=NULL, stat.type=NULL) {
   # Load data and run full stats.
   #
   # Args:
+  #   path: Input data path, typically a spreadsheet such as a CSV file;
+  #     defaults to NULL to use ``StatsPathIn`` in the environment profile.
+  #   profiles: Profile names, where multiple profiles can be given
+  #     separated by commas; defaults to NULL.
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
 
@@ -887,36 +892,23 @@ runStats <- function(stat.type=NULL) {
   } else {
     message("Running stats of type", stat.type)
   }
-  
-  # setup configuration environment
+
+  # set up configuration environment based on profile names
   setupConfig()
-  
-  #setupConfig("dsc")
-  #setupConfig("aba")
-  #setupConfig("smoothing")
-  
-  setupConfig("wt")
-  #setupConfig("intensnuc")
-  #setupConfig("compactness")
-  #setupConfig("compactness.stats")
-  #setupConfig("reg")
-  #setupConfig("wt.test")
-  #setupConfig("compare.vol")
-  #setupConfig("clustering")
-  
-  #setupConfig("geno")
-  #setupConfig("lessstringent")
-  #setupConfig("compare.sex") # M vs F unpaired stats
-  #setupConfig("compare.laterality") # L vs R paired stats
-  #setupConfig("benjamini.hochman")
-  
-  setupConfig("basic.stats")
-  #setupConfig("nolevels")
-  #setupConfig("nojittersave")
-  #setupConfig("skinny.small")
-  #setupConfig("square")
-  setupConfig("revpairedstats")
-  
+  if (is.null(profiles)) {
+    profiles.split <- c("wt", "basic.stats", "revpairedstats")
+  } else {
+    profiles.split <- strsplit(profiles, ",")[[1]]
+  }
+  for (profile in profiles.split) {
+    setupConfig(profile)
+  }
+
+  if (is.null(path)) {
+    # default to use path from profile
+    path <- config.env$StatsPathIn
+  }
+
   if (is.null(stat.type) || stat.type == kStatTypes[1]) {
     # default, general stats
     
@@ -942,7 +934,7 @@ runStats <- function(stat.type=NULL) {
         stats <- read.csv(path.out)
       } else {
         stats <- calcVolStats(
-          config.env$StatsPathIn, path.out, meas, config.env$Model, region.ids, 
+          path, path.out, meas, config.env$Model, region.ids,
           split.by.side=split.by.side, corr=config.env$P.Corr)
       }
       

@@ -12,5 +12,6 @@ Imports:
   RColorBrewer, 
   Hmisc, 
   corrplot,
-  optparse
+  optparse,
+  tryCatchLog
 RoxygenNote: 6.1.1

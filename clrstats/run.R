@@ -19,7 +19,11 @@ if (dir.exists(kWorkDir)) {
 
 # load all source changes and run stats
 devtools::load_all(file.path(getwd(), "R"))
-tryCatch({
+
+# use tryCatchLog to include line numbers with errors, which is not
+# available with tryCatch
+futile.logger::flog.threshold(futile.logger::ERROR)
+tryCatchLog::tryCatchLog({
   # set args.parsed directly if sourcing this file since arguments cannot
   # be given to the parser
   if (!exists("args.parsed")) {
@@ -44,4 +48,4 @@ tryCatch({
 }, finally={
   # return to original directory
   setwd(dir.start)
-})
+}, include.full.call.stack=FALSE)

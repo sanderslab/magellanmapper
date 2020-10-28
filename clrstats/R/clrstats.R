@@ -711,9 +711,11 @@ setupConfig <- function(name=NULL) {
   # Args:
   #   name: Name of profile to load. Defaults to NULL, which will initialize  
   #     the environment with default settings.
-  
+
+  loaded <- TRUE
   if (is.null(name)) {
     # initialize environment
+    name <- "default"
     config.env$PlotSize <- c(5, 7)
     config.env$SampleLegend <- FALSE
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
@@ -731,7 +733,9 @@ setupConfig <- function(name=NULL) {
     config.env$Sort.Groups <- TRUE
     config.env$Condition <- NULL
     config.env$P.Corr <- "bonferroni"
-    
+
+    # STAT MODES
+
   } else if (name == "aba") {
     # multiple distinct atlases
     config.env$SampleLegend <- TRUE
@@ -794,7 +798,10 @@ setupConfig <- function(name=NULL) {
   } else if (name == "nojittersave") {
     # plot but don't save jitter plots
     config.env$JitterPlotSave <- FALSE
-    
+
+
+    # SAMPLE GROUPS
+
   } else if (name == "wt") {
     # WT samples
     config.env$Measurements <- kMeas[c(1:7, 13:14)]
@@ -856,7 +863,10 @@ setupConfig <- function(name=NULL) {
     # generate only basic stats
     config.env$Model <- kModel[10]
     config.env$PlotVolcano <- FALSE
-    
+
+
+    # PLOT OPTIONS
+
   } else if (name == "skinny") {
     # very narrow plots
     config.env$PlotSize <- c(3.5, 7)
@@ -873,6 +883,12 @@ setupConfig <- function(name=NULL) {
     # reverse the order of conditions in paired stats
     config.env$ReversePairedStats <- TRUE
     
+  } else {
+    loaded <- FALSE
+    message("Could not find ", name, " profile to load")
+  }
+  if (loaded) {
+    message(name, " profile loaded")
   }
 }
 

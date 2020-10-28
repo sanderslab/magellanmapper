@@ -11,5 +11,6 @@ Imports:
   gee, 
   RColorBrewer, 
   Hmisc, 
-  corrplot
+  corrplot,
+  optparse
 RoxygenNote: 6.1.1

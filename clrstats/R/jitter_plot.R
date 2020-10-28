@@ -241,7 +241,24 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     # make legend width larger for narrow plots to avoid overlap
     legend.text.width <- 0.6 + 0.1 * plot.size[2] / plot.size[1]
   }
-  
+
+  if (save) {
+    printed <- FALSE
+    path.plot <- paste0(
+      "../plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf")
+    tryCatchLog::tryLog({
+      # open device that allows printing both to screen and to pdf; may
+      # fail if screen device is not available, such as running in Rscript
+      printDirectly(pdf, path.plot, plot.size)
+      printed <- TRUE
+    }, include.full.call.stack=FALSE, include.compact.call.stack=FALSE)
+
+    if (!printed) {
+      # open PDF device to save when plotting
+      pdf(width=plot.size[1], height=plot.size[2], file=path.plot)
+    }
+  }
+
   # draw main plot
   tryCatch({
   plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n",
@@ -379,17 +396,34 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       }
     }
   }
-  
-  if (save) {
-    # save figure to PDF
-    dev.print(
-      pdf, width=plot.size[1], height=plot.size[2], 
-      file=paste0("../plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
-    }
+
+  # reset graphics parameters
   par(par.old)
   
   return(list(
     names.groupcombos, vals.n, vals.means, vals.medians, vals.sds, vals.cis))
+}
+
+resetDevice <- function() {
+  # Reset all graphics devices, including any stale ones from prior exceptions.
+
+  while (!is.null(dev.list())) {
+    # reset graphics
+    # TODO: calling in close proximity to plot commands appears to prevent
+    # their screen appearance, whether before or after plotting
+    dev.off()
+  }
+}
+
+printDirectly <- function(dev.fn, path.out, plot.size) {
+  # Print directly from the current device (eg screen) to the given device.
+  #
+  # Args:
+  #   dev.fn: Output device function.
+  #   path.out: Output path.
+  #   plot.size: Vector of plot size in ``width, height``
+
+  dev.print(dev.fn, file=path.out, width=plot.size[1], height=plot.size[2])
 }
 
 getUniqueSubgroups <- function(subgroups, split.by.subgroup) {

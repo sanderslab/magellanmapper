@@ -46,15 +46,25 @@ LabelMetrics = Enum(
         "VarIntensMatch", 
         "VarIntensDiff", 
         "MeanNuclei", 
-        "VarNucMatch", 
-        "EdgeSize", "EdgeDistSum", "EdgeDistMean", 
-        "CoefVarIntens", "CoefVarNuc", 
-        # shape measurements
-        "SurfaceArea", "Compactness", 
-        # overlap metrics
+        "VarNucMatch",
+        
+        # Distances
+        "EdgeSize",  # edge pixels
+        "EdgeDistSum",  # sum of distances between edges in two images
+        "EdgeDistMean",  # mean of these distances
+        "Dist",  # generic distance
+        
+        # Variation
+        "CoefVarIntens", "CoefVarNuc",
+        
+        # Shape measurements
+        "SurfaceArea", "Compactness",
+        
+        # Overlap metrics
         "VolDSC", "NucDSC",  # volume/nuclei Dice Similarity Coefficient
         "VolOut", "NucOut",  # volume/nuclei shifted out of orig position
-        # point cloud measurements
+        
+        # Point cloud measurements
         "NucCluster",  # number of nuclei clusters
         "NucClusNoise",  # number of nuclei that do not fit into a cluster
         "NucClusLarg",  # number of nuclei in the largest cluster
@@ -1250,7 +1260,8 @@ def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None):
     # export metrics to data frame
     df = df_io.dict_to_data_frame(
         dists, out_path, show=True, records_cols=(
-            "label_id", "centroid1", "centroid2", "dist"))
+            LabelMetrics.Region.name, "Centroid1", "Centroid2",
+            LabelMetrics.Dist.name))
     return df
 
 

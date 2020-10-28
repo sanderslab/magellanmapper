@@ -10,6 +10,7 @@ from time import time
 
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import cdist
 from skimage import measure
 
 from magmap.cv import chunking
@@ -1203,6 +1204,54 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         labels_diff[labels_region] = diff
         print("label {} difference: {}".format(region, diff))
     return labels_diff
+
+
+def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None):
+    """Measure distances between corresponding labels in two images.
+    
+    Assumes that a 0 is background and will be skipped.
+    
+    Args:
+        labels_img1 (:class:`numpy.nhdarray`): Labels image 1.
+        labels_img2 (:class:`numpy.nhdarray`): Labels image 2. Does not
+            have to be of the same shape as ``labels_img``, but assumed
+            to have the same origin/offset and ``spacing`` as distances
+            are based on centroid coordinates of the corresponding labels.
+        spacing (list[float]): Spacing/scaling in ``z,y,x``.
+        out_path (str): CSV output path; defaults to None to not save.
+
+    Returns:
+        :class:`pandas.DataFrame`: Data frame of output metrics.
+
+    """
+    dists = []
+    # pool unique labels from both images
+    label_ids1 = np.unique(labels_img1)
+    label_ids2 = np.unique(labels_img2)
+    label_ids = np.unique(np.append(label_ids1, label_ids2))
+    
+    imgs = (labels_img1, labels_img2)
+    for label_id in label_ids:
+        if label_id == 0: continue
+        if label_id in label_ids1 and label_id in label_ids2:
+            # compute distance between centroids of corresponding labels
+            # in both images
+            centroids = [
+                np.multiply(cv_nd.get_label_props(
+                    img, label_id)[0].centroid, spacing) for img in imgs]
+            dist = cdist(
+                np.array([centroids[0]]), np.array([centroids[1]]))[0][0]
+        else:
+            # label missing from at least one image
+            centroids = [np.nan] * 2
+            dist = np.nan
+        dists.append((label_id, *centroids[:2], dist))
+    
+    # export metrics to data frame
+    df = df_io.dict_to_data_frame(
+        dists, out_path, show=True, records_cols=(
+            "label_id", "centroid1", "centroid2", "dist"))
+    return df
 
 
 def get_metric_weight_col(stat):

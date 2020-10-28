@@ -1707,6 +1707,11 @@ def main():
     if size: size = size[0][:2]
     # TODO: transition size -> fig_size
     fig_size = config.plot_labels[config.PlotLabels.SIZE]
+    scaling = None
+    if config.metadatas and config.metadatas[0]:
+        output = config.metadatas[0]
+        if "scaling" in output:
+            scaling = output["scaling"]
     
     #_test_labels_lookup()
     #_test_region_from_id()
@@ -2160,14 +2165,24 @@ def main():
     
     elif reg is config.RegisterTypes.PLOT_CLUSTER_BLOBS:
         # show blob clusters for the given plane
-        scaling = None
-        if config.metadatas and config.metadatas[0]:
-            output = config.metadatas[0]
-            if "scaling" in output:
-                scaling = output["scaling"]
         atlas_stats.plot_clusters_by_label(
             config.filename, config.roi_offsets[0][2], config.suffix,
             config.show, scaling)
+    
+    elif reg is config.RegisterTypes.LABELS_DIST:
+        # measure distance between corresponding labels in two different
+        # labels images
+        if len(config.filenames) < 2:
+            print("Please provide paths to 2 labels images")
+            return
+        labels_imgs = [sitk_io.read_sitk_files(p) for p in config.filenames[:2]]
+        spacing = scaling
+        if spacing is None and len(config.resolutions) > 0:
+            # default to using loaded metadata
+            spacing = config.resolutions[0]
+        out_path = libmag.make_out_path(libmag.combine_paths(
+            config.filename, "labelsdist.csv"))
+        vols.labels_distance(*labels_imgs[:2], spacing, out_path)
 
     else:
         print("Could not find register task:", reg)

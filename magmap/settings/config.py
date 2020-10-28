@@ -478,6 +478,7 @@ RegisterTypes = Enum(
         "CLUSTER_BLOBS",
         "PLOT_KNNS",
         "PLOT_CLUSTER_BLOBS",
+        "LABELS_DIST",  # distance between corresponding labels in 2 images
     ]
 )
 register_type = None

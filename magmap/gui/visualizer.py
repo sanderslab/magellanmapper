@@ -2216,7 +2216,7 @@ class Visualization(HasTraits):
                 chls = np.unique(detector.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
-            self._blob_detection_fired(segs=blobs)
+            self.detect_blobs(blobs)
             roi_editor.verify = True
         else:
             print("no roi found")

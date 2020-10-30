@@ -271,10 +271,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
             else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
+                img5d = None
                 if not import_only:
                     # load previously imported image
-                    config.img5d = importer.read_file(path, series)
-                    config.image5d = config.img5d.img
+                    img5d = importer.read_file(path, series)
                 if allow_import:
                     # re-import over existing image or import new image
                     if os.path.isdir(path) and all(
@@ -288,9 +288,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
                             prefix = os.path.join(
                                 os.path.dirname(path),
                                 importer.DEFAULT_IMG_STACK_NAME)
-                        config.img5d = importer.import_planes_to_stack(
+                        img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
-                        config.image5d = config.img5d.img
                     elif import_only or config.image5d is None:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
@@ -299,10 +298,13 @@ def setup_images(path=None, series=None, offset=None, size=None,
                         import_md = importer.setup_import_metadata(
                             chls, config.channel, series)
                         add_metadata()
-                        config.img5d = importer.import_multiplane_images(
+                        img5d = importer.import_multiplane_images(
                             chls, prefix, import_md, series,
                             channel=config.channel)
-                        config.image5d = config.img5d.img
+                if img5d is not None:
+                    # set loaded main image in config
+                    config.img5d = img5d
+                    config.image5d = config.img5d.img
                 config.image5d_io = config.LoadIO.NP
         except FileNotFoundError as e:
             print(e)

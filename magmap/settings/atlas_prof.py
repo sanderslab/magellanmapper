@@ -95,6 +95,7 @@ class AtlasProfile(profiles.SettingsDict):
             RegKeys.ACTIVE: False,
             "start": None,  # reflect planes starting here
             "neg_labels": True,  # invert values of mirrored labels
+            "atlas_mirror": True,  # also mirror intensity image
         }
         # extend edge labels
         self["labels_edge"] = {

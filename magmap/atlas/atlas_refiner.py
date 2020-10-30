@@ -1177,7 +1177,8 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
     if affine:
         for aff in affine:
             img_atlas_np = cv_nd.affine_nd(img_atlas_np, **aff)
-    if is_mirror and mirror["start"] is not None:
+    if is_mirror and mirror["start"] is not None and mirror["atlas_mirror"]:
+        # mirror underlying intensity image
         # TODO: consider removing dup since not using
         dup = config.atlas_profile["labels_dup"]
         img_atlas_np = mirror_planes(

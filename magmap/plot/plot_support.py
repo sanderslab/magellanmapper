@@ -846,7 +846,7 @@ def get_downsample_max_sizes():
     """
     max_sizes = None
     downsample_io = config.atlas_profile["editor_downsample_io"]
-    if downsample_io and config.image5d_io in downsample_io:
+    if downsample_io and config.img5d and config.img5d.img_io in downsample_io:
         max_sizes = config.atlas_profile["editor_max_sizes"]
         if max_sizes:
             max_sizes = max_sizes[::-1]

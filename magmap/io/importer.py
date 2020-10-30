@@ -633,7 +633,8 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             if load_info:
                 # load updated archive
                 metadata, image5d_ver_num = load_metadata(filename_meta)
-        img5d = np_io.Image5d(image5d, filename_image5d, filename_meta)
+        img5d = np_io.Image5d(
+            image5d, filename_image5d, filename_meta, config.LoadIO.NP)
         if return_info:
             return img5d, metadata
         return img5d
@@ -988,7 +989,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                    .format(filename_image5d, md), fn_feedback)
     if jb_attached:
         jb.detach()
-    return np_io.Image5d(image5d, filename_image5d, filename_meta)
+    return np_io.Image5d(
+        image5d, filename_image5d, filename_meta, config.LoadIO.NP)
 
 
 def _parse_import_chls(paths):
@@ -1148,7 +1150,8 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
     assign_metadata(md)
     libmag.printcb("Saved image to \"{}\" with the following metadata:\n{}"
                    .format(filename_image5d_npz, md), fn_feedback)
-    return np_io.Image5d(image5d, filename_image5d_npz, filename_info_npz)
+    return np_io.Image5d(
+        image5d, filename_image5d_npz, filename_info_npz, config.LoadIO.NP)
 
 
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):

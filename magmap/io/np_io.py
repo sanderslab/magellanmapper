@@ -28,13 +28,15 @@ class Image5d:
         path_img (str): Path from which ``img`` was loaded; defaults to None.
         path_meta (str): Path from which metadata for ``img`` was loaded;
             defaults to None.
+        img_io (enum): I/O source for image5d array; defaults to None.
     
     """
-    def __init__(self, img=None, path_img=None, path_meta=None):
+    def __init__(self, img=None, path_img=None, path_meta=None, img_io=None):
         """Construct an Image5d object."""
         self.img = img
         self.path_img = path_img
         self.path_meta = path_meta
+        self.img_io = img_io
 
 
 def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
@@ -209,9 +211,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.image5d = np.load(filename_subimg, mmap_mode="r")
             config.image5d = importer.roi_to_image5d(config.image5d)
             config.image5d_is_roi = True
-            config.image5d_io = config.LoadIO.NP
             config.img5d.img = config.image5d
             config.img5d.path_img = filename_subimg
+            config.img5d.img_io = config.LoadIO.NP
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
 
@@ -265,9 +267,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
             if path.endswith(sitk_io.EXTS_3D):
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
-                config.image5d_io = config.LoadIO.SITK
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
+                config.img5d.img_io = config.LoadIO.SITK
             else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
@@ -305,7 +307,6 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     # set loaded main image in config
                     config.img5d = img5d
                     config.image5d = config.img5d.img
-                config.image5d_io = config.LoadIO.NP
         except FileNotFoundError as e:
             print(e)
             print("Could not load {}, will fall back to any associated "
@@ -334,7 +335,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.image5d = sitk_io.read_sitk_files(
                 path, reg_names=atlas_suffix)[None]
             config.img5d.img = config.image5d
-            config.image5d_io = config.LoadIO.SITK
+            config.img5d.img_io = config.LoadIO.SITK
         except FileNotFoundError as e:
             print(e)
     

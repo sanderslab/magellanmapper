@@ -278,6 +278,9 @@ class Themes(Enum):
         "font.sans-serif": ["Arial", "Helvetica", "Tahoma"],
         # some styles use strings; change to num for numerical adjustments
         "axes.titlesize": 12,
+        # turn off compositing to allow separating layers in vector graphics
+        # output
+        "image.composite_image": False,
     }
 
     # dark theme

@@ -169,7 +169,7 @@ class AtlasProfile(profiles.SettingsDict):
         # edge-aware reannotation: label erosion to generate watershed
         # seeds/markers for resegmentation; also used to demarcate the interior
         # of regions for metrics; can turn on/off with erode_labels
-        self[RegKeys.EDGE_AWARE_REANNOTAION] = {
+        self[RegKeys.EDGE_AWARE_REANNOTATION] = {
             RegKeys.MARKER_EROSION: 8,  # filter size for labels to markers
             RegKeys.MARKER_EROSION_MIN: 1,  # None for default, 0 for no min
             RegKeys.WATERSHED_MASK_FILTER: (config.SmoothingModes.opening, 2),
@@ -395,7 +395,7 @@ class AtlasProfile(profiles.SettingsDict):
                     "rotation": ((-4, 1), (-2, 2)),
                     "resize": False,
                 },
-                RegKeys.EDGE_AWARE_REANNOTAION: {
+                RegKeys.EDGE_AWARE_REANNOTATION: {
                     # use a small closing filter avoid label loss
                     RegKeys.WATERSHED_MASK_FILTER: (
                         config.SmoothingModes.closing, 1),
@@ -424,7 +424,7 @@ class AtlasProfile(profiles.SettingsDict):
                     "rotation": ((-4, 1),),
                     "resize": False,
                 },
-                RegKeys.EDGE_AWARE_REANNOTAION: {
+                RegKeys.EDGE_AWARE_REANNOTATION: {
                     # turn off filtering to avoid label loss
                     RegKeys.WATERSHED_MASK_FILTER: (None, 0),
                 },
@@ -450,7 +450,7 @@ class AtlasProfile(profiles.SettingsDict):
                     "resize": False,
                 },
                 "smooth": 3,
-                RegKeys.EDGE_AWARE_REANNOTAION: {
+                RegKeys.EDGE_AWARE_REANNOTATION: {
                     RegKeys.MARKER_EROSION_MIN: 4,
                 }
             },
@@ -647,7 +647,7 @@ class AtlasProfile(profiles.SettingsDict):
 
             # turn off labels markers generation
             "nomarkers": {
-                RegKeys.EDGE_AWARE_REANNOTAION: None,
+                RegKeys.EDGE_AWARE_REANNOTATION: None,
             },
 
             # turn off cropping atlas to extent of labels

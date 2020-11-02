@@ -140,7 +140,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         # make map of label interiors for interior/border comparisons
         print("Eroding labels to generate interior labels image")
         erosion = config.atlas_profile[
-            profiles.RegKeys.EDGE_AWARE_REANNOTAION]
+            profiles.RegKeys.EDGE_AWARE_REANNOTATION]
         erosion_frac = config.atlas_profile["erosion_frac"]
         interior, _ = erode_labels(
             labels_img_np, erosion, erosion_frac, 
@@ -282,7 +282,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     mirrorred = atlas and sym_axis >= 0
     len_half = None
     seg_args = {"exclude_labels": exclude_labels}
-    edge_prof = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
+    edge_prof = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTATION]
     if edge_prof:
         edge_filt = edge_prof[profiles.RegKeys.WATERSHED_MASK_FILTER]
         if edge_filt and len(edge_filt) > 1:
@@ -365,7 +365,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
     # erode all labels images into markers for watershed; not multiprocessed
     # since erosion is itself multiprocessed
     erode = config.atlas_profile["erode_labels"]
-    erosion = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTAION]
+    erosion = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTATION]
     erosion_frac = config.atlas_profile["erosion_frac"]
     mirrored = atlas and _is_profile_mirrored()
     mirror_mult = _get_mirror_mult()

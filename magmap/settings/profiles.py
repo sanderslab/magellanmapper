@@ -22,7 +22,7 @@ class RegKeys(Enum):
     MARKER_EROSION_USE_MIN = auto()
     WATERSHED_MASK_FILTER = auto()
     SAVE_STEPS = auto()
-    EDGE_AWARE_REANNOTAION = auto()
+    EDGE_AWARE_REANNOTATION = auto()
     METRICS_CLUSTER = auto()
     DBSCAN_EPS = auto()
     DBSCAN_MINPTS = auto()

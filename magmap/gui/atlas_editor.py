@@ -344,6 +344,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         """
         try:
             self.interp_planes.interpolate(self.labels_img)
+            # flag Plot Editors as edited so labels can be saved
+            for ed in self.plot_eds.values(): ed.edited = True
             self.refresh_images(None, True)
         except ValueError as e:
             print(e)

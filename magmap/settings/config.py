@@ -255,8 +255,8 @@ STR_FN = {
 }
 
 
-#: str: Matplotlib style sheet
-matplotlib_style = "seaborn"
+#: str: Matplotlib style sheet.
+matplotlib_style = "default"
 
 
 class Themes(Enum):
@@ -269,8 +269,6 @@ class Themes(Enum):
 
     # default theme
     DEFAULT = {
-        "image.interpolation": "bilinear",
-        "image.resample": False,
         "font.family": "sans-serif",
         # dejavusans is Matplotlib default but not on Mac by default, so
         # need to change for PDF export; still falls back to DejaVuSans if

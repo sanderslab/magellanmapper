@@ -1011,10 +1011,9 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
 
 
 def main():
-    # set up command-line args and plotting style
-    setup_style("default")
+    """Perform 2D plot tasks."""
+    # collect config settings
     size = config.plot_labels[config.PlotLabels.SIZE]
-    
     plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
     annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]

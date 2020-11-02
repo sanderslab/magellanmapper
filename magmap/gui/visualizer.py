@@ -888,7 +888,8 @@ class Visualization(HasTraits):
                 print("Dark mode detected; applying dark theme to "
                       "Matplotlib figures")
                 rc_params = [config.Themes.DARK]
-        plot_2d.setup_style(rc_params=rc_params)
+        # ROI and Atlas Editors are currently designed for Seaborn style
+        plot_2d.setup_style("seaborn", rc_params)
         self.roi_ed = None
         # no constrained layout because of performance impact at least as of
         # Matplotlib 3.2

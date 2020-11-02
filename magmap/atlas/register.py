@@ -1694,8 +1694,6 @@ def main():
     """Handle registration processing tasks as specified in 
     :attr:`magmap.config.register_type`.
     """
-    plot_2d.setup_style("default")
-    
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 
     # to the original image

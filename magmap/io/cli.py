@@ -635,6 +635,8 @@ def main(process_args_only=False, skip_dbs=False):
                 config.rc_params.append(theme_enum)
                 theme_names.append(theme_enum.name)
         print("Set to use themes to {}".format(theme_names))
+    # set up Matplotlib styles/themes
+    plot_2d.setup_style()
 
     # prep filename
     filename_base = None
@@ -883,7 +885,6 @@ def _grid_search(series_list):
     if not config.filename:
         print("No image filename set for grid search, skipping")
         return
-    plot_2d.setup_style()
     for series in series_list:
         # process each series, typically a tile within an microscopy image
         # set or a single whole image

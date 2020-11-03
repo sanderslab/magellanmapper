@@ -201,7 +201,7 @@ def _load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
 
 
 def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True, 
-                holes_area=None):
+                thresh=None, holes_area=None):
     """Curate images by in-painting where corresponding pixels are present in 
     fixed image but not labels or other images and removing pixels 
     present in those images but not the fixed image.
@@ -215,6 +215,8 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
         inpaint: True to in-paint; defaults to True.
         carve: True to carve based on ``fixed_img``; defaults to True. If 
             ``inpaint`` is True, ``carve`` should typically be True as well.
+        thresh (float): Threshold to use for carving; defaults to None to
+            determine by taking the mean threshold of ``fixed_img``.
         holes_area: Maximum area of holes to fill when carving.
     
     Returns:
@@ -222,8 +224,6 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
     """
     fixed_img_np = sitk.GetArrayFromImage(fixed_img)
     labels_img_np = sitk.GetArrayFromImage(labels_img)
-    result_img = labels_img
-    result_img_np = labels_img_np
     # ensure that labels image is first
     if imgs:
         imgs.insert(0, labels_img)
@@ -232,8 +232,9 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
     
     # mask image showing where result is 0 but fixed image is above thresh 
     # to fill in with nearest neighbors
-    thresh = filters.threshold_mean(fixed_img_np)
-    print("thresh: {}".format(thresh))
+    if thresh is None:
+        thresh = filters.threshold_mean(fixed_img_np)
+    print("Carving thresh for curation: {}".format(thresh))
     # fill only empty regions corresponding to filled pixels, but fills 
     # some with 0 from dist transform pointing to appropriately empty pixels
     #to_fill = np.logical_and(labels_img_np == 0, fixed_img_np > thresh)
@@ -368,6 +369,8 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
         params = settings[key]
         if not params: continue
         max_iter = params["max_iter"]
+        # TODO: consider removing since does not skip if "0" and need at least
+        # one transformation for reg, even if 0 iterations
         if not max_iter: continue
         param_map = sitk.GetDefaultParameterMap(params["map_name"])
         similarity = metric_sim
@@ -592,9 +595,13 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
         labels_trans_cur = None
         transformed_img_cur = None
         if settings["curate"]:
+            thresh_carve = settings["carve_threshold"]
+            if isinstance(thresh_carve, str):
+                # get threshold from another setting, eg atlas_threshold_all
+                thresh_carve = settings[thresh_carve]
             labels_trans_cur, transformed_img_cur = _curate_img(
-                fixed_img_orig, labels_trans, imgs=[img_moved],
-                inpaint=new_atlas)
+                fixed_img_orig, labels_trans, [img_moved], inpaint=new_atlas,
+                thresh=thresh_carve, holes_area=settings["holes_area"])
             print("DSC of original and registered sample images after curation")
             dsc = atlas_refiner.measure_overlap(
                 fixed_img_orig, transformed_img_cur, 

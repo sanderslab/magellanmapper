@@ -1280,6 +1280,9 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
                   extra_metrics=None):
     """Get volumes and additional label metrics for each single labels ID.
     
+    Atlas (intensity) and annotation (labels) images can be configured
+    in :attr:`config.reg_suffixes`.
+    
     Args:
         img_paths: Sequence of images.
         labels_ref_lookup: The labels reference lookup, assumed to be an 
@@ -1352,13 +1355,16 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
         subseg = None
         if (df is None or 
                 extra_metrics and config.MetricGroups.SHAPES in extra_metrics):
-            # open images registered to the main image, starting with the 
-            # experimental image if available and falling back to atlas; 
-            # avoid opening if data frame is available and not taking any 
-            # stats requiring images
+            # open images registered to the main image; avoid opening if data
+            # frame is available and not taking any stats requiring images
+            
+            # open intensity image in priority: config > exp > atlas
+            atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
+            if not atlas_suffix:
+                atlas_suffix = config.RegNames.IMG_EXP.value
             try:
                 img_sitk = sitk_io.load_registered_img(
-                    mod_path, config.RegNames.IMG_EXP.value, get_sitk=True)
+                    mod_path, atlas_suffix, get_sitk=True)
             except FileNotFoundError as e:
                 print(e)
                 libmag.warn("will load atlas image instead")
@@ -1367,11 +1373,14 @@ def volumes_by_id(img_paths, labels_ref_lookup, suffix=None, unit_factor=None,
             img_np = sitk.GetArrayFromImage(img_sitk)
             spacing = img_sitk.GetSpacing()[::-1]
             
-            # load labels in order of priority: full labels > truncated labels; 
-            # labels are required and will give exception if not found
+            # load labels in order of priority: config > full labels
+            # > truncated labels; required so give exception if not found
+            labels_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+            if not labels_suffix:
+                labels_suffix = config.RegNames.IMG_LABELS.value
             try:
                 labels_img_np = sitk_io.load_registered_img(
-                    mod_path, config.RegNames.IMG_LABELS.value)
+                    mod_path, labels_suffix)
             except FileNotFoundError as e:
                 print(e)
                 libmag.warn(

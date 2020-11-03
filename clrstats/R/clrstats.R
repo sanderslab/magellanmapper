@@ -735,6 +735,14 @@ setupConfig <- function(name=NULL) {
     config.env$P.Corr <- "bonferroni"
     config.env$ylim <- NULL
 
+  } else if (endsWith(name, ".R")) {
+    # load a profile file
+    if (!file.exists(name)) {
+      # fallback to assuming file is in R/profiles folder
+      name <- file.path("R", "profiles", name)
+    }
+    source(name)
+
     # STAT MODES
 
   } else if (name == "aba") {

@@ -259,14 +259,22 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     }
   }
 
+  # set y-limit to full range of data with padding
+  ylim <- range(mins[2], maxes[2])
+  if (exists("config.env")) {
+    if (!is.null(config.env$ylim)) {
+      # override y-limit with config
+      ylim <- config.env$ylim
+    }
+  }
+
   # draw main plot
   tryCatch({
-  plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n",
-       xlim=range(mins[1], maxes[1] - 0.5), ylim=range(mins[2], maxes[2]),
-       bty="n", las=1)
-  }, error=function(e) {
+    plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n",
+         xlim=range(mins[1], maxes[1] - 0.5), ylim=ylim, bty="n", las=1)
+    }, error=function(e) {
     message(paste(
-      "Error while creating main plot for jitter plot. If figure margins are ",
+      "Error while creating main plot for jitter plot. If figure margins are",
       "too large, try increasing the size of your graphics window"))
     message(e)
   })

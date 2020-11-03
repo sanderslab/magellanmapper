@@ -733,6 +733,7 @@ setupConfig <- function(name=NULL) {
     config.env$Sort.Groups <- TRUE
     config.env$Condition <- NULL
     config.env$P.Corr <- "bonferroni"
+    config.env$ylim <- NULL
 
     # STAT MODES
 

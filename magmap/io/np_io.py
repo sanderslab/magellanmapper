@@ -292,7 +292,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                                 importer.DEFAULT_IMG_STACK_NAME)
                         img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
-                    elif import_only or config.image5d is None:
+                    elif import_only or img5d is None:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
                             path)

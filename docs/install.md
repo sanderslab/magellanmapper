@@ -4,9 +4,9 @@ MagellanMapper can be installed many different ways dependening on one's Python 
 
 ## Recommended: Install in a Conda environment
 
-Conda greatly simplifies installation by managing all supporting packages, such as Java and packages that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
+Conda simplifies installation by managing all supporting packages such as Java and others that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
 
-After downloading MagellanMapper, create a new Conda environment with all dependent packages using a provided script for your platform.
+After downloading MagellanMapper, create a new Conda environment with all dependent packages using a provided setup script below for your platform.
 
 **Mac, Linux**:
 
@@ -20,9 +20,9 @@ bin/setup_conda [-n name] [-s spec]
 bin/setup_conda.bat
 ```
 
-These setup scripts perform full installation including Conda if not already present. Specifically, it will install:
+These scripts perform a full installation of Conda if not already present. Specifically, it will install:
 
-- [Miniconda](https://conda.io/miniconda.html), a light version of the Anaconda package and environment manager for Python, if not already present based on the `conda` command
+- [Miniconda](https://conda.io/miniconda.html), a package manager for the Anaconda Python Distribution, if not already present based on the `conda` command
 - A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
 - Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
 

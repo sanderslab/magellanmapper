@@ -1177,12 +1177,25 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
     if affine:
         for aff in affine:
             img_atlas_np = cv_nd.affine_nd(img_atlas_np, **aff)
-    if is_mirror and mirror["start"] is not None and mirror["atlas_mirror"]:
-        # mirror underlying intensity image
-        # TODO: consider removing dup since not using
-        dup = config.atlas_profile["labels_dup"]
-        img_atlas_np = mirror_planes(
-            img_atlas_np, extis[1], start_dup=dup)
+    if is_mirror and mirror["start"] is not None:
+        if mirror["atlas_mirror"]:
+            # mirror underlying intensity image
+            # TODO: consider removing dup since not using
+            dup = config.atlas_profile["labels_dup"]
+            img_atlas_np = mirror_planes(
+                img_atlas_np, extis[1], start_dup=dup)
+        else:
+            labels_len = len(img_labels_np)
+            atlas_len = len(img_atlas_np)
+            if labels_len != atlas_len:
+                # pad image with fewer z-planes at end since mirroring may
+                # increase or decrease number of labels planes
+                if labels_len > atlas_len:
+                    img_atlas_np = plot_3d.pad_img(
+                        img_atlas_np, (0, 0, 0), (labels_len, ))
+                else:
+                    img_labels_np = plot_3d.pad_img(
+                        img_labels_np, (0, 0, 0), (atlas_len, ))
 
     crop_offset = None
     if crop:

@@ -782,32 +782,45 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipz=None):
     return pts_in, cmap, scale
 
 
-def replace_vol(img, vol, center, vol_as_mask=None):
+def replace_vol(img, vol, center=None, offset=None, vol_as_mask=None):
     """Replace a volume within an image, centering on the given coordinates 
     and cropping the input volume to fit.
 
     Args:
-        img: Image as a Numpy array into which ``vol`` will be placed. 
-            ``img`` will be updated in-place.
-        vol: Volume to place in ``img``.
-        center: Coordinates of the center of volume, given in z,y,x order.
-        vol_as_mask: If ``vol`` should be taken as a mask, where only 
-            its True values will replace the corresponding pixels in 
-            ``img``, assign this value to the mask locations. Defaults to 
-            None, in which case the entire ``vol`` will be assigned.
+        img (:class:`numpy.ndarray`): Image as a Numpy array into which
+            ``vol`` will be placed. Updated in-place.
+        vol (:class:`numpy.ndarray`): Volume to place in ``img``.
+        center (list[int]): Coordinates of the center of volume, given in
+            ``z,y,x`` order. Either ``center`` or ``offset`` must be given.
+            Takes precedence over ``offset``.
+        offset (list[int]): Coordinates of offset within ``img`` to place
+            ``vol``, given in ``z,y,x`` order.
+        vol_as_mask (:class:`numpy.ndarray`): If ``vol`` should be taken as
+            a mask, where only its True values will replace the corresponding
+            pixels in ``img``, assign this value to the mask locations.
+            Defaults to None, in which case the entire ``vol`` will be assigned.
 
     Returns:
-        ``img`` with ``vol`` centered on ``center``.
+        :class:`numpy.ndarray`: ``img`` modified in-place.
+    
+    Raises:
+        ValueError: if ``center`` and ``offset`` are both None.
+    
     """
+    if center is None and offset is None:
+        raise ValueError("`center` or `offset` must be given in `replace_vol`")
     dims = vol.ndim
     slices_img = []
     slices_vol = []
     for i in range(dims):
         start_vol = 0
         stop_vol = int(vol.shape[i])
-        # center volumes with odd-numbered length, and skew slightly 
-        # toward lower values for even-numbered length
-        start = int(center[i] - vol.shape[i] // 2)
+        if center is not None:
+            # center volumes with odd-numbered length, and skew slightly
+            # toward lower values for even-numbered length
+            start = int(center[i] - vol.shape[i] // 2)
+        else:
+            start = offset[i]
         stop = start + stop_vol
         # ensure that slices do not exceed bounds of img, also cropping 
         # volume if so
@@ -826,6 +839,29 @@ def replace_vol(img, vol, center, vol_as_mask=None):
         # replace complete vol
         img[tuple(slices_img)] = vol[tuple(slices_vol)]
     return img
+
+
+def pad_img(img, offset, shape):
+    """Pad image surroundings with zeros.
+    
+    Args:
+        img (:class:`numpy.ndarray`): Image array.
+        offset (list[int]): Offset within padded image at which to place
+            ``img``, given in ``z,y,x``.
+        shape (list[int]): Shape of resulting image, given in ``z,y,x``.
+            Values can be None or sequence can stop early to use the
+            corresponding original shape values from ``img``.
+
+    Returns:
+        :class:`numpy.ndarray`: Padded image.
+
+    """
+    shape_padded = list(img.shape)
+    for axis, n in enumerate(shape):
+        if shape[axis] is not None:
+            shape_padded[axis] = shape[axis]
+    img_padded = np.zeros(shape_padded, dtype=img.dtype)
+    return replace_vol(img_padded, img, offset=offset)
 
 
 def build_ground_truth(img3d, blobs, ellipsoid=False, labels=None, 

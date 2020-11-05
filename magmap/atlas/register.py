@@ -1483,7 +1483,8 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
     Label identities can be translated using CSV files specified in the
     :attr:`config.atlas_labels[config.AtlasLabels.TRANSLATE_LABELS` value
     to compare labels from different atlases or groups of labels that do
-    not fit exclusively into a single super-structure.
+    not fit exclusively into a single super-structure. Each file will be
+    mapped to the corresponding path in ``img_paths``.
 
     Args:
         img_paths: Sequence of images to compare.
@@ -1561,7 +1562,7 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
         paths_translate = config.atlas_labels[
             config.AtlasLabels.TRANSLATE_LABELS]
         if paths_translate:
-            # load data frames corresponding to the labels image to convert
+            # load data frames corresponding to each labels image to convert
             # label IDs, clearing all other labels
             if not libmag.is_seq(paths_translate):
                 paths_translate = [paths_translate]
@@ -1569,7 +1570,7 @@ def volumes_by_id_compare(img_paths, labels_ref_lookup, unit_factor=None,
                 if os.path.exists(path_translate):
                     # translate labels based on the given data frame
                     ontology.replace_labels(
-                        labels_imgs[0], pd.read_csv(path_translate), clear=True)
+                        labels_img, pd.read_csv(path_translate), clear=True)
                 elif path_translate:
                     # warn if path does not exist; empty string can skip image
                     libmag.warn("{} does not exist, skipping label translation"

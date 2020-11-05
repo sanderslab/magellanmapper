@@ -436,10 +436,18 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                 fit=(size is None or ncols * nrows == 1))
     path_base = paths[0]
     if animated:
+        # generate animated image (eg animated GIF or movie file)
         animate_imgs(
             path_base, plotted_imgs, config.delay, config.savefig, suffix)
     else:
-        planei = roi_offset[-1] if roi_offset else config.slice_vals[0]
+        # save image as single file
+        if roi_offset:
+            # get plane index from coordinate at the given axis in ROI offset
+            planei = roi_offset[::-1][plot_support.get_plane_axis(
+                config.plane, get_index=True)]
+        else:
+            # get plane index from slice start
+            planei = config.slice_vals[0]
         if num_paths > 1:
             # output filename as a collage of images
             if not os.path.isdir(path_base):

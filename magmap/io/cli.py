@@ -56,22 +56,13 @@ import sys
 
 import numpy as np
 
-from magmap.atlas import register
-from magmap.atlas import transformer
+from magmap.atlas import register, transformer
 from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
-from magmap.io import df_io
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.io import np_io
-from magmap.io import sqlite
+from magmap.io import df_io, export_stack, importer, libmag, np_io, sqlite
+from magmap.plot import colormaps, plot_2d
+from magmap.settings import atlas_prof, config, grid_search_prof, roi_prof
 from magmap.stats import mlearn
-from magmap.settings import atlas_prof
-from magmap.settings import config
-from magmap.settings import grid_search_prof
-from magmap.settings import roi_prof
-from magmap.plot import colormaps
-from magmap.plot import plot_2d
 
 
 def _parse_coords(arg, rev=False):
@@ -977,7 +968,6 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
     elif proc_type in (
             config.ProcessTypes.EXTRACT, config.ProcessTypes.ANIMATED):
         # generate animated GIF or extract single plane
-        from magmap.io import export_stack
         export_stack.stack_to_img(
             config.filenames, roi_offset, roi_size, series, subimg_offset,
             subimg_size, proc_type is config.ProcessTypes.ANIMATED,
@@ -1013,7 +1003,6 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
 
     elif proc_type is config.ProcessTypes.EXPORT_PLANES:
         # export each plane as a separate image file
-        from magmap.io import export_stack
         export_stack.export_planes(
             config.image5d, config.prefix, config.savefig, config.channel)
     

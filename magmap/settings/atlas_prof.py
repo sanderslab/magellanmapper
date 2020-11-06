@@ -520,7 +520,11 @@ class AtlasProfile(profiles.SettingsDict):
                     "start": 0.11,  # some lat labels only partially complete
                     "surr_size": 12,
                     "smoothing_size": 0,  # no smoothing to avoid loss of detail
-                    RegKeys.MARKER_EROSION: 5,
+                    # large erosion in outer planes (weighted ~off medially)
+                    RegKeys.MARKER_EROSION: 50,
+                    RegKeys.MARKER_EROSION_MIN: 20,
+                    # most erosion in lateral planes; minimal in medial planes
+                    "wt_lat": 0.9,
                 },
                 # "labels_dup": 0.48,
                 # rotate for symmetry, which also reduces label loss

@@ -790,11 +790,11 @@ def replace_vol(img, vol, center=None, offset=None, vol_as_mask=None):
         img (:class:`numpy.ndarray`): Image as a Numpy array into which
             ``vol`` will be placed. Updated in-place.
         vol (:class:`numpy.ndarray`): Volume to place in ``img``.
-        center (list[int]): Coordinates of the center of volume, given in
-            ``z,y,x`` order. Either ``center`` or ``offset`` must be given.
-            Takes precedence over ``offset``.
-        offset (list[int]): Coordinates of offset within ``img`` to place
-            ``vol``, given in ``z,y,x`` order.
+        center (tuple[int, int, int]): Coordinates of the center of volume,
+            given as a sequence of ``z,y,x``. Either ``center`` or ``offset``
+            must be given. Takes precedence over ``offset``.
+        offset (tuple[int, int, int]): Coordinates of offset within ``img``
+            to place ``vol``, given as a sequence of ``z,y,x``.
         vol_as_mask (:class:`numpy.ndarray`): If ``vol`` should be taken as
             a mask, where only its True values will replace the corresponding
             pixels in ``img``, assign this value to the mask locations.
@@ -846,11 +846,11 @@ def pad_img(img, offset, shape):
     
     Args:
         img (:class:`numpy.ndarray`): Image array.
-        offset (list[int]): Offset within padded image at which to place
-            ``img``, given in ``z,y,x``.
-        shape (list[int]): Shape of resulting image, given in ``z,y,x``.
-            Values can be None or sequence can stop early to use the
-            corresponding original shape values from ``img``.
+        offset (tuple[int, int, int]): Offset within padded image at which
+            to place ``img``, given as a sequence of ``z,y,x``.
+        shape (tuple[int, int, int]): Shape of resulting image, given as
+            a sequence of ``z,y,x``. Values can be None or sequence can stop
+            early to use the corresponding original shape values from ``img``.
 
     Returns:
         :class:`numpy.ndarray`: Padded image.

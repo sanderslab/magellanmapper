@@ -2202,7 +2202,9 @@ def main():
             spacing = config.resolutions[0]
         out_path = libmag.make_out_path(libmag.combine_paths(
             config.filename, "labelsdist.csv"))
-        vols.labels_distance(*labels_imgs[:2], spacing, out_path)
+        # base name of first image filename
+        sample = libmag.get_filename_without_ext(config.filename)
+        vols.labels_distance(*labels_imgs[:2], spacing, out_path, sample)
 
     else:
         print("Could not find register task:", reg)

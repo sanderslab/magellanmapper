@@ -1216,7 +1216,8 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
     return labels_diff
 
 
-def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None):
+def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None,
+                    name=None):
     """Measure distances between corresponding labels in two images.
     
     Assumes that a 0 is background and will be skipped.
@@ -1229,6 +1230,7 @@ def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None):
             are based on centroid coordinates of the corresponding labels.
         spacing (list[float]): Spacing/scaling in ``z,y,x``.
         out_path (str): CSV output path; defaults to None to not save.
+        name (str): Sample name; defaults to None.
 
     Returns:
         :class:`pandas.DataFrame`: Data frame of output metrics.
@@ -1255,11 +1257,12 @@ def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None):
             # label missing from at least one image
             centroids = [np.nan] * 2
             dist = np.nan
-        dists.append((label_id, *centroids[:2], dist))
+        dists.append((name, label_id, *centroids[:2], dist))
     
     # export metrics to data frame
     df = df_io.dict_to_data_frame(
         dists, out_path, show=True, records_cols=(
+            config.AtlasMetrics.SAMPLE.value,
             LabelMetrics.Region.name, "Centroid1", "Centroid2",
             LabelMetrics.Dist.name))
     return df

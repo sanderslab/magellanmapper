@@ -20,7 +20,7 @@ from magmap.io import importer
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.io import sitk_io
-from magmap.plot import plot_support
+from magmap.plot import plot_3d, plot_support
 from magmap.settings import config
 from magmap.settings import profiles
 
@@ -331,7 +331,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
             None, edgei, edge["surr_size"], edge["smoothing_size"],
             edge["in_paint"], None, edge[profiles.RegKeys.MARKER_EROSION],
             edge[profiles.RegKeys.MARKER_EROSION_MIN],
-            edge[profiles.RegKeys.MARKER_EROSION_USE_MIN], save_steps)
+            edge[profiles.RegKeys.MARKER_EROSION_USE_MIN], edge["wt_lat"],
+            save_steps)
     
     if expand:
         # expand selected regions
@@ -431,7 +432,8 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
 def extend_edge(region, region_ref, threshold, plane_region, planei,
                 surr_size=0, smoothing_size=0, in_paint=False, edges=None,
                 marker_erosion=0, marker_erosion_min=None,
-                marker_erosion_use_min=False, save_steps=False):
+                marker_erosion_use_min=False, wt_lat=0, save_steps=False,
+                edge_bounds=None):
     """Recursively extend the nearest plane with labels based on the 
     underlying atlas histology.
 
@@ -494,6 +496,14 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         save_steps (bool): True to output intermediate steps as images,
             saving to the extension set in :attr:`config.savefig`; defaults
             to False.
+        wt_lat (float): Weight lateral planes more heavily by reducing the
+            weight of medial planes' erosion filter sizes by this fraction.
+            Defaults to 0 to weight all planes equally. 1 causes the most
+            medial plane to undergo no erosion, with erosion weight increasing
+            linearly to 1 at the most lateral planes.
+        edge_bounds (list[int]): Sequence of indices of lateral ``first, last``
+            planes; defaults to None to determine based on edge map.
+    
     """
     if planei < 0: return
     
@@ -542,6 +552,15 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
         edges_region = None
         if edges is not None:
             edges_region = edges[:, slices[0], slices[1]]
+            if edge_bounds is None:
+                # find first and last planes for extension; predict first plane
+                # by presence of edge map, though may differ from true start if
+                # sliced edge becomes None in a different plane
+                edge_bounds = [0, planei]
+                for edgei, edge in enumerate(edges_region):
+                    if np.any(edge != 0):
+                        edge_bounds[0] = edgei
+                        break
         save_imgs = {}
         if not has_template:
             # crop to use corresponding labels as template for next planes
@@ -580,8 +599,20 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                 perim = cv_nd.perimeter_nd(
                     plane_add != 0, largest_only=True)
                 wt_dists = cv_nd.signed_distance_transform(~perim)
+                filt_size = marker_erosion
+                filt_size_min = marker_erosion_min
+                if edge_bounds is not None and wt_lat:
+                    # weight lateral planes more heavily by reducing weight
+                    # of medial planes
+                    wt_lat_frac = 1 - wt_lat * (
+                            float(planei) - edge_bounds[0]) / (
+                            edge_bounds[1] - edge_bounds[0])
+                    filt_size *= wt_lat_frac
+                    filt_size_min *= wt_lat_frac
+                    print("planei", planei, "edge_bounds", edge_bounds,
+                          "wt_lat", wt_lat_frac)
                 markers, _ = segmenter.labels_to_markers_erosion(
-                    plane_add, marker_erosion, -1, marker_erosion_min,
+                    plane_add, filt_size, -1, filt_size_min,
                     marker_erosion_use_min, wt_dists=wt_dists)
                 plane_add = segmenter.segment_from_labels(
                     edges_region[planei], markers, plane_add)
@@ -604,7 +635,7 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
             prop_region, prop_region_ref, threshold, prop_plane_region,
             planei - 1, surr_size, smoothing_size, in_paint, edges_region,
             marker_erosion, marker_erosion_min, marker_erosion_use_min,
-            save_steps)
+            wt_lat, save_steps, edge_bounds)
 
 
 def crop_to_orig(labels_img_np_orig, labels_img_np, crop):

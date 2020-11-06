@@ -106,10 +106,18 @@ class AtlasProfile(profiles.SettingsDict):
             # smoothing filter size to remove artifacts (None or 0 to ignore)
             "smoothing_size": 3,
             "in_paint": True,  # True to fill pxs missing labels
-            # erosion filter size for watershed markers (0 to ignore)
+            # erosion filter size for watershed markers (0 to ignore), which
+            # are weighted by distance to border
             RegKeys.MARKER_EROSION: 10,
-            RegKeys.MARKER_EROSION_MIN: None,  # use default size; 0 for no min
+            # no erosion if weighted filter size is below min; None to use
+            # default size (half of erosion filter size); 0 for no min
+            RegKeys.MARKER_EROSION_MIN: None,
+            # if filter size is below min, still erode at this size if True
             RegKeys.MARKER_EROSION_USE_MIN: False,  # don't erode if reach min
+            # preferentially weight erosion filter sizes in lateral planes
+            # so that sizes are reduced linearly to this fraction in the most
+            # medial plane; 0 = no weighting, 1 = full weighting
+            "wt_lat": 0
         }
         self["labels_dup"] = None  # start duplicating planes til last labels
 

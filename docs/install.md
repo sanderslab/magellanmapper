@@ -92,7 +92,7 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 | Dependency | Precompiled Available? | Precompiled Run Req | Build Req | Purpose | 
 | --- | --- | --- | --- | --- |
 | Python-Javabridge | Yes, via custom package | Python 3.6, Java 8+ | JDK, C compiler| Import proprietary image formats |
-| Traits | Yes, via Conda (not PyPI) | n/a | C compiler | GUI |
+| Traits, Pyface, Traitsui | Yes, via Conda (not PyPI) | Python 3.6+ | C compiler, Python dev | GUI |
 | SimpleElastix | Yes, via custom package | Python 3.6 | C, C++ compilers | Load medical 3D formats, image regsitration |
 | ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
 

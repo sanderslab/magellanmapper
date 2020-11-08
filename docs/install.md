@@ -106,10 +106,10 @@ C compilers by platform:
 Java versions:
 
 - The Conda setup pathway installs JDK 8
-- Python-Javabridge uses JDK v8-13 (v12+ in latest Git commits)
+- Python-Javabridge uses JDK v8+ (v12+ in Javabridge 1.0.19; see [below](#image-loading) for image loading times and setup troubleshooting with various Java versions)
 - ImageJ/Fiji currently supports Java 8 best in our experience
 
-Our custom packages assume an environment with Python 3.6 and Java 8.
+Our custom packages assume an environment with Python 3.6 and Java 8+.
 
 ### Additional optional packages
 

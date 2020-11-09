@@ -2427,7 +2427,9 @@ class Visualization(HasTraits):
             profs[profs[:, 0] == ProfileCats.GRID.value, 1])
 
         # set up all profiles
-        cli.setup_profiles(roi_profs, atlas_profs, grid_profs)
+        cli.setup_roi_profiles(roi_profs)
+        cli.setup_atlas_profiles(grid_profs)
+        cli.setup_grid_search_profiles(grid_profs)
 
     def _init_profiles(self):
         """Initialize the profiles table based on the currently loaded profiles.

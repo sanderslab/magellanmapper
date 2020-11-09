@@ -496,7 +496,9 @@ def main(process_args_only=False, skip_dbs=False):
                 int(n) for n in shape.split(",")[::-1]]
 
     # set up ROI and register profiles
-    setup_profiles(args.roi_profile, args.atlas_profile, args.grid_search)
+    setup_roi_profiles(args.roi_profile)
+    setup_atlas_profiles(args.atlas_profile)
+    setup_grid_search_profiles(args.grid_search)
 
     if args.plane is not None:
         config.plane = args.plane
@@ -750,19 +752,16 @@ def setup_dbs(filename_base, db_path=None, truth_db_config=None):
         config.db.load_db(None, False)
 
 
-def setup_profiles(roi_profiles_names, atlas_profiles_names,
-                   grid_search_profiles_names):
-    """Setup ROI, atlas, and grid search profiles.
+def setup_roi_profiles(roi_profiles_names):
+    """Setup ROI profiles.
 
     If a profile is None, only a default set of profile settings
     will be generated. Also sets up colormaps based on ROI profiles. Any
     previously set up profile will be replaced.
 
     Args:
-        roi_profiles_names (List[str]): Sequence of ROI and atlas profiles
+        roi_profiles_names (list[str]): Sequence of ROI and atlas profiles
             names to use for the corresponding channel.
-        atlas_profiles_names (str): Atlas profiles names.
-        grid_search_profiles_names (str): Grid search profiles names.
 
     """
     # initialize ROI profile settings and update with modifiers
@@ -786,13 +785,36 @@ def setup_profiles(roi_profiles_names, atlas_profiles_names,
                   i, prof[prof.NAME_KEY]))
     colormaps.setup_colormaps(np_io.get_num_channels(config.image5d))
 
+
+def setup_atlas_profiles(atlas_profiles_names, reset=True):
+    """Setup atlas profiles.
+
+    If a profile is None, only a default set of profile settings
+    will be generated. Any previously set up profile will be replaced.
+
+    Args:
+        atlas_profiles_names (str): Atlas profiles names.
+
+    """
     # initialize atlas profile and update with modifiers
-    config.atlas_profile = atlas_prof.AtlasProfile()
+    if reset:
+        config.atlas_profile = atlas_prof.AtlasProfile()
     if atlas_profiles_names is not None:
         config.atlas_profile.update_settings(atlas_profiles_names)
     print("Set atlas profile to {}"
           .format(config.atlas_profile[config.atlas_profile.NAME_KEY]))
 
+
+def setup_grid_search_profiles(grid_search_profiles_names):
+    """Setup grid search profiles.
+
+    If a profile is None, only a default set of profile settings
+    will be generated. Any previously set up profile will be replaced.
+
+    Args:
+        grid_search_profiles_names (str): Grid search profiles names.
+
+    """
     if grid_search_profiles_names:
         # parse grid search profiles
         config.grid_search_profile = grid_search_prof.GridSearchProfile()

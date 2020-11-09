@@ -18,7 +18,7 @@ class TestImageStackProcessing(unittest.TestCase):
     def setUp(self):
         config.filename = TEST_IMG
         config.channel = None
-        cli.setup_profiles(["lightsheet,4xnuc"], None, None)
+        cli.setup_roi_profiles(["lightsheet,4xnuc"])
     
     def test_load_image(self):
         img5d = importer.read_file(

@@ -57,6 +57,7 @@ class SettingsDict(dict):
     Attributes:
         PATH_PROFILES (str): Path to profiles directory.
         NAME_KEY (str): Key for profile name.
+        DEFAULT_NAME (str): Default profile modifier name.
         profiles (dict): Dictionary of profiles to modify the default
             values, where each key is the profile name and the value
             is a nested dictionary that will overwrite or update the
@@ -68,6 +69,7 @@ class SettingsDict(dict):
     PATH_PROFILES = "profiles"
     _EXT_YAML = (".yml", ".yaml")
     NAME_KEY = "settings_name"
+    DEFAULT_NAME = "default"
 
     def __init__(self, *args, **kwargs):
         """Initialize a settings dictionary.
@@ -154,11 +156,16 @@ class SettingsDict(dict):
                 mods.update(yaml)
             print("loaded {}:\n{}".format(mod_path, mods))
         else:
-            # if name to check is given, must match modifier name to continue
-            if mod_name not in profiles:
-                print(mod_name, "profile not found, skipped")
-                return
-            mods = profiles[mod_name]
+            if mod_name == self.DEFAULT_NAME:
+                # update entries from a new instance for default values;
+                # use class name to access any profile subclasses
+                mods = self.__class__()
+            else:
+                # must match an available modifier name
+                if mod_name not in profiles:
+                    print(mod_name, "profile not found, skipped")
+                    return
+                mods = profiles[mod_name]
 
         self[self.NAME_KEY] += sep + mod_name
         if self._add_mod_directly:

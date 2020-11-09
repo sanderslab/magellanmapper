@@ -447,6 +447,17 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
         new_atlas: True to generate registered images that will serve as a 
             new atlas; defaults to False.
     """
+    def get_similarity_metric():
+        # get the name of the similarity metric from the first found name
+        # among the available transformations
+        for trans in ("reg_translation", "reg_affine", "reg_bspline"):
+            trans_prof = settings[trans]
+            if trans_prof:
+                sim = trans_prof["metric_similarity"]
+                if sim:
+                    return sim
+        return None
+    
     start_time = time()
     if name_prefix is None:
         name_prefix = fixed_file
@@ -557,7 +568,7 @@ def register(fixed_file, moving_file_dir, show_imgs=True, write_imgs=True,
     dsc_sample = atlas_refiner.measure_overlap(
         fixed_img_orig, img_moved, thresh_img2=thresh_mov)
     fallback = settings["metric_sim_fallback"]
-    metric_sim = "default"  # differs depending on reg type
+    metric_sim = get_similarity_metric()
     if fallback and dsc_sample < fallback[0]:
         print("reg DSC below threshold of {}, will re-register using {} "
               "similarity metric".format(*fallback))

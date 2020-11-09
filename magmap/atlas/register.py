@@ -46,27 +46,14 @@ from time import time
 import pandas as pd
 import numpy as np
 import SimpleITK as sitk
-from skimage import filters
-from skimage import measure
-from skimage import morphology
-from skimage import transform
+from skimage import filters, measure, morphology, transform
 
-from magmap.atlas import atlas_refiner
-from magmap.stats import atlas_stats
-from magmap.stats import clustering
-from magmap.settings import config
+from magmap.atlas import atlas_refiner, edge_seg, ontology, transformer
 from magmap.cv import cv_nd
-from magmap.atlas import edge_seg
-from magmap.io import export_regions
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.atlas import ontology
-from magmap.plot import plot_2d
-from magmap.plot import plot_3d
-from magmap.io import sitk_io
-from magmap.io import df_io
-from magmap.atlas import transformer
-from magmap.stats import vols
+from magmap.io import cli, df_io, export_regions, importer, libmag, sitk_io
+from magmap.plot import plot_2d, plot_3d
+from magmap.settings import config
+from magmap.stats import atlas_stats, clustering, vols
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
@@ -2212,7 +2199,5 @@ def main():
 
 if __name__ == "__main__":
     print("MagellanMapper image registration")
-    from magmap.io import cli
-
     cli.main(True)
     main()

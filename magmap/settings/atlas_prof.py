@@ -274,7 +274,7 @@ class AtlasProfile(profiles.SettingsDict):
                 },
                 # fallback to MMI since it has been rather reliable
                 "metric_sim_fallback":
-                    (0.85, "AdvancedMattesMutualInformation"),
+                    (0.85, self.DEFAULT_NAME),
             },
 
             # groupwise registration

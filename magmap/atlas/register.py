@@ -306,8 +306,8 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
         param_map["NumberOfResolutions"] = [str(num_res)]
 
 
-def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
-                 fixed_mask=None, moving_mask=None):
+def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
+                 moving_mask=None):
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
@@ -317,8 +317,6 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
             registration files ``fix_pts.txt`` and ``mov_pts.txt`` will
             be found; defaults to None, in which case points-based
             reg will be ignored even if set.
-        metric_sim (str): Similarity metric; defaults to None to query from
-            :attr:`config.register_settings`.
         fixed_mask (:obj:`sitk.Image`): Mask for ``fixed_img``; defaults
             to None.
         moving_mask (:obj:`sitk.Image`): Mask for ``moving_img``; defaults
@@ -360,9 +358,7 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
         # one transformation for reg, even if 0 iterations
         if not max_iter: continue
         param_map = sitk.GetDefaultParameterMap(params["map_name"])
-        similarity = metric_sim
-        if similarity is None:
-            similarity = params["metric_similarity"]
+        similarity = params["metric_similarity"]
         if len(param_map["Metric"]) > 1:
             param_map["Metric"] = [similarity, *param_map["Metric"][1:]]
         else:
@@ -408,9 +404,12 @@ def register_duo(fixed_img, moving_img, path=None, metric_sim=None,
     elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
     
-    # prep filter to apply transformation to label files
+    # prep filter to apply transformation to label files; turn off final
+    # bspline interpolation to avoid overshooting the interpolation for the
+    # labels image (see Elastix manual section 4.3)
     transform_param_map = elastix_img_filter.GetTransformParameterMap()
     transformix_img_filter = sitk.TransformixImageFilter()
+    transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
     transformix_img_filter.SetTransformParameterMap(transform_param_map)
     
     return transformed_img, transformix_img_filter
@@ -535,21 +534,10 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
         for img in moving_imgs:
             img.SetSpacing(moving_img_spacing)
     
-    def reg(metric=None):
-        # register images and turn off final bspline interpolation to avoid
-        # overshooting the interpolation for the labels image 
-        # (see Elastix manual section 4.3)
-        img_reg, transformix = register_duo(
-            fixed_img, moving_img, name_prefix, metric, fixed_mask,
-            moving_mask)
-        param_map = transformix.GetTransformParameterMap()
-        param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
-        transformix.SetTransformParameterMap(param_map)
-        return img_reg, transformix, param_map
-
     # perform registration
     try:
-        img_moved, transformix_filter, transform_param_map = reg()
+        img_moved, transformix_filter = register_duo(
+            fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
     except RuntimeError:
         libmag.warn("Could not perform registration. Will retry with"
                     "world info (spacing, origin, etc) set to that of the "
@@ -561,7 +549,8 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
             imgs.append(fixed_mask)
         for img in imgs:
             sitk_io.match_world_info(fixed_img, img)
-        img_moved, transformix_filter, transform_param_map = reg()
+        img_moved, transformix_filter = register_duo(
+            fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
 
     # overlap stats comparing original and registered samples (eg histology)
     print("DSC of original and registered sample images")
@@ -571,10 +560,16 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
     fallback = settings["metric_sim_fallback"]
     metric_sim = get_similarity_metric()
     if fallback and dsc_sample < fallback[0]:
-        print("reg DSC below threshold of {}, will re-register using {} "
-              "similarity metric".format(*fallback))
-        metric_sim = fallback[1]
-        img_moved, transformix_filter, transform_param_map = reg(metric_sim)
+        # fall back to another atlas profile; update the current profile with
+        # this new profile and re-set-up the original profile afterward
+        print("Registration DSC below threshold of {}, will re-register "
+              "using {} atlas profile".format(*fallback))
+        atlas_prof_name_orig = settings[settings.NAME_KEY]
+        cli.setup_atlas_profiles(fallback[1], reset=False)
+        metric_sim = get_similarity_metric()
+        img_moved, transformix_filter = register_duo(
+            fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
+        cli.setup_atlas_profiles(atlas_prof_name_orig)
         dsc_sample = atlas_refiner.measure_overlap(
             fixed_img_orig, img_moved, thresh_img2=thresh_mov)
     
@@ -653,9 +648,9 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
 
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed
-    _, translation = _handle_transform_file(name_prefix, transform_param_map)
-    translation = _translation_adjust(
-        moving_img, img_moved, translation, flip=True)
+    _, translation = _handle_transform_file(
+        name_prefix, transformix_filter.GetTransformParameterMap())
+    _translation_adjust(moving_img, img_moved, translation, flip=True)
     
     # compare original atlas with registered labels taken as a whole
     dsc_labels = atlas_refiner.measure_overlap_combined_labels(
@@ -759,8 +754,11 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
     if fallback and dsc_sample < fallback[0]:
         print("reg DSC below threshold of {}, will re-register using {} "
               "similarity metric".format(*fallback))
+        atlas_prof_name_orig = settings[settings.NAME_KEY]
+        cli.setup_atlas_profiles(fallback[1], reset=False)
         transformed_img, transformix_img_filter = register_duo(
-            fixed_img, moving_img, prefix, fallback[1])
+            fixed_img, moving_img, prefix)
+        cli.setup_atlas_profiles(atlas_prof_name_orig)
     reg_imgs = [transformed_img]
     names = [config.RegNames.IMG_EXP.value if reg_base is None else reg_base]
     if reg_names is not None:

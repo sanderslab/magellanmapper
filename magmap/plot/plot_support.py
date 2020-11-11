@@ -770,11 +770,12 @@ def get_roi_path(path, offset, roi_size=None):
 
 
 def save_fig(path, ext=None, modifier="", fig=None):
-    """Save figure, swapping in the given extension for the extension
-    in the given path.
+    """Save figure with support for backup and alternative file formats.
     
     Dots per inch is set by :attr:`config.plot_labels[config.PlotLabels.DPI]`.
-    Backs up any existing file before saving.
+    Backs up any existing file before saving. If the found extension is
+    not for a supported format for the figure's backend, the figure is not
+    saved.
 
     Args:
         path (str): Base path to use.
@@ -787,7 +788,14 @@ def save_fig(path, ext=None, modifier="", fig=None):
         fig (:obj:`matplotlib.figure.Figure`): Figure; defaults to None
             to use the current figure.
     
+    Returns:
+        str: The output path, or None if the file was not saved.
+    
     """
+    if fig is None:
+        # default to using the current figure
+        fig = plt.gcf()
+    
     if ext in config.FORMATS_3D:
         print("Extension \"{}\" is a 3D type, will skip saving 2D figure"
               .format(ext))
@@ -798,14 +806,21 @@ def save_fig(path, ext=None, modifier="", fig=None):
         # extract extension from path if not given directly, defaulting to PNG
         ext = os.path.splitext(path)[1]
         ext = ext[1:] if ext else "png"
+    if ext not in fig.canvas.get_supported_filetypes().keys():
+        # avoid saving if the figure backend does not support the output format
+        print("Figure for {} not saved as no save extension was given"
+              .format(path))
+        return None
+    
+    # backup any existing file
     plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
     libmag.backup_file(plot_path)
     
     # save the current or given figure with config DPI
-    save_fn = plt.savefig if fig is None else fig.savefig
     dpi = config.plot_labels[config.PlotLabels.DPI]
-    save_fn(plot_path, dpi=dpi)
+    fig.savefig(plot_path, dpi=dpi)
     print("exported figure to", plot_path)
+    return plot_path
 
 
 def setup_fig(nrows, ncols, size=None):

@@ -598,8 +598,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if df is None:
         df = pd.read_csv(path_to_df)
     if ax is None:
-        fig = plt.figure(figsize=size, constrained_layout=True)
-        gs = gridspec.GridSpec(1, 1, figure=fig)
+        fig, gs = plot_support.setup_fig(1, 1, size)
         ax = plt.subplot(gs[0, 0])
 
     if colors is None:
@@ -770,8 +769,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(path)
-    fig = plt.figure(figsize=fig_size)
-    gs = gridspec.GridSpec(1, 1)
+    fig, gs = plot_support.setup_fig(1, 1, fig_size)
     ax = plt.subplot(gs[0, 0])
     
     sizes = size_mult
@@ -854,9 +852,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     plot_support.scale_axes(ax, scale_x, scale_y)
     if title: ax.set_title(title)
     
-    # tighten layout before creating legend to avoid compressing the graph 
+    # constrained layout tightens layout to avoid compressing the graph
     # for large legends
-    gs.tight_layout(fig)
     if len(ax.get_legend_handles_labels()[1]) > 0:
         ax.legend(loc=legend_loc, fancybox=True, framealpha=0.5)
     

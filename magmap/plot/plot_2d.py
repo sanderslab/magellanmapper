@@ -756,8 +756,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         annot_arri: Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
-        alpha (int): Point transparency value, from 0-255; defaults to None,
-            in which case 255 will be used.
+        alpha (float): Point transparency value, from 0-1; defaults to None,
+            in which case 1.0 will be used.
         legend_loc (str): Legend location, which should be one of
             :attr:``plt.legend.loc`` values; defaults to "best".
         scale_x (str): Scale mode for :meth:`plot_support.scale_axes` x-axis;
@@ -797,8 +797,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         sizes = df[col_size]
         sizes *= size_mult / np.amax(sizes)
     
-    if not alpha:
-        alpha = 255
+    if alpha is None:
+        alpha = 1.0
+    # scale to 255 for colormap generation
+    alpha = int(alpha * 255)
     
     # point markers
     markers = ["o", "v", "^", "d", "<", ">"]

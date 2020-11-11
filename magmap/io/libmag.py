@@ -254,25 +254,31 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
     return path
 
 
-def make_out_path(base_path=None):
+def make_out_path(base_path=None, prefix=None, suffix=None):
     """Make output path based on prefix and suffix settings.
     
     Args:
         base_path (str): Base path from which to construct the output path
             if :attr:`config.prefix` is not available. Defaults to None
             to use :attr:`config.filename`.
+        prefix (str): Path to use; defaults to None to use
+            :attr:`config.prefix`. If this path is also None, ``base_path``
+            and ``suffix`` are used.
+        suffix (str): String to append to end of path just before the
+            extension; defaults to None to use :attr:`config.suffix`.
 
     Returns:
-        str: :attr:`config.prefix` if available, otherwise ``base_path``
-            with :attr:`config.suffix` inserted before the extension.
+        str: Output path.
 
     """
-    if not base_path:
-        base_path = config.filename
-    out_path = config.prefix
+    # use config setting if prefix is not given
+    out_path = config.prefix if prefix is None else prefix
     if not out_path:
-        suffix = config.suffix if config.suffix else ""
-        out_path = insert_before_ext(base_path, suffix)
+        # construct from base path and suffix if prefix is not given
+        suffix = config.suffix if suffix is None else suffix
+        out_path = insert_before_ext(
+            base_path if base_path else config.filename,
+            "" if suffix is None else suffix)
     return out_path
 
 
@@ -520,7 +526,7 @@ def format_num(val, digits=1, allow_scinot=True):
         val (float): The value to format.
         digits (int): Maximum number of digits to keep; defaults to 1.
         allow_scinot (bool): True to allow scientific notation in output;
-            defaults to True;
+            defaults to True.
     
     Returns:
         A formatted string with the number of digits reduced to ``digits`` 

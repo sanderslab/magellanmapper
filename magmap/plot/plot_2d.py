@@ -687,8 +687,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if title: ax.set_title(title)
     
     # save and display
-    out_path = path_to_df if prefix is None else prefix
-    if suffix: out_path = libmag.insert_before_ext(out_path, suffix)
+    out_path = libmag.make_out_path(path_to_df, prefix, suffix)
     if save: plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax
@@ -862,8 +861,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         ax.legend(loc=legend_loc, fancybox=True, framealpha=0.5)
     
     # save and display
-    out_path = path
-    if suffix: out_path = libmag.insert_before_ext(out_path, suffix)
+    out_path = libmag.make_out_path(path, suffix=suffix)
     plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
 

@@ -547,13 +547,18 @@ def print_data_frame(df, sep=" ", index=False, header=True):
 
 def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
                        records_cols=None):
-    """Import dictionary to data frame, with option to export to CSV.
+    """Import dictionary to data frame with additional options.
+    
+    Supports conversion of Enum column names to their values. Also, allows
+    import of data in record format, given as a list rather than as a
+    dictionary. Additional options are supported through
+    :meth:`data_frames_to_csv`.
     
     Args:
         to_import (Union[dict, list[list]]): Dictionary to import. May
             also be list of lists to import as records if ``records_cols``
-            is given. If column name are enums, their names will be
-            used instead to shorten column names.
+            is given. If column name are enums, they will be converted to
+            their values.
         path (str): Output path to export data frame to CSV file; defaults to
             None for no export.
         sort_cols (Union[str, list[str]]): Column as a string or list of
@@ -580,11 +585,11 @@ def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
         df = pd.DataFrame(to_import)
         keys = to_import.keys()
     
-    if len(keys) > 0 and isinstance(next(iter(keys)), Enum):
-        # convert enum keys to names of enums
-        cols = {}
-        for key in keys: cols[key] = key.value
-        df.rename(columns=cols, inplace=True)
+    if len(keys) > 0:
+        # convert enum keys to their values
+        cols = {k: k.value for k in keys if isinstance(k, Enum)}
+        if cols:
+            df.rename(columns=cols, inplace=True)
     
     # further processing including CSV export, sorting, and display
     df = data_frames_to_csv(df, path, sort_cols, show)

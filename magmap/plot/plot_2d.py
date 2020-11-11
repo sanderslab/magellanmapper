@@ -531,7 +531,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
                units=None, marker=None, err_cols=None, prefix=None, save=True,
-               ax=None, col_annot=None):
+               ax=None, col_annot=None, line_label_style=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -584,6 +584,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             None to generate a new figure and subplot.
         col_annot (str): Name of column for point annotations; defaults to
             None. The first line will be annotated based on this column.
+        line_label_style (str): "legend" to label lines through a legend,
+            "end" to label the last point of each line, and any other string
+            to not label lines; defaults to None to use "legend".
     
     Returns:
         :obj:`matplotlib.Axes`: Axes object.
@@ -593,7 +596,21 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     def to_ignore(arr):
         # True if set to ignore and fewer than 2 points to plot
         return ignore_invis and np.sum(~np.isnan(arr)) < 2
-
+    
+    def plot_line():
+        # plot line and error bars
+        line_lbl = None
+        if line_label_style == "end":
+            ax.annotate(label, (xs.iloc[-1], ys.iloc[-1]))
+        elif line_label_style == "legend":
+            line_lbl = label
+        line = ax.plot(
+            xs, ys, color=colors[i], linestyle=linestyles[i],
+            label=line_lbl, marker=marker)
+        if errs is not None:
+            ax.errorbar(xs, df_col, errs)
+        return line
+    
     # load data frame from CSV unless already given and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
@@ -616,6 +633,8 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     if groups is not None:
         # simply repeat line style sets if groups exceed existing styles
         linestyles = linestyles * (len(groups) // (len(linestyles) + 1) + 1)
+    if line_label_style is None:
+        line_label_style = "legend"
 
     annots = None
     if col_annot:
@@ -633,11 +652,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         df_err = df[err_cols[i]] if err_cols else None
         if groups is None:
             if to_ignore(df_col): continue
-            lines.extend(ax.plot(
-                xs, df_col, color=colors[i], linestyle=linestyles[i],
-                label=label, marker=marker))
-            if df_err is not None:
-                ax.errorbar(xs, df_col, df_err)
+            ys = df_col
+            errs = df_err
+            lines.extend(plot_line())
         else:
             # prioritize solid line for main legend
             labelj = linestyles.index("-") if "-" in linestyles else 0
@@ -645,11 +662,9 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                 # plot all lines within group with same color but unique styles
                 df_group = df_col[group]
                 if to_ignore(df_group): continue
-                lines_group = ax.plot(
-                    xs, df_group, color=colors[i], linestyle=linestyles[j],
-                    label=label, marker=marker)
-                if df_err is not None:
-                    ax.errorbar(xs, df_group, df_err[group])
+                ys = df_group
+                errs = None if df_err is None else df_err[group]
+                lines_group = plot_line()
                 if j == labelj:
                     # add first line to main legend
                     lines.extend(lines_group)
@@ -664,22 +679,23 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             for x, y, annot in zip(xs, df_col, annots):
                 ax.annotate(annot, (x, y))
 
-    # add legends, using "best" location for main legend unless also showing
-    # a group legend, in which case locations are set explicitly
-    legend_main_loc = "best"
-    legend_group = None
-    if lines_groups is not None:
-        # group legend from empty lines to show line style
-        legend_group = ax.legend(
-            lines_groups, [l.get_label() for l in lines_groups],
-            loc="lower right", fancybox=True, framealpha=0.5)
-        legend_main_loc = "upper left"
-    ax.legend(
-        lines, [l.get_label() for l in lines], loc=legend_main_loc,
-        fancybox=True, framealpha=0.5)
-    if legend_group is not None:
-        # only last legend appears to be shown so need to add prior legends
-        ax.add_artist(legend_group)
+    if line_label_style == "legend":
+        # add legends, using "best" location for main legend unless also
+        # showing a group legend, in which case locations are set explicitly
+        legend_main_loc = "best"
+        legend_group = None
+        if lines_groups is not None:
+            # group legend from empty lines to show line style
+            legend_group = ax.legend(
+                lines_groups, [l.get_label() for l in lines_groups],
+                loc="lower right", fancybox=True, framealpha=0.5)
+            legend_main_loc = "upper left"
+        ax.legend(
+            lines, [l.get_label() for l in lines], loc=legend_main_loc,
+            fancybox=True, framealpha=0.5)
+        if legend_group is not None:
+            # only last legend appears to be shown so need to add prior legends
+            ax.add_artist(legend_group)
 
     # add supporting plot components
     plot_support.set_scinot(ax, lbls=labels, units=units)

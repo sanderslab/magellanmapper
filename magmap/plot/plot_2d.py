@@ -978,7 +978,7 @@ def plot_image(img, path=None, show=False):
         if not ext:
             # use path extension if available, or default to png
             path_split = os.path.splitext(path)
-            ext = path_split[1][1:] if path_split[1] else "png"
+            ext = path_split[1][1:] if path_split[1] else config.DEFAULT_SAVEFIG
             print(path_split, ext)
         plot_support.save_fig(path, ext)
     if show: plt.show()

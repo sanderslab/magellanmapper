@@ -2276,7 +2276,8 @@ class Visualization(HasTraits):
                     # save 3D image with extension in config
                     screenshot = self.scene.mlab.screenshot(
                         mode="rgba", antialiased=True)
-                    ext = config.savefig if config.savefig else "png"
+                    ext = (config.savefig if config.savefig else
+                           config.DEFAULT_SAVEFIG)
                     path = "{}.{}".format(plot_support.get_roi_path(
                         config.filename, self._curr_offset(),
                         self.roi_array[0].astype(int)), ext)

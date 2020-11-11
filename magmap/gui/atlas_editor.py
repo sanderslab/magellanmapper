@@ -390,7 +390,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             str: Figure save path.
 
         """
-        ext = config.savefig if config.savefig else "png"
+        ext = config.savefig if config.savefig else config.DEFAULT_SAVEFIG
         return "{}.{}".format(plot_support.get_roi_path(
             os.path.basename(self.title), self.offset), ext)
     

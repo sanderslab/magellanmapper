@@ -243,9 +243,15 @@ Transforms = Enum(
 )
 transform = dict.fromkeys(Transforms, None)
 
-# extensions for saving figures
-FORMATS_3D = ("obj", "x3d")  # save 3D renderings
-savefig = None  # save files using this extension (without period)
+
+# extensions for saving figures.
+
+#: tuple[str, ...]: Extension for 3D renderings.
+FORMATS_3D = ("obj", "x3d")
+#: str: Default extension for saving figures.
+DEFAULT_SAVEFIG = "png"
+#: str: # File extension (without period) for saving figures.
+savefig = DEFAULT_SAVEFIG
 
 
 #: dict: Dictionary mapping function names as lower-case strings to functions.

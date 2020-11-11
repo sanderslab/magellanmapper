@@ -805,7 +805,7 @@ def save_fig(path, ext=None, modifier="", fig=None):
     if ext is None:
         # extract extension from path if not given directly, defaulting to PNG
         ext = os.path.splitext(path)[1]
-        ext = ext[1:] if ext else "png"
+        ext = ext[1:] if ext else config.DEFAULT_SAVEFIG
     if ext not in fig.canvas.get_supported_filetypes().keys():
         # avoid saving if the figure backend does not support the output format
         print("Figure for {} not saved as no save extension was given"

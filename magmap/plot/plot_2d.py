@@ -1038,8 +1038,13 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
         plt.show()
 
 
-def main():
-    """Perform 2D plot tasks."""
+def main(ax=None):
+    """Perform 2D plot tasks.
+    
+    Args:
+        ax (:class:`matplotlib.image.Axes`): Matplotlib plot.
+    
+    """
     # collect config settings
     size = config.plot_labels[config.PlotLabels.SIZE]
     plot_2d_type = libmag.get_enum(
@@ -1049,7 +1054,6 @@ def main():
     scale_x = config.plot_labels[config.PlotLabels.X_SCALE]
     scale_y = config.plot_labels[config.PlotLabels.Y_SCALE]
     
-    ax = None
     out_path = None
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
@@ -1159,6 +1163,8 @@ def main():
     
     if ax is not None:
         post_plot(ax, out_path, config.savefig, config.show)
+    
+    return ax
 
 
 if __name__ == "__main__":

@@ -708,12 +708,12 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     return ax
 
 
-def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None, 
-                 names_group=None, labels=None, units=None, xlim=None, 
-                 ylim=None, title=None, fig_size=None, show=True, suffix=None, 
+def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
+                 names_group=None, labels=None, units=None, xlim=None,
+                 ylim=None, title=None, fig_size=None, show=True, suffix=None,
                  df=None, xy_line=False, col_size=None, size_mult=5,
                  annot_arri=None, alpha=None, legend_loc="best",
-                 scale_x=None, scale_y=None):
+                 scale_x=None, scale_y=None, ax=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -763,6 +763,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         scale_x (str): Scale mode for :meth:`plot_support.scale_axes` x-axis;
             defaults to None to ignore.
         scale_y (str): Scale mode for y-axis; defaults to None to ignore.
+        ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
+    
+    Returns:
+        :class:`matplotlib.image.Axes`: Matplotlib plot.
     
     """
     def plot():
@@ -788,8 +792,9 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(path)
-    fig, gs = plot_support.setup_fig(1, 1, fig_size)
-    ax = plt.subplot(gs[0, 0])
+    if ax is None:
+        fig, gs = plot_support.setup_fig(1, 1, fig_size)
+        ax = plt.subplot(gs[0, 0])
     
     sizes = size_mult
     if col_size is not None:
@@ -882,6 +887,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     out_path = libmag.make_out_path(path, suffix=suffix)
     plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
+    return ax
 
 
 def plot_probability(path, conds, metric_cols, col_size, **kwargs):
@@ -934,7 +940,7 @@ def plot_roc(df, show=True, annot_arri=None):
     
     # plot sensitivity by FDR, annotating with col of final hyperparameter
     # rather than using this col in the group specification
-    plot_scatter(
+    return plot_scatter(
         "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
         names_group, ("Sensitivity", "False Discovery Rate"), 
@@ -1110,14 +1116,14 @@ def main():
             config.filename, x_col=x_cols, data_cols=data_cols,
             labels=labels, err_cols=err_cols, title=title, size=size,
             show=False, groups=config.groups, prefix=config.prefix,
-            suffix=config.suffix, marker=marker, col_annot=annot_col)
+            suffix=config.suffix, marker=marker, col_annot=annot_col, ax=ax)
 
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
 
         # set annotation array index as 0 since most often vary only
         # z-val, but switch or remove when varying other axes
-        plot_roc(pd.read_csv(config.filename), config.show, 0)
+        ax = plot_roc(pd.read_csv(config.filename), config.show, 0)
     
     elif plot_2d_type is config.Plot2DTypes.SCATTER_PLOT:
         # scatter plot
@@ -1138,11 +1144,12 @@ def main():
         title = config.plot_labels[config.PlotLabels.TITLE]
         if not title: title = "{} Vs. {}".format(*labels)
         
-        plot_scatter(
+        ax = plot_scatter(
             config.filename, cols[1], cols[0], annot_col,
             cols_group=cols_group, labels=labels, title=title,
             fig_size=size, show=config.show, suffix=config.suffix,
-            alpha=config.alphas[0] * 255, scale_x=scale_x, scale_y=scale_y)
+            alpha=config.alphas[0], scale_x=scale_x, scale_y=scale_y,
+            ax=ax)
     
     if ax is not None:
         post_plot(ax, out_path, config.savefig, config.show)

@@ -476,13 +476,16 @@ def is_int(val):
     types such as Numpy integers.
     
     Args:
-        val: Value to check.
+        val (Any): Value to check.
 
     Returns:
-        True if ``val`` is castable to an int.
+        bool: True if ``val`` is equal to itself after casting to an int.
 
     """
-    return val == int(val)
+    try:
+        return val == int(val)
+    except ValueError:
+        return False
 
 
 def is_number(val):

@@ -713,7 +713,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                  ylim=None, title=None, fig_size=None, show=True, suffix=None,
                  df=None, xy_line=False, col_size=None, size_mult=5,
                  annot_arri=None, alpha=None, legend_loc="best",
-                 scale_x=None, scale_y=None, ax=None):
+                 scale_x=None, scale_y=None, ax=None, save=True):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -764,6 +764,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             defaults to None to ignore.
         scale_y (str): Scale mode for y-axis; defaults to None to ignore.
         ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
+        save (bool): True to save the plot; defaults to True.
     
     Returns:
         :class:`matplotlib.image.Axes`: Matplotlib plot.
@@ -884,8 +885,9 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         ax.legend(loc=legend_loc, fancybox=True, framealpha=0.5)
     
     # save and display
-    out_path = libmag.make_out_path(path, suffix=suffix)
-    plot_support.save_fig(out_path, config.savefig)
+    if save:
+        out_path = libmag.make_out_path(path, suffix=suffix)
+        plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
     return ax
 

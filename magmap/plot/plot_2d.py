@@ -713,7 +713,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                  ylim=None, title=None, fig_size=None, show=True, suffix=None,
                  df=None, xy_line=False, col_size=None, size_mult=5,
                  annot_arri=None, alpha=None, legend_loc="best",
-                 scale_x=None, scale_y=None, ax=None, save=True):
+                 scale_x=None, scale_y=None, ax=None, save=True,
+                 annot_thresh_fn=None):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -765,6 +766,9 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         scale_y (str): Scale mode for y-axis; defaults to None to ignore.
         ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
         save (bool): True to save the plot; defaults to True.
+        annot_thresh_fn (func): Function accepting ``x, y`` and returning
+            a boolean indicated whether to annotate the given point;
+            defaults to False.
     
     Returns:
         :class:`matplotlib.image.Axes`: Matplotlib plot.

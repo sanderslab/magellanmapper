@@ -82,6 +82,23 @@ def _parse_coords(arg, rev=False):
     return coords
 
 
+def _parse_none(arg, fn=None):
+    """Parse arguments with support for conversion to None.
+    
+    Args:
+        arg (str): Argument to potentially convert.
+        fn (func): Function to apply to the argument if not converted to None.
+
+    Returns:
+        Any: Arguments that are "none" or "0" are converted to None;
+        otherwise, returns the original value.
+
+    """
+    if arg.lower() in ("none", "0"):
+        return None
+    return arg if fn is None else fn(arg)
+
+
 def _is_arg_true(arg):
     return arg.lower() == "true" or arg == "1"
 
@@ -400,7 +417,7 @@ def main(process_args_only=False, skip_dbs=False):
 
     if args.savefig is not None:
         # save figure with file type of this extension; remove leading period
-        config.savefig = args.savefig.lstrip(".")
+        config.savefig = _parse_none(args.savefig.lstrip("."))
         print("Set savefig extension to {}".format(config.savefig))
 
     if args.verbose:
@@ -437,8 +454,7 @@ def main(process_args_only=False, skip_dbs=False):
     
     if args.cpus is not None:
         # set maximum number of CPUs
-        config.cpus = (None if args.cpus.lower() in ("none", "0")
-                       else int(args.cpus))
+        config.cpus = _parse_none(args.cpus.lower(), int)
         print("Set maximum number of CPUs for multiprocessing tasks to",
               config.cpus)
 
@@ -537,7 +553,7 @@ def main(process_args_only=False, skip_dbs=False):
         # of arguments as for slice built-in function and interpreting 
         # "none" string as None
         config.slice_vals = args.slice.split(",")
-        config.slice_vals = [None if val.lower() == "none" else int(val)
+        config.slice_vals = [_parse_none(val.lower(), int)
                              for val in config.slice_vals]
         print("Set slice values to {}".format(config.slice_vals))
     if args.delay:

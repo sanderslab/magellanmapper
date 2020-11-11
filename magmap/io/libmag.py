@@ -522,24 +522,28 @@ def is_nan(val):
         return False
         
 
-def format_num(val, digits=1, allow_scinot=True):
+def format_num(val, dec_digits=1, allow_scinot=True):
     """Format a value to a given number of digits if the value is a number.
     
     Args:
         val (float): The value to format.
-        digits (int): Maximum number of digits to keep; defaults to 1.
+        dec_digits (int): Maximum number of decimal place digits to keep;
+            defaults to 1.
         allow_scinot (bool): True to allow scientific notation in output;
             defaults to True.
     
     Returns:
-        A formatted string with the number of digits reduced to ``digits`` 
-        if ``val`` is a number, or otherwise simply ``val``.
+        str: A formatted string with the number of decimal place digits
+        reduced to ``digits`` if ``val`` is a number, or otherwise simply
+        ``val``.
+    
     """
     formatted = val
     if is_number(val):
         if isinstance(val, str): val = float(val)
         format_char = "g" if allow_scinot else "f"
-        formatted = ("{:." + str(digits) + format_char + "}").format(float(val))
+        formatted = ("{:." + str(dec_digits) + format_char + "}").format(
+            float(val))
     return formatted
 
 

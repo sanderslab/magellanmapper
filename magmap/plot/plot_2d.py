@@ -763,8 +763,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                     annot_arr = libmag.npstr_to_array(annot)
                     if annot_arr is not None:
                         annot = annot_arr[annot_arri]
+                dec_digits = 0 if libmag.is_int(annot) else 3
                 ax.annotate(
-                    "{}".format(libmag.format_num(annot, 3)), (xan, yan))
+                    "{}".format(libmag.format_num(annot, dec_digits, False)),
+                    (xan, yan))
     
     # load data frame from CSV and setup figure
     if df is None:

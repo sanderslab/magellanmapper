@@ -926,7 +926,7 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
         xy_line=True, col_size=col_size, **kwargs)
 
 
-def plot_roc(df, show=True, annot_arri=None):
+def plot_roc(df, show=True, annot_arri=None, save=True):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
     Args:
@@ -952,7 +952,7 @@ def plot_roc(df, show=True, annot_arri=None):
         names_group, ("Sensitivity", "False Discovery Rate"), 
         None, (0, 1), (0, 1), 
         "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
-        show=show, annot_arri=annot_arri, legend_loc="lower right")
+        show=show, annot_arri=annot_arri, legend_loc="lower right", save=save)
 
 
 def plot_image(img, path=None, show=False):
@@ -1034,6 +1034,9 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
         ax.set_ylim(*y_lim)
     if out_path and save_ext:
         plot_support.save_fig(out_path, save_ext)
+    else:
+        print("Figure not saved as both output path ({}) and file "
+              "extension ({}) are required".format(out_path, save_ext))
     if show:
         plt.show()
 
@@ -1054,6 +1057,7 @@ def main(ax=None):
     scale_x = config.plot_labels[config.PlotLabels.X_SCALE]
     scale_y = config.plot_labels[config.PlotLabels.Y_SCALE]
     
+    # perform 2D plot task, deferring save until the post-processing step
     out_path = None
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
@@ -1126,14 +1130,15 @@ def main(ax=None):
             config.filename, x_col=x_cols, data_cols=data_cols,
             labels=labels, err_cols=err_cols, title=title, size=size,
             show=False, groups=config.groups, prefix=config.prefix,
-            suffix=config.suffix, marker=marker, col_annot=annot_col, ax=ax)
+            suffix=config.suffix, marker=marker, col_annot=annot_col, ax=ax,
+            save=False)
 
     elif plot_2d_type is config.Plot2DTypes.ROC_CURVE:
         # ROC curve
 
         # set annotation array index as 0 since most often vary only
         # z-val, but switch or remove when varying other axes
-        ax = plot_roc(pd.read_csv(config.filename), config.show, 0)
+        ax = plot_roc(pd.read_csv(config.filename), config.show, 0, save=False)
     
     elif plot_2d_type is config.Plot2DTypes.SCATTER_PLOT:
         # scatter plot
@@ -1159,9 +1164,14 @@ def main(ax=None):
             cols_group=cols_group, labels=labels, title=title,
             fig_size=size, show=config.show, suffix=config.suffix,
             alpha=config.alphas[0], scale_x=scale_x, scale_y=scale_y,
-            ax=ax)
+            ax=ax, save=False)
     
     if ax is not None:
+        # perform plot post-processing tasks, including file save unless
+        # savefig is None
+        if out_path is None:
+            # generate a generic save path from the input path
+            out_path = libmag.make_out_path()
         post_plot(ax, out_path, config.savefig, config.show)
     
     return ax

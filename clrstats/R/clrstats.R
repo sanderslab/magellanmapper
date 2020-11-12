@@ -637,13 +637,9 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
   cat("\n\n")
   
   # calculate stats, filter out NAs and extract effects and p-values
-  regions.ignore <- NULL
-  if (basename(path.in) == kStatsFilesIn[2]) {
-    # ignore duplicate when including all levels
-    regions.ignore <- kRegionsIgnore
-  }
   stats <- statsByRegion(
-    df, meas, model, split.by.side=split.by.side, regions.ignore=regions.ignore,
+    df, meas, model, split.by.side=split.by.side,
+    regions.ignore=config.env$Regions.Ignore,
     cond=config.env$Condition, group.col=config.env$GroupCol)
   stats.filtered <- filterStats(stats, corr=corr)
   stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
@@ -734,6 +730,7 @@ setupConfig <- function(name=NULL) {
     config.env$Condition <- NULL
     config.env$P.Corr <- "bonferroni"
     config.env$ylim <- NULL
+    config.env$Regions.Ignore <- NULL # vector or regions to exclude
 
   } else if (endsWith(name, ".R")) {
     # load a profile file
@@ -750,6 +747,7 @@ setupConfig <- function(name=NULL) {
     config.env$SampleLegend <- TRUE
     config.env$Measurements <- kMeas[c(6, 13)]
     config.env$PlotVolcano <- FALSE
+    config.env$Regions.Ignore <- kRegionsIgnore
     setupConfig("skinny")
     
   } else if (name == "dsc") {
@@ -759,6 +757,7 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[4])
     config.env$Measurements <- kMeas[8]
     config.env$GroupCol <- "Condition"
+    config.env$Regions.Ignore <- NULL
     
   } else if (name == "smoothing") {
     # smoothing quality comparison between Gaussian and opening filter methods
@@ -818,6 +817,7 @@ setupConfig <- function(name=NULL) {
     config.env$VolcanoLabels <- FALSE
     config.env$VolcanoLogX <- FALSE
     config.env$JitterPlotSave <- FALSE
+    config.env$Regions.Ignore <- kRegionsIgnore
     
   } else if (name == "intensnuc") {
     # WT intensity and nuclei counts

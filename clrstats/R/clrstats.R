@@ -731,6 +731,7 @@ setupConfig <- function(name=NULL) {
     config.env$P.Corr <- "bonferroni"
     config.env$ylim <- NULL
     config.env$Regions.Ignore <- NULL # vector or regions to exclude
+    config.env$Split.By.Side <- TRUE # FALSE to combine sides
 
   } else if (endsWith(name, ".R")) {
     # load a profile file
@@ -873,6 +874,10 @@ setupConfig <- function(name=NULL) {
     config.env$Model <- kModel[10]
     config.env$PlotVolcano <- FALSE
 
+  } else if (name == "combine.sides") {
+    # combine equal Region values with different Side column values
+    config.env$Split.BySide <- FALSE
+
 
     # PLOT OPTIONS
 
@@ -949,7 +954,6 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL,
     # default, general stats
     
     # setup measurement and model types
-    split.by.side <- TRUE # false to combine sides
     load.stats <- FALSE # true to load saved stats, only regenerate volcano plots
     
     # set up parameters based on chosen model
@@ -971,7 +975,7 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL,
       } else {
         stats <- calcVolStats(
           path, path.out, meas, config.env$Model, region.ids,
-          split.by.side=split.by.side, corr=config.env$P.Corr)
+          split.by.side=config.env$Split.By.Side, corr=config.env$P.Corr)
       }
       
       if (!is.null(stats) & config.env$PlotVolcano) {

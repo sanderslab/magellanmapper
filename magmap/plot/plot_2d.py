@@ -531,7 +531,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
                title=None, size=None, show=True, suffix=None, 
                colors=None, df=None, groups=None, ignore_invis=False, 
                units=None, marker=None, err_cols=None, prefix=None, save=True,
-               ax=None, col_annot=None, line_label_style=None):
+               ax=None, col_annot=None, line_label_style=None, linewidth=None):
     """Plot a line graph from a Pandas data frame.
     
     Args:
@@ -606,7 +606,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
             line_lbl = label
         line = ax.plot(
             xs, ys, color=colors[i], linestyle=linestyles[i],
-            label=line_lbl, marker=marker)
+            linewidth=linewidth, label=line_lbl, marker=marker)
         if errs is not None:
             ax.errorbar(xs, df_col, errs)
         return line

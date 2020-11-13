@@ -275,10 +275,12 @@ class LabelToMarkerErosion(object):
                 amount of erosion allowed.
             min_filter_size (int): Minimum filter size, below which the
                 original, uneroded label will be used instead. Defaults to 1.
+                Use 0 to erode at size 1 even if below ``target_frac``.
                 Titrates the absolute amount of erosion allowed.
-            use_min_filter (bool): True to erode even if ``min_filter_size``
-                is reached; defaults to False to avoid any erosion if this
-                size is reached.
+            use_min_filter (bool): True to erode at ``min_filter_size`` if
+                a smaller filter size would otherwise be required; defaults
+                to False to revert to original, uneroded size if a filter
+                smaller than ``min_filter_size`` would be needed.
             skel_eros_filt_size (int): Erosion filter size before
                 skeletonization to balance how much of the labels' extent will
                 be preserved during skeletonization. Increase to reduce the

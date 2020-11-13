@@ -275,10 +275,13 @@ def surface_area_3d(img_np, level=0.0, spacing=None):
     """
     if spacing is None:
         spacing = np.ones(3)
-    verts, faces, normals, vals = measure.marching_cubes_lewiner(
-        img_np, level=level, spacing=spacing)
-    area = measure.mesh_surface_area(verts, faces)
-    return area
+    try:
+        verts, faces, normals, vals = measure.marching_cubes_lewiner(
+            img_np, level=level, spacing=spacing)
+        return measure.mesh_surface_area(verts, faces)
+    except RuntimeError as e:
+        print(e)
+    return np.nan
 
 
 def compactness_count(mask_borders, mask_object):

@@ -244,8 +244,13 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
 
   if (save) {
     printed <- FALSE
-    path.plot <- paste0(
-      "../plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf")
+    if (exists("config.env")) {
+      prefix <- config.env$Prefix
+    } else {
+      prefix <- ".."
+    }
+    path.plot <- file.path(prefix, paste0(
+      "plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
     tryCatchLog::tryLog({
       # open device that allows printing both to screen and to pdf; may
       # fail if screen device is not available, such as running in Rscript

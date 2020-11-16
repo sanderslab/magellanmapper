@@ -70,7 +70,7 @@ kStatsFilesIn <- c(
   "reg_stats_melted.csv", "smoothing_gausVopen.csv",
   "vols_by_sample_compare.csv", "vols_by_sample_compare_levels.csv"
 )
-kStatsPathOut <- "../vols_stats" # output stats
+kStatsPathOut <- "vols_stats" # output stats
 
 # region-ID map from MagellanMapper, which should contain all regions including 
 # hierarchical/ontological ones
@@ -386,16 +386,16 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       }
       if (is.element(model, kModel[5:9])) {
         # filter for means tests, which compare groups specified in group.col
-        # TODO: reconsider aggregating sides but need way to properly 
+        # TODO: reconsider aggregating sides but need way to properly
         # average variations in a weighted manner
         split.col <- group.col
         if (paired) {
-          # sort by sample and condition, matching saved condition order, 
-          # split by condition, and filter out pairs where either sample 
+          # sort by sample and condition, matching saved condition order,
+          # split by condition, and filter out pairs where either sample
           # has a zero value
           #print(df.region.nonnan)
           df.region.nonnan <- df.region.nonnan[
-            order(df.region.nonnan$Sample, 
+            order(df.region.nonnan$Sample,
                   match(df.region.nonnan[[split.col]], cond.unique)), ]
           df.region.nonnan <- setupPairing(df.region.nonnan, col, split.col)
           if (is.null(df.region.nonnan)) next
@@ -715,6 +715,7 @@ setupConfig <- function(name=NULL) {
     config.env$PlotSize <- c(5, 7)
     config.env$SampleLegend <- FALSE
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
+    config.env$Prefix <- ".."
     config.env$Measurements <- kMeas[6]
     config.env$Model <- kModel[8]
     config.env$PlotVolcano <- FALSE
@@ -774,6 +775,7 @@ setupConfig <- function(name=NULL) {
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[5])
     config.env$Measurements <- kMeas[9]
     config.env$Sort.Groups <- FALSE
+    config.env$Regions.Ignore <- NULL
     
   } else if (name == "compactness.stats") {
     # compactness stats for ABA series by treating conditions as different 
@@ -906,7 +908,7 @@ setupConfig <- function(name=NULL) {
   }
 }
 
-runStats <- function(path=NULL, profiles=NULL, measurements=NULL,
+runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
                      stat.type=NULL) {
   # Load data and run full stats.
   #
@@ -950,6 +952,12 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL,
   }
   cat("Measurements:", paste(measurements.split), "\n")
 
+  if (!is.null(prefix)) {
+    # set path prefix
+    config.env$Prefix <- prefix
+    cat("Outputting files to:", config.env$Prefix, "\n")
+  }
+
   if (is.null(stat.type) || stat.type == kStatTypes[1]) {
     # default, general stats
     
@@ -968,11 +976,18 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL,
     
     for (meas in measurements.split) {
       print(paste("Calculating stats for", meas))
-      # calculate stats or retrieve from file
-      path.out <- paste0(kStatsPathOut, "_", meas, ".csv")
+      # set up output path for stats CSV file, creating directories if necessary
+      path.out <- file.path(config.env$Prefix, paste0(
+        kStatsPathOut, "_", meas, ".csv"))
+      path.dir <- dirname(path.out)
+      if (!file.exists(path.dir)) {
+        dir.create(path.dir, recursive=TRUE)
+      }
       if (load.stats && file.exists(path.out)) {
+        # retrieve stats from a file to regenerate volcano plots
         stats <- read.csv(path.out)
       } else {
+        # calculate stats
         stats <- calcVolStats(
           path, path.out, meas, config.env$Model, region.ids,
           split.by.side=config.env$Split.By.Side, corr=config.env$P.Corr)

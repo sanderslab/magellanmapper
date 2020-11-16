@@ -992,10 +992,12 @@ def aggr_smoothing_metrics(df_pxs):
             metrics[key] = [df_io.weight_mean(df_pxs[key.value], wts)]
     # measure label loss based on number of labels whose smoothed vol is 0
     num_labels_orig = np.sum(wts > 0)
-    metrics[config.SmoothingMetrics.LABEL_LOSS] = [
-        (num_labels_orig -
-         np.sum(df_pxs[config.SmoothingMetrics.VOL.value] > 0)) 
-        / num_labels_orig]
+    if num_labels_orig > 0:
+        label_loss = (num_labels_orig - np.sum(
+            df_pxs[config.SmoothingMetrics.VOL.value] > 0)) / num_labels_orig
+    else:
+        label_loss = np.nan
+    metrics[config.SmoothingMetrics.LABEL_LOSS] = [label_loss]
     return df_io.dict_to_data_frame(metrics)
 
 

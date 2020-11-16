@@ -53,6 +53,8 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   
   # set up grouping, where "group" specifies the main group, and 
   # "split.col" specifies subgroups
+
+  # main group setup
   if (is.null(group.col)) {
     # default group name
     group.col <- "Group"
@@ -66,6 +68,8 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   }
   groups.unique <- unique(groups)
   if (sort.groups) groups.unique <- sort(groups.unique)
+
+  # subgroup setup
   if (is.null(split.col)) {
     # default column name by which to split
     split.col <- "Side"
@@ -77,6 +81,10 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     subgroups <- c("")
   }
   subgroups.unique <- getUniqueSubgroups(subgroups, split.by.subgroup)
+
+  # group-subgroup combo setup
+  # TODO: support different subgroups per group rather than assuming all
+  # groups have the same subgroups
   num.groups <- length(groups.unique) # total groups
   num.subgroups <- length(subgroups.unique) # total unique subgroups
   num.groupcombos <- num.groups # total group-subgroup combos

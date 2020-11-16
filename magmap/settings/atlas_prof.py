@@ -490,6 +490,9 @@ class AtlasProfile(profiles.SettingsDict):
                     "resize": False,
                 },
                 "smooth": 4,
+                RegKeys.EDGE_AWARE_REANNOTATION: {
+                    RegKeys.MARKER_EROSION_MIN: 4,
+                }
             },
 
             # ABA P14 specific settings
@@ -512,6 +515,9 @@ class AtlasProfile(profiles.SettingsDict):
                     "resize": False,
                 },
                 "smooth": 5,
+                RegKeys.EDGE_AWARE_REANNOTATION: {
+                    RegKeys.MARKER_EROSION_MIN: 4,
+                }
             },
 
             # ABA P28 specific settings
@@ -539,6 +545,9 @@ class AtlasProfile(profiles.SettingsDict):
                     "resize": False,
                 },
                 "smooth": 2,
+                RegKeys.EDGE_AWARE_REANNOTATION: {
+                    RegKeys.MARKER_EROSION_MIN: 2,
+                }
             },
 
             # ABA P56 (developing mouse) specific settings
@@ -558,6 +567,9 @@ class AtlasProfile(profiles.SettingsDict):
                 },
                 "smooth": 2,
                 "make_far_hem_neg": True,
+                RegKeys.EDGE_AWARE_REANNOTATION: {
+                    RegKeys.MARKER_EROSION_MIN: 2,
+                }
             },
 
             # ABA P56 (adult) specific settings

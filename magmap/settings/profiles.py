@@ -9,6 +9,7 @@ given default settings.
 from enum import Enum, auto
 import glob
 import os
+import pprint
 
 from magmap.io import yaml_io
 from magmap.settings import config
@@ -202,7 +203,8 @@ class SettingsDict(dict):
             self.add_modifier(profile, self.profiles, self.delimiter)
 
         if config.verbose:
-            print("settings for {}:\n{}".format(self[self.NAME_KEY], self))
+            print("settings for {}:", self[self.NAME_KEY])
+            pprint.pprint(self)
 
     def check_file_changed(self):
         """Check whether any profile files have changed since last loaded.

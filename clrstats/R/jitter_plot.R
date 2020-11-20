@@ -222,7 +222,18 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     mins[2] <- mins[2] - y.pad
     maxes[2] <- maxes[2] + y.pad
   }
-  
+
+  # set up plot saving
+  path.plot <- file.path(
+    ifelse(exists("config.env"), config.env$Prefix, ".."),
+    paste0("plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
+  is.interactive <- interactive()
+  if (save & !is.interactive) {
+    # open PDF device if not in interactive mode (eg IDE or R interpreter);
+    # if interactive, a screen device is opened instead and saved later
+    pdf(width=plot.size[1], height=plot.size[2], file=path.plot)
+  }
+
   # save current graphical parameters to reset at end, avoiding setting 
   # spillover in subsequent plots
   par.old <- par(no.readonly=TRUE)
@@ -250,28 +261,6 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     legend.text.width <- 0.6 + 0.1 * plot.size[2] / plot.size[1]
   }
 
-  if (save) {
-    printed <- FALSE
-    if (exists("config.env")) {
-      prefix <- config.env$Prefix
-    } else {
-      prefix <- ".."
-    }
-    path.plot <- file.path(prefix, paste0(
-      "plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
-    tryCatchLog::tryLog({
-      # open device that allows printing both to screen and to pdf; may
-      # fail if screen device is not available, such as running in Rscript
-      printDirectly(pdf, path.plot, plot.size)
-      printed <- TRUE
-    }, include.full.call.stack=FALSE, include.compact.call.stack=FALSE)
-
-    if (!printed) {
-      # open PDF device to save when plotting
-      pdf(width=plot.size[1], height=plot.size[2], file=path.plot)
-    }
-  }
-
   # set y-limit to full range of data with padding
   ylim <- range(mins[2], maxes[2])
   if (exists("config.env")) {
@@ -282,10 +271,11 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   }
 
   # draw main plot
-  tryCatch({
+  tryCatchLog::tryCatchLog({
     plot(NULL, main=title, xlab="", ylab=ylab, xaxt="n",
          xlim=range(mins[1], maxes[1] - 0.5), ylim=ylim, bty="n", las=1)
-    }, error=function(e) {
+    }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE,
+       error=function(e) {
     message(paste(
       "Error while creating main plot for jitter plot. If figure margins are",
       "too large, try increasing the size of your graphics window"))
@@ -418,6 +408,15 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     }
   }
 
+  if (save & is.interactive) {
+    # save plot from screen device and clear all devices to allow next plots;
+    # in interactive mode, plot is saved by device, which should not be reset
+    # TODO: fix legend spacing in saved plot
+    tryCatchLog::tryLog({
+      printDirectly(pdf, path.plot, plot.size)
+    }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
+    resetDevice()
+  }
   # reset graphics parameters
   par(par.old)
   

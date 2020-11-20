@@ -263,7 +263,7 @@ def make_out_path(base_path=None, prefix=None, suffix=None):
             to use :attr:`config.filename`.
         prefix (str): Path to use; defaults to None to use
             :attr:`config.prefix`. If this path is also None, ``base_path``
-            and ``suffix`` are used.
+            and ``suffix`` are used. Set to "" to ignore.
         suffix (str): String to append to end of path just before the
             extension; defaults to None to use :attr:`config.suffix`.
 

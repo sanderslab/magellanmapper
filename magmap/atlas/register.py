@@ -1882,13 +1882,16 @@ def main():
         for key in dfs:
             # save metrics across atlases for given filter size
             df_io.data_frames_to_csv(
-                dfs[key], "smoothing_filt{}.csv".format(key))
+                dfs[key], libmag.make_out_path(
+                    config.prefix, "", "smoothing_filt{}.csv".format(key)))
         
         # round peak filter sizes after extraction since sizes are now strings
         df_peaks = df_io.data_frames_to_csv(dfs_noloss)
         df_peaks[key_filt] = df_peaks[key_filt].map(
             libmag.truncate_decimal_digit)
-        df_io.data_frames_to_csv(df_peaks, "smoothing_peaks.csv")
+        df_io.data_frames_to_csv(
+            df_peaks, libmag.make_out_path(
+                config.prefix, "", "smoothing_peaks.csv"))
 
     elif reg is config.RegisterTypes.SMOOTHING_METRICS_AGGR:
         # re-aggregate smoothing metrics from raw stats

@@ -766,6 +766,7 @@ setupConfig <- function(name=NULL) {
     setupConfig("aba")
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[8])
     config.env$Measurements <- kMeas[19]
+    config.env$Regions.Ignore <- NULL
     
   } else if (name == "compactness") {
     # compactness combined jitter plot for ABA series by treating conditions 

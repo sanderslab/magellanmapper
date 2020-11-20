@@ -611,7 +611,20 @@ class AtlasProfile(profiles.SettingsDict):
                 "smooth": 4,
                 "unit_factor": 1000,
             },
-
+    
+            # Allen Human Reference Atlas (3D, v1.0.0)
+            "ahra": {
+                "target_size": (193, 229, 193),
+                "pre_plane": config.PLANE[2],
+                "resize_factor": None,  # turn off resizing
+                # mirror, but no need to extend lateral edges
+                "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
+                "crop_to_labels": True,  # strip skull
+                "smooth": 0,
+                "unit_factor": 1000,  # convert from mm to um
+                "log_sigma": 4,  # capture more detail
+            },
+    
             # Profile modifiers to turn off settings. These "no..." profiles
             # can be applied on top of atlas-specific profiles to turn off
             # specific settings. Where possible, the ACTIVE flags will be turned

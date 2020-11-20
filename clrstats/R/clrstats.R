@@ -642,9 +642,14 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
     regions.ignore=config.env$Regions.Ignore,
     cond=config.env$Condition, group.col=config.env$GroupCol)
   stats.filtered <- filterStats(stats, corr=corr)
-  stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
-  print(stats.filtered)
-  write.csv(stats.filtered, path.out)
+  if (is.null(stats.filtered)) {
+    message("No stats were generated. Please check input file, regions,",
+            "and stats settings.\n")
+  } else {
+    stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
+    print(stats.filtered)
+    write.csv(stats.filtered, path.out)
+  }
   return(stats.filtered)
 }
 

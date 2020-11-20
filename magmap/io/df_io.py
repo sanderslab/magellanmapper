@@ -616,6 +616,10 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     ext = ".csv"
     if path:
         if not path.endswith(ext): path += ext
+        path_dir = os.path.dirname(path)
+        if path_dir and not os.path.exists(path_dir):
+            # recursively generate parent directories
+            os.makedirs(path_dir)
         libmag.backup_file(path)
     combined = data_frames
     if not isinstance(data_frames, pd.DataFrame):

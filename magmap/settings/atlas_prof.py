@@ -683,11 +683,6 @@ class AtlasProfile(profiles.SettingsDict):
                 "make_far_hem_neg": False,
             },
 
-            # set smoothing to 4
-            "smooth4": {
-                "smooth": 4,
-            },
-
             # turn off labels markers generation
             "nomarkers": {
                 RegKeys.EDGE_AWARE_REANNOTATION: None,

@@ -345,10 +345,11 @@ def plot_intensity_nuclei(paths, labels, size=None, show=True, unit=None):
         lbls = [l.replace("_", " ") for l in lbls]
         title = "{} Vs. {} By Region".format(*lbls)
         plot_2d.plot_scatter(
-            "vols_stats_intensVnuc", cols_xy[0], cols_xy[1], units=units,
+            "vols_stats_intensVnuc", cols_xy[0], cols_xy[1], yunit=units[0],
+            xunit=units[1], ylabel=lbls[0], xlabel=lbls[1], title=title,
             # col_annot=config.AtlasMetrics.REGION_ABBR.value,
-            names_group=names_group, labels=lbls, title=title,
-            fig_size=size, show=show, suffix=suffix, df=df)
+            names_group=names_group, fig_size=size, show=show, suffix=suffix,
+            df=df)
     
     if len(paths) < 2 or len(labels) < 2: return
     dfs = [pd.read_csv(path) for path in paths]

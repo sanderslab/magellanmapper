@@ -709,12 +709,10 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
 
 
 def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
-                 names_group=None, labels=None, units=None, xlim=None,
-                 ylim=None, title=None, fig_size=None, show=True, suffix=None,
+                 names_group=None, fig_size=None, show=True, suffix=None,
                  df=None, xy_line=False, col_size=None, size_mult=5,
                  annot_arri=None, alpha=None, legend_loc="best",
-                 scale_x=None, scale_y=None, ax=None, save=True,
-                 annot_thresh_fn=None):
+                 ax=None, save=True, annot_thresh_fn=None, **kwargs):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -730,17 +728,6 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         names_group: Sequence of names to display in place of ``cols_group``; 
             defaults to None, in which case ``cols_groups`` will be used 
             instead. Length should equal that of ``cols_group``.
-        labels (List[str]): ``(y_label, x_label)`` to display; defaults 
-            to None to use :attr:`config.plot_labels`. Can explicitly set a 
-            value to None to prevent unit display. 
-        units (List[str]): ``(y_unit, x_unit)`` to display; defaults 
-            to None to use :attr:`config.plot_labels`. Can explicitly set a 
-            value to None to prevent unit display. 
-        xlim: Sequence of min and max boundaries for the x-axis; 
-            defaults to None.
-        ylim: Sequence of min and max boundaries for the y-axis; 
-            defaults to None.
-        title: Title of figure; defaults to None.
         fig_size: Sequence of ``width, height`` to size the figure; defaults 
             to None.
         show: True to display the image; otherwise, the figure will only 
@@ -761,14 +748,12 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             in which case 1.0 will be used.
         legend_loc (str): Legend location, which should be one of
             :attr:``plt.legend.loc`` values; defaults to "best".
-        scale_x (str): Scale mode for :meth:`plot_support.scale_axes` x-axis;
-            defaults to None to ignore.
-        scale_y (str): Scale mode for y-axis; defaults to None to ignore.
         ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
         save (bool): True to save the plot; defaults to True.
         annot_thresh_fn (func): Function accepting ``x, y`` and returning
             a boolean indicated whether to annotate the given point;
             defaults to False.
+        kwargs (str): Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
         :class:`matplotlib.image.Axes`: Matplotlib plot.
@@ -868,20 +853,13 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             ys = df_group[col_y]
             plot()
     
-    # set x/y axis limits if given
-    if xlim: ax.set_xlim(xlim)
-    if ylim: ax.set_ylim(ylim)
-    
     if xy_line:
         # add xy line
         xy_line = np.linspace(*ax.get_xlim())
         ax.plot(xy_line, xy_line)
     
-    # set labels and title if given; scale axes, which must follow scientific
-    # notation since non-linear formatters are not compatible with scinot
-    plot_support.set_scinot(ax, lbls=labels, units=units)
-    plot_support.scale_axes(ax, scale_x, scale_y)
-    if title: ax.set_title(title)
+    # set labels, title, etc
+    decorate_plot(ax, **kwargs)
     
     # constrained layout tightens layout to avoid compressing the graph
     # for large legends
@@ -922,20 +900,26 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
     plot_scatter(
         path, metric_cond_cols[0], metric_cond_cols[1], None, None, 
         names_group=metric_cols, 
-        labels=(conds[1].capitalize(), conds[0].capitalize()), 
+        ylabel=conds[1].capitalize(), xlabel=conds[0].capitalize(),
         xy_line=True, col_size=col_size, **kwargs)
 
 
-def plot_roc(df, show=True, annot_arri=None, save=True):
+def plot_roc(df, show=True, annot_arri=None, **kwargs):
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
     Args:
-        df: Data frame generated from :meth:``mlearn.parse_grid_stats``.
-        show: True to display the plot in :meth:``plot_scatter``; 
+        df (:class:`pandas.DataFrame`): Data frame generated from
+            :meth:``mlearn.parse_grid_stats``.
+        show (bool): True to display the plot in :meth:``plot_scatter``;
             defaults to True.
-        annot_arri: Int as index or slice of indices of annotation value
-            if the annotation isa string that can be converted into a
+        annot_arri (int): Int as index or slice of indices of annotation value
+            if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
+        kwargs (str): Extra arguments to :meth:`plot_support.plot_scatter`.
+    
+    Returns:
+        :class:`matplotlib.image.Axes`: Matplotlib plot.
+    
     """
     # names of hyperparameters for each group name, with hyperparameters 
     # identified by param prefix
@@ -944,15 +928,21 @@ def plot_roc(df, show=True, annot_arri=None, save=True):
     start = len(mlearn.GridSearchStats.PARAM.value)
     names_group = [col[start+1:] for col in cols_group]
     
+    # add extra arguments unless already set in kwargs
+    libmag.add_missing_keys({
+        "xlabel": "False Discovery Rate",
+        "ylabel": "Sensitivity",
+        "xlim": (0, 1),
+        "ylim": (0, 1),
+        "title": "Nuclei Detection ROC Over {}".format(names_group[-1]),
+    }, kwargs)
     # plot sensitivity by FDR, annotating with col of final hyperparameter
     # rather than using this col in the group specification
     return plot_scatter(
         "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
-        names_group, ("Sensitivity", "False Discovery Rate"), 
-        None, (0, 1), (0, 1), 
-        "Nuclei Detection ROC Over {}".format(names_group[-1]), df=df,
-        show=show, annot_arri=annot_arri, legend_loc="lower right", save=save)
+        names_group, df=df, show=show, annot_arri=annot_arri,
+        legend_loc="lower right", **kwargs)
 
 
 def plot_image(img, path=None, show=False):
@@ -983,6 +973,55 @@ def plot_image(img, path=None, show=False):
         plot_support.save_fig(path, ext)
     if show: plt.show()
     plt.close()  # prevent display during next show call
+
+
+def decorate_plot(ax, title=None, xlabel=None, ylabel=None, xunit=None,
+                  yunit=None, xlim=None, ylim=None, xscale=None, yscale=None,
+                  **kwargs):
+    """Decorate a plot with text and configure limits and scaling.
+
+    Args:
+        ax (:class:`matplotlib.image.Axes`): Matplotlib plot.
+        title (str): Title of figure; defaults to None.
+        xlabel (str): X-axis label; defaults to None to use
+            :attr:`config.plot_labels`. Can explicitly set to None to prevent
+            unit display.
+        ylabel (str): Y-axis label; defaults to None to use
+            :attr:`config.plot_labels`. Can explicitly set to None to prevent
+            unit display.
+        xunit (str): X-axis label unit; defaults to None.
+        yunit (str): Y-axis label unit; defaults to None.:
+        xlim (Sequence[float]): Sequence of min and max boundaries for the
+            x-axis; defaults to None.
+        ylim (Sequence[float]): Sequence of min and max boundaries for the
+            y-axis; defaults to None.
+        xscale (str): Scale mode for :meth:`plot_support.scale_axes` x-axis;
+            defaults to None to ignore.
+        yscale (str): Scale mode for :meth:`plot_support.scale_axes` y-axis;
+            defaults to None to ignore.
+        **kwargs (str): Additional arguments, which will be ignored.
+
+    Returns:
+        :class:`matplotlib.image.Axes`: Matplotlib plot.
+
+    """
+    if config.verbose:
+        print("Parameters not recognized and ignored for plot decorations:")
+        print(kwargs)
+    
+    # set x/y axis limits if given
+    if xlim: ax.set_xlim(xlim)
+    if ylim: ax.set_ylim(ylim)
+    
+    # axes scaling must follow after scientific notation since non-linear
+    # formatters are not compatible with scinot
+    plot_support.set_scinot(ax, lbls=(ylabel, xlabel), units=(yunit, xunit))
+    plot_support.scale_axes(ax, xscale, yscale)
+    
+    # set title if given
+    if title: ax.set_title(title)
+    
+    return ax
 
 
 def setup_style(style=None, rc_params=None):

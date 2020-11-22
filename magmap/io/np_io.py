@@ -7,16 +7,11 @@ import os
 import numpy as np
 import pandas as pd
 
-from magmap.plot import colormaps
-from magmap.settings import config
+from magmap.atlas import ontology, transformer
 from magmap.cv import detector
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.atlas import ontology
-from magmap.io import sitk_io
-from magmap.cv import stack_detect
-from magmap.atlas import transformer
-from magmap.plot import plot_3d
+from magmap.io import importer, libmag, naming, sitk_io
+from magmap.plot import colormaps, plot_3d
+from magmap.settings import config
 
 
 class Image5d:
@@ -201,7 +196,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
 
     if load_subimage and not config.save_subimg:
         # load a saved sub-image file if available and not set to save one
-        subimg_base = stack_detect.make_subimage_name(
+        subimg_base = naming.make_subimage_name(
             filename_base, offset, size)
         filename_subimg = libmag.combine_paths(
             subimg_base, config.SUFFIX_SUBIMG)

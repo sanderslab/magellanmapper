@@ -750,25 +750,6 @@ def setup_images_for_plane(plane, arrs_3d):
     return arrs_3d_tr, aspect, origin, scaling
 
 
-def get_roi_path(path, offset, roi_size=None):
-    """Get a string describing an ROI for an image at a given path.
-    
-    Args:
-        path (str): Path to include in string, without extension.
-        offset (List[int]): Offset of ROI.
-        roi_size (List[int]): Shape of ROI; defaults to None to ignore.
-    
-    Returns:
-        str: String with ``path`` without extension followed immediately by
-        ``offset`` and ``roi_size`` as tuples, with all spaces removed.
-    """
-    size = ""
-    if roi_size is not None:
-        size = "x{}".format(tuple(roi_size))
-    return "{}_offset{}{}".format(
-        os.path.splitext(path)[0], tuple(offset), size).replace(" ", "")
-
-
 def save_fig(path, ext=None, modifier="", fig=None):
     """Save figure with support for backup and alternative file formats.
     

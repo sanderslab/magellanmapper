@@ -53,19 +53,10 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
 from magmap.atlas import ontology
-from magmap.cv import (
-    chunking, colocalizer, cv_nd, detector, segmenter, stack_detect)
-from magmap.gui import atlas_editor
-from magmap.gui import roi_editor
-from magmap.io import cli
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.io import np_io
-from magmap.io import sitk_io
-from magmap.io import sqlite
-from magmap.plot import plot_2d
-from magmap.plot import plot_3d
-from magmap.plot import plot_support
+from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter
+from magmap.gui import atlas_editor, roi_editor
+from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
+from magmap.plot import plot_2d, plot_3d
 from magmap.settings import config
 
 
@@ -2278,7 +2269,7 @@ class Visualization(HasTraits):
                         mode="rgba", antialiased=True)
                     ext = (config.savefig if config.savefig else
                            config.DEFAULT_SAVEFIG)
-                    path = "{}.{}".format(plot_support.get_roi_path(
+                    path = "{}.{}".format(naming.get_roi_path(
                         config.filename, self._curr_offset(),
                         self.roi_array[0].astype(int)), ext)
                     path = self._get_save_path(path)

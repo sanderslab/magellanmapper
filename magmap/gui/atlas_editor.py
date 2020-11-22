@@ -11,13 +11,11 @@ from matplotlib import figure
 from matplotlib import gridspec
 from matplotlib.widgets import Slider, Button, TextBox
 
-from magmap.plot import colormaps
-from magmap.settings import config
-from magmap.io import libmag
-from magmap.gui import plot_editor
-from magmap.plot import plot_support
 from magmap.cv import cv_nd
-from magmap.io import sitk_io
+from magmap.gui import plot_editor
+from magmap.io import libmag, naming, sitk_io
+from magmap.plot import colormaps, plot_support
+from magmap.settings import config
 
 
 class AtlasEditor(plot_support.ImageSyncMixin):
@@ -391,7 +389,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
 
         """
         ext = config.savefig if config.savefig else config.DEFAULT_SAVEFIG
-        return "{}.{}".format(plot_support.get_roi_path(
+        return "{}.{}".format(naming.get_roi_path(
             os.path.basename(self.title), self.offset), ext)
     
     def toggle_edit_mode(self, event):

@@ -6,8 +6,6 @@ Attributes:
     verify: If true, verification mode is turned on, which for now
         simply turns on interior borders as the picker remains on
         by default.
-    padding: Padding in pixels (x, y), or planes (z) in which to show
-        extra segments.
 """
 
 from collections import OrderedDict
@@ -24,14 +22,11 @@ from matplotlib import patches
 from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 
-from magmap.gui import pixel_display
-from magmap.gui import plot_editor
-from magmap.plot import colormaps
-from magmap.settings import config
 from magmap.cv import detector
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.plot import plot_support
+from magmap.gui import pixel_display, plot_editor
+from magmap.io import importer, libmag, naming
+from magmap.plot import colormaps, plot_support
+from magmap.settings import config
 
 verify = False
 
@@ -1048,7 +1043,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
         """
         ext = config.savefig if config.savefig else config.DEFAULT_SAVEFIG
-        return "{}_{}{}.{}".format(plot_support.get_roi_path(
+        return "{}_{}{}.{}".format(naming.get_roi_path(
             os.path.basename(self.filename), self.offset, self.roi_size),
             plot_support.get_plane_axis(self.plane),
             self._z_overview, ext)

@@ -14,11 +14,7 @@ import numpy as np
 import pandas as pd
 
 from magmap.cv import chunking, colocalizer, detector
-from magmap.io import cli
-from magmap.io import df_io
-from magmap.io import importer
-from magmap.io import libmag
-from magmap.io import sqlite
+from magmap.io import cli, df_io, importer, libmag, naming, sqlite
 from magmap.plot import plot_3d
 from magmap.settings import config
 
@@ -182,32 +178,6 @@ class StackDetector(object):
         return coord, segments
 
 
-def make_subimage_name(base, offset, shape, suffix=None):
-    """Make name of subimage for a given offset and shape.
-
-    The order of ``offset`` and ``shape`` are assumed to be in z,y,x but
-    will be reversed for the output name since the user-oriented ordering
-    is x,y,z.
-    
-    Args:
-        base (str): Start of name, which can include full parent path.
-        offset (Tuple[int]): Offset, generally given as a tuple.
-        shape (Tuple[int]): Shape, generally given as a tuple.
-        suffix (str): Suffix to append, replacing any existing extension
-            in ``base``; defaults to None.
-    
-    Returns:
-        str: Name (or path) to subimage.
-    """
-    # sub-image offset/shape stored as z,y,x, but file named as x,y,z
-    roi_site = "{}x{}".format(offset[::-1], shape[::-1]).replace(" ", "")
-    name = libmag.insert_before_ext(base, roi_site, "_")
-    if suffix:
-        name = libmag.combine_paths(name, suffix)
-    print("subimage name: {}".format(name))
-    return name
-
-
 def setup_blocks(settings, shape):
     """Set up blocks for block processing, where each block is a chunk of
     a larger image processed sequentially or in parallel to optimize
@@ -297,7 +267,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         offset = (0, 0, 0)
     else:
         # change base filename for ROI-based partial stack
-        filename_base = make_subimage_name(filename_base, offset, size)
+        filename_base = naming.make_subimage_name(filename_base, offset, size)
     filename_subimg = libmag.combine_paths(filename_base, config.SUFFIX_SUBIMG)
     filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
     

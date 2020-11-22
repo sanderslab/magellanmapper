@@ -1000,6 +1000,36 @@ def get_dict_keys_from_val(d, val):
     return [k for k, v in d.items() if v == val]
 
 
+def add_missing_keys(d_src, d_target, override=None):
+    """Add dictionary items without overriding existing items.
+    
+    Add key-value pairs from one dictionary to another if the key does
+    not exist in the target dictionary or the corresponding value is an
+    overridable value. Thisupdating allows these values to be overridden
+    while protecting values that are explicitly set.
+    
+    Args:
+        d_src (dict): Source dictionary, from which key-value pairs will be
+            added to ``d_target``.
+        d_target (dict): Target dictionary, to which which key-value pairs
+            from ``d_src`` if each key is not in ``d_target`` or if
+            ``d_target[key]`` is a value in ``override``.
+        override (Sequence[Any]): Sequence of values to override even
+            if the key is present; defaults to None to use ``(None,)``,
+            where any existing value that is None will be overridden.
+
+    Returns:
+        dict: ``d_target``, modified in-place.
+
+    """
+    if override is None:
+        override = (None,)
+    for k, v in d_src.items():
+        if k not in d_target or d_target[k] not in override:
+            d_target[k] = v
+    return d_target
+
+
 def scale_slice(sl, scale, size):
     """Scale slice values by a given factor.
     

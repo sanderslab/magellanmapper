@@ -15,13 +15,15 @@ from magmap.io import df_io
 
 class GridSearchStats(Enum):
     """Grid search statistics categories."""
-    PARAM = "Par"
-    PPV = "PPV"
-    SENS = "Sens"
-    POS = "Pos"
-    TP = "TP"
-    FP = "FP"
-    FDR = "FDR"
+    PARAM = "Par"  # (hyper)parameter
+    PPV = "PPV"  # positive predictive value
+    SENS = "Sens"  # sensitivity
+    POS = "Pos"  # condition positive
+    TP = "TP"  # true positive
+    FP = "FP"  # false positive
+    TN = "TN"  # true negative
+    FN = "FN"  # false negative
+    FDR = "FDR"  # false discovery rate
 
 
 def grid_search(roc_dict, fnc, *fnc_args):
@@ -137,7 +139,15 @@ def parse_grid_stats(stats_dict):
             if not headers:
                 # set up headers for each stat and insert parameter headers
                 # at the start
-                headers = [e.value for e in GridSearchStats]
+                headers = [
+                    GridSearchStats.PARAM.value,
+                    GridSearchStats.PPV,
+                    GridSearchStats.SENS,
+                    GridSearchStats.POS,
+                    GridSearchStats.TP,
+                    GridSearchStats.FP,
+                    GridSearchStats.FDR,
+                ]
                 headers[0] = "_".join((headers[0], last_param_key))
                 for i, parent in enumerate(parent_params.keys()):
                     headers.insert(

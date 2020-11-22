@@ -945,6 +945,50 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
         legend_loc="lower right", **kwargs)
 
 
+def plot_histogram(df, path, col_x, ax=None, size=None, save=True, suffix=None,
+                   show=False, **kwargs):
+    """Geneate a histogram plot.
+    
+    Args:
+        df (:class:`pandas.DataFrame`): Data frame to plot.
+        path (str): Path to data frame to use if ``df`` is None, also used
+            as the basis for output path.
+        col_x (str): Name of column with values to plot.
+        ax (:class:`matplotlib.axes.Axes`): Matplotlib axes; defaults to
+            None to generate a new figure with axes.
+        size (Sequence[float]): Sequence of ``width, height`` to size the
+            figure; defaults to None.
+        save (bool): True to save the plot; defaults to True.
+        suffix: String to append to output path before extension;
+            defaults to None to ignore.
+        show: True to display the image; otherwise, the figure will only
+            be saved to file, if :attr:``config.savefig`` is set.
+            Defaults to True.
+        kwargs (str): Extra arguments to :meth:`decorate_plot`.
+
+    Returns:
+        :class:`matplotlib.axes.Axes`: Matplotlib axes.
+
+    """
+    # load data frame from CSV unless already given and set up figure
+    if df is None:
+        df = pd.read_csv(path)
+    if ax is None:
+        fig, gs = plot_support.setup_fig(1, 1, size)
+        ax = plt.subplot(gs[0, 0])
+    
+    # generate histogram
+    n, bins, patches = ax.hist(df[col_x])
+    decorate_plot(ax, **kwargs)
+    
+    # save and display plot if indicated
+    if save:
+        out_path = libmag.make_out_path(path, suffix=suffix)
+        plot_support.save_fig(out_path, config.savefig)
+    if show: plt.show()
+    return ax
+
+
 def plot_image(img, path=None, show=False):
     """Plot a single image in a borderless figure, with option to export 
     directly to file.

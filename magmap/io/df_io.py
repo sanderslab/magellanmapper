@@ -455,7 +455,7 @@ def join_dfs(dfs, id_col, drop_dups=False):
     
     Args:
         dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to join.
-        id_col (str): Index column.
+        id_col (Union[str, list[str]]): Index column.
         drop_dups (bool): True to drop duplicates of ``id_col``; defaults
             to False.
 
@@ -563,9 +563,9 @@ def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
             None for no export.
         sort_cols (Union[str, list[str]]): Column as a string or list of
             columns by which to sort; defaults to None for no sorting.
-        show (bool): True or " " to print the data frame with a space-separated
-            table, or can provide an alternate separator. Defaults to None 
-            to not print the data frame.
+        show (Union[bool, str]): True or " " to print the data frame with a
+            space-separated table, or can provide an alternate separator.
+            Defaults to None to not print the data frame.
         records_cols (Union[list, tuple]): Import from records, where
             ``to_import`` is a list of rows rather than a dictionary, using
             this sequence of record column names instead of dictionary keys;
@@ -635,16 +635,21 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
     return combined
 
 
-def merge_csvs(in_paths, out_path):
+def merge_csvs(in_paths, out_path=None):
     """Combine and export multiple CSV files to a single CSV file.
     
     Args:
-        in_paths: List of paths to CSV files to import as data frames 
-            and concatenate.
-        out_path: Output path.
+        in_paths (list[str]): List of paths to CSV files to import as data
+            frames and concatenate.
+        out_path (str): Output path; defaults to None.
+    
+    Returns:
+        :class:`pandas.DataFrame`: Merged data frame.
+    
     """
     dfs = [pd.read_csv(path) for path in in_paths]
-    data_frames_to_csv(dfs, out_path)
+    df = data_frames_to_csv(dfs, out_path)
+    return df
 
 
 def filter_dfs_on_vals(dfs, cols=None, row_matches=None):

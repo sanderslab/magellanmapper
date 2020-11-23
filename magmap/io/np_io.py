@@ -24,6 +24,8 @@ class Image5d:
         path_meta (str): Path from which metadata for ``img`` was loaded;
             defaults to None.
         img_io (enum): I/O source for image5d array; defaults to None.
+        subimg_offset (Sequence[int]): Sub-image offset in ``z,y,x``.
+        subimg_size (Sequence[int]): Sub-image size in ``z,y,x``.
     
     """
     def __init__(self, img=None, path_img=None, path_meta=None, img_io=None):
@@ -32,6 +34,8 @@ class Image5d:
         self.path_img = path_img
         self.path_meta = path_meta
         self.img_io = img_io
+        self.subimg_offset = None
+        self.subimg_size = None
 
 
 def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
@@ -209,6 +213,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.img5d.img = config.image5d
             config.img5d.path_img = filename_subimg
             config.img5d.img_io = config.LoadIO.NP
+            config.img5d.subimg_offset = offset
+            config.img5d.subimg_size = size
             print("Loaded sub-image from {} with shape {}"
                   .format(filename_subimg, config.image5d.shape))
 

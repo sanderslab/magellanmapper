@@ -242,11 +242,48 @@ def setup_blocks(settings, shape):
         exclude_border, tol, overlap_base, overlap, overlap_padding
 
 
+def _get_truth_db_rois(subimg_path_base, filename_base, db_path_base=None):
+    """Get ROIs from a truth database.
+    
+    Args:
+        subimg_path_base (str): Base path with sub-image.
+        filename_base (str): Base path without sub-image to find the
+            experiment, used only if an experiment cannot be found based on
+            ``subimg_path_base``.
+        db_path_base (str): Path to database to load; defaults to None
+            to use :attr:`config.truth_db`.
+
+    Returns:
+        str, list[:class:`sqlite3.Row`]: Found experiment name and
+        list of database ROI rows in that experiment, or None for each
+        if the ROIs are not found.
+
+    """
+    name = None
+    exp_rois = None
+    if db_path_base:
+        # load truth DB
+        print("Loading truth db for verifications from", db_path_base)
+        sqlite.load_truth_db(db_path_base)
+    if config.truth_db is not None:
+        # load experiment and ROIs from truth DB using the sub-image-based
+        # name; series not included in exp name since in ROI
+        name = sqlite.get_exp_name(subimg_path_base)
+        print("Loading truth ROIs from experiment:", name)
+        exp_rois = config.truth_db.get_rois(name)
+        if exp_rois is None:
+            # exp may have been named without sub-image
+            print("{} experiment name not found, will try without "
+                  "sub-image offset/size".format(name))
+            name = sqlite.get_exp_name(filename_base)
+            exp_rois = config.truth_db.get_rois(name)
+    return name, exp_rois
+
+
 def detect_blobs_large_image(filename_base, image5d, offset, size,
                              verify=False, save_dfs=True, full_roi=False,
                              coloc=False):
-    """Detect blobs within a large image through parallel processing of 
-    smaller chunks.
+    """Detect blobs within a large image through parallel processing.
     
     Args:
         filename_base: Base path to use file output.
@@ -261,15 +298,15 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         coloc (bool): True to perform blob co-localizations; defaults to False.
     """
     time_start = time()
+    subimg_path_base = filename_base
     if size is None or offset is None:
         # uses the entire stack if no size or offset specified
         size = image5d.shape[1:4]
         offset = (0, 0, 0)
     else:
-        # change base filename for ROI-based partial stack
-        filename_base = naming.make_subimage_name(filename_base, offset, size)
-    filename_subimg = libmag.combine_paths(filename_base, config.SUFFIX_SUBIMG)
-    filename_blobs = libmag.combine_paths(filename_base, config.SUFFIX_BLOBS)
+        # get base path for sub-image
+        subimg_path_base = naming.make_subimage_name(filename_base, offset, size)
+    filename_blobs = libmag.combine_paths(subimg_path_base, config.SUFFIX_BLOBS)
     
     # get ROI for given region, including all channels
     if full_roi:
@@ -355,39 +392,47 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         # TODO: assumes ground truth is relative to any ROI offset,
         # but should make customizable
         if verify:
-            db_path_base = None
+            db_path_base = os.path.basename(subimg_path_base)
             try:
+                # Truth databases are any database stored with manually
+                # verified blobs and loaded at command-line with the
+                # `--truth_db` flag or loaded here. While all experiments
+                # can be stored in a single database, this verification also
+                # supports experiments saved to separate databases in the
+                # software root directory and named as a sub-image but with
+                # the `sqlite.DB_SUFFIX_TRUTH` suffix. Experiments in the
+                # database are also assumed to be named based on the full
+                # image or the sub-image filename, without any directories.
+                
+                # load ROIs from previously loaded truth database or one loaded
+                # based on sub-image filename
+                exp_name, rois = _get_truth_db_rois(
+                    subimg_path_base, filename_base,
+                    db_path_base if config.truth_db is None else None)
+                if rois is None:
+                    # load alternate truth database based on sub-image filename
+                    print("Loading truth ROIs from experiment:", exp_name)
+                    exp_name, rois = _get_truth_db_rois(
+                        subimg_path_base, filename_base, db_path_base)
                 if config.truth_db is None:
-                    # find and load truth DB based on filename and subimage
-                    db_path_base = os.path.basename(filename_base)
-                    print("about to verify with truth db from {}"
-                          .format(db_path_base))
-                    sqlite.load_truth_db(db_path_base)
-                if config.truth_db is not None and config.img5d:
-                    # truth DB may contain multiple experiments for different
-                    # subimages; series not included in exp name since in ROI
-                    exp_name = sqlite.get_exp_name(config.img5d.path_img)
-                    rois = config.truth_db.get_rois(exp_name)
-                    if rois is None:
-                        # exp may have been named without sub-image
-                        # TODO: consider removing
-                        print("{} experiment name not found, will try without "
-                              "sub-image offset/size".format(exp_name))
-                        exp_name = importer.deconstruct_np_filename(exp_name)[0]
-                        rois = config.truth_db.get_rois(exp_name)
-                    if rois is None:
-                        raise LookupError(
-                            "No truth set ROIs found for experiment {}, will "
-                            "skip detection verification".format(exp_name))
-                    print("load ROIs from exp: {}".format(exp_name))
-                    exp_id = sqlite.insert_experiment(
-                        config.verified_db.conn, config.verified_db.cur, 
-                        exp_name, None)
-                    verify_tol = np.multiply(
-                        overlap_base, settings["verify_tol_factor"])
-                    stats_detection, fdbk = detector.verify_rois(
-                        rois, segments_all, config.truth_db.blobs_truth, 
-                        verify_tol, config.verified_db, exp_id, config.channel)
+                    raise LookupError(
+                        "No truth database found for experiment {}, will "
+                        "skip detection verification".format(exp_name))
+                if rois is None:
+                    raise LookupError(
+                        "No truth set ROIs found for experiment {}, will "
+                        "skip detection verification".format(exp_name))
+                
+                # verify each ROI and store results in a separate database
+                exp_id = sqlite.insert_experiment(
+                    config.verified_db.conn, config.verified_db.cur,
+                    exp_name, None)
+                verify_tol = np.multiply(
+                    overlap_base, settings["verify_tol_factor"])
+                stats_detection, fdbk = detector.verify_rois(
+                    rois, segments_all, config.truth_db.blobs_truth,
+                    verify_tol, config.verified_db, exp_id, exp_name,
+                    config.channel)
             except FileNotFoundError:
                 libmag.warn("Could not load truth DB from {}; "
                             "will not verify ROIs".format(db_path_base))
@@ -396,15 +441,17 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     
     file_time_start = time()
     if config.save_subimg:
+        subimg_base_path = libmag.combine_paths(
+            subimg_path_base, config.SUFFIX_SUBIMG)
         if (isinstance(config.image5d, np.memmap) and 
-                config.image5d.filename == os.path.abspath(filename_subimg)):
+                config.image5d.filename == os.path.abspath(subimg_base_path)):
             # file at sub-image save path may have been opened as a memmap
             # file, in which case saving would fail
             libmag.warn("{} is currently open, cannot save sub-image"
-                        .format(filename_subimg))
+                        .format(subimg_base_path))
         else:
             # write sub-image, which is in ROI (3D) format
-            with open(filename_subimg, "wb") as f:
+            with open(subimg_base_path, "wb") as f:
                 np.save(f, roi)
 
     # save blobs

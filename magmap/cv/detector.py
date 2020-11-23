@@ -12,13 +12,11 @@ from scipy import optimize
 from scipy.spatial import distance
 from skimage.feature import blob_log
 
-from magmap.settings import config
 from magmap.cv import cv_nd
-from magmap.io import libmag
+from magmap.io import df_io, libmag, sqlite
 from magmap.plot import plot_3d
-from magmap.io import sqlite
-from magmap.io import df_io
-from magmap.stats import atlas_stats
+from magmap.settings import config
+from magmap.stats import atlas_stats, mlearn
 
 # blob confirmation flags
 CONFIRMATION = {
@@ -1023,7 +1021,8 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         matches
 
 
-def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
+def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
+                channel):
     """Verify blobs in ROIs by comparing detected blobs with truth sets
     of blobs stored in a database.
     
@@ -1048,11 +1047,14 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         output_db: Database in which to save the verification flags, typical
             the database in :attr:``config.verified_db``.
         exp_id: Experiment ID in ``output_db``.
+        exp_name (str): Name of experiment to store as the sample name for
+            each row in the output data frame.
         channel (List[int]): Filter ``blobs_truth`` by this channel.
     
     Returns:
-        Tuple, str: Tuple of ``pos, true_pos, false_pos`` stats and
-        feedback as a string.
+        tuple[int, int, int], str, :class:`pandas.DataFrame`: Tuple of
+        ``pos, true_pos, false_pos`` stats, feedback message, and accuracy
+        metrics in a data frame.
     
     """
     blobs_truth = blobs_in_channel(blobs_truth, channel)
@@ -1062,11 +1064,26 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
     thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
         blobs, tol)
     
+    # set up metrics dict for accuracy metrics of each ROI
+    metrics = {}
+    cols = (
+        config.AtlasMetrics.SAMPLE,
+        config.AtlasMetrics.CHANNEL,
+        config.AtlasMetrics.OFFSET,
+        config.AtlasMetrics.SIZE,
+        mlearn.GridSearchStats.POS,
+        mlearn.GridSearchStats.TP,
+        mlearn.GridSearchStats.FP,
+        mlearn.GridSearchStats.FN,
+    )
+    
     for roi in rois:
+        # get ROI from database for ground truth blobs
         offset = (roi["offset_x"], roi["offset_y"], roi["offset_z"])
         size = (roi["size_x"], roi["size_y"], roi["size_z"])
         series = roi["series"]
         
+        # find matches between truth and detected blobs
         blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \
             matches = match_blobs_roi(
                 blobs, blobs_truth, offset, size, thresh, scaling,
@@ -1081,13 +1098,20 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
                             blobs_truth_inner_plus)
         output_db.insert_blob_matches(roi_id, matches)
         
-        true_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 1])
-        false_pos = len(blobs_inner_plus[blobs_inner_plus[:, 4] == 0])
+        # compute accuracy metrics for the ROI
+        pos = len(blobs_truth_inner_plus)  # condition pos
+        true_pos = np.sum(blobs_inner_plus[:, 4] == 1)
+        false_pos = np.sum(blobs_inner_plus[:, 4] == 0)
         false_neg = len(blobs_truth_inner_plus) - true_pos
         if false_neg > 0 or false_pos > 0:
             rois_falsehood.append((offset_inner, false_pos, false_neg))
+        vals = (exp_name, channel[0] if channel else 0,
+                tuple(offset_inner.astype(int)), tuple(size_inner.astype(int)),
+                pos, true_pos, false_pos, pos - true_pos)
+        for key, val in zip(cols, vals):
+            metrics.setdefault(key, []).append(val)
         
-        # combine blobs into total lists for stats
+        # combine blobs into total lists for stats across ROIs
         if blobs_truth_rois is None:
             blobs_truth_rois = blobs_truth_inner_plus
         else:
@@ -1098,15 +1122,19 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, channel):
         else:
             blobs_rois = np.concatenate((blobs_inner_plus, blobs_rois))
     
-    true_pos = len(blobs_rois[blobs_rois[:, 4] == 1])
-    false_pos = len(blobs_rois[blobs_rois[:, 4] == 0])
-    pos = len(blobs_truth_rois)
+    # generate and show data frame of accuracy metrics for each ROI
+    df = df_io.dict_to_data_frame(metrics, show=" ")
+    
+    # show accuracy metrics of blobs combined across ROIs
+    true_pos = df[mlearn.GridSearchStats.TP.value].sum()
+    false_pos = df[mlearn.GridSearchStats.FP.value].sum()
+    pos = df[mlearn.GridSearchStats.POS.value].sum()
     false_neg = pos - true_pos
     print("Automated verification using tol {}:\n".format(tol))
     fdbk = atlas_stats.calc_sens_ppv(pos, true_pos, false_pos, false_neg)[2]
     print(fdbk)
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
-    return (pos, true_pos, false_pos), fdbk
+    return (pos, true_pos, false_pos), fdbk, df
 
 
 def meas_detection_accuracy(blobs, verified=False, treat_maybes=0):

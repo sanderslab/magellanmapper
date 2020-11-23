@@ -429,10 +429,12 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
                     exp_name, None)
                 verify_tol = np.multiply(
                     overlap_base, settings["verify_tol_factor"])
-                stats_detection, fdbk = detector.verify_rois(
+                stats_detection, fdbk, df_verify = detector.verify_rois(
                     rois, segments_all, config.truth_db.blobs_truth,
                     verify_tol, config.verified_db, exp_id, exp_name,
                     config.channel)
+                df_io.data_frames_to_csv(df_verify, libmag.combine_paths(
+                    exp_name, "verify.csv"))
             except FileNotFoundError:
                 libmag.warn("Could not load truth DB from {}; "
                             "will not verify ROIs".format(db_path_base))

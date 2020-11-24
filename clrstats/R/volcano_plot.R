@@ -80,7 +80,18 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   } else {
     title <- paste(meas, "Differences for", interaction)
   }
-  
+
+  # set up plot saving
+  path.plot <- file.path(
+    ifelse(exists("config.env"), config.env$Prefix, ".."),
+    paste0("plot_volcano_", gsub("/| ", "_", title), ".pdf"))
+  is.interactive <- interactive()
+  if (!is.interactive) {
+    # open PDF device if not in interactive mode (eg IDE or R interpreter);
+    # if interactive, a screen device is opened instead and saved later
+    pdf(width=plot.size[1], height=plot.size[2], file=path.plot)
+  }
+
   # scatter plot with vertical line to denote x = 0
   plot(
     x, y, xlim=c(-1 * x.max, x.max), 
@@ -112,9 +123,13 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     basicPlotteR::addTextLabels(
       x.lbl, y.lbl, label=lbls, cex.label=0.5, lwd=0.5)
   }
-  
-  # write to PDF file
-  dev.print(
-    pdf, width=plot.size[1], height=plot.size[2], 
-    file=paste("../plot_volcano", meas, paste0(interaction, ".pdf"), sep="_"))
+
+  if (is.interactive) {
+    # save plot from screen device and clear all devices to allow next plots;
+    # in interactive mode, plot is saved by device, which should not be reset
+    tryCatchLog::tryLog({
+      printDirectly(pdf, path.plot, plot.size)
+    }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
+    resetDevice()
+  }
 }

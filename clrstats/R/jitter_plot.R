@@ -356,7 +356,8 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
              bg=colors.group, cex=pt.cex)
       if (show.labels) {
         basicPlotteR::addTextLabels(
-          x.vals, vals.group, label=vals.groups[[i]]$samples, cex=0.5, lwd=0.2)
+          x.vals, vals.group, label=vals.groups[[i]]$samples,
+          cex.label=0.5, lwd=0.2)
       }
       
       # plot summary stats, eg means/CIs or boxplots

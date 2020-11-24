@@ -202,7 +202,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
 
 
 def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
-               title, padding=0.2, skip_all_zero=False, rotation=None,
+               padding=0.2, skip_all_zero=False, rotation=None,
                y_unit=None, vspans=None, vspan_lbls=None, vspan_alt_y=False,
                hline=None):
     """Generate grouped bar plots from lists, where corresponding elements 
@@ -237,7 +237,6 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
             should be equal to that of each main value sequence in ``lists``.
         y_label: Y-axis label. Falls back to :meth:``plot_support.set_scinot`` 
             defaults.
-        title: Graph title.
         padding: Fraction each bar group's width that should be left 
             unoccupied by bars. Defaults to 0.2.
         skip_all_zero: True to skip any data list that contains only 
@@ -318,7 +317,6 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
         if hline_fn:
             # dashed horizontal line at the given metric output
             ax.axhline(hline_fn(lists[i]), color=colors[i], linestyle="--")
-    ax.set_title(title)
     
     # show y-label with any unit in scientific notation
     plot_support.set_scinot(ax, lbls=(y_label,), units=(y_unit,))
@@ -366,9 +364,9 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
 
 def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
               col_groups=None, groups=None, y_label=None, y_unit=None, 
-              title=None, size=None, show=True, prefix=None, col_vspan=None, 
-              vspan_fmt=None, col_wt=None, df=None, x_tick_labels=None, 
-              rotation=None, save=True, hline=None):
+              size=None, show=True, col_vspan=None, vspan_fmt=None,
+              col_wt=None, df=None, x_tick_labels=None, rotation=None,
+              save=True, hline=None, ax=None, suffix=None, **kwargs):
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -396,15 +394,11 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             :attr:`config.plot_labels`. ``(None, )`` prevents label display.
         y_unit: Measurement unit for y-axis; defaults to None to use 
             :attr:`config.plot_labels`. ``(None, )`` prevents unit display.
-        title: Title of figure; defaults to None, which will use  
-            ``path_to_df`` to build the title.
         size: Sequence of ``width, height`` to size the figure; defaults 
             to None.
         show: True to display the image; otherwise, the figure will only 
             be saved to file, if :attr:``config.savefig`` is set.  
             Defaults to True.
-        prefix: Base path for figure output if :attr:``config.savefig`` 
-            is set; defaults to None to use ``path_to_df``.
         col_vspan: Name of column with values specifying groups demaracted 
             by vertical spans. Each change in value when taken in sequence 
             will specify a new span in alternating background colors. 
@@ -423,6 +417,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         hline (str): One of :attr:`config.STR_FN` for a function to apply
             to each list in ``lists`` for a horizontal line to be drawn
             at this y-value; defaults to None.
+        ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
+        suffix: String to append to output path before extension;
+            defaults to None to ignore.
+        kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
         :obj:`matplotlib.image.Axes`, str: Plot axes and save path without
@@ -436,10 +434,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         y_label = config.plot_labels[config.PlotLabels.Y_LABEL]
     if not y_unit:
         y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
-    
-    fig = plt.figure(figsize=size, constrained_layout=True)
-    gs = gridspec.GridSpec(1, 1, figure=fig)
-    ax = plt.subplot(gs[0, 0])
+
+    if ax is None:
+        fig, gs = plot_support.setup_fig(1, 1, size)
+        ax = plt.subplot(gs[0, 0])
     
     if col_groups is None:
         # default to using first col as group names
@@ -507,24 +505,25 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             errs_dfs = df[col_err] * wts
         errs.append(errs_dfs)
         bar_colors.append("C{}".format(i))
-    
+
+    # set labels, title, etc
+    decorate_plot(ax, **kwargs)
+
     # plot bars
     if len(errs) < 1: errs = None
-    if title is None:
-        title = os.path.splitext(
-            os.path.basename(path_to_df))[0].replace("_", " ")
     x_labels = x_tick_labels if x_tick_labels else df[col_groups]
+    # TODO: remove more redundant decorations
     _bar_plots(
         ax, lists, errs, legend_names, x_labels, bar_colors, y_label, 
-        title, y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls, 
+        y_unit=y_unit, vspans=vspans, vspan_lbls=vspan_lbls,
         rotation=rotation, hline=hline)
-    
+
     # save and display
-    out_path = path_to_df if prefix is None else prefix
-    out_path = libmag.combine_paths(out_path, "barplot")
-    if save: plot_support.save_fig(out_path, config.savefig)
+    if save:
+        out_path = libmag.make_out_path(path_to_df, suffix=suffix)
+        plot_support.save_fig(out_path, config.savefig)
     if show: plt.show()
-    return ax, out_path
+    return ax
 
 
 def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None, 
@@ -1141,7 +1140,6 @@ def main(ax=None):
     scale_y = config.plot_labels[config.PlotLabels.Y_SCALE]
     
     # perform 2D plot task, deferring save until the post-processing step
-    out_path = None
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
         title = config.plot_labels[config.PlotLabels.TITLE]
@@ -1155,9 +1153,9 @@ def main(ax=None):
         col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
         legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
         hline = config.plot_labels[config.PlotLabels.HLINE]
-        ax, out_path = plot_bars(
+        ax = plot_bars(
             config.filename, data_cols=data_cols, 
-            legend_names=legend_names, col_groups=col_groups, title=title, 
+            legend_names=legend_names, col_groups=col_groups, title=title,
             y_label=y_lbl, y_unit=y_unit, hline=hline,
             size=size, show=False, groups=config.groups, 
             prefix=config.prefix, save=False,
@@ -1165,7 +1163,7 @@ def main(ax=None):
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
         # barplot for data frame from R stats from means/CIs
-        ax, out_path = plot_bars(
+        ax = plot_bars(
             config.filename, data_cols=("original.mean", "smoothed.mean"), 
             err_cols=("original.ci", "smoothed.ci"), 
             legend_names=("Original", "Smoothed"), col_groups="RegionName", 
@@ -1189,7 +1187,7 @@ def main(ax=None):
         if col_wt: print("weighting bars by", col_wt)
         
         # generate bar plot
-        ax, out_path = plot_bars(
+        ax = plot_bars(
             config.filename, data_cols=("vals.effect",), 
             err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
             legend_names="", col_groups="RegionName", title=title, 
@@ -1252,10 +1250,7 @@ def main(ax=None):
     if ax is not None:
         # perform plot post-processing tasks, including file save unless
         # savefig is None
-        if out_path is None:
-            # generate a generic save path from the input path
-            out_path = libmag.make_out_path()
-        post_plot(ax, out_path, config.savefig, config.show)
+        post_plot(ax, libmag.make_out_path(), config.savefig, config.show)
     
     return ax
 

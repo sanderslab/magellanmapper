@@ -410,13 +410,9 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   }
 
   if (save & is.interactive) {
-    # save plot from screen device and clear all devices to allow next plots;
-    # in interactive mode, plot is saved by device, which should not be reset
-    # TODO: fix legend spacing in saved plot
-    tryCatchLog::tryLog({
-      printDirectly(pdf, path.plot, plot.size)
-    }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
-    resetDevice()
+    # save plot from interactive (screen) device; in non-interactive mode,
+    # plot is saved by device, which should not be reset
+    printDirectly(pdf, path.plot, plot.size)
   }
   # reset graphics parameters
   par(par.old)
@@ -439,12 +435,21 @@ resetDevice <- function() {
 printDirectly <- function(dev.fn, path.out, plot.size) {
   # Print directly from the current device (eg screen) to the given device.
   #
+  # Allows a plot displayed on a graphics device such as the interactive
+  # screen to be saved by another device, such as ``pdf`` or ``png``.
+  # Resets all graphics devices afterward to allow subsequent plots.
+  #
   # Args:
   #   dev.fn: Output device function.
   #   path.out: Output path.
   #   plot.size: Vector of plot size in ``width, height``
 
-  dev.print(dev.fn, file=path.out, width=plot.size[1], height=plot.size[2])
+  # save plot from screen device and clear all devices to allow next plots
+  # TODO: fix legend spacing in saved plot
+  tryCatchLog::tryLog({
+    dev.print(dev.fn, file=path.out, width=plot.size[1], height=plot.size[2])
+  }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
+  resetDevice()
 }
 
 getUniqueSubgroups <- function(subgroups, split.by.subgroup) {

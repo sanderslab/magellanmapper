@@ -125,11 +125,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   }
 
   if (is.interactive) {
-    # save plot from screen device and clear all devices to allow next plots;
-    # in interactive mode, plot is saved by device, which should not be reset
-    tryCatchLog::tryLog({
-      printDirectly(pdf, path.plot, plot.size)
-    }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
-    resetDevice()
+    # save plot from interactive (screen) device
+    printDirectly(pdf, path.plot, plot.size)
   }
 }

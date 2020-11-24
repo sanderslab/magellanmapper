@@ -224,14 +224,15 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
   }
 
   # set up plot saving
+  ext <- ".pdf"
   path.plot <- file.path(
-    ifelse(exists("config.env"), config.env$Prefix, ".."),
-    paste0("plot_jitter_", col, "_", gsub("/| ", "_", title), ".pdf"))
-  is.interactive <- interactive()
-  if (save & !is.interactive) {
+    if(exists("config.env")) config.env$Prefix else "..",
+    paste0("plot_jitter_", col, "_", gsub("/| ", "_", title), ext))
+  dev.fn <- getDevice(ext)
+  if (save & !interactive()) {
     # open PDF device if not in interactive mode (eg IDE or R interpreter);
     # if interactive, a screen device is opened instead and saved later
-    pdf(width=plot.size[1], height=plot.size[2], file=path.plot)
+    openPlotDevice(dev.fn, path.plot, plot.size)
   }
 
   # save current graphical parameters to reset at end, avoiding setting 
@@ -409,16 +410,68 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
     }
   }
 
-  if (save & is.interactive) {
-    # save plot from interactive (screen) device; in non-interactive mode,
-    # plot is saved by device, which should not be reset
-    printDirectly(pdf, path.plot, plot.size)
+  if (save) {
+    # save plot in interactive mode and reset device if necessary
+    finalizeDevice(dev.fn, path.plot, plot.size)
   }
   # reset graphics parameters
   par(par.old)
   
   return(list(
     names.groupcombos, vals.n, vals.means, vals.medians, vals.sds, vals.cis))
+}
+
+getDevice <- function(ext) {
+  # Get a device based on a file extension
+  #
+  # Args:
+  #   ext: File extension, from which the device will be determined, eg
+  #     ".pdf" for a PDF device.
+  #
+  # Returns:
+  #   Output device function corresponding to the extension, or NULL if
+  #   none is found.
+
+  dev.fn <- NULL
+  # get graphics device corresponding to extension
+  if (ext == ".pdf") {
+    dev.fn <- pdf
+  } else if (ext == ".png") {
+    dev.fn <- png
+  } else if (ext %in% c(".jpg", ".jpeg")) {
+    dev.fn <- jpeg
+  } else if (ext %in% c(".tif", ".tiff")) {
+    dev.fn <- tiff
+  }
+  return(dev.fn)
+}
+
+openPlotDevice <- function(dev.fn, path.out, plot.size) {
+  # Setup a device to output a plot in non-interactive mode.
+  #
+  # Allows a plot generated in non-interactive mode such as through Rscript
+  # to be saved by a ``pdf`` ``png``, or other output device.
+  #
+  # Args:
+  #   dev.fn: Output device function.
+  #   path.out: Output path.
+  #   plot.size: Vector of plot size in ``width, height``
+
+  tryCatchLog::tryLog({
+    if (!interactive()) {
+      # get graphics device corresponding to extension; copying output to
+      # multiple devices does not appear to be supported in foreach
+      if (identical(dev.fn, pdf)) {
+        # open a PDF device
+        dev.fn(path.out, width=plot.size[1], height=plot.size[2])
+      } else if (!is.null(dev.fn)) {
+        # open the matching graphics device, which requires additional
+        # parameters that PDF does not accept
+        dev.fn(path.out, width=plot.size[1], height=plot.size[2], units="in",
+               res=150)
+      }
+    }
+  }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
 }
 
 resetDevice <- function() {
@@ -447,9 +500,34 @@ printDirectly <- function(dev.fn, path.out, plot.size) {
   # save plot from screen device and clear all devices to allow next plots
   # TODO: fix legend spacing in saved plot
   tryCatchLog::tryLog({
-    dev.print(dev.fn, file=path.out, width=plot.size[1], height=plot.size[2])
+    if (identical(dev.fn, pdf)) {
+      dev.print(dev.fn, file=path.out, width=plot.size[1], height=plot.size[2])
+    } else {
+      dev.print(dev.fn, file=path.out, width=plot.size[1], height=plot.size[2],
+                units="in", res=150)
+    }
   }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
   resetDevice()
+}
+
+finalizeDevice <- function(dev.fn, path.plot, plot.size) {
+  # Print and reset a device depending on device type and interactivity.
+  #
+  # Print to a device if in interactive mode. Reset the device if in
+  # interactive mode or if the device is PDF if non-interactive mode..
+  #
+  # Args:
+  #   dev.fn: Output device function.
+  #   path.out: Output path.
+  #   plot.size: Vector of plot size in ``width, height``
+
+  if (interactive()) {
+    # save plot from interactive (screen) device, including device reset
+    printDirectly(dev.fn, path.plot, plot.size)
+  } else if (!is.null(dev.fn) & !identical(dev.fn, pdf)) {
+    # must reset non-pdf devices in non-interactive mode to output the file
+    resetDevice()
+  }
 }
 
 getUniqueSubgroups <- function(subgroups, split.by.subgroup) {

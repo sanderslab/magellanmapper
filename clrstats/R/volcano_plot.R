@@ -82,14 +82,14 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   }
 
   # set up plot saving
+  ext <- ".pdf"
   path.plot <- file.path(
-    ifelse(exists("config.env"), config.env$Prefix, ".."),
-    paste0("plot_volcano_", gsub("/| ", "_", title), ".pdf"))
-  is.interactive <- interactive()
-  if (!is.interactive) {
-    # open PDF device if not in interactive mode (eg IDE or R interpreter);
-    # if interactive, a screen device is opened instead and saved later
-    pdf(width=plot.size[1], height=plot.size[2], file=path.plot)
+    if(exists("config.env")) config.env$Prefix else "..",
+    paste0("plot_volcano_", gsub("/| ", "_", title), ext))
+  dev.fn <- getDevice(ext)
+  if (!interactive()) {
+    # open PDF device
+    openPlotDevice(dev.fn, path.plot, plot.size)
   }
 
   # scatter plot with vertical line to denote x = 0
@@ -124,8 +124,6 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
       x.lbl, y.lbl, label=lbls, cex.label=0.5, lwd=0.5)
   }
 
-  if (is.interactive) {
-    # save plot from interactive (screen) device
-    printDirectly(pdf, path.plot, plot.size)
-  }
+  # save plot in interactive mode and reset device if necessary
+  finalizeDevice(dev.fn, path.plot, plot.size)
 }

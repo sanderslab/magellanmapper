@@ -760,10 +760,9 @@ def main():
         dfs = [pd.read_csv(f) for f in config.filenames]
         df = join_dfs(
             dfs, id_col, config.plot_labels[config.PlotLabels.DROP_DUPS])
-        out_path = config.prefix
-        if not out_path:
-            out_path = libmag.insert_before_ext(
-                config.filename, "_joined")
+        out_path = libmag.make_out_path(
+            config.filename,
+            suffix="_joined" if config.suffix is None else None)
         data_frames_to_csv(df, out_path)
 
     elif df_task is config.DFTasks.APPEND_CSVS_COLS:
@@ -776,10 +775,9 @@ def main():
         data_cols = libmag.to_seq(y_col)
         df = append_cols(
             dfs, labels, extra_cols=extra_cols, data_cols=data_cols)
-        out_path = config.prefix
-        if not out_path:
-            out_path = libmag.insert_before_ext(
-                config.filename, "_appended")
+        out_path = libmag.make_out_path(
+            config.filename,
+            suffix="_appended" if config.suffix is None else None)
         data_frames_to_csv(df, out_path)
 
     elif df_task is config.DFTasks.EXPS_BY_REGION:
@@ -802,10 +800,9 @@ def main():
         cols = {k: v for k, v in zip(
             libmag.to_seq(x_col), libmag.to_seq(y_col))}
         df = add_cols_df(df, cols)
-        out_path = config.prefix
-        if not out_path:
-            out_path = libmag.insert_before_ext(
-                config.filename, "_appended")
+        out_path = libmag.make_out_path(
+            config.filename,
+            suffix="_appended" if config.suffix is None else None)
         data_frames_to_csv(df, out_path)
 
     elif df_task is config.DFTasks.NORMALIZE:
@@ -819,9 +816,9 @@ def main():
         df = normalize_df(
             df, id_col, x_col, y_col, group_col,
             config.plot_labels[config.PlotLabels.WT_COL])
-        out_path = config.prefix
-        if not out_path:
-            out_path = libmag.insert_before_ext(config.filename, "_norm")
+        out_path = libmag.make_out_path(
+            config.filename,
+            suffix="_norm" if config.suffix is None else None)
         data_frames_to_csv(df, out_path)
 
     elif df_task is config.DFTasks.MERGE_EXCELS:

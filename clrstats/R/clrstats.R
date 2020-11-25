@@ -204,14 +204,25 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   if (model == kModel[5] | model == kModel[7]) {
     # Student's t-test
     result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
+
   } else if (model == kModel[6] | model == kModel[8]) {
     # Wilcoxon test (Mann-Whitney if not paired)
     result <- wilcox.test(
       val.conds[[2]], val.conds[[1]], paired=paired, conf.int=TRUE)
+
+    # calculate the standardized effect size, given as z / sqrt(N),
+    # where N = number of pairs
+    eff <- result[[col.effect]]
+    result[col.effect] <- rcompanion::wilcoxonZ(
+      val.conds[[2]], val.conds[[1]], paired=paired) / sqrt(num.per.cond)
+    cat("Wilcoxon estimate: ", eff, ", standardized effect: ",
+        result[[col.effect]], "\n", sep="")
+
   } else if (model == kModel[9]) {
     # Fligner-Killen test of variance
     result <- fligner.test(vals, conditions)
     col.effect <- "statistic"
+
   } else {
     cat("Sorry, model", model, "not found\n")
   }

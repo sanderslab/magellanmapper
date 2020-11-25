@@ -10,7 +10,8 @@ Imports:
   MASS, 
   gee, 
   RColorBrewer, 
-  Hmisc, 
+  Hmisc,
+  rcompanion,
   corrplot,
   optparse,
   tryCatchLog

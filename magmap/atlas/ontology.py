@@ -24,13 +24,13 @@ def load_labels_ref(path):
     """Load labels from a reference JSON or CSV file.
     
     Args:
-        path: Path to labels reference.
+        path (str): Path to labels reference.
     
     Returns:
-        A JSON decoded object (eg dictionary) if the path has a JSON 
-        extension, or a ``Pandas`` object otherwise.
+        Union[dict, :class:`pandas.DataFrame`]: A JSON decoded object
+        (eg dictionary) if the path has a JSON extension, or a data frame.
+    
     """
-    labels_ref = None
     path_split = os.path.splitext(path)
     if path_split[1] == ".json":
         with open(path, "r") as f:
@@ -105,7 +105,7 @@ def create_aba_reverse_lookup(labels_ref):
         config.ABAKeys.CHILDREN.value)
 
 
-def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(), 
+def create_reverse_lookup(nested_dict, key, key_children, id_dict=None,
                           parent_list=None):
     """Create a reveres lookup dictionary with the values of the original 
     dictionary as the keys of the new dictionary.
@@ -117,26 +117,29 @@ def create_reverse_lookup(nested_dict, key, key_children, id_dict=OrderedDict(),
     all its children.
     
     Args:
-        nested_dict: A dictionary that contains a list of dictionaries in
-            the key_children entry.
-        key: Key that contains the values to use as keys in the new dictionary. 
-            The values of this key should be unique throughout the entire 
-            nested_dict and thus serve as IDs.
-        key_children: Name of the children key, which contains a list of 
+        nested_dict (dict): A dictionary that contains a list of dictionaries
+            in the key_children entry.
+        key (Any): Key that contains the values to use as keys in the new
+            dictionary. The values of this key should be unique throughout
+            the entire nested_dict and thus serve as IDs.
+        key_children (Any): Name of the children key, which contains a list of
             further dictionaries but can be empty.
-        id_dict: The output dictionary as an OrderedDict to preserve key 
-            order (though not hierarchical structure) so that children 
-            will come after their parents; if None is given, an empty 
-            dictionary will be created.
-        parent_list: List of values for the given key in all parent 
+        id_dict (OrderedDict): The output dictionary as an OrderedDict to
+            preserve key  order (though not hierarchical structure) so that
+            children will come after their parents. Defaults to None to create
+            an empty `OrderedDict`.
+        parent_list (list[Any]): List of values for the given key in all parent
             dictionaries.
     
     Returns:
-        A dictionary with the original values as the keys, which each map 
-        to another dictionary containing an entry with the dictionary 
+        OrderedDict: A dictionary with the original values as the keys, which
+        each map to another dictionary containing an entry with the dictionary
         holding the given value and another entry with a list of all parent 
         dictionary values for the given key.
+    
     """
+    if id_dict is None:
+        id_dict = OrderedDict()
     value = nested_dict[key]
     sub_dict = {NODE: nested_dict}
     if parent_list is not None:

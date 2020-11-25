@@ -502,17 +502,19 @@ def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
     columns that are each split into condition sub-columns.
     
     Args:
-        df (:obj:`pd.DataFrame`): Data frame to pivot. 
-        index (str, List): Column name or sequence of columns specifying 
-            samples, generally a sequence to later unstack.
-        columns (str, List): Column name or sequence of columns to pivot 
-            into separate columns.
-        values (str): Column of values to move into new columns.
+        df (:class:`pandas.DataFrame`): Data frame to pivot.
+        index (Union[str, list[str]]): Column name or list of names specifying
+            the index for the output table.
+        columns (Union[str, list[str]]): Name or list of names of columns
+            whose values are pivoted into separate columns.
+        values (str): Name of column whose values are moved into the new
+            columns specified by ``columns``.
         aggfunc (func): Aggregation function for duplicates; defaults to 
             "first" to take the first value.
 
     Returns:
-        Tuple of the pivoted data frame and the list of pivoted columns.
+        :class:`pandas.DataFrame`, list[str]: The pivoted data frame and
+        list of pivoted columns.
 
     """
     # use multi-level indexing; assumes that no duplicates exist for

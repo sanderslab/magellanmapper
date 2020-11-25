@@ -891,21 +891,21 @@ def is_seq(val):
     return isinstance(val, (list, tuple)) or np.ndim(val) != 0
 
 
-def to_seq(val):
-    """Wrap a value in a sequence if not already a sequence or None.
+def to_seq(val, non_none=True):
+    """Wrap a value in a sequence if not already a sequence.
     
     Args:
         val (Any): Value to wrap in a sequence.
+        non_none (bool): True to only wrap in a sequence if the value is
+            not None; False to allow creating ``[None]``.
 
     Returns:
-        List: A sequence of the value if it is not already a sequence, or
-        otherwise the sequence itself. If ``val`` is None, ``val`` is
-        simply returned.
+        list: A sequence of the value if it is not already a sequence.
 
     """
     if not is_seq(val):
-        # wrap in a list if not already a sequence or None
-        if val is not None:
+        if not non_none or val is not None:
+            # avoid wrapping None in a sequence unless flagged to
             val = [val]
     return val
 

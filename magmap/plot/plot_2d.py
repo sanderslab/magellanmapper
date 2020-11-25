@@ -586,6 +586,7 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
         line_label_style (str): "legend" to label lines through a legend,
             "end" to label the last point of each line, and any other string
             to not label lines; defaults to None to use "legend".
+        linewidth (float): Line width; defaults to None.
     
     Returns:
         :obj:`matplotlib.Axes`: Axes object.
@@ -752,7 +753,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         annot_thresh_fn (func): Function accepting ``x, y`` and returning
             a boolean indicated whether to annotate the given point;
             defaults to False.
-        kwargs (str): Extra arguments to :meth:`plot_support.decorate_plot`.
+        kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
         :class:`matplotlib.image.Axes`: Matplotlib plot.
@@ -914,7 +915,7 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
         annot_arri (int): Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
-        kwargs (str): Extra arguments to :meth:`plot_support.plot_scatter`.
+        kwargs (Any): Extra arguments to :meth:`plot_support.plot_scatter`.
     
     Returns:
         :class:`matplotlib.image.Axes`: Matplotlib plot.
@@ -935,10 +936,16 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
         "ylim": (0, 1),
         "title": "Nuclei Detection ROC Over {}".format(names_group[-1]),
     }, kwargs)
+    if "path" in kwargs:
+        path = kwargs["path"]
+        del kwargs["path"]
+    else:
+        path = "gridsearch_roc"
+    
     # plot sensitivity by FDR, annotating with col of final hyperparameter
     # rather than using this col in the group specification
     return plot_scatter(
-        "gridsearch_roc", mlearn.GridSearchStats.FDR.value, 
+        path, mlearn.GridSearchStats.FDR.value,
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
         names_group, df=df, show=show, annot_arri=annot_arri,
         legend_loc="lower right", **kwargs)
@@ -963,7 +970,7 @@ def plot_histogram(df, path, col_x, ax=None, size=None, save=True, suffix=None,
         show: True to display the image; otherwise, the figure will only
             be saved to file, if :attr:``config.savefig`` is set.
             Defaults to True.
-        kwargs (str): Extra arguments to :meth:`decorate_plot`.
+        kwargs (Any): Extra arguments to :meth:`decorate_plot`.
 
     Returns:
         :class:`matplotlib.axes.Axes`: Matplotlib axes.
@@ -1042,7 +1049,7 @@ def decorate_plot(ax, title=None, xlabel=None, ylabel=None, xunit=None,
             defaults to None to ignore.
         yscale (str): Scale mode for :meth:`plot_support.scale_axes` y-axis;
             defaults to None to ignore.
-        **kwargs (str): Additional arguments, which will be ignored.
+        **kwargs (Any): Additional arguments, which will be ignored.
 
     Returns:
         :class:`matplotlib.image.Axes`: Matplotlib plot.

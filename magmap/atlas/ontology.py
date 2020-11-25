@@ -644,18 +644,23 @@ def rel_to_abs_ages(rel_ages, gestation=19):
     return ages
 
 
-def replace_labels(labels_img, df, clear=False):
+def replace_labels(labels_img, df, clear=False, ref=None, combine_sides=False):
     """Replace labels based on a data frame.
     
     Args:
-        labels_img (:obj:`np.ndarray`): Labels image array whose values
+        labels_img (:class:`numpy.ndarray`): Labels image array whose values
             will be converted in-place.
-        df (:obj:`pd.DataFrame`): Pandas data frame with from and to columns
-            specified by :class:`LabelColumns` values.
+        df (:class:`pandas.DataFrame`): Pandas data frame with from and to
+            columns specified by :class:`LabelColumns` values.
         clear (bool): True to clear all other label values.
+        ref (dict): Dictionary to get all children from each label;
+            defaults to None.
+        combine_sides (bool): True to combine sides by converting both
+            positive labels and their corresponding negative label;
+            defaults to False.
 
     Returns:
-        :obj:`np.ndarray`: ``labels_img`` with values replaced in-place.
+        :class:`numpy.ndarray`: ``labels_img`` with values replaced in-place.
 
     """
     labels_img_orig = labels_img
@@ -668,7 +673,16 @@ def replace_labels(labels_img, df, clear=False):
     for to_label in to_labels.unique():
         # replace all labels matching the given target label
         to_convert = from_labels.loc[to_labels == to_label]
+        if ref:
+            to_convert_all = []
+            for lbl in to_convert:
+                # get all children for the label
+                to_convert_all.extend(get_children_from_id(
+                    ref, lbl, both_sides=combine_sides))
+        else:
+            to_convert_all = to_convert.values
         print("Converting labels from {} to {}"
-              .format(to_convert.values, to_label))
-        labels_img[np.isin(labels_img_orig, to_convert)] = to_label
+              .format(to_convert_all, to_label))
+        labels_img[np.isin(labels_img_orig, to_convert_all)] = to_label
+    print("Converted image labels:", np.unique(labels_img))
     return labels_img

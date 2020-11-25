@@ -392,6 +392,8 @@ AtlasLabels = Enum(
         # path to CSV file to translate labels
         # (see :meth:`ontology.replace_labels`)
         "TRANSLATE_LABELS",
+        # True to translate labels and their children
+        "TRANSLATE_CHILDREN",
     )
 )
 # default to load original labels image if available for ID-color mapping
@@ -422,6 +424,7 @@ class RegNames(Enum):
     IMG_LABELS_DIFF = "annotationDiff.mhd"
     IMG_LABELS_LEVEL = "annotationLevel{}.mhd"
     IMG_LABELS_EDGE_LEVEL = "annotationEdgeLevel{}.mhd"
+    IMG_LABELS_TRANS = "annotationTrans.mhd"
     COMBINED = "combined.mhd"  # spliced into other registered names
 
 

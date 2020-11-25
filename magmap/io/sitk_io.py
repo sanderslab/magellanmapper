@@ -264,11 +264,12 @@ def load_registered_img(img_path, reg_name, get_sitk=False, return_path=False):
     return (reg_img, reg_img_path) if return_path else reg_img
 
 
-def find_atlas_labels(load_labels, drawn_labels_only, labels_ref_lookup):
+def find_atlas_labels(labels_ref_path, drawn_labels_only, labels_ref_lookup):
     """Find atlas label IDs from the labels directory.
     
     Args:
-        load_labels (str): Path to labels directory.
+        labels_ref_path (str): Path to labels reference from which to load
+            labels from the original labels if ``drawn_labels_only`` is True.
         drawn_labels_only (bool): True to load the atlas in the ``load_labels``
             folder to collect only labels drawn in this atlas; False to use
             all labels in ``labels_ref_lookup``.
@@ -276,17 +277,16 @@ def find_atlas_labels(load_labels, drawn_labels_only, labels_ref_lookup):
             label IDs to labels.
     
     Returns:
-        List: Sequence of label IDs.
+        list[int]: List of label IDs.
     
     """
-    orig_atlas_dir = os.path.dirname(load_labels)
     orig_labels_path = os.path.join(
-        orig_atlas_dir, config.RegNames.IMG_LABELS.value)
+        os.path.dirname(labels_ref_path), config.RegNames.IMG_LABELS.value)
     # need all labels from a reference as registered image may have lost labels
     if drawn_labels_only and os.path.exists(orig_labels_path):
         # use all drawn labels in original labels image
         config.labels_img_orig = load_registered_img(
-            config.load_labels, config.RegNames.IMG_LABELS.value)
+            labels_ref_path, config.RegNames.IMG_LABELS.value)
         orig_labels_sitk = sitk.ReadImage(orig_labels_path)
         orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
         label_ids = np.unique(orig_labels_np).tolist()

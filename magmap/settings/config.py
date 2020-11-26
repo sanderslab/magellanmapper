@@ -589,6 +589,7 @@ class AtlasMetrics(Enum):
     SAMPLE = "Sample"
     REGION = "Region"
     REGION_ABBR = "RegionAbbr"
+    REGION_NAME = "RegionName"
     LEVEL = "Level"
     SIDE = "Side"
     CONDITION = "Condition"

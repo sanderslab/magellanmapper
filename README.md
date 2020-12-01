@@ -15,7 +15,7 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
 
 ### Install Notes
 - On Mac, it may be necessary to right-click and "Open with" the Terminal app.
-- On Linux, it may be necessary to go to "Preferences," select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
+- On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
 - See [Installation](docs/install.md) for more details, including installation without Conda, using Pip or Venv+Pip instead.
   
 ## Run MagellanMapper

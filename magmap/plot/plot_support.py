@@ -651,20 +651,21 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
     unit labels. Units will be formatted with math text.
     
     Args:
-        ax: Axis object.
-        lims: Scientific notation limits as a sequence of lower and 
-            upper bounds outside of which scientific notation will 
+        ax (:class:`matplotlib.image.Axes`): Axis object.
+        lims (Sequence[int]): Scientific notation limits as a sequence of lower
+            and upper bounds outside of which scientific notation will
             be used for each applicable axis. Defaults to ``(-2, 4)``.
-        lbls: Sequence of axis labels given in the order ``(y-axis, x-axis)``. 
-            Defaults to None, which causes the corresponding value from 
-            :attr:`config.plot_labels` to be used if available. A None element 
-            prevents the label main text from displaying and will show the 
-            unit without parentheses if available.
-        units: Sequence of units given in the order ``(y-axis, x-axis)``. 
-            Defaults to None, which causes the corresponding value from 
-            :attr:`config.plot_labels` to be used if available. A None 
-            element prevents unit display other than any scientific notation 
-            exponent.
+        lbls (Sequence[str]): Sequence of axis labels given in the order
+            ``(y-axis, x-axis)``. Defaults to None, which causes the
+            corresponding value from :attr:`config.plot_labels` to be used
+            if available. A None element prevents the label main text from
+            displaying and will show the unit without parentheses if available.
+        units (Sequence[str]): Sequence of units given in the order
+            ``(y-axis, x-axis)``. Defaults to None, which causes the
+            corresponding value from :attr:`config.plot_labels` to be used
+            if available. A None element prevents unit display other than
+            any scientific notation exponent.
+    
     """
     # set scientific notation
     ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
@@ -690,7 +691,9 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
             axis.offsetText.set_visible(False)
         unit = units[i] if num_units > i else None
         if unit is not None and unit != "":
-            # format unit with math text
+            # format unit with math text, using 3 sets of curly braces
+            # (inner = formatting; outer = MathText, x2 to escape from
+            # formatting)
             unit_all.append("${{{}}}$".format(unit))
         if lbl and unit_all:
             # put unit in parentheses and combine with label main text

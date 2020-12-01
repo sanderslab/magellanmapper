@@ -410,9 +410,10 @@ class AtlasProfile(profiles.SettingsDict):
                     "resize": False,
                 },
                 RegKeys.EDGE_AWARE_REANNOTATION: {
-                    # use a small closing filter avoid label loss
-                    RegKeys.WATERSHED_MASK_FILTER: (
-                        config.SmoothingModes.closing, 1),
+                    # turn off watershed mask filter and increase minimum
+                    # marker erosion filter size to avoid label loss
+                    RegKeys.WATERSHED_MASK_FILTER: (None, 0),
+                    RegKeys.MARKER_EROSION_MIN: 2,
                 },
                 "crop_to_labels": True,
                 "smooth": 2,

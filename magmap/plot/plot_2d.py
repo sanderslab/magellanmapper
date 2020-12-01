@@ -723,11 +723,13 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         col_y: Name of column to plot as corresponding y-values. Can 
             also be a sequence corresponding to that of `col_x`.
         col_annot: Name of column to annotate each point; defaults to None.
-        cols_group: Name of sequence of column names specifying groups 
-            to plot separately; defaults to None.
-        names_group: Sequence of names to display in place of ``cols_group``; 
-            defaults to None, in which case ``cols_groups`` will be used 
-            instead. Length should equal that of ``cols_group``.
+        cols_group (Sequence[str]): Sequence of column names; defaults to None.
+            Each unique combination in these columns specifies a group
+            to plot separately.
+        names_group (Sequence[str]): Sequence of names to display;
+            defaults to None, in which case a name based on ``cols_groups``
+            will be used instead. Length should equal that of groups based
+            on ``cols_group``.
         fig_size: Sequence of ``width, height`` to size the figure; defaults 
             to None.
         show: True to display the image; otherwise, the figure will only 
@@ -830,7 +832,6 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                 else:
                     df_groups = df_groups.str.cat(df_col, sep=",")
             groups = df_groups.unique()
-        names = cols_group if names_group is None else names_group
         num_groups = len(groups)
         markers = libmag.pad_seq(markers, num_groups)
         colors = colormaps.discrete_colormap(
@@ -845,10 +846,14 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                 mask = df_groups == group
                 df_group = df.loc[mask]
                 if col_size is not None: sizes_plot = sizes_plot[mask]
-                # make label from group names and values
-                label = ", ".join(
-                    ["{} {}".format(name, libmag.format_num(val, 3)) 
-                     for name, val in zip(names, group.split(","))])
+                if names_group is None:
+                    # make label from group names and values
+                    label = ", ".join(
+                        ["{} {}".format(name, libmag.format_num(val, 3))
+                         for name, val in zip(cols_group, group.split(","))])
+                else:
+                    # use given group name directly
+                    label = names_group[i]
             xs = df_group[col_x]
             ys = df_group[col_y]
             plot()

@@ -39,7 +39,7 @@ python <path-to-magellanmapper>/run.py
 
 This approach is recommended when running command-line tasks or for debugging output. Replace `mag` if you gave the environment a different name.
 
-MagellanMapper can be run as a GUI as described above or headlessly for automated tasks. [`sample_cmds.sh`](bin/sample_cm**ds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See [Settings](docs/settings.md) for how to customize paramers your image aanalysis.
+MagellanMapper can be run as a GUI as described above or headlessly for automated tasks. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See [Settings](docs/settings.md) for how to customize parameters for your image analysis.
 
 ### Image file import
 In the "Import" tab, you can select files, view and update metadata, and import the files.

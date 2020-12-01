@@ -22,7 +22,7 @@ bin/setup_conda.bat
 
 These scripts perform a full installation of Conda if not already present. Specifically, it will install:
 
-- [Miniconda](https://conda.io/miniconda.html), a package manager for the Anaconda Python Distribution, if not already present based on the `conda` command
+- [Miniconda](https://conda.io/miniconda.html), a free minimal installer for the Anaconda Python Distribution, if not already present based on the `conda` command
 - A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
 - Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
 

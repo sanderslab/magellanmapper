@@ -9,7 +9,7 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
 1. Download MagellanMapper
     - Download and extract the [latest release.](https://github.com/sanderslab/magellanmapper/releases/latest)
     - Or clone the git repo: `git clone https://github.com/sanderslab/magellanmapper.git`
-1. Install MagellanMapper using this script in the `magellanmapper` folder. Note that the script will also install the Conda package manager if it is not already installed. This process may take up to 5 minutes, depsinding on internet connection speed.
+1. Install MagellanMapper using this script in the `magellanmapper` folder. Note that the script will also install the Conda package manager if it is not already installed. This process may take up to 5 minutes, depending on internet connection speed.
     - On Mac or Linux: `bin/setup_conda`
     - On Windows: `bin\setup_conda.bat`
 

@@ -22,7 +22,7 @@ MagellanMapper is a graphical imaging informatics suite and pipeline for high-th
 
 ### From a file browser
 
-**On Mac or Linux**: Double-click the `MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default.
+**On Mac or Linux**: Double-click the `MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
 
 **On Windows**: Run `run.py` through Python.
 - It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`

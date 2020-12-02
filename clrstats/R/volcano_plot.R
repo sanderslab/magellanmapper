@@ -52,15 +52,11 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   # base plot -log p vs effect size
   xlab <- "Effects"
   if (log.scale.x) {
-    # log scale x, rescaling so abs vals of x are >= 1 to get pos log vals 
-    # and changing back to original sign
-    x.neg <- x < 0
-    x.norm <- x / min(abs(x))
-    x.log <- log(abs(x.norm))
-    x.log[x.neg] <- -1 * x.log[x.neg]
-    print(data.frame(x, x.norm, x.neg, x.log, y))
-    x <- x.log
-    xlab <- "log(normalized effects)"
+    # apply a log-modulus transform to allow non-positive values as input
+    # and to ensure that output is >=0; also apply to threshold x-value
+    x <- logModulusTransform(x)
+    xlab <- "Effects (log-transformed)"
+    thresh[[1]] <- logModulusTransform(thresh[[1]])
   }
   
   # x-lims based on points above y-thresh and size thresh if each are given; 
@@ -126,4 +122,16 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
 
   # save plot in interactive mode and reset device if necessary
   finalizeDevice(dev.fn, path.plot, plot.size)
+}
+
+logModulusTransform <- function(vals, shift=1) {
+  # Transform data with a log modulus transformation.
+  #
+  # Args:
+  #   vals: Sequence to transform.
+  #   shift: Amount by which to shift the absolute value of the data prior
+  #     to taking the log; defaults to 1.
+  
+  vals.trans <- sign(vals) * log10(abs(vals) + shift)
+  return(vals.trans)
 }

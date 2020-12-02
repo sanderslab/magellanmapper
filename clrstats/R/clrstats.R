@@ -728,6 +728,7 @@ setupConfig <- function(name=NULL) {
   if (is.null(name)) {
     # initialize environment
     name <- "default"
+    config.env$Verbose <- FALSE
     config.env$PlotSize <- c(5, 7)
     config.env$SampleLegend <- FALSE
     config.env$StatsPathIn <- file.path("..", kStatsFilesIn[2])
@@ -926,7 +927,7 @@ setupConfig <- function(name=NULL) {
 }
 
 runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
-                     stat.type=NULL) {
+                     verbose=NULL, stat.type=NULL) {
   # Load data and run full stats.
   #
   # Args:
@@ -936,6 +937,7 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
   #     separated by commas; defaults to NULL.
   #   measurements: Measurements names, where multiple measurements can be
   #     given separated by commas; defaults to NULL.
+  #   verbose: True to show verbose debugging information; defaults to NULL.
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
 
@@ -956,6 +958,12 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
     setupConfig(profile)
   }
 
+  if (!is.null(verbose)) {
+    # set path prefix
+    config.env$Verbose <- verbose
+    cat("Set verbose mode to:", config.env$Verbose, "\n")
+  }
+
   if (is.null(path)) {
     # default to use path from profile
     path <- config.env$StatsPathIn
@@ -973,6 +981,11 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
     # set path prefix
     config.env$Prefix <- prefix
     cat("Outputting files to:", config.env$Prefix, "\n")
+  }
+  
+  if (config.env$Verbose) {
+    cat("Environment settings:\n")
+    print(mget(ls(config.env), envir=config.env))
   }
 
   if (is.null(stat.type) || stat.type == kStatTypes[1]) {

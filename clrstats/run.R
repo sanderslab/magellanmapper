@@ -30,6 +30,9 @@ tryCatchLog::tryCatchLog({
     # parse command-line arguments if args have not been set explicitly
     parser <- optparse::OptionParser()
     parser <- optparse::add_option(
+      parser, c("-v", "--verbose"), action="store_true",
+      help="Show verbose debugging information")
+    parser <- optparse::add_option(
       parser, c("-f", "--file"), type="character",
       help="Input file, generally a CSV/TSV file")
     parser <- optparse::add_option(
@@ -48,7 +51,7 @@ tryCatchLog::tryCatchLog({
   # run main statistics
   print(args.parsed$meas)
   runStats(args.parsed$file, args.parsed$profiles, args.parsed$meas,
-           args.parsed$prefix)
+           args.parsed$prefix, args.parsed$verbose)
 }, finally={
   # return to original directory
   setwd(dir.start)

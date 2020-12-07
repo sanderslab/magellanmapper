@@ -102,6 +102,7 @@ class DiscreteColormap(colors.ListedColormap):
         self.norm = None
         self.cmap_labels = None
         self.img_labels = None
+        self.symmetric_colors = symmetric_colors
 
         if labels is None: return
         labels_unique = np.unique(labels)
@@ -182,21 +183,36 @@ class DiscreteColormap(colors.ListedColormap):
         """Convert an image to the indices in :attr:`img_labels` to give
         a linearly scaled image.
 
-        This image can be displayed using a colormap with :obj:`colors.NoNorm`
-        to index directly into the colormpa.
+        This image can be displayed using a colormap with
+        :class:`matplotlib.colors.NoNorm` to index directly into the colormap.
 
         Args:
-            img (:obj:`np.ndarray`): Image to convert.
+            img (:obj:`np.ndarray`): Image to convert. If
+                :attr:`symmetric_colors` is True, the absolute value will
+                be taken as a workaround for likely image display resampling
+                errors.
 
         Returns:
-            :obj:`np.ndarray`: Array of same shape as ``img`` with values
+            :class:`numpy.ndarray`: Array of same shape as ``img`` with values
             translated to their corresponding indices within :attr:`img_labels`,
             or ``img`` unchanged if :attr:`img_labels` is None.
 
         """
         conv = img
         if self.img_labels is not None:
+            if self.symmetric_colors:
+                # WORKAROUND: corresponding pos/neg label vals may display
+                # different colors despite mapping to the same colormap value,
+                # perhaps because rounding or resampling issues related to:
+                # https://github.com/matplotlib/matplotlib/issues/12071
+                # https://github.com/matplotlib/matplotlib/issues/16910
+                img = np.abs(img)
             conv = np.searchsorted(self.img_labels, img)
+            # TESTING: show colormap correspondences with label IDs
+            # img_un = np.unique(img)
+            # img_conv = np.searchsorted(self.img_labels, img_un)
+            # for im, cv in zip(img_un, img_conv):
+            #     print(im, cv, self(cv))
         return conv
 
 

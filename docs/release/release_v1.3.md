@@ -1,5 +1,36 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.7
+
+This is a bugfix release for MagellanMapper.
+
+### Changes
+
+Installation
+- Fixed launch error when Javabridge is installed but Java is not
+
+GUI
+- The "Save Figure" button opens a file save dialog to configure the location, filename, and file format of saved figures
+- Fixed display resolution on HiDPI screens set to fractional scaling (eg 150%; the fix requires Qt 5.14+) 
+- Fixed Atlas Editor non-Numpy image initial loading performance (regression introduced in v1.0.0, most notably in larger images)
+- Fixed Atlas Editor to enable saving after edge interpolation
+
+CLI
+- Configure DPI of saved images using `--plot_labels dpi=<n>`
+- Specify colors for NaN values through `--plot_labels nan_color=<color>` instead of through `--atlas_labels binary=<color>`, which is now only specifies colors when displaying labels as binary images to fix this display
+- Defaults to saving images in PNG format, even if `--savefig <ext>` is not set
+- CLI sub-arguments are now shown in `./run.py -h` (help documentation)
+- Fixed saved plane filenames to use the plane index for the axis corresponding to the saved plane
+
+Atlas refinement
+- Smoothing metrics now include the filter size in metrics output
+- Fixed the denominator in the smoothing displacement metric and smoothing metrics for non-existent labels
+
+Python stats and plots
+- Excludes decimal points that were likely included by floating-point errors
+- Fixed mapping measurements to labels with weighting
+
+
 ## MagellanMapper v1.3.6
 
 This release focuses on usability fixes. New settings settings and build tools have been added to support older Linux platforms.

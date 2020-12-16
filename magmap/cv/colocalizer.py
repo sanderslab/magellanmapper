@@ -4,6 +4,7 @@
 
 import multiprocessing as mp
 
+import pandas as pd
 import numpy as np
 from skimage import morphology
 
@@ -59,7 +60,9 @@ class StackColocalizer(object):
             blobs (:obj:`np.ndarray`): 2D Numpy array of blobs.
 
         Returns:
-            dict[Tuple[int], Tuple]: The dictionary of matches.
+            dict[tuple[int, int], :class:`magmap.io.sqlite.BlobMatch`]: The
+            dictionary of matches, where keys are tuples of the channel pairs,
+            and values are blob match objects. 
 
         """
         # set up ROI blocks from which to select blobs in each block
@@ -96,17 +99,14 @@ class StackColocalizer(object):
                                       blobs, offset, shape)[0], match_tol,
                                   True)))
         
-        # store blobs in dict with channel combos as keys
+        # dict of channel combos to blob matches data frame
         matches_all = {}
         for result in pool_results:
             coord, matches = result.get()
             count = 0
             for key, val in matches.items():
-                if key in matches_all:
-                    matches_all[key].extend(val)
-                else:
-                    matches_all[key] = val
-                count += len(val)
+                matches_all.setdefault(key, []).append(val.df)
+                count += len(val.df)
             print("adding {} matches from block at {} of {}"
                   .format(count, coord, np.add(sub_roi_slices.shape, -1)))
         
@@ -114,40 +114,41 @@ class StackColocalizer(object):
         pool.join()
         
         # prune duplicates by taking matches with shortest distance
-        for matchi in range(2):
-            for key in matches_all.keys():
-                # convert matches for channel-combo to ndarray to extract
-                # blobs by column
-                matches = np.array(matches_all[key])
+        for key in matches_all.keys():
+            matches_all[key] = pd.concat(matches_all[key])
+            for blobi in (sqlite.BlobMatch.Cols.BLOB1,
+                          sqlite.BlobMatch.Cols.BLOB2):
+                # convert blob column to ndarray to extract coords by column
+                matches = matches_all[key]
                 matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
-                    np.array(matches[:, matchi].tolist(), dtype=int)[:, :3],
-                    axis=0, return_index=True, return_inverse=True,
-                    return_counts=True)
+                    np.vstack(matches[blobi.value])[:, :3], axis=0,
+                    return_index=True, return_inverse=True, return_counts=True)
                 if np.sum(matches_cts > 1) > 0:
                     # prune if at least one blob has been matched to multiple
                     # other blobs
-                    singles = matches[matches_i[matches_cts == 1]]
+                    singles = matches.iloc[matches_i[matches_cts == 1]]
                     dups = []
                     for i, ct in enumerate(matches_cts):
                         # include non-duplicates to retain index
                         if ct <= 1: continue
-                        # get indices in orig matches at given uniq array index
-                        # and take match with lowest dist
-                        matches_mult = matches[matches_inv == i]
-                        min_dist = np.amin(matches_mult[:, 2])
+                        # get indices in orig matches at given unique array
+                        # index and take match with lowest dist
+                        matches_mult = matches.loc[matches_inv == i]
+                        dists = matches_mult[sqlite.BlobMatch.Cols.DIST.value]
+                        min_dist = np.amin(dists)
                         num_matches = len(matches_mult)
                         if config.verbose and num_matches > 1:
                             print("pruning from", num_matches,
-                                  "matches of dist:", matches_mult[:, 2])
-                        matches_mult = matches_mult[
-                            matches_mult[:, 2] == min_dist]
-                        dups.append(matches_mult[0])
-                    matches_all[key] = np.vstack((singles, dups))
+                                  "matches of dist:", dists)
+                        matches_mult = matches_mult.loc[dists == min_dist]
+                        # take first in case of any ties
+                        dups.append(matches_mult.iloc[[0]])
+                    matches_all[key] = pd.concat((singles, pd.concat(dups)))
                 if config.verbose:
                     print("Colocalization matches for channels", key)
-                    for match in matches_all[key]:
-                        print("Blob1 {}, Blob2 {}, dist {}".format(
-                            match[0][:3], match[1][:3], match[2]))
+                    print(matches_all[key])
+            # store data frame in BlobMatch object
+            matches_all[key] = sqlite.BlobMatch(df=matches_all[key])
         
         return matches_all
 
@@ -261,8 +262,9 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
             to None to use the padding based on ``tol``.
 
     Returns:
-        Dict[Tuple, List]: Dictionary where keys are tuples of the two
-        channels compared and values are a list of blob matches.
+        dict[tuple[int, int], :class:`magmap.io.sqlite.BlobMatch`]: Dictionary
+        where keys are tuples of the two channels compared and values are blob
+        matches objects.
 
     """
     if blobs is None:
@@ -293,7 +295,7 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
                 for i, c in enumerate(chl_combo):
                     detector.set_blob_truth(match[i], -1)
                     detector.set_blob_confirmed(match[i], -1)
-            matches_chls[chl_combo] = matches
+            matches_chls[chl_combo] = sqlite.BlobMatch(matches)
     return matches_chls
 
 
@@ -325,14 +327,16 @@ def insert_matches(db, offset, shape, matches):
         db (:obj:`sqlite.ClrDB`): Database object.
         offset (List[int]): ROI offset in z,y,x.
         shape (List[int]): ROI shape in z,y,x.
-        matches (Dict, Tuple): Dictionary of matches.
+        matches (dict[tuple[int, int], :class:`magmap.io.sqlite.BlobMatch`):
+            Dictionary of channel combo tuples to blob match objects.
 
     """
     roi_id = _get_roi_id(db, offset, shape[::-1])
-    for match in matches.values():
-        blobs = [b for m in match for b in m[:2]]
-        sqlite.insert_blobs(db.conn, db.cur, roi_id, blobs)
-        config.db.insert_blob_matches(roi_id, match)
+    for chl_matches in matches.values():
+        # insert blobs and matches for the given channel combo
+        sqlite.insert_blobs(db.conn, db.cur, roi_id, np.vstack(
+            (chl_matches.get_blobs(1), chl_matches.get_blobs(2))))
+        config.db.insert_blob_matches(roi_id, chl_matches)
 
 
 def select_matches(db, offset, shape, channels):
@@ -361,9 +365,10 @@ def select_matches(db, offset, shape, channels):
             if chl >= chl_other: continue
             # select matches for blobs in the given first channel of the pair
             # of channels, assuming chls were paired this way during insertion
-            match = db.select_blob_matches_by_blob_id(
-                roi_id, 1, blob_ids[detector.get_blobs_channel(blobs) == chl])
-            match = [m for m in match
-                     if detector.get_blob_channel(m.blob2) == chl_other]
-            matches[(chl, chl_other)] = match
+            chl_matches = db.select_blob_matches_by_blob_id(
+                roi_id, 1,
+                blob_ids[detector.get_blobs_channel(blobs) == chl])
+            chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
+                chl_matches.get_blobs(2)) == chl_other]
+            matches[(chl, chl_other)] = sqlite.BlobMatch(df=chl_matches)
     return matches

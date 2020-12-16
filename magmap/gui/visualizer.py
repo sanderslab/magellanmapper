@@ -844,7 +844,6 @@ class Visualization(HasTraits):
             self._check_list_3d.append(self._DEFAULTS_3D[3])
         # self._structure_scale = self._structure_scale_high
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
-        self._blob_matches = None
         self.blobs = detector.Blobs()
 
         # set up profiles selectors
@@ -1293,9 +1292,7 @@ class Visualization(HasTraits):
         
         # insert blob matches
         if self.blobs.blob_matches is not None:
-            for match in self.blobs.blob_matches:
-                detector.shift_blob_rel_coords(match.blob1, offset[::-1])
-                detector.shift_blob_rel_coords(match.blob2, offset[::-1])
+            self.blobs.blob_matches.shift_blobs(offset[::-1])
             config.db.insert_blob_matches(roi_id, self.blobs.blob_matches)
         
         # add ROI to selection dropdown
@@ -1847,12 +1844,8 @@ class Visualization(HasTraits):
                     segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
                     np.zeros(3, dtype=int))
                 if matches:
-                    blob_matches = []
-                    for match in matches[tuple(matches.keys())[0]]:
-                        blob_matches.append(sqlite.BlobMatch(
-                            None, None, None, match[0], None, match[1],
-                            match[2]))
-                    self.blobs.blob_matches = blob_matches
+                    # TODO: include all channel combos
+                    self.blobs.blob_matches = matches[tuple(matches.keys())[0]]
         else:
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
@@ -1866,15 +1859,15 @@ class Visualization(HasTraits):
             segs_all, mask_chl = detector.blobs_in_channel(
                 segs_all, config.channel, return_mask=True)
             if ColocalizeOptions.MATCHES.value in self._colocalize:
-                # get blob matches from whole-image match colocalization
+                # get blob matches from whole-image match colocalization,
+                # shifting blobs to relative coordinates
                 matches = colocalizer.select_matches(
                     config.db, offset[::-1], roi_size[::-1], config.channel)
-                self.blobs.blob_matches = []
-                for val in matches.values():
-                    self.blobs.blob_matches.extend(val)
+                # TODO: include all channel combos
+                matches = matches[tuple(matches.keys())[0]]
                 shift = [n * -1 for n in offset[::-1]]
-                for match in self.blobs.blob_matches:
-                    match.shift_blobs(shift)
+                matches.shift_blobs(shift)
+                self.blobs.blob_matches = matches
                 print("loaded blob matches:\n", self.blobs.blob_matches)
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize
                   and config.blobs.colocalizations is not None
@@ -2311,9 +2304,7 @@ class Visualization(HasTraits):
             
             # get matches between blobs, such as verifications
             blob_matches = config.db.select_blob_matches(roi_id)
-            offset = [n * -1 for n in config.roi_offset[::-1]]
-            for match in blob_matches:
-                match.shift_blobs(offset)
+            blob_matches.shift_blobs([n * -1 for n in config.roi_offset[::-1]])
             
             # display blobs
             self.detect_blobs(segs=blobs, blob_matches=blob_matches)

@@ -1294,8 +1294,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 if (self.blobs is not None
                         and self.blobs.blob_matches is not None):
                     # show blob matches by corresponding number labels
-                    for i, match in enumerate(self.blobs.blob_matches):
-                        for j, blob in enumerate((match.blob1, match.blob2)):
+                    for i, (blob1, blob2) in enumerate(zip(
+                            self.blobs.blob_matches.get_blobs(1),
+                            self.blobs.blob_matches.get_blobs(2))):
+                        for j, blob in enumerate((blob1, blob2)):
                             if blob[0] != z_relative: continue
                             # add label with number; italicize if 1st blob
                             style = "italic" if j == 0 else "normal"

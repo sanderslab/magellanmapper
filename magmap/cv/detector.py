@@ -927,11 +927,12 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
             defaults to None.
     
     Returns:
-        :obj:`np.ndarray`, :obj:`np.ndarray`, List[int], List[int], List[List]:
+        :class:`numpy.ndarray`, :class:`numpy.ndarray`, list[int], list[int],
+        list[list[:class:`numpy.ndarray`, :class:`numpy.ndarray`, float]]:
         Array of blobs from ``blobs``; corresponding array from ``blobs_base``
         matching blobs in ``blobs``; offset of the inner portion of the ROI
         in absolute coordinates of x,y,z; shape of this inner portion of the
-        ROI; and list of blob matches, each given as a tuple of
+        ROI; and list of blob matches, each given as a list of
         ``blob_master, blob, distance``.
     
     """

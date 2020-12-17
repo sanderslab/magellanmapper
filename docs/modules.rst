@@ -5,4 +5,5 @@ magellanmapper
    :maxdepth: 4
 
    magmap
+   run
    setup

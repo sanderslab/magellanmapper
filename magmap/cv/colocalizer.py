@@ -2,6 +2,7 @@
 # Copyright The MagellanMapper Contributors
 """Colocalize objects in an image, typically in separate channels."""
 
+from enum import Enum
 import multiprocessing as mp
 
 import pandas as pd
@@ -9,8 +10,107 @@ import numpy as np
 from skimage import morphology
 
 from magmap.cv import chunking, detector, stack_detect
-from magmap.io import cli, libmag, sqlite
+from magmap.io import cli, df_io, libmag, sqlite
 from magmap.settings import config
+
+
+class BlobMatch:
+    """Blob match storage class as a wrapper for a data frame of matches.
+
+    Attributes:
+        df (:class:`pandas.DataFrame`): Data frame of matches with column
+            names given by :class:`BlobMatch.Cols`.
+
+    """
+    
+    class Cols(Enum):
+        """Blob match column names."""
+        MATCH_ID = "MatchID"
+        ROI_ID = "RoiID"
+        BLOB1_ID = "Blob1ID"
+        BLOB1 = "Blob1"
+        BLOB2_ID = "Blob2ID"
+        BLOB2 = "Blob2"
+        DIST = "Distance"
+    
+    def __init__(self, matches=None, match_id=None, roi_id=None, blob1_id=None,
+                 blob2_id=None, df=None):
+        """Initialize blob match object.
+
+        Args:
+            matches (list[list[
+                :class:`numpy.ndarray`, :class:`numpy.ndarray`, float]]:
+                List of blob match lists, which each contain,
+                ``blob1, blob2, distance``. Defaults to None, which
+                sets the data frame to None.
+            match_id (Sequence[int]): Sequence of match IDs, which should be
+                of the same length as ``matches``; defaults to None.
+            roi_id (Sequence[int]): Sequence of ROI IDs, which should be
+                of the same length as ``matches``; defaults to None.
+            blob1_id (Sequence[int]): Sequence of blob 1 IDs, which should be
+                of the same length as ``matches``; defaults to None.
+            blob2_id (Sequence[int]): Sequence of blob2 IDs, which should be
+                of the same length as ``matches``; defaults to None.
+            df (:class:`pandas.DataFrame`): Pandas data frame to set in
+                place of any other arguments; defaults to None.
+        """
+        if df is not None:
+            # set data frame directly and ignore any other arguments
+            self.df = df
+            return
+        if matches is None:
+            # set data frame to None and return since any other arguments
+            # must correspond to matches
+            self.df = None
+            return
+        
+        matches_dict = {}
+        for i, match in enumerate(matches):
+            # assumes that all first sequences are of the same length
+            vals = {
+                BlobMatch.Cols.BLOB1: match[0],
+                BlobMatch.Cols.BLOB2: match[1],
+                BlobMatch.Cols.DIST: match[2],
+            }
+            if match_id is not None:
+                vals[BlobMatch.Cols.MATCH_ID] = match_id[i]
+            if roi_id is not None:
+                vals[BlobMatch.Cols.ROI_ID] = roi_id[i]
+            if blob1_id is not None:
+                vals[BlobMatch.Cols.BLOB1_ID] = blob1_id[i]
+            if blob2_id is not None:
+                vals[BlobMatch.Cols.BLOB2_ID] = blob2_id[i]
+            for key in BlobMatch.Cols:
+                matches_dict.setdefault(key, []).append(
+                    vals[key] if key in vals else None)
+        self.df = df_io.dict_to_data_frame(matches_dict)
+    
+    def get_blobs(self, n):
+        """Get blobs as a numpy array.
+
+        Args:
+            n (int): 1 for blob1, otherwise blob 2.
+
+        Returns:
+            :class:`numpy.ndarray`: Numpy array of the given blob type.
+
+        """
+        col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
+        return np.vstack(self.df[col.value])
+    
+    def shift_blobs(self, offset):
+        """Shift coordinates of blobs by offset.
+
+        Args:
+            offset (list[int]): Sequence of coordinates by which to shift
+                the corresponding elements from the start of :attr:`blob1`
+                and :attr:`blob2`.
+
+        """
+        self.df[BlobMatch.Cols.BLOB1.value] = detector.shift_blob_rel_coords(
+            self.get_blobs(1), offset).tolist()
+        self.df[BlobMatch.Cols.BLOB2.value] = detector.shift_blob_rel_coords(
+            self.get_blobs(2), offset).tolist()
 
 
 class StackColocalizer(object):
@@ -60,7 +160,7 @@ class StackColocalizer(object):
             blobs (:obj:`np.ndarray`): 2D Numpy array of blobs.
 
         Returns:
-            dict[tuple[int, int], :class:`magmap.io.sqlite.BlobMatch`]: The
+            dict[tuple[int, int], :class:`BlobMatch`]: The
             dictionary of matches, where keys are tuples of the channel pairs,
             and values are blob match objects. 
 
@@ -116,8 +216,7 @@ class StackColocalizer(object):
         # prune duplicates by taking matches with shortest distance
         for key in matches_all.keys():
             matches_all[key] = pd.concat(matches_all[key])
-            for blobi in (sqlite.BlobMatch.Cols.BLOB1,
-                          sqlite.BlobMatch.Cols.BLOB2):
+            for blobi in (BlobMatch.Cols.BLOB1, BlobMatch.Cols.BLOB2):
                 # convert blob column to ndarray to extract coords by column
                 matches = matches_all[key]
                 matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
@@ -134,7 +233,7 @@ class StackColocalizer(object):
                         # get indices in orig matches at given unique array
                         # index and take match with lowest dist
                         matches_mult = matches.loc[matches_inv == i]
-                        dists = matches_mult[sqlite.BlobMatch.Cols.DIST.value]
+                        dists = matches_mult[BlobMatch.Cols.DIST.value]
                         min_dist = np.amin(dists)
                         num_matches = len(matches_mult)
                         if config.verbose and num_matches > 1:
@@ -148,7 +247,7 @@ class StackColocalizer(object):
                     print("Colocalization matches for channels", key)
                     print(matches_all[key])
             # store data frame in BlobMatch object
-            matches_all[key] = sqlite.BlobMatch(df=matches_all[key])
+            matches_all[key] = BlobMatch(df=matches_all[key])
         
         return matches_all
 
@@ -262,9 +361,9 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
             to None to use the padding based on ``tol``.
 
     Returns:
-        dict[tuple[int, int], :class:`magmap.io.sqlite.BlobMatch`]: Dictionary
-        where keys are tuples of the two channels compared and values are blob
-        matches objects.
+        dict[tuple[int, int], :class:`BlobMatch`]:
+        Dictionary where keys are tuples of the two channels compared and
+        values are blob matches objects.
 
     """
     if blobs is None:
@@ -295,7 +394,7 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
                 for i, c in enumerate(chl_combo):
                     detector.set_blob_truth(match[i], -1)
                     detector.set_blob_confirmed(match[i], -1)
-            matches_chls[chl_combo] = sqlite.BlobMatch(matches)
+            matches_chls[chl_combo] = BlobMatch(matches)
     return matches_chls
 
 
@@ -327,7 +426,7 @@ def insert_matches(db, offset, shape, matches):
         db (:obj:`sqlite.ClrDB`): Database object.
         offset (List[int]): ROI offset in z,y,x.
         shape (List[int]): ROI shape in z,y,x.
-        matches (dict[tuple[int, int], :class:`magmap.io.sqlite.BlobMatch`):
+        matches (dict[tuple[int, int], :class:`BlobMatch`):
             Dictionary of channel combo tuples to blob match objects.
 
     """
@@ -349,7 +448,7 @@ def select_matches(db, offset, shape, channels):
         channels (List[int]): List of channels.
 
     Returns:
-        Dict[str, List[:obj:`magmap.io.sqlit.BlobMatch`]: Dictionary where
+        Dict[str, List[:obj:`BlobMatch`]: Dictionary where
         keys are tuples of the two channels compared and values are a list
         of blob matches.
 
@@ -370,5 +469,5 @@ def select_matches(db, offset, shape, channels):
                 blob_ids[detector.get_blobs_channel(blobs) == chl])
             chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
                 chl_matches.get_blobs(2)) == chl_other]
-            matches[(chl, chl_other)] = sqlite.BlobMatch(df=chl_matches)
+            matches[(chl, chl_other)] = BlobMatch(df=chl_matches)
     return matches

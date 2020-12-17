@@ -5,7 +5,6 @@
 analysis storage.
 """
 
-from enum import Enum
 import os
 import glob
 import datetime
@@ -13,7 +12,7 @@ import sqlite3
 import numpy as np
 
 from magmap.settings import config
-from magmap.cv import detector
+from magmap.cv import colocalizer, detector
 from magmap.io import df_io, importer, libmag
 
 DB_NAME_BASE = "magmap"
@@ -24,105 +23,6 @@ DB_VERSION = 4
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
 _COLS_BLOB_MATCHES = "roi_id, blob1, blob2, dist"
-
-
-class BlobMatch:
-    """Blob match storage class as a wrapper for a data frame of matches.
-    
-    Attributes:
-        df (:class:`pandas.DataFrame`): Data frame of matches with column
-            names given by :class:`BlobMatch.Cols`.
-    
-    """
-    
-    class Cols(Enum):
-        """Blob match column names."""
-        MATCH_ID = "MatchID"
-        ROI_ID = "RoiID"
-        BLOB1_ID = "Blob1ID"
-        BLOB1 = "Blob1"
-        BLOB2_ID = "Blob2ID"
-        BLOB2 = "Blob2"
-        DIST = "Distance"
-    
-    def __init__(self, matches=None, match_id=None, roi_id=None, blob1_id=None,
-                 blob2_id=None, df=None):
-        """Initialize blob match object.
-        
-        Args:
-            matches (list[list[
-                :class:`numpy.ndarray`, :class:`numpy.ndarray`, float]]:
-                List of blob match lists, which each contain,
-                ``blob1, blob2, distance``. Defaults to None, which
-                sets the data frame to None.
-            match_id (Sequence[int]): Sequence of match IDs, which should be
-                of the same length as ``matches``; defaults to None.
-            roi_id (Sequence[int]): Sequence of ROI IDs, which should be
-                of the same length as ``matches``; defaults to None.
-            blob1_id (Sequence[int]): Sequence of blob 1 IDs, which should be
-                of the same length as ``matches``; defaults to None.
-            blob2_id (Sequence[int]): Sequence of blob2 IDs, which should be
-                of the same length as ``matches``; defaults to None.
-            df (:class:`pandas.DataFrame`): Pandas data frame to set in
-                place of any other arguments; defaults to None.
-        """
-        if df is not None:
-            # set data frame directly and ignore any other arguments
-            self.df = df
-            return
-        if matches is None:
-            # set data frame to None and return since any other arguments
-            # must correspond to matches
-            self.df = None
-            return
-        
-        matches_dict = {}
-        for i, match in enumerate(matches):
-            # assumes that all first sequences are of the same length
-            vals = {
-                BlobMatch.Cols.BLOB1: match[0],
-                BlobMatch.Cols.BLOB2: match[1],
-                BlobMatch.Cols.DIST: match[2],
-            }
-            if match_id is not None:
-                vals[BlobMatch.Cols.MATCH_ID] = match_id[i]
-            if roi_id is not None:
-                vals[BlobMatch.Cols.ROI_ID] = roi_id[i]
-            if blob1_id is not None:
-                vals[BlobMatch.Cols.BLOB1_ID] = blob1_id[i]
-            if blob2_id is not None:
-                vals[BlobMatch.Cols.BLOB2_ID] = blob2_id[i]
-            for key in BlobMatch.Cols:
-                matches_dict.setdefault(key, []).append(
-                    vals[key] if key in vals else None)
-        self.df = df_io.dict_to_data_frame(matches_dict)
-    
-    def get_blobs(self, n):
-        """Get blobs as a numpy array.
-        
-        Args:
-            n (int): 1 for blob1, otherwise blob 2.
-
-        Returns:
-            :class:`numpy.ndarray`: Numpy array of the given blob type.
-
-        """
-        col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
-        return np.vstack(self.df[col.value])
-    
-    def shift_blobs(self, offset):
-        """Shift coordinates of blobs by offset.
-        
-        Args:
-            offset (list[int]): Sequence of coordinates by which to shift
-                the corresponding elements from the start of :attr:`blob1`
-                and :attr:`blob2`.
-
-        """
-        self.df[BlobMatch.Cols.BLOB1.value] = detector.shift_blob_rel_coords(
-            self.get_blobs(1), offset).tolist() 
-        self.df[BlobMatch.Cols.BLOB2.value] = detector.shift_blob_rel_coords(
-            self.get_blobs(2), offset).tolist()  
 
 
 def _create_db(path):
@@ -929,7 +829,7 @@ class ClrDB:
         
         Args:
             roi_id (int): ROI ID.
-            matches (:class:`BlobMatch`): Blob matches object.
+            matches (:class:`magmap.cv.colocalizer.BlobMatch`): Blob matches object.
 
         Returns:
             list[int]: List of blob match IDs.
@@ -944,12 +844,12 @@ class ClrDB:
         ids = []
         for _, match in matches.df.iterrows():
             blob1_id = get_blob_id(
-                match[BlobMatch.Cols.BLOB1.value],
-                match[BlobMatch.Cols.BLOB1_ID.value])
+                match[colocalizer.BlobMatch.Cols.BLOB1.value],
+                match[colocalizer.BlobMatch.Cols.BLOB1_ID.value])
             blob2_id = get_blob_id(
-                match[BlobMatch.Cols.BLOB2.value],
-                match[BlobMatch.Cols.BLOB2_ID.value])
-            dist = match[BlobMatch.Cols.DIST.value]
+                match[colocalizer.BlobMatch.Cols.BLOB2.value],
+                match[colocalizer.BlobMatch.Cols.BLOB2_ID.value])
+            dist = match[colocalizer.BlobMatch.Cols.DIST.value]
             if blob1_id and blob2_id:
                 self.cur.execute(
                     "INSERT INTO blob_matches ({}) "
@@ -985,7 +885,7 @@ class ClrDB:
         
         # convert to data frame to access by named columns
         df = df_io.dict_to_data_frame(rows, records_cols=rows[0].keys())
-        blob_matches = BlobMatch(
+        blob_matches = colocalizer.BlobMatch(
             matches, df["id"], df["roi_id"], df["blob1"], df["blob2"])
         return blob_matches
     
@@ -1034,7 +934,7 @@ class ClrDB:
                         ",".join("?" * (len(ids) - 1))),
                 ids)
             matches.append(self._parse_blob_matches(self.cur.fetchall()).df)
-        return BlobMatch(df=df_io.data_frames_to_csv(matches))
+        return colocalizer.BlobMatch(df=df_io.data_frames_to_csv(matches))
 
 
 def main():

@@ -199,18 +199,12 @@ def parse_ome_raw(filename):
             for grandchild in child:
                 if grandchild.tag.endswith("Pixels"):
                     att = grandchild.attrib
-                    try:
-                        # get image shape for each series
-                        sizes.append(tuple(
-                            [int(att[t]) for t in size_tags]))
-                    except KeyError:
-                        print("Could not find image sizes metadata")
-                    try:
-                        # get image resolutions for each series
-                        resolutions.append(tuple(
-                            [float(att[t]) for t in res_tags]))
-                    except KeyError:
-                        print("Could not find image resolution metadata")
+                    # get image shape for the series
+                    sizes.append(tuple(
+                        [int(att[t]) if t in att else 1 for t in size_tags]))
+                    # get image resolutions for the series
+                    resolutions.append(tuple(
+                        [float(att[t]) if t in att else 1.0 for t in res_tags]))
                     # assumes pixel type is same for all images
                     if pixel_type is None:
                         pixel_type = att.get("Type")

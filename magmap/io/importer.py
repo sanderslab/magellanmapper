@@ -915,6 +915,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
         
         len_shape = len(shape)
         len_shape_in = len(shape_in)
+        plane_shape = None
         for chl_load in chls_load:
             lows = []
             highs = []
@@ -929,9 +930,11 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                         img = (img_raw[z, ..., chl_load] if len_shape_in >= 5
                                else img_raw[z])
                     else:
-                        # read plane with Bioformats reader
+                        # read plane with Bioformats reader; chl_load may be
+                        # ignored for some formats, yielding multichannel planes
                         img = rdr.read(z=(z + offset), t=t, c=chl_load,
                                        series=series, rescale=False)
+                    plane_shape = img.shape
                     
                     if image5d is None:
                         # open output file as memmap to directly write to disk,
@@ -952,6 +955,11 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                         image5d[t, z, :, :, chli] = img
                     else:
                         image5d[t, z] = img
+            if len(plane_shape) > 2 and plane_shape[2] > 1:
+                # assume all planes were multichannel so all channels imported
+                print("Multiple channels imported per plane, will assume "
+                      "all channels are imported and end channel import")
+                break
             near_mins, near_maxs = _calc_near_intensity_bounds(
                 near_mins, near_maxs, lows, highs)
             chli += 1

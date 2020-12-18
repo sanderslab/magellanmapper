@@ -947,8 +947,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                     low, high = calc_intensity_bounds(img, dim_channel=2)
                     lows.append(low)
                     highs.append(high)
-                    if len_shape >= 5:
-                        # squeeze plane inside if separate file per channel
+                    if len_shape >= 5 and len(img.shape) == 2:
+                        # squeeze 2D plane inside if separate file per channel
                         image5d[t, z, :, :, chli] = img
                     else:
                         image5d[t, z] = img

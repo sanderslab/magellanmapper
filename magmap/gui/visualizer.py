@@ -2830,9 +2830,10 @@ class Visualization(HasTraits):
         
         if chl_paths:
             # set metadata
-            series = 0 if config.series is None else config.series
             md = {
-                config.MetaKeys.RESOLUTIONS: self._import_res[series].astype(
+                # assumes only resolutions for chosen series has been set
+                # TODO: add control to select series
+                config.MetaKeys.RESOLUTIONS: self._import_res[0].astype(
                     float)[::-1],
                 config.MetaKeys.MAGNIFICATION: self._import_mag,
                 config.MetaKeys.ZOOM: self._import_zoom,
@@ -2916,7 +2917,9 @@ class SetupImportThread(QtCore.QThread):
     
     def run(self):
         """Set up image import metadata."""
-        md = importer.setup_import_metadata(self.chl_paths)
+        # extract metadata for the given image series (eg tile)
+        md = importer.setup_import_metadata(
+            self.chl_paths, series=config.series)
         self.signal.emit(md)
 
 
@@ -2964,7 +2967,7 @@ class ImportThread(QtCore.QThread):
             elif self.mode is ImportModes.MULTIPAGE:
                 # import multi-plane files
                 img5d = importer.import_multiplane_images(
-                    self.chl_paths, self.prefix, self.import_md,
+                    self.chl_paths, self.prefix, self.import_md, config.series,
                     fn_feedback=self.fn_feedback)
         finally:
             if img5d is not None:

@@ -493,28 +493,30 @@ def reg_planes_to_img(imgs, path=None, ax=None):
         plot_support.save_fig(path, config.savefig)
 
 
-def export_planes(image5d, prefix, ext, channel=None):
+def export_planes(image5d, ext, channel=None, separate_chls=False):
     """Export each plane and channel combination into separate 2D image files
 
     Args:
         image5d (:obj:`np.ndarray`): Image in ``t,z,y,x[,c]`` format.
-        prefix (str): Output path template.
         ext (str): Save format given as an extension without period.
         channel (int): Channel to save; defaults to None for all channels.
+        separate_chls (bool): True to export all channels from each plane to
+            a separate image; defaults to False. 
 
     """
-    output_dir = os.path.dirname(prefix)
-    basename = os.path.splitext(os.path.basename(prefix))[0]
+    suffix = "_export" if config.suffix is None else config.suffix 
+    out_path = libmag.make_out_path(suffix=suffix)
+    output_dir = os.path.dirname(out_path)
+    basename = os.path.splitext(os.path.basename(out_path))[0]
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
     roi = image5d[0]
-    # TODO: option for RGB(A) images, which skimage otherwise assumes
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     num_digits = len(str(len(roi)))
     for i, plane in enumerate(roi):
         path = os.path.join(output_dir, "{}_{:0{}d}".format(
             basename, i, num_digits))
-        if multichannel:
+        if separate_chls and multichannel:
             for chl in channels:
                 # save each channel as separate file
                 plane_chl = plane[..., chl]

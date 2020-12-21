@@ -174,6 +174,7 @@ ProcessTypes = Enum(
         "ANIMATED",
         "EXPORT_BLOBS",
         "EXPORT_PLANES",  # export a 3D+ image to individual planes
+        "EXPORT_PLANES_CHANNELS",  # also export channels to separate files
         "EXPORT_RAW",  # export an array as a raw data file
         "PREPROCESS",  # pre-process whole image
     )

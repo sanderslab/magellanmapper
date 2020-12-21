@@ -1039,10 +1039,12 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         else:
             print("No blobs loaded to colocalize, skipping")
 
-    elif proc_type is config.ProcessTypes.EXPORT_PLANES:
+    elif proc_type in (config.ProcessTypes.EXPORT_PLANES,
+                       config.ProcessTypes.EXPORT_PLANES_CHANNELS):
         # export each plane as a separate image file
         export_stack.export_planes(
-            config.image5d, config.prefix, config.savefig, config.channel)
+            config.image5d, config.savefig, config.channel,
+            proc_type is config.ProcessTypes.EXPORT_PLANES_CHANNELS)
     
     elif proc_type is config.ProcessTypes.EXPORT_RAW:
         # export the main image as a raw data file

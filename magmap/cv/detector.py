@@ -5,15 +5,17 @@
 Prunes duplicates and verifies detections against truth sets.
 """
 
-from time import time
 import math
+import pprint
+from time import time
+
 import numpy as np
 from scipy import optimize
 from scipy.spatial import distance
 from skimage.feature import blob_log
 
 from magmap.cv import cv_nd
-from magmap.io import df_io, libmag, sqlite
+from magmap.io import df_io, libmag, np_io, sqlite
 from magmap.plot import plot_3d
 from magmap.settings import config
 from magmap.stats import atlas_stats, mlearn
@@ -50,6 +52,24 @@ class Blobs:
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
         self.path = path
+    
+    def update_archive(self, to_add):
+        """Update the blobs Numpy archive file.
+        
+        Args:
+            to_add (dict): Dictionary of items to add.
+
+        Returns:
+            dict: Updated dictionary saved to :attr:`path`.
+
+        """
+        with np.load(self.path) as archive:
+            blobs_arc = np_io.read_np_archive(archive)
+            blobs_arc.update(to_add)
+            np.savez(self.path, **blobs_arc)
+        if config.verbose:
+            pprint.pprint(blobs_arc)
+        return blobs_arc
 
 
 def calc_scaling_factor():

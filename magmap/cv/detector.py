@@ -33,6 +33,7 @@ class Blobs:
     """Blob storage class.
     
     Attributes:
+        BLOBS_NP_VER (int): Current blobs Numpy archive version number.
         blobs (:obj:`np.ndarray`): 2D Numpy array of blobs in the format
             ``[[z, y, x, radius, ...], ...]``; defaults to None.
         blob_matches (:obj:`magmap.io.sqlite.BlobMatch`): Sequence of blob
@@ -44,6 +45,13 @@ class Blobs:
         path (str): Path from which blobs were loaded; defaults to None.
     
     """
+
+    # blobs Numpy archive versions:
+    # 0: initial version
+    # 1: added resolutions, basename, offset, roi_size fields
+    # 2: added archive version number
+    # 3: added colocs
+    BLOBS_NP_VER = 3
     
     def __init__(self, blobs=None, blob_matches=None, colocalizations=None,
                  path=None):

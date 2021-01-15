@@ -18,13 +18,6 @@ from magmap.io import cli, df_io, importer, libmag, naming, sqlite
 from magmap.plot import plot_3d
 from magmap.settings import config
 
-# Numpy archive for blobs versions:
-# 0: initial version
-# 1: added resolutions, basename, offset, roi_size fields
-# 2: added archive version number
-# 3: added colocs
-BLOBS_NP_VER = 3
-
 
 class StackTimes(Enum):
     """Stack processing durations."""
@@ -458,9 +451,10 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
 
     # save blobs
     # TODO: only segments used; consider removing the rest except ver
+    # TODO: consider refactoring fields to Blobs
     blobs = detector.Blobs(path=filename_blobs)
     blobs.save_archive(dict(
-        ver=BLOBS_NP_VER, segments=segments_all,
+        ver=blobs.BLOBS_NP_VER, segments=segments_all,
         resolutions=config.resolutions,
         basename=os.path.basename(config.filename),  # only save name
         offset=offset, roi_size=size,  # None unless explicitly set

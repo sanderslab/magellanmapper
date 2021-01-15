@@ -69,7 +69,7 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
     print("Loading blobs from", path)
     with np.load(path) as archive:
         info = read_np_archive(archive)
-        blobs = detector.Blobs()
+        blobs = detector.Blobs(path=path)
         if "segments" in info:
             blobs.blobs = info["segments"]
             print("Loaded {} blobs".format(len(blobs.blobs)))

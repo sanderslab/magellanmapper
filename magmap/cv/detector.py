@@ -39,14 +39,17 @@ class Blobs:
             as ``blobs`` with a column for each channel, where 0 = no
             signal and 1 = signal at the corresponding blob's location
             in the given and channel; defaults to None.
+        path (str): Path from which blobs were loaded; defaults to None.
     
     """
     
-    def __init__(self, blobs=None, blob_matches=None, colocalizations=None):
+    def __init__(self, blobs=None, blob_matches=None, colocalizations=None,
+                 path=None):
         """Initialize blobs storage object."""
         self.blobs = blobs
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
+        self.path = path
 
 
 def calc_scaling_factor():

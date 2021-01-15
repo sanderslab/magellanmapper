@@ -98,7 +98,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
             # get blobs and change confirmation flag to avoid confirmation 
             # color in 2D plots
             roi_id = roi["id"]
-            blobs = sqlite.select_blobs(db.cur, roi_id)
+            blobs = db.select_blobs_by_roi(roi_id)[0]
             blobs_detected = None
             if truth_mode is config.TruthDBModes.VERIFIED:
                 # verified DBs use a truth value of -1 to indicate "detected",

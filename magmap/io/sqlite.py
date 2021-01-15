@@ -508,21 +508,6 @@ def _parse_blobs(rows):
     return blobs, ids
 
 
-def select_blobs(cur, roi_id):
-    """Selects blobs from the given ROI.
-    
-    Args:
-        cur: Connection's cursor.
-        roi_id (int): ROI ID.
-    
-    Returns:
-        Blobs in the given ROI.
-    """
-    cur.execute(
-        "SELECT {} FROM blobs WHERE roi_id = ?".format(_COLS_BLOBS), (roi_id, ))
-    return _parse_blobs(cur.fetchall())[0]
-
-
 def select_blobs_confirmed(cur, confirmed):
     """Selects ROIs from the given experiment
     
@@ -561,7 +546,7 @@ def verification_stats(cur, exp_name, treat_maybes=0):
     blobs = []
     for roi in rois:
         #print("got roi_id: {}".format(roi[0]))
-        bb = select_blobs(cur, roi[0])
+        bb = config.db.select_blobs_by_roi(roi[0])[0]
         blobs.extend(bb)
     blobs = np.array(blobs)
     return detector.meas_detection_accuracy(
@@ -598,7 +583,7 @@ def _merge_dbs(db_paths, db_merged=None):
                 roi_id, _ = insert_roi(
                     db_merged.conn, db_merged.cur, exp_id, roi["series"], 
                     get_roi_offset(roi), get_roi_size(roi))
-                blobs = select_blobs(db.cur, roi["id"])
+                blobs = db.select_blobs_by_roi(roi["id"])
                 insert_blobs(db_merged.conn, db_merged.cur, roi_id, blobs)
         exps_len = 0 if exps is None else len(exps)
         print("imported {} experiments from {}".format(exps_len, db_path))
@@ -631,7 +616,7 @@ def clean_up_blobs(db):
         for roi in rois:
             roi_id = roi["id"]
             print("cleaning ROI {}".format(roi_id))
-            blobs = select_blobs(db.cur, roi_id)
+            blobs = db.select_blobs_by_roi(roi_id)[0]
             #print("blobs:\n{}".format(blobs))
             del_mask = blobs[:, 4] != 1
             delete_blobs(db.conn, db.cur, roi_id, blobs[del_mask])
@@ -801,6 +786,22 @@ class ClrDB:
             "SELECT {}, id FROM blobs WHERE id = ?"
                 .format(_COLS_BLOBS), (blob_id,))
         return self._get_blob(self.cur.fetchall())
+
+    def select_blobs_by_roi(self, roi_id):
+        """Select blobs from the given ROI.
+
+        Args:
+            roi_id (int): ROI ID.
+
+        Returns:
+            :class:`numpy.ndarray`, list[int]: Blobs in the given ROI. List
+            of blob IDs if available.
+
+        """
+        self.cur.execute(
+            "SELECT {}, id FROM blobs WHERE roi_id = ?".format(_COLS_BLOBS),
+            (roi_id,))
+        return _parse_blobs(self.cur.fetchall())
 
     def select_blobs_by_position(self, roi_id, offset, size):
         """Select blobs from the given region defined by offset and size.

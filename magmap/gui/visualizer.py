@@ -2295,7 +2295,7 @@ class Visualization(HasTraits):
             
             # redraw the original ROI and prepare verify mode
             roi_id = roi["id"]
-            blobs = sqlite.select_blobs(config.db.cur, roi_id)
+            blobs = config.db.select_blobs_by_roi(roi_id)[0]
             if len(blobs) > 0:
                 # change to single-channel if all blobs are from same channel
                 chls = np.unique(detector.get_blobs_channel(blobs))

@@ -85,6 +85,12 @@ class BlobMatch:
                     vals[key] if key in vals else None)
         self.df = df_io.dict_to_data_frame(matches_dict)
     
+    def __repr__(self):
+        """Format the underlying data frame."""
+        if self.df is None:
+            return "Empty blob matches"
+        return df_io.print_data_frame(self.df, show=False)
+    
     def get_blobs(self, n):
         """Get blobs as a numpy array.
 

@@ -217,14 +217,15 @@ def get_exp_name(path):
     return path_decon
 
 
-def insert_experiment(conn, cur, name, date):
+def insert_experiment(conn, cur, name, date=None):
     """Inserts an experiment into the database.
     
     Args:
-        conn: The connection.
-        cur: Connection's cursor.
-        name: Name of the experiment.
-        date: The date as a SQLite date object.
+        conn (:class:`sqlite3.Connection): SQLite connection object.
+        cur (:class:`sqlite3.Cursor): SQLite cursor object.
+        name (str): Name of the experiment.
+        date (:class:`datetime`): The experiment date; defaults to None
+            to use the date now.
     """
     if date is None:
         date = datetime.datetime.now()
@@ -259,18 +260,21 @@ def select_experiment(cur, name=None):
     return rows
 
 
-def select_or_insert_experiment(conn, cur, exp_name, date):
+def select_or_insert_experiment(conn, cur, exp_name=None, date=None):
     """Selects an experiment from the given name, or inserts the 
     experiment if not found.
     
     Args:
-        conn: The connection.
-        cur: Connection's cursor.
-        exp_name: Name of the experiment, typically the filename.
-        date: The date as a SQLite date object.
+        conn (:class:`sqlite3.Connection): SQLite connection object.
+        cur (:class:`sqlite3.Cursor): SQLite cursor object.
+        exp_name (str): Name of the experiment, typically the filename.
+            Defaults to None to use the first experiment found.
+        date (:class:`datetime`): The date if an experiment is inserted;
+            defaults to None.
     
     Returns:
-        The ID fo the selected or inserted experiment.
+        int: The ID of the selected or inserted experiment.
+    
     """
     exps = select_experiment(cur, exp_name)
     if len(exps) >= 1:

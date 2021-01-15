@@ -877,7 +877,7 @@ class ClrDB:
             rows (List[:obj:`sqlite3.Row`]): Sequence of rows.
 
         Returns:
-            :class:`BlobMatch`: Blob matches.
+            :class:`magmap.cv.colocalizer.BlobMatch`: Blob match object.
 
         """
         # build list of blob matches, which contain matching blobs and their
@@ -888,10 +888,13 @@ class ClrDB:
                 self.select_blob_by_id(row["blob1"])[0],
                 self.select_blob_by_id(row["blob2"])[0], row["dist"]))
         
-        # convert to data frame to access by named columns
-        df = df_io.dict_to_data_frame(rows, records_cols=rows[0].keys())
-        blob_matches = colocalizer.BlobMatch(
-            matches, df["id"], df["roi_id"], df["blob1"], df["blob2"])
+        if len(rows) > 0:
+            # convert to data frame to access by named columns
+            df = df_io.dict_to_data_frame(rows, records_cols=rows[0].keys())
+            blob_matches = colocalizer.BlobMatch(
+                matches, df["id"], df["roi_id"], df["blob1"], df["blob2"])
+        else:
+            blob_matches = colocalizer.BlobMatch()
         return blob_matches
     
     def select_blob_matches(self, roi_id):
@@ -920,7 +923,8 @@ class ClrDB:
             blob_ids (List[int]): Blob IDs.
 
         Returns:
-            List[:obj:`BlobMatch`]: List of blob matches.
+            :class:`magmap.cv.colocalizer.BlobMatch`: Blob match object,
+            which is empty if not matches are found.
 
         """
         matches = []
@@ -938,8 +942,12 @@ class ClrDB:
                 .format(_COLS_BLOB_MATCHES, blobn,
                         ",".join("?" * (len(ids) - 1))),
                 ids)
-            matches.append(self._parse_blob_matches(self.cur.fetchall()).df)
-        return colocalizer.BlobMatch(df=df_io.data_frames_to_csv(matches))
+            df = self._parse_blob_matches(self.cur.fetchall()).df
+            if df is not None:
+                matches.append(df)
+        if len(matches) > 0:
+            return colocalizer.BlobMatch(df=df_io.data_frames_to_csv(matches))
+        return colocalizer.BlobMatch()
 
 
 def main():

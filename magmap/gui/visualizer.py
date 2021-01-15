@@ -1862,11 +1862,12 @@ class Visualization(HasTraits):
                 # get blob matches from whole-image match colocalization,
                 # shifting blobs to relative coordinates
                 matches = colocalizer.select_matches(
-                    config.db, offset[::-1], roi_size[::-1], config.channel)
+                    config.db, config.channel, offset[::-1], roi_size[::-1])
                 # TODO: include all channel combos
-                matches = matches[tuple(matches.keys())[0]]
-                shift = [n * -1 for n in offset[::-1]]
-                matches.shift_blobs(shift)
+                if matches is not None:
+                    matches = matches[tuple(matches.keys())[0]]
+                    shift = [n * -1 for n in offset[::-1]]
+                    matches.shift_blobs(shift)
                 self.blobs.blob_matches = matches
                 print("loaded blob matches:\n", self.blobs.blob_matches)
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize

@@ -1032,10 +1032,8 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
                      else subimg_size)
             matches = colocalizer.StackColocalizer.colocalize_stack(
                 shape, config.blobs.blobs)
-            
             # insert matches into database
-            offset = (0, 0, 0) if subimg_offset is None else subimg_offset
-            colocalizer.insert_matches(config.db, offset, shape[:3], matches)
+            colocalizer.insert_matches(config.db, matches)
         else:
             print("No blobs loaded to colocalize, skipping")
 

@@ -404,20 +404,23 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     return matches_chls
 
 
-def _get_roi_id(db, offset, shape):
+def _get_roi_id(db, offset, shape, exp_name=None):
     """Get database ROI ID for the given ROI position within the main image5d.
     
     Args:
         db (:obj:`sqlite.ClrDB`): Database object.
         offset (List[int]): ROI offset in z,y,x.
         shape (List[int]): ROI shape in z,y,x.
+        exp_name (str): Name of experiment; defaults to None to attempt
+            discovery through any image loaded to :attr:`config.img5d`.
 
     Returns:
         int: ROI ID or found or inserted ROI.
 
     """
-    exp_name = sqlite.get_exp_name(
-        config.img5d.path_img if config.img5d else None)
+    if exp_name is None:
+        exp_name = sqlite.get_exp_name(
+            config.img5d.path_img if config.img5d else None)
     exp_id = sqlite.select_or_insert_experiment(
         db.conn, db.cur, exp_name, None)
     roi_id = sqlite.select_or_insert_roi(
@@ -425,18 +428,19 @@ def _get_roi_id(db, offset, shape):
     return roi_id
 
 
-def insert_matches(db, offset, shape, matches):
-    """Insert matches into database.
+def insert_matches(db, matches):
+    """Insert matches into database for a whole image.
     
     Args:
         db (:obj:`sqlite.ClrDB`): Database object.
-        offset (List[int]): ROI offset in z,y,x.
-        shape (List[int]): ROI shape in z,y,x.
         matches (dict[tuple[int, int], :class:`BlobMatch`):
             Dictionary of channel combo tuples to blob match objects.
 
     """
-    roi_id = _get_roi_id(db, offset, shape[::-1])
+    # use size of 0 for each dimension for whole-image ROI, which avoids
+    # the need to discover the image size
+    roi_id = _get_roi_id(db, (0, 0, 0), (0, 0, 0))
+    
     for chl_matches in matches.values():
         # insert blobs and matches for the given channel combo
         sqlite.insert_blobs(db.conn, db.cur, roi_id, np.vstack(
@@ -444,24 +448,41 @@ def insert_matches(db, offset, shape, matches):
         config.db.insert_blob_matches(roi_id, chl_matches)
 
 
-def select_matches(db, offset, shape, channels):
+def select_matches(db, channels, offset=None, shape=None, exp_name=None):
     """Select blob matches for the given region from a database.
+    
+    Blob matches are assumed to have been processed from the whole image.
+    To retrieve matches from a selected ROI, use
+    :meth:`magmap.io.sqlite.ClrDB.select_blob_matches` instead.
     
     Args:
         db (:obj:`sqlite.ClrDB`): Database object.
-        offset (List[int]): ROI offset in z,y,x.
-        shape (List[int]): ROI shape in z,y,x.
-        channels (List[int]): List of channels.
+        channels (list[int]): List of channels.
+        offset (list[int]): ROI offset in z,y,x; defaults to None to use
+            ``(0, 0, 0)``.
+        shape (list[int]): ROI shape in z,y,x; defaults to None to use
+            ``(0, 0, 0)``.
+        exp_name (str): Name of experiment in ``db``.
 
     Returns:
-        Dict[str, List[:obj:`BlobMatch`]: Dictionary where
+        dict[tuple[int, int], list[:obj:`BlobMatch`]: Dictionary where
         keys are tuples of the two channels compared and values are a list
-        of blob matches.
+        of blob matches. None if no blob matches are found.
 
     """
-    roi_id = _get_roi_id(db, (0, 0, 0), config.image5d.shape[3:0:-1])
-    blobs, blob_ids = db.select_blobs_by_position(
-        roi_id, offset[::-1], shape[::-1])
+    # get ROI for whole image
+    roi_id = _get_roi_id(db, (0, 0, 0), (0, 0, 0), exp_name)
+    if offset is not None and shape is not None:
+        # get blob from matches within ROI
+        blobs, blob_ids = db.select_blobs_by_position(
+            roi_id, offset[::-1], shape[::-1])
+    else:
+        # get blobs from matches within the whole image
+        blobs, blob_ids = db.select_blobs_by_roi(roi_id)
+    if blobs is None or len(blobs) == 0:
+        print("No blob matches found")
+        return None
+    
     blob_ids = np.array(blob_ids)
     matches = {}
     for chl in channels:
@@ -473,7 +494,8 @@ def select_matches(db, offset, shape, channels):
             chl_matches = db.select_blob_matches_by_blob_id(
                 roi_id, 1,
                 blob_ids[detector.get_blobs_channel(blobs) == chl])
-            chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
-                chl_matches.get_blobs(2)) == chl_other]
-            matches[(chl, chl_other)] = BlobMatch(df=chl_matches)
+            if chl_matches.df is not None:
+                chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
+                    chl_matches.get_blobs(2)) == chl_other]
+                matches[(chl, chl_other)] = BlobMatch(df=chl_matches)
     return matches

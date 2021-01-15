@@ -305,7 +305,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         offset = (0, 0, 0)
     else:
         # get base path for sub-image
-        subimg_path_base = naming.make_subimage_name(filename_base, offset, size)
+        subimg_path_base = naming.make_subimage_name(
+            filename_base, offset, size)
     filename_blobs = libmag.combine_paths(subimg_path_base, config.SUFFIX_BLOBS)
     
     # get ROI for given region, including all channels
@@ -441,7 +442,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
             except LookupError as e:
                 libmag.warn(str(e))
     
-    file_time_start = time()
     if config.save_subimg:
         subimg_base_path = libmag.combine_paths(
             subimg_path_base, config.SUFFIX_SUBIMG)
@@ -458,14 +458,13 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
 
     # save blobs
     # TODO: only segments used; consider removing the rest except ver
-    outfile_blobs = open(filename_blobs, "wb")
-    np.savez(outfile_blobs, ver=BLOBS_NP_VER, segments=segments_all,
-             resolutions=config.resolutions,
-             basename=os.path.basename(config.filename),  # only save name
-             offset=offset, roi_size=size,  # None unless explicitly set
-             colocs=colocs)
-    outfile_blobs.close()
-    file_save_time = time() - file_time_start
+    blobs = detector.Blobs(path=filename_blobs)
+    blobs.save_archive(dict(
+        ver=BLOBS_NP_VER, segments=segments_all,
+        resolutions=config.resolutions,
+        basename=os.path.basename(config.filename),  # only save name
+        offset=offset, roi_size=size,  # None unless explicitly set
+        colocs=colocs))
     
     # whole image benchmarking time
     times = (
@@ -480,7 +479,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     else:
         print("\nTotal blobs found:", len(segments_all))
         detector.show_blobs_per_channel(segments_all)
-    print("file save time:", file_save_time)
     print("\nTotal detection processing times (s):")
     path_times = "stack_detection_times.csv" if save_dfs else None
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")

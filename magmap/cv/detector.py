@@ -53,19 +53,26 @@ class Blobs:
         self.colocalizations = colocalizations
         self.path = path
     
-    def update_archive(self, to_add):
-        """Update the blobs Numpy archive file.
+    def save_archive(self, to_add, update=False):
+        """Save the blobs Numpy archive file to :attr:`path`.
         
         Args:
             to_add (dict): Dictionary of items to add.
+            update (bool): True to load the Numpy archive at :attr:`path`
+                and update it.
 
         Returns:
-            dict: Updated dictionary saved to :attr:`path`.
+            dict: Dictionary saved to :attr:`path`.
 
         """
         with np.load(self.path) as archive:
-            blobs_arc = np_io.read_np_archive(archive)
-            blobs_arc.update(to_add)
+            if update:
+                # load archive, convert to dict, and update dict
+                blobs_arc = np_io.read_np_archive(archive)
+                blobs_arc.update(to_add)
+            else:
+                blobs_arc = to_add
+            # save as uncompressed zip Numpy archive file
             np.savez(self.path, **blobs_arc)
         if config.verbose:
             pprint.pprint(blobs_arc)

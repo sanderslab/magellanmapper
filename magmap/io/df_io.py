@@ -530,7 +530,7 @@ def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
     return df_lines, cols
 
 
-def print_data_frame(df, sep=" ", index=False, header=True):
+def print_data_frame(df, sep=" ", index=False, header=True, show=True):
     """Print formatted data frame.
     
     Args:
@@ -540,11 +540,19 @@ def print_data_frame(df, sep=" ", index=False, header=True):
             alternate separator. Defaults to " ".
         index (bool): True to show index; defaults to False.
         header (bool): True to show header; defaulst to True.
+        show (bool): True to print the formatted data frame; defaults to True.
+    
+    Returns:
+        str: The formatted data frame.
+    
     """
     if sep is True or sep == " ":
-        print(df.to_string(index=index, header=header, na_rep="NaN"))
+        df_str = df.to_string(index=index, header=header, na_rep="NaN")
     else:
-        print(df.to_csv(sep=sep, index=index, header=header, na_rep="NaN"))
+        df_str = df.to_csv(sep=sep, index=index, header=header, na_rep="NaN")
+    if show:
+        print(df_str)
+    return df_str
 
 
 def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,

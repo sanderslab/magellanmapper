@@ -18,9 +18,8 @@ from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
-from magmap.cv import chunking, cv_nd, detector
-from magmap.io import df_io
-from magmap.io import sitk_io
+from magmap.cv import chunking, colocalizer, cv_nd, detector
+from magmap.io import df_io, sitk_io, sqlite
 from magmap.plot import colormaps
 from magmap.stats import vols
 
@@ -173,11 +172,16 @@ def export_common_labels(img_paths, output_path):
 
 
 def make_density_image(img_path, scale=None, shape=None, suffix=None, 
-                       labels_img_sitk=None, channel=None):
+                       labels_img_sitk=None, channel=None, matches=None):
     """Make a density image based on associated blobs.
     
     Uses the shape of the registered labels image by default to set 
     the voxel sizes for the blobs.
+    
+    If ``matches`` is given, a heat map will be generated for each set
+    of channels given in the dictionary. Otherwise, if the loaded blobs
+    file has intensity-based colocalizations, a heat map will be generated
+    for each combination of channels.
     
     Args:
         img_path: Path to image, which will be used to indentify the blobs file.
@@ -196,6 +200,9 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
             will be opened.
         channel (List[int]): Sequence of channels to include in density image;
             defaults to None to combine blobs from all channels.
+        matches (dict[tuple[int, int], :class:`magmap.cv.colocalizer`):
+            Dictionary of channel combinations to blob matches; defaults to
+            None.
     
     Returns:
         :obj:`np.ndarray`, str: The density image as a Numpy array in the
@@ -238,12 +245,24 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         blobs_chl = blobs_chl[np.isin(detector.get_blobs_channel(
             blobs_chl), channel)]
     heat_map = make_heat_map()
-    print("heat map", heat_map.shape, heat_map.dtype)
+    print("heat map", heat_map.shape, heat_map.dtype, labels_img.shape)
     imgs_write = {
         config.RegNames.IMG_HEAT_MAP.value:
             sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)}
     
-    if blobs.colocalizations is not None:
+    heat_colocs = None
+    if matches:
+        # create heat maps for match-based colocalization combos
+        heat_colocs = []
+        for chl_combo, chl_matches in matches.items():
+            print("Generating match-based colocalization heat map "
+                  "for channel combo:", chl_combo)
+            blobs_chl = chl_matches.get_blobs(1)
+            heat_colocs.append(make_heat_map())
+    
+    elif blobs.colocalizations is not None:
+        # create heat map for each intensity-based colocalization combo
+        # as a separate channel in output image
         blob_chls = range(blobs.colocalizations.shape[1])
         blob_chls_len = len(blob_chls)
         if blob_chls_len > 1:
@@ -255,18 +274,20 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
                     [tuple(c) for c in itertools.combinations(blob_chls, r)
                      if all([h in c for h in chls])])
             
-            # create heat map for each co-localization combo as a separate
-            # channel in output image
             heat_colocs = []
             for combo in combos:
-                print("combo", combo)
+                print("Generating intensity-based colocalization heat map "
+                      "for channel combo:", combo)
                 blobs_chl = blobs.blobs[np.all(np.equal(
                     blobs.colocalizations[:, combo], 1), axis=1)]
                 heat_colocs.append(make_heat_map())
-            heat_colocs = np.stack(heat_colocs, axis=3)
-            imgs_write[config.RegNames.IMG_HEAT_COLOC.value] = \
-                sitk_io.replace_sitk_with_numpy(
-                    labels_img_sitk, heat_colocs)
+    
+    if heat_colocs is not None:
+        # combine heat maps into single image
+        heat_colocs = np.stack(heat_colocs, axis=3)
+        imgs_write[config.RegNames.IMG_HEAT_COLOC.value] = \
+            sitk_io.replace_sitk_with_numpy(
+                labels_img_sitk, heat_colocs)
     
     # write images to file
     sitk_io.write_reg_images(imgs_write, mod_path)
@@ -296,10 +317,18 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None,
     pool = chunking.get_mp_pool()
     pool_results = []
     for img_path in img_paths:
-        print("making image", img_path)
+        print("Making density image from blobs related to:", img_path)
+        if config.channel:
+            # get blob matches for the given channels if available; must load
+            # from db outside of multiprocessing to avoid MemoryError
+            matches = colocalizer.select_matches(
+                config.db, config.channel,
+                exp_name=sqlite.get_exp_name(img_path))
+        else:
+            matches = None
         pool_results.append(pool.apply_async(
             make_density_image,
-            args=(img_path, scale, shape, suffix, None, channel)))
+            args=(img_path, scale, shape, suffix, None, channel, matches)))
     for result in pool_results:
         _, path = result.get()
         print("finished {}".format(path))

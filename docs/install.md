@@ -162,6 +162,25 @@ If you created an environment with a custom name, replace `mag` with this name.
 For more details on uninstalling Conda, see the [Conda uninstallation directions](https://docs.anaconda.com/anaconda/install/uninstall/).
 
 
+## Build Documentation
+
+API documentation can be built using Sphinx. To install Sphinx, run:
+
+```
+pip install sphinx
+```
+
+We have provided a convenience Bash script to generate HTML files with Sphinx. To build all required files, run:
+
+```
+bin/build_docs.sh -a
+```
+
+Output API docs can be accessed from `docs/_build/html/index.html`.
+
+Note that there may be many warnings but otherwise correct output. On subsequent runs, the `-a` flag can be omitted if no new modules are added. The `-c` flag will clean the documentation before reubuilding it.
+
+
 ## Tested Platforms
 
 MagellanMapper has been built and tested to build on:
@@ -177,7 +196,7 @@ MagellanMapper has been built and tested to build on:
 
 ### Installation on Windows
 
-Currently MagellanMapper uses many Bash scripts, which require Cygwin or more recently Windows Subsystem for Linux (WSL) to run. Theoretically MagellanMapper most likely could run without them, which we will need to test.
+Currently, MagellanMapper uses many Bash scripts, which require Cygwin or more recently Windows Subsystem for Linux (WSL) to run. Theoretically MagellanMapper most likely could run without them, which we will need to test.
 
 In the meantime, here are instructions for either Linux-like layer:
 

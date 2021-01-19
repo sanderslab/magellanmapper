@@ -40,16 +40,24 @@ class Image5d:
 
 
 def img_to_blobs_path(path):
-    """Convert an image base path to a blobs path.
+    """Get the blobs path associated with an image or user-supplied.
+    
+    The user-supplied blobs path stored in :attr:`magmap.io.config.load_data`
+    takes precedence over ``path``.
     
     Args:
         path (str): Image base path, without extension or MagellanMapper
             suffixes.
 
     Returns:
-        str: Default MagellanMapper blobs path based on image path.
+        str: Default MagellanMapper blobs path based on image path, or
+        the config path if it is a string.
 
     """
+    path_blobs = config.load_data[config.LoadData.BLOBS]
+    if isinstance(path_blobs, str):
+        # user-supplied path takes precedence
+        return path_blobs
     return libmag.combine_paths(path, config.SUFFIX_BLOBS)
 
 

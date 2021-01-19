@@ -463,10 +463,12 @@ def main(process_args_only=False, skip_dbs=False):
               config.cpus)
 
     if args.load is not None:
-        # flag loading data sources, specified by the source alone to use a
-        # default path for it, or giving a path as a sub-arg
+        # flag loading data sources with default sub-arg indicating that the
+        # data should be loaded from a default path; otherwise, load from
+        # path given by the sub-arg; change delimiter to allow paths with ","
         config.load_data = args_to_dict(
-            args.load, config.LoadData, config.load_data, default="1")
+            args.load, config.LoadData, config.load_data, sep_vals="|",
+            default=True)
         print("Set to load the data types: {}".format(config.load_data))
 
     # set up main processing mode

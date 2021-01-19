@@ -121,8 +121,8 @@ def plot_knns(img_paths, suffix=None, show=False, names=None):
             mod_path = libmag.insert_before_ext(img_path, suffix)
         labels_img_np = sitk_io.load_registered_img(
             mod_path, config.RegNames.IMG_LABELS.value)
-        blobs, scaling, res = np_io.load_blobs(
-            img_path, True, labels_img_np.shape)
+        blobs = np_io.load_blobs(np_io.img_to_blobs_path(img_path))
+        scaling, res = np_io.find_scaling(img_path, labels_img_np.shape)
         if blobs is None:
             libmag.warn("unable to load nuclei coordinates for", img_path)
             continue
@@ -258,7 +258,8 @@ def cluster_blobs(img_path, suffix=None):
         mod_path = libmag.insert_before_ext(img_path, suffix)
     labels_img_np = sitk_io.load_registered_img(
         mod_path, config.RegNames.IMG_LABELS.value)
-    blobs, scaling, res = np_io.load_blobs(img_path, True, labels_img_np.shape)
+    blobs = np_io.load_blobs(np_io.img_to_blobs_path(img_path))
+    scaling, res = np_io.find_scaling(img_path, labels_img_np.shape)
     if blobs is None:
         libmag.warn("unable to load nuclei coordinates")
         return

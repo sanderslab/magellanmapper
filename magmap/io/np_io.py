@@ -39,34 +39,34 @@ class Image5d:
         self.subimg_size = None
 
 
-def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
-    """Load blobs from an archive.
-    
-    Scaling can be computed to translate blob coordinates into another
-    space, such as a heat map for a downsampled image.
+def img_to_blobs_path(path):
+    """Convert an image base path to a blobs path.
     
     Args:
-        img_path (str): Base path to blobs.
-        check_scaling (bool): True to check scaling, in which case
-            the scaling factor and scaled resolutions will be returned.
-            Defaults to False.
-        scaled_shape (List): Shape of image to calculate scaling factor if
-            this factor cannot be found from a transposed file's metadata;
-            defaults to None.
-        scale (int, float): Scalar scaling factor, used to find a
-            rescaled file; defaults to None. To find a resized file instead,
-            set an atlas profile with the resizing factor.
+        path (str): Image base path, without extension or MagellanMapper
+            suffixes.
 
     Returns:
-        :obj:`magmap.cv.detector.Blobs`[, List, List]: Blobs object.
-        If ``check_scaling`` is True, also returns sequence of scaling
-        factors to a scaled or resized image, or None if not loaded or
-        given, and the resolutions of the full-sized image in which the
-        blobs were detected.
+        str: Default MagellanMapper blobs path based on image path.
+
+    """
+    return libmag.combine_paths(path, config.SUFFIX_BLOBS)
+
+
+def load_blobs(path):
+    """Load blobs from an archive.
+    
+    Also loads associated metadata from the archive.
+    
+    Args:
+        path (str): Path to blobs archive.
+
+    Returns:
+        :obj:`magmap.cv.detector.Blobs`: Blobs object.
 
     """
     # load blobs and display counts
-    path = libmag.combine_paths(img_path, config.SUFFIX_BLOBS)
+    # path = libmag.combine_paths(img_path, config.SUFFIX_BLOBS)
     print("Loading blobs from", path)
     with np.load(path) as archive:
         info = read_np_archive(archive)
@@ -83,9 +83,30 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
                       .format(blobs.colocalizations.shape[1]))
         if config.verbose:
             pprint.pprint(info)
-    if not check_scaling:
-        return blobs
+    return blobs
 
+
+def find_scaling(img_path, scaled_shape=None, scale=None):
+    """Find scaling between two images.
+    
+    Scaling can be computed to translate blob coordinates into another
+    space, such as a heat map for a downsampled image.
+    
+    Args:
+        img_path (str): Base path to image.
+        scaled_shape (List): Shape of image to calculate scaling factor if
+            this factor cannot be found from a transposed file's metadata;
+            defaults to None.
+        scale (int, float): Scalar scaling factor, used to find a
+            rescaled file; defaults to None. To find a resized file instead,
+            set an atlas profile with the resizing factor.
+
+    Returns:
+        list[float], list[float]: Sequence of scaling factors to a scaled
+        or resized image, or None if not loaded or given, and the resolutions
+        of the full-sized image found based on ``img_path``.
+
+    """
     # get scaling and resolutions from blob space to that of a down/upsampled
     # image space
     load_size = config.atlas_profile["target_size"]
@@ -109,7 +130,7 @@ def load_blobs(img_path, check_scaling=False, scaled_shape=None, scale=None):
         res = config.resolutions[0]
         print("using scaling compared to full image:", scaling)
         print("resolution from full-scale image:", res)
-    return blobs, scaling, res
+    return scaling, res
 
 
 def read_np_archive(archive):
@@ -241,20 +262,20 @@ def setup_images(path=None, series=None, offset=None, size=None,
             if subimg_base:
                 try:
                     # load blobs generated from sub-image
-                    config.blobs = load_blobs(subimg_base)
+                    config.blobs = load_blobs(img_to_blobs_path(subimg_base))
                 except (FileNotFoundError, KeyError):
                     # fallback to loading from full image blobs and getting
                     # a subset, shifting them relative to sub-image offset
                     print("Unable to load blobs file based on {}, will try "
                           "from {}".format(subimg_base, filename_base))
-                    config.blobs = load_blobs(filename_base)
+                    config.blobs = load_blobs(img_to_blobs_path(filename_base))
                     config.blobs.blobs, _ = detector.get_blobs_in_roi(
                         config.blobs.blobs, offset, size, reverse=False)
                     detector.shift_blob_rel_coords(
                         config.blobs.blobs, np.multiply(offset, -1))
             else:
                 # load full image blobs
-                config.blobs = load_blobs(filename_base)
+                config.blobs = load_blobs(img_to_blobs_path(filename_base))
         except (FileNotFoundError, KeyError) as e2:
             print("Unable to load blobs file")
             if proc_type in (

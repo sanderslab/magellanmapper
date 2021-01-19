@@ -156,9 +156,10 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
             ``keys_enum``; defaults to None, which will assign an empty dict.
         sep_args (str): Separator between arguments and values; defaults to "=".
         sep_vals (str): Separator within values; defaults to ",".
-        default (str): Default value for each argument. Effectively turns off
+        default (Any): Default value for each argument. Effectively turns off
             positional argument assignments since all args become
-            ``<keyword>=<default>``. Defaults to None.
+            ``<keyword>=<default>``. Defaults to None. If a str, will
+            undergo splitting by ``sep_vals``.
     
     Returns:
         dict: Dictionary filled with arguments. Values that contain commas
@@ -202,12 +203,15 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
                 print("unable to find {} in {}".format(key_str, keys_enum))
                 continue
         if key:
-            vals_split = vals.split(sep_vals)
-            if len(vals_split) > 1:
-                # use split value if comma-delimited
-                vals = vals_split
-            # cast to numeric types if possible and assign to found enum
-            args_dict[key] = libmag.get_int(vals)
+            if isinstance(vals, str):
+                # split delimited strings
+                vals_split = vals.split(sep_vals)
+                if len(vals_split) > 1:
+                    vals = vals_split
+                # cast to numeric type if possible
+                vals = libmag.get_int(vals)
+            # assign to found enum
+            args_dict[key] = vals
     return args_dict
 
 

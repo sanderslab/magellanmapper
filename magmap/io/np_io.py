@@ -3,7 +3,6 @@
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import os
-import pprint
 
 import numpy as np
 import pandas as pd
@@ -59,39 +58,6 @@ def img_to_blobs_path(path):
         # user-supplied path takes precedence
         return path_blobs
     return libmag.combine_paths(path, config.SUFFIX_BLOBS)
-
-
-def load_blobs(path):
-    """Load blobs from an archive.
-    
-    Also loads associated metadata from the archive.
-    
-    Args:
-        path (str): Path to blobs archive.
-
-    Returns:
-        :obj:`magmap.cv.detector.Blobs`: Blobs object.
-
-    """
-    # load blobs and display counts
-    # path = libmag.combine_paths(img_path, config.SUFFIX_BLOBS)
-    print("Loading blobs from", path)
-    with np.load(path) as archive:
-        info = read_np_archive(archive)
-        blobs = detector.Blobs(path=path)
-        if "segments" in info:
-            blobs.blobs = info["segments"]
-            print("Loaded {} blobs".format(len(blobs.blobs)))
-            if config.verbose:
-                detector.show_blobs_per_channel(blobs.blobs)
-        if "colocs" in info:
-            blobs.colocalizations = info["colocs"]
-            if blobs.colocalizations is not None:
-                print("Loaded blob co-localizations for {} channels"
-                      .format(blobs.colocalizations.shape[1]))
-        if config.verbose:
-            pprint.pprint(info)
-    return blobs
 
 
 def find_scaling(img_path, scaled_shape=None, scale=None):
@@ -266,24 +232,28 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.ProcessTypes.EXPORT_BLOBS,
             config.ProcessTypes.DETECT):
         # load a blobs archive
+        blobs = detector.Blobs()
         try:
             if subimg_base:
                 try:
                     # load blobs generated from sub-image
-                    config.blobs = load_blobs(img_to_blobs_path(subimg_base))
+                    config.blobs = blobs.load_blobs(
+                        img_to_blobs_path(subimg_base))
                 except (FileNotFoundError, KeyError):
                     # fallback to loading from full image blobs and getting
                     # a subset, shifting them relative to sub-image offset
                     print("Unable to load blobs file based on {}, will try "
                           "from {}".format(subimg_base, filename_base))
-                    config.blobs = load_blobs(img_to_blobs_path(filename_base))
-                    config.blobs.blobs, _ = detector.get_blobs_in_roi(
-                        config.blobs.blobs, offset, size, reverse=False)
+                    config.blobs = blobs.load_blobs(
+                        img_to_blobs_path(filename_base))
+                    blobs.blobs, _ = detector.get_blobs_in_roi(
+                        blobs.blobs, offset, size, reverse=False)
                     detector.shift_blob_rel_coords(
-                        config.blobs.blobs, np.multiply(offset, -1))
+                        blobs.blobs, np.multiply(offset, -1))
             else:
                 # load full image blobs
-                config.blobs = load_blobs(img_to_blobs_path(filename_base))
+                config.blobs = blobs.load_blobs(
+                    img_to_blobs_path(filename_base))
         except (FileNotFoundError, KeyError) as e2:
             print("Unable to load blobs file")
             if proc_type in (

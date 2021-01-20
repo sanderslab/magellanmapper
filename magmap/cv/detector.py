@@ -60,7 +60,40 @@ class Blobs:
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
         self.path = path
-    
+
+    def load_blobs(self, path=None):
+        """Load blobs from an archive.
+
+        Also loads associated metadata from the archive.
+
+        Args:
+            path (str): Path to set :attr:`path`; defaults to None to use
+                the existing path.
+
+        Returns:
+            :class:`Blobs`: Blobs object.
+
+        """
+        # load blobs and display counts
+        if path is not None:
+            self.path = path
+        print("Loading blobs from", self.path)
+        with np.load(self.path) as archive:
+            info = np_io.read_np_archive(archive)
+            if "segments" in info:
+                self.blobs = info["segments"]
+                print("Loaded {} blobs".format(len(self.blobs)))
+                if config.verbose:
+                    show_blobs_per_channel(self.blobs)
+            if "colocs" in info:
+                self.colocalizations = info["colocs"]
+                if self.colocalizations is not None:
+                    print("Loaded blob co-localizations for {} channels"
+                          .format(self.colocalizations.shape[1]))
+            if config.verbose:
+                pprint.pprint(info)
+        return self
+
     def save_archive(self, to_add, update=False):
         """Save the blobs Numpy archive file to :attr:`path`.
         

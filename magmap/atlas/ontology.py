@@ -422,30 +422,25 @@ def get_label_side(label_id):
     return config.HemSides.BOTH.value
 
 
-def get_label_ids_from_position(coord, labels_img, scaling=None, rounding=False, 
-                                return_coord_scaled=False):
+def scale_coords(coord, scaling=None, clip_shape=None):
     """Get the atlas label IDs for the given coordinates.
     
     Args:
-        coord: Coordinates of experiment image in (z, y, x) order. Can be an 
-            [n, 3] array of coordinates.
-        labels_img: The registered image whose intensity values correspond to 
-            label IDs.
-        scaling: Scaling factor for the labels image size compared with the 
-            experiment image; defaults to None.
-        rounding: True to round coordinates after scaling, which should be 
-            used rounding to reverse coordinates that were previously scaled 
-            inversely to avoid size degredation with repeated scaling. 
-            Typically rounding is False (default) so that coordinates fall 
-            evenly to their lowest integer, without exceeding max bounds.
-        return_coord_scaled: True to return the array of scaled coordinates; 
-            defaults to False.
+        coord (:class:`numpy.ndarray`): Coordinates of experiment image in
+            ``z,y,x`` order. Can be an ``[n, 3]`` array of coordinates.
+        scaling (Sequence[int]): Scaling factor for the labels image size
+            compared with the experiment image as ``z,y,x``; defaults to None.
+        clip_shape (Sequence[int]): Max image shape as ``z,y,x``, used to
+            round coordinates for extra precision. For simplicity, scaled
+            values are simply floored. Repeated scaling such as upsampling
+            after downsampling can lead to errors. If this parameter is given,
+            values will instead by rounded to minimize errors while giving
+            ints. Rounded values will be clipped to this shape minus 1 to
+            stay within bounds.
     
     Returns:
-        An array of label IDs corresponding to ``coord``, or a scalar of 
-        one ID if only one coordinate is given. If ``return_coord_scaled`` is 
-        True, also returns a Numpy array of the same shape as ``coord`` 
-        scaled based on ``scaling``.
+        :class:`numpy.ndarray`: An scaled array of the same shape as ``coord``.
+    
     """
     libmag.printv(
         "getting label IDs from coordinates using scaling", scaling)
@@ -453,23 +448,37 @@ def get_label_ids_from_position(coord, labels_img, scaling=None, rounding=False,
     if scaling is not None:
         # scale coordinates to atlas image size
         coord_scaled = np.multiply(coord, scaling)
-    if rounding: 
+    if clip_shape is not None:
         # round when extra precision is necessary, such as during reverse 
         # scaling, which requires clipping so coordinates don't exceed labels 
         # image shape
         coord_scaled = np.around(coord_scaled).astype(np.int)
         coord_scaled = np.clip(
-            coord_scaled, None, np.subtract(labels_img.shape, 1))
+            coord_scaled, None, np.subtract(clip_shape, 1))
     else:
         # typically don't round to stay within bounds
         coord_scaled = coord_scaled.astype(np.int)
+    return coord_scaled
+
+
+def get_label_ids_from_position(coord_scaled, labels_img):
+    """Get the atlas label IDs for the given coordinates.
+
+    Args:
+        coord_scaled (:class:`numpy.ndarray`): 2D array of coordinates in
+            ``[[z,y,x], ...]`` format, or a single row as a 1D array.
+        labels_img (:class:`numpy.ndarray`): Labeled image from which to
+            extract labels at coordinates in ``coord_scaled``.
+
+    Returns:
+        :class:`numpy.ndarray`: An array of label IDs corresponding to
+        ``coord``, or a scalar of one ID if only one coordinate is given.
     
+    """
     # index blob coordinates into labels image by int array indexing to 
     # get the corresponding label IDs
     coordsi = libmag.coords_for_indexing(coord_scaled)
     label_ids = labels_img[tuple(coordsi)][0]
-    if return_coord_scaled:
-        return label_ids, coord_scaled
     return label_ids
 
 
@@ -497,7 +506,9 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
         The label dictionary at those coordinates, or None if no label is 
         found.
     """
-    label_id = get_label_ids_from_position(coord, labels_img, scaling, rounding)
+    coord_scaled = scale_coords(
+        coord, scaling, labels_img.shape if rounding else None)
+    label_id = get_label_ids_from_position(coord_scaled, labels_img)
     libmag.printv("found label_id: {}".format(label_id))
     mirrored = label_id < 0
     if mirrored:

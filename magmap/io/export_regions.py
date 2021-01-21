@@ -211,9 +211,8 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     """
     def make_heat_map():
         # build heat map to store densities per label px and save to file
-        _, coord_scaled = ontology.get_label_ids_from_position(
-            blobs_chl[:, :3], labels_img, scaling,
-            return_coord_scaled=True)
+        coord_scaled = ontology.scale_coords(
+            blobs_chl[:, :3], scaling, labels_img.shape)
         print("coords", coord_scaled)
         return cv_nd.build_heat_map(labels_img.shape, coord_scaled)
     

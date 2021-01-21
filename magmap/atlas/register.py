@@ -1692,9 +1692,9 @@ def _test_labels_lookup():
     blobs = np.array([[300, 5000, 3000], [350, 5500, 4500], [400, 6000, 5000]])
     img5d = importer.read_file(config.filename, config.series)
     scaling = importer.calc_scaling(img5d.img, labels_img)
-    ids, coord_scaled = ontology.get_label_ids_from_position(
-        blobs[:, 0:3], labels_img, scaling, return_coord_scaled=True)
-    print("blob IDs:\n{}".format(ids))
+    coord_scaled = ontology.scale_coords(blobs[:, 0:3], scaling, labels_img.shape)
+    label_ids = ontology.get_label_ids_from_position(coord_scaled, labels_img)
+    print("blob IDs:\n{}".format(label_ids))
     print("coord_scaled:\n{}".format(coord_scaled))
 
 

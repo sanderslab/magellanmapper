@@ -178,8 +178,9 @@ class ClusterByLabel(object):
     @classmethod
     def cluster_by_label(cls, blobs, labels_img_np, blobs_lbl_scaling,
                          blobs_iso_scaling, all_labels=False):
+        coord_scaled = ontology.scale_coords(blobs, blobs_lbl_scaling)
         blobs_lbls = ontology.get_label_ids_from_position(
-            blobs, labels_img_np, blobs_lbl_scaling)
+            coord_scaled, labels_img_np)
         blobs = np.multiply(blobs[:, :3], blobs_iso_scaling)
         blobs_clus = np.zeros((len(blobs), 5), dtype=int)
         blobs_clus[:, :3] = blobs

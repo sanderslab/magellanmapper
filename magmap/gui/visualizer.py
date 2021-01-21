@@ -1959,7 +1959,14 @@ class Visualization(HasTraits):
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
-        self.redraw_selected_viewer(clear=False)
+        
+        if (self.selected_viewer_tab is ViewerTabs.ROI_ED or
+                self.selected_viewer_tab is ViewerTabs.MAYAVI and
+                self.stale_viewers[ViewerTabs.MAYAVI]):
+            # currently must redraw ROI Editor to include blobs; redraw
+            # 3D viewer if stale and only if shown to limit performance impact
+            # of 3D display; Atlas Editor does not show blobs
+            self.redraw_selected_viewer(clear=False)
         
         if (self.selected_viewer_tab is ViewerTabs.MAYAVI or
                 not self.stale_viewers[ViewerTabs.MAYAVI]):

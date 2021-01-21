@@ -874,12 +874,26 @@ def zero_crossing(img, filter_size):
 
 
 def calc_isotropic_factor(scale):
+    """Calculate the isotropic factor based on the current image resolutions.
+    
+    The resolutions are divided by their minimum value and multiplied by
+    the given scaling factor. The resulting value can be used to rescale
+    images or coordinates to be isotropic.
+    
+    Args:
+        scale (Union[float, Sequence[float]]): Float scalar or sequence of
+            scaling factors in ``z,y,x`` by which to multiply the currently
+            loaded image's resolutions.
+
+    Returns:
+        :class:`numpy.ndarray`: Isotropic factor.
+
+    """
     res = config.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))
     resize_factor *= scale
     #print("isotropic resize factor: {}".format(resize_factor))
     return resize_factor
-    #return np.array((1, 1, 1))
 
 
 def make_isotropic(roi, scale):

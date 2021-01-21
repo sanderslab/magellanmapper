@@ -1995,9 +1995,14 @@ class Visualization(HasTraits):
         self._scale_detections_high = scale * 2
         self.scale_detections = scale
         
-        if self.segments is not None and len(self.segments) > 0:
-            # show plot outline for emphasis
-            self.scene.mlab.outline()
+        # show plot outline to show ROI borders, manually calculating extent
+        # since the default bounds do not always capture all objects and to
+        # include any empty border spaces
+        isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
+        if isotropic is not None:
+            roi_size = np.multiply(roi_size, isotropic[::-1])
+        self.scene.mlab.outline(extent=(
+            0, roi_size[0], 0, roi_size[1], 0, roi_size[2]))
 
     @on_trait_change("_colocalize")
     def _colocalize_blobs(self):

@@ -298,13 +298,31 @@ def remap_intensity(roi, channel=None):
     return roi_out
 
 
-def _resize_glyphs_isotropic(settings, glyphs=None):
-    # resize Mayavi glyphs to make them isotropic based on profile settings
+def get_isotropic_vis(settings):
+    """Get the isotropic factor scaled by the profile setting for visualization.
+    
+    Visualization may require the isotropic factor to be further scaled,
+    such as for images whose z resolution is less precise that x/y resolution.
+    
+    Args:
+        settings (:class:`magmap.settings.profiles.SettingsDict`): Settings
+            dictionary from which to retrieve the isotropic visualization value.
+
+    Returns:
+        :class:`numpy.ndarray`: Isotropic factor based on the profile setting.
+
+    """
     isotropic = settings["isotropic_vis"]
     if isotropic is not None:
         isotropic = cv_nd.calc_isotropic_factor(isotropic)
-        if glyphs:
-            glyphs.actor.actor.scale = isotropic[::-1]
+    return isotropic
+
+
+def _resize_glyphs_isotropic(settings, glyphs=None):
+    # resize Mayavi glyphs to make them isotropic based on profile settings
+    isotropic = get_isotropic_vis(settings)
+    if isotropic is not None and glyphs:
+        glyphs.actor.actor.scale = isotropic[::-1]
     return isotropic
 
 

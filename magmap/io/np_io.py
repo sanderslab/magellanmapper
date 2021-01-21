@@ -196,6 +196,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
 
     filename_base = importer.filename_to_base(path, series)
     subimg_base = None
+    blobs = None
 
     if load_subimage and not config.save_subimg:
         # load a saved sub-image file if available and not set to save one
@@ -422,6 +423,15 @@ def setup_images(path=None, series=None, offset=None, size=None,
     config.vmax_overview = libmag.pad_seq(
         config.vmax_overview, num_channels)
     colormaps.setup_colormaps(num_channels)
+    
+    if (blobs is not None and blobs.blobs is not None
+            and config.img5d.img is not None):
+        # scale blob coordinates to main image if shapes differ
+        scaling = np.divide(config.img5d.img.shape[1:4], blobs.roi_size)
+        if not np.all(scaling == 1):
+            print("Scaling blobs to main image by factor:", scaling)
+            blobs.blobs[:, :3] = ontology.scale_coords(
+                blobs.blobs[:, :3], scaling)
 
 
 def get_num_channels(image5d):

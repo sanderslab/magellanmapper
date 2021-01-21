@@ -450,15 +450,17 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
                 np.save(f, roi)
 
     # save blobs
-    # TODO: only segments used; consider removing the rest except ver
-    # TODO: consider refactoring fields to Blobs
+    # TODO: consider separating into blobs and blobs metadata archives
     blobs = detector.Blobs(path=filename_blobs)
-    blobs.save_archive(dict(
-        ver=blobs.BLOBS_NP_VER, segments=segments_all,
-        resolutions=config.resolutions,
-        basename=os.path.basename(config.filename),  # only save name
-        offset=offset, roi_size=size,  # None unless explicitly set
-        colocs=colocs))
+    blobs.save_archive({
+        detector.Blobs.Keys.VER.value: blobs.BLOBS_NP_VER,
+        detector.Blobs.Keys.BLOBS.value: segments_all,
+        detector.Blobs.Keys.RESOLUTIONS.value: config.resolutions,
+        # only save name
+        detector.Blobs.Keys.BASENAME.value: os.path.basename(config.filename),
+        detector.Blobs.Keys.ROI_OFFSET.value: offset,
+        detector.Blobs.Keys.ROI_SIZE.value: size,
+        detector.Blobs.Keys.COLOCS.value: colocs})
     
     # whole image benchmarking time
     times = (

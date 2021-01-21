@@ -5,6 +5,7 @@
 Prunes duplicates and verifies detections against truth sets.
 """
 
+from enum import Enum
 import math
 import pprint
 from time import time
@@ -43,6 +44,10 @@ class Blobs:
             signal and 1 = signal at the corresponding blob's location
             in the given and channel; defaults to None.
         path (str): Path from which blobs were loaded; defaults to None.
+        roi_offset (Sequence[int]): Offset in ``z,y,x`` from ROI in which
+            blobs were detected.
+        roi_size (Sequence[int]): Size in ``z,y,x`` from ROI in which
+            blobs were detected.
     
     """
 
@@ -53,6 +58,16 @@ class Blobs:
     # 3: added colocs
     BLOBS_NP_VER = 3
     
+    class Keys(Enum):
+        """Numpy archive metadata keys as enumerations."""
+        VER = "ver"
+        BLOBS = "segments"
+        COLOCS = "colocs"
+        RESOLUTIONS = "resolutions"
+        BASENAME = "basename"
+        ROI_OFFSET = "offset"
+        ROI_SIZE = "roi_size"
+
     def __init__(self, blobs=None, blob_matches=None, colocalizations=None,
                  path=None):
         """Initialize blobs storage object."""
@@ -60,6 +75,8 @@ class Blobs:
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
         self.path = path
+        self.roi_offset = None
+        self.roi_size = None
 
     def load_blobs(self, path=None):
         """Load blobs from an archive.
@@ -80,16 +97,28 @@ class Blobs:
         print("Loading blobs from", self.path)
         with np.load(self.path) as archive:
             info = np_io.read_np_archive(archive)
-            if "segments" in info:
-                self.blobs = info["segments"]
+            if self.Keys.BLOBS.value in info:
+                # load blobs as a Numpy array
+                self.blobs = info[self.Keys.BLOBS.value]
                 print("Loaded {} blobs".format(len(self.blobs)))
                 if config.verbose:
                     show_blobs_per_channel(self.blobs)
-            if "colocs" in info:
-                self.colocalizations = info["colocs"]
+            
+            if self.Keys.COLOCS.value in info:
+                # load intensity-based colocalizations
+                self.colocalizations = info[self.Keys.COLOCS.value]
                 if self.colocalizations is not None:
                     print("Loaded blob co-localizations for {} channels"
                           .format(self.colocalizations.shape[1]))
+            
+            if self.Keys.ROI_OFFSET.value in info:
+                # load offset of ROI from which blobs were detected
+                self.roi_offset = info[self.Keys.ROI_OFFSET.value]
+            
+            if self.Keys.ROI_SIZE.value in info:
+                # load size of ROI from which blobs were detected
+                self.roi_size = info[self.Keys.ROI_SIZE.value]
+            
             if config.verbose:
                 pprint.pprint(info)
         return self

@@ -123,13 +123,13 @@ class VisHandler(Handler):
             tab = ViewerTabs(i + 1)  # enums auto-index starting from 1
             info.object.selected_viewer_tab = tab
             print("Changed to tab", i, tab)
-            if (info.object.stale_viewers[tab]
+            if (info.object.stale_viewers[tab] is StaleFlags.IMAGE
                     or tab is ViewerTabs.ROI_ED and not info.object.roi_ed
                     or tab is ViewerTabs.ATLAS_ED and not info.object.atlas_eds
                     or tab is ViewerTabs.MAYAVI
                     and not info.object.scene_3d_shown):
-                # redraw if the tab is stale, or the corresponding viewer
-                # has not been shown before
+                # redraw if new image has not been drawn for tab, or the
+                # corresponding viewer has not been shown before
                 info.object.redraw_selected_viewer(clear=False)
                 if tab is ViewerTabs.MAYAVI:
                     # initialize the camera orientation
@@ -328,6 +328,12 @@ class ViewerTabs(Enum):
     MAYAVI = auto()
 
 
+class StaleFlags(Enum):
+    """Enumerations for stale viewer states."""
+    IMAGE = auto()  # loaded new image
+    ROI = auto()  # changed ROI offset or size
+
+
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
     
@@ -355,10 +361,11 @@ class Visualization(HasTraits):
             tab in the viewer panel.
         select_controls_tab (int): Enum value from :class:`ControlsTabs` to
             select the controls panel tab.
-        stale_viewers (dict[:obj:`ViewerTabs`, bool]): Dictionary of viewer
-            tab Enums to boolean value, where True indicates that the
-            viewer's display is stale and should be refreshed when shown.
-            Defaults to all viewers set to True.
+        stale_viewers (dict[:class:`ViewerTabs`, :class:`StaleFlags`]):
+            Dictionary of viewer tab Enums to stale flag Enums, where the
+            flag indicates the update that the viewer would require.
+            Defaults to all viewers set to :class:`StaleFlags.IMAGE`.
+    
     """
     # File selection
 
@@ -887,6 +894,7 @@ class Visualization(HasTraits):
         self._atlas_ed_fig = figure.Figure()
         self._atlas_ed_options = [AtlasEditorOptions.SHOW_LABELS.value]
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
+        self.stale_viewers = self.reset_stale_viewers()
         
         # set up rest of image adjustment during image setup
         self._img3ds = None
@@ -1475,7 +1483,7 @@ class Visualization(HasTraits):
 
         if feedback:
             self._update_roi_feedback(" ".join(feedback), print_out=True)
-        self.stale_viewers[ViewerTabs.MAYAVI] = False
+        self.stale_viewers[ViewerTabs.MAYAVI] = None
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.
@@ -1508,12 +1516,14 @@ class Visualization(HasTraits):
         name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(
             title="label3d_{}".format(name), show_orientation=False)
+        
+        # turn off stale flag from ROI changes
+        self.stale_viewers[ViewerTabs.MAYAVI] = None
     
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
         """
-        self.stale_viewers = dict.fromkeys(ViewerTabs, True)
-        print("stale", self.stale_viewers)
+        self.reset_stale_viewers()
         self._init_channels()
         if config.image5d is not None:
             # TODO: consider subtracting 1 to avoid max offset being 1 above
@@ -1680,12 +1690,35 @@ class Visualization(HasTraits):
         self._reset_segments()
         print("Changed channel to {}".format(config.channel))
     
+    def reset_stale_viewers(self, val=StaleFlags.IMAGE):
+        """Reset the stale viewer flags for all viewers.
+        
+        Args:
+            val (:class:`StaleFlags`): Enumeration to set for all viewers.
+
+        """
+        self.stale_viewers = dict.fromkeys(ViewerTabs, val)
+        return self.stale_viewers
+    
     @on_trait_change("x_offset,y_offset,z_offset")
     def update_plot(self):
-        """Shows the chosen offset when an offset slider is moved.
+        """Respond to ROI offset slider changes.
+        
+        Sets all stale viewer flags to the ROI flag.
+        
         """
         print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, 
                                            self.z_offset))
+        self.reset_stale_viewers(StaleFlags.ROI)
+
+    @on_trait_change("roi_array")
+    def _update_roi_array(self):
+        """Respond to ROI size array changes.
+
+        Sets all stale viewer flags to the ROI flag.
+
+        """
+        self.reset_stale_viewers(StaleFlags.ROI)
 
     def update_status_bar_msg(self, msg):
         """Update the message displayed in the status bar.
@@ -1696,11 +1729,6 @@ class Visualization(HasTraits):
         """
         if msg:
             self._status_bar_msg = msg
-
-    '''
-    @on_trait_change("roi_array")
-    def _update_roi_array(self):
-    '''
     
     @on_trait_change("_structure_scale")
     def _update_structure_scale(self):
@@ -2137,7 +2165,7 @@ class Visualization(HasTraits):
         roi_ed.set_show_labels(self._get_show_labels())
         self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
-        self.stale_viewers[ViewerTabs.ROI_ED] = False
+        self.stale_viewers[ViewerTabs.ROI_ED] = None
 
     def launch_atlas_editor(self):
         if config.image5d is None:
@@ -2161,7 +2189,7 @@ class Visualization(HasTraits):
         atlas_ed.show_atlas()
         atlas_ed.set_show_labels(self._get_show_labels())
         self._add_mpl_fig_handlers(atlas_ed.fig)
-        self.stale_viewers[ViewerTabs.ATLAS_ED] = False
+        self.stale_viewers[ViewerTabs.ATLAS_ED] = None
 
     def _refresh_atlas_eds(self, ed_ignore):
         """Callback handler to refresh all other Atlas Editors

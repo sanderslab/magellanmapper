@@ -190,6 +190,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
     config.labels_img = None
     config.labels_img_sitk = None
     config.borders_img = None
+    
+    # reset blobs
+    config.blobs = None
 
     filename_base = importer.filename_to_base(path, series)
     subimg_base = None

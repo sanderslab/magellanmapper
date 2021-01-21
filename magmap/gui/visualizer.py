@@ -56,7 +56,7 @@ from magmap.atlas import ontology
 from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter
 from magmap.gui import atlas_editor, roi_editor
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
-from magmap.plot import plot_2d, plot_3d
+from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config
 
 
@@ -1765,8 +1765,6 @@ class Visualization(HasTraits):
             self.launch_atlas_editor()
         elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
             self.show_3d()
-            if len(self.segments) > 0:
-                self.show_3d_blobs()
             self._post_3d_display()
     
     @on_trait_change("scene.activated")
@@ -1878,6 +1876,7 @@ class Visualization(HasTraits):
             # get all previously processed blobs in ROI plus additional 
             # padding region to show surrounding blobs
             # TODO: set segs_all to None rather than empty list if no blobs?
+            print("Selecting blobs in ROI from loaded blobs")
             segs_all, mask = detector.get_blobs_in_roi(
                 config.blobs.blobs, offset, roi_size, self._margin)
             
@@ -1926,7 +1925,15 @@ class Visualization(HasTraits):
             self.blobs.blobs = self.segments
             if colocs is not None:
                 self.blobs.colocalizations = colocs
-            self.show_3d_blobs()
+            # make blobs mask and colormap for ROI Editor and 3D viewers
+            self.segs_in_mask = detector.get_blobs_in_roi(
+                self.segments, np.zeros(3),
+                roi_size, np.multiply(self.border, -1))[1]
+            num_colors = len(self.segs_in_mask)
+            if num_colors < 2:
+                num_colors = 2
+            self.segs_cmap = colormaps.discrete_colormap(
+                num_colors, 170, True, config.seed)
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
@@ -1953,19 +1960,27 @@ class Visualization(HasTraits):
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         self.redraw_selected_viewer(clear=False)
+        
+        if (self.selected_viewer_tab is ViewerTabs.MAYAVI or
+                not self.stale_viewers[ViewerTabs.MAYAVI]):
+            # show 3D blobs if 3D viewer is showing; if not, add to 3D display
+            # if it is not stale so blobs do not need to be redetected to show
+            self.show_3d_blobs()
+        
         if ColocalizeOptions.INTENSITY.value in self._colocalize:
+            # perform intensity-based colocalization
             self._colocalize_blobs()
     
     def show_3d_blobs(self):
         """Show blobs as spheres in 3D viewer."""
+        if self.segments is None or len(self.segments) < 1:
+            return
+        
         # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
         show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
-        _, self.segs_in_mask = detector.get_blobs_in_roi(
-            self.segments, np.zeros(3),
-            roi_size, np.multiply(self.border, -1))
-        self.segs_pts, self.segs_cmap, scale = plot_3d.show_blobs(
-            self.segments, self.scene.mlab, self.segs_in_mask,
+        self.segs_pts, scale = plot_3d.show_blobs(
+            self.segments, self.scene.mlab, self.segs_in_mask, self.segs_cmap,
             show_shadows, roi_size[2] if self.flipz else 0)
         
         # reduce number of digits to make the slider more compact

@@ -695,7 +695,8 @@ def _shadow_blob(x, y, z, cmap_indices, cmap, scale, mlab):
     return pts_shadows
 
 
-def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipz=None):
+def show_blobs(segments, mlab, segs_in_mask, cmap, show_shadows=False,
+               flipz=None):
     """Shows 3D blob segments.
     
     Args:
@@ -704,6 +705,8 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipz=None):
         segs_in_mask: Boolean mask for segments within the ROI; all other 
             segments are assumed to be from padding and border regions 
             surrounding the ROI.
+        cmap (:class:`numpy.ndaarry`): Colormap as a 2D Numpy array in the
+            format  ``[[R, G, B, alpha], ...]``.
         show_shadows: True if shadows of blobs should be depicted on planes 
             behind the blobs; defaults to False.
         flipz (int): Invert blobs and shift them by this amount along the
@@ -734,8 +737,6 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipz=None):
     print("blob point scaling: {}".format(scale))
     # colormap has to be at least 2 colors
     segs_in = segs[segs_in_mask]
-    num_colors = segs_in.shape[0] if segs_in.shape[0] >= 2 else 2
-    cmap = colormaps.discrete_colormap(num_colors, 170, True, config.seed)
     cmap_indices = np.arange(segs_in.shape[0])
     
     if show_shadows:
@@ -779,7 +780,7 @@ def show_blobs(segments, mlab, segs_in_mask, show_shadows=False, flipz=None):
             mask_points=mask, scale_mode="none", scale_factor=scale/2, resolution=50,
             opacity=0.2)
     
-    return pts_in, cmap, scale
+    return pts_in, scale
 
 
 def replace_vol(img, vol, center=None, offset=None, vol_as_mask=None):

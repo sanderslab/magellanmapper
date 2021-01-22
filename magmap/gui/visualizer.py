@@ -1155,20 +1155,29 @@ class Visualization(HasTraits):
         Returns:
             :obj:`magmap.plot_editor.PlotAxImg`: The last updated axes image
             plot, assumed to have the same values as all the other
-            updated plots.
+            updated plots, or None if the selected tab does not have an
+            axes image, such as an unloaded tab or 3D visualization tab.
 
         """
-        eds = []
-        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
-            eds.append(self.roi_ed)
-        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
-            eds.extend(self.atlas_eds)
         plot_ax_img = None
-        for ed in eds:
-            if not ed: continue
-            plot_ax_img = ed.update_imgs_display(
-                self._imgadj_names.selections.index(self._imgadj_name),
-                chl=int(self._imgadj_chls), **kwargs)
+        if self.selected_viewer_tab is ViewerTabs.MAYAVI:
+            # update 3D visualization Mayavi/VTK settings
+            self._vis3d.update_img_display(**kwargs)
+        else:
+            # update any selected Matplotlib-based viewer settings
+            eds = []
+            if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+                eds.append(self.roi_ed)
+            elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+                # support multiple Atlas Editors (currently only have one)
+                eds.extend(self.atlas_eds)
+            plot_ax_img = None
+            for ed in eds:
+                if not ed: continue
+                # update settings for the viewer
+                plot_ax_img = ed.update_imgs_display(
+                    self._imgadj_names.selections.index(self._imgadj_name),
+                    chl=int(self._imgadj_chls), **kwargs)
         return plot_ax_img
 
     @staticmethod

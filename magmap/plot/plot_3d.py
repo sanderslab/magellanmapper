@@ -341,9 +341,12 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipz=False):
             spurious surfaces. Defaults to False.
         flipz: True to invert ``roi`` along z-axis to match handedness
             of Matplotlib with z progressing upward; defaults to False.
+    
+    Returns:
+        list: List of Mayavi surfaces for each displayed channel.
+    
     """
     # Plot in Mayavi
-    #mlab.figure()
     print("viewing 3D surface")
     pipeline = scene_mlab.pipeline
     scene_mlab.clf()
@@ -363,6 +366,7 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipz=False):
     
     time_start = time()
     multichannel, channels = setup_channels(roi, channel, 3)
+    surfaces = []
     for chl in channels:
         roi_show = roi[..., chl] if multichannel else roi
         
@@ -432,8 +436,10 @@ def plot_3d_surface(roi, scene_mlab, channel, segment=False, flipz=False):
         '''
 
         _resize_glyphs_isotropic(settings, surface)
+        surfaces.append(surface)
     
     print("time to render 3D surface: {}".format(time() - time_start))
+    return surfaces
 
 
 def plot_3d_points(roi, scene_mlab, channel, flipz=False):

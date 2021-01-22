@@ -54,7 +54,7 @@ import vtk
 
 from magmap.atlas import ontology
 from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter
-from magmap.gui import atlas_editor, roi_editor
+from magmap.gui import atlas_editor, roi_editor, vis_3d
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config
@@ -894,9 +894,12 @@ class Visualization(HasTraits):
         self._atlas_ed_fig = figure.Figure()
         self._atlas_ed_options = [AtlasEditorOptions.SHOW_LABELS.value]
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
-        self.stale_viewers = self.reset_stale_viewers()
+        
+        # 3D visualization object
+        self._vis3d = None
         
         # set up rest of image adjustment during image setup
+        self.stale_viewers = self.reset_stale_viewers()
         self._img3ds = None
         self._imgadj_min_ignore_update = False
         self._imgadj_max_ignore_update = False
@@ -1463,7 +1466,7 @@ class Visualization(HasTraits):
                 # surface rendering, segmenting to clean up image 
                 # if 2D segmentation option checked
                 segment = self._DEFAULTS_2D[2] in self._check_list_2d
-                plot_3d.plot_3d_surface(
+                self._vis3d.surfaces = plot_3d.plot_3d_surface(
                     self.roi, self.scene.mlab, config.channel, segment, 
                     self.flipz)
                 self.scene_3d_shown = True
@@ -1504,13 +1507,14 @@ class Visualization(HasTraits):
         self.scene_3d_shown = True
         
         # show main image corresponding to label region
+        # TODO: provide option to show label without main image?
         if isinstance(label_id, (tuple, list)):
             label_mask = np.isin(config.labels_img[tuple(slices)], label_id)
         else:
             label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(config.image5d[0][tuple(slices)])
         self.roi[~label_mask] = 0
-        plot_3d.plot_3d_surface(
+        self._vis3d.surfaces = plot_3d.plot_3d_surface(
             self.roi, self.scene.mlab, config.channel, flipz=self.flipz)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
         name = os.path.splitext(os.path.basename(config.filename))[0]
@@ -1525,6 +1529,7 @@ class Visualization(HasTraits):
         """
         self.reset_stale_viewers()
         self._init_channels()
+        self._vis3d = vis_3d.Vis3D()
         if config.image5d is not None:
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked

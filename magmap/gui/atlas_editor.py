@@ -102,12 +102,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs[0, 0])
         
-        # set up colormaps, using a labels image to generate a template 
-        # for the borders image if it has the same number of colors; ideally 
-        # use the original labels for consistent ID-color mapping
-        cmap_labels = colormaps.setup_labels_cmap(self.labels_img)
+        # set up a colormap for the borders image if present
         cmap_borders = colormaps.get_borders_colormap(
-            self.borders_img, self.labels_img, cmap_labels)
+            self.borders_img, self.labels_img, config.cmap_labels)
         coord = list(self.offset[::-1])
         
         # editor controls, split into a slider sub-spec to allow greater
@@ -173,7 +170,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             # plot editor
             max_size = max_sizes[axis] if max_sizes else None
             plot_ed = plot_editor.PlotEditor(
-                ax, img3d_tr, labels_img_tr, cmap_labels,
+                ax, img3d_tr, labels_img_tr, config.cmap_labels,
                 plane, aspect, origin, self.update_coords, self.refresh_images, 
                 scaling, plane_slider, img3d_borders=borders_img_tr,
                 cmap_borders=cmap_borders, 

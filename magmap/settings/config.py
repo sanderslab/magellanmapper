@@ -122,13 +122,18 @@ vmax_overview = [None]
 
 #: List[float]: Auto-detected near maximum of clipped intensities from the
 # whole image.
-near_max = [-1.0]  # TODO: consider making None\
+near_max = [-1.0]  # TODO: consider making None
 
 #: List[float]: Auto-detected near minimum of clipped intensities from the
 # whole image.
 near_min = [0.0]
 
+#: list[:class:`matplotlib.colors.Colormap`]: List of Matplotlib colormaps
+# for the main image, :attr:`img5d`, with a colormap for each channel.
 cmaps = None
+
+#: :class:`magmap.plot.colormaps.DiscreteColormap`: Labels image colormap.
+cmap_labels = None
 
 
 # MICROSCOPY

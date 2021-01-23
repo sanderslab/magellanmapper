@@ -229,26 +229,28 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None, suffix=None):
 
 
 def _setup_labels_cmaps(imgs, cmaps_labels=None):
-    """Setup labels colormaps for registered images.
+    """Set up labels colormaps for registered images.
     
     Args:
         imgs (List[:obj:`np.ndarray`]): Sequence of images where the first
             is assumed to be non-labels, the second is labels, and the
             third are label borders.
-        cmaps_labels (List[List[:obj:`colormaps.DiscreteColormap`]]): 
+        cmaps_labels (List[List[
+            :class:`magmap.plot.colormaps.DiscreteColormap`]]): 
             List of discrete colormaps corresponding to ``imgs[:1]``.
-
+    
+    Returns:
+        list: List of colormaps for ``[labels_img, borders_img]``.
+    
     """
     if cmaps_labels is None:
         cmaps_labels = []
     num_imgs = len(imgs)
     if num_imgs > 1:
-        # 2nd image is main labels image, but use original set of 
-        # labels if available
-        cmaps_labels.append(colormaps.setup_labels_cmap(imgs[1]))
+        # get colormap for 2nd image, the main labels image
+        cmaps_labels.append(config.cmap_labels)
     if num_imgs > 2:
-        # subsequent image's colormap is based on first labels 
-        # if possible
+        # subsequent image's colormap is based on first labels if possible
         cmaps_labels.append(
             colormaps.get_borders_colormap(
                 imgs[2], imgs[1], cmaps_labels[0]))

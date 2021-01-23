@@ -424,6 +424,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
         config.vmax_overview, num_channels)
     colormaps.setup_colormaps(num_channels)
     
+    if config.labels_img is not None:
+        # make discrete colormap for labels image
+        config.cmap_labels = colormaps.setup_labels_cmap(config.labels_img)
+    
     if (blobs is not None and blobs.blobs is not None
             and config.img5d.img is not None):
         # scale blob coordinates to main image if shapes differ

@@ -643,10 +643,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             plane, arrs3d)
         scaling = config.labels_scaling
         if scaling is not None: scaling = [scaling]
-        cmap_labels = None
-        if self.labels_img is not None:
-            # set up labels image discrete colormap
-            cmap_labels = colormaps.setup_labels_cmap(self.labels_img)
         max_sizes = plot_support.get_downsample_max_sizes()
         max_size = max_sizes[plot_support.get_plane_axis(
             plane, get_index=True)] if max_sizes else None
@@ -815,8 +811,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
             ax_overviews.append(ax)
             plot_support.hide_axes(ax)
             self._show_overview(
-                ax, level, zoom_levels, arrs_3d, cmap_labels, aspect, origin,
-                scaling, max_size)
+                ax, level, zoom_levels, arrs_3d, config.cmap_labels, aspect,
+                origin, scaling, max_size)
         
         # attach overview plot navigation handlers: 1) mouse scroll, 2) arrow
         # key, and 3) right-click in zoomed plot to jump to that plane in the
@@ -862,7 +858,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             zoom_plot_rows, zoom_plot_cols, gs[1, :], wspace=0.1, hspace=0.1)
         cmap_labels = None
         if labels is not None:
-            # background partially transparent to show any mismatch
+            # partially transparent segmentation labels to show any mismatch
             cmap_labels = colormaps.get_labels_discrete_colormap(labels, 100)
         # plot the fully zoomed plots
         #zoom_plot_rows = 0 # TESTING: show no fully zoomed plots

@@ -312,6 +312,13 @@ class ColocalizeOptions(Enum):
     MATCHES = "Matches"
 
 
+class BlobColorStyles(Enum):
+    """Enumerations for blob color style options."""
+    ATLAS_LABELS = "Atlas label colors"
+    UNIQUE = "Unique colors"
+    CHANNEL = "Channel colors"
+
+
 class ControlsTabs(Enum):
     """Enumerations for controls tabs."""
     ROI = auto()
@@ -412,6 +419,7 @@ class Visualization(HasTraits):
     btn_save_segments = Button("Save Blobs")
     _segs_visible = List  # blob visibility options
     _colocalize = List  # blob co-localization options
+    _blob_color_style = List  # blob coloring
     _segments = Array  # table of blobs
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
@@ -680,9 +688,13 @@ class Visualization(HasTraits):
                      values=[e.value for e in BlobsVisibilityOptions],
                      cols=len(BlobsVisibilityOptions),
                      format_func=lambda x: x)),
-            Item("_colocalize", label="Co-localize by", springy=True,
+            Item("_colocalize", label="Co-localize by",
                  editor=CheckListEditor(
                      values=[e.value for e in ColocalizeOptions],
+                     format_func=lambda x: x)),
+            Item("_blob_color_style", show_label=False, springy=True,
+                 editor=CheckListEditor(
+                     values=[e.value for e in BlobColorStyles],
                      format_func=lambda x: x)),
         ),
         Item("scale_detections",
@@ -852,6 +864,7 @@ class Visualization(HasTraits):
         # self._structure_scale = self._structure_scale_high
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
         self.blobs = detector.Blobs()
+        self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
 
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
@@ -1939,15 +1952,35 @@ class Visualization(HasTraits):
             self.blobs.blobs = self.segments
             if colocs is not None:
                 self.blobs.colocalizations = colocs
+            
             # make blobs mask and colormap for ROI Editor and 3D viewers
             self.segs_in_mask = detector.get_blobs_in_roi(
                 self.segments, np.zeros(3),
                 roi_size, np.multiply(self.border, -1))[1]
-            num_colors = len(self.segs_in_mask)
-            if num_colors < 2:
-                num_colors = 2
-            self.segs_cmap = colormaps.discrete_colormap(
-                num_colors, 170, True, config.seed)
+            alpha = 170
+            if self._blob_color_style[0] is BlobColorStyles.UNIQUE.value:
+                # unique color for each blob
+                num_colors = len(self.segs_in_mask)
+                self.segs_cmap = colormaps.discrete_colormap(
+                    num_colors if num_colors >= 2 else 2, alpha, True,
+                    config.seed)
+            elif (self._blob_color_style[0]
+                    is BlobColorStyles.ATLAS_LABELS.value
+                    and config.labels_img is not None):
+                # same colors as corresponding atlas labels
+                blob_ids = ontology.get_label_ids_from_position(
+                    segs_all[self.segs_in_mask, :3].astype(np.int),
+                    config.labels_img)
+                self.segs_cmap = config.cmap_labels(
+                    config.cmap_labels.convert_img_labels(blob_ids))
+                self.segs_cmap[:, :3] *= 255
+                self.segs_cmap[:, 3] *= alpha
+            else:
+                # default to color by channel
+                cmap = colormaps.discrete_colormap(
+                    len(config.channel), alpha, True, config.seed)
+                self.segs_cmap = cmap[detector.get_blobs_channel(
+                    segs_all[self.segs_in_mask]).astype(np.int)]
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]

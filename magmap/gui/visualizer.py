@@ -1489,19 +1489,19 @@ class Visualization(HasTraits):
                 # if 2D segmentation option checked
                 segment = self._DEFAULTS_2D[2] in self._check_list_2d
                 self._vis3d.plot_3d_surface(
-                    self.roi, self.scene.mlab, config.channel, segment, 
+                    self.roi, config.channel, segment, 
                     self.flipz)
                 self.scene_3d_shown = True
             else:
                 # 3D point rendering
                 self.scene_3d_shown = self._vis3d.plot_3d_points(
-                    self.roi, self.scene.mlab, config.channel, self.flipz)
+                    self.roi, config.channel, self.flipz)
         else:
             self.scene.mlab.clf()
         
         # show shadow images around the points if selected
         if self._DEFAULTS_3D[0] in self._check_list_3d:
-            self._vis3d.plot_2d_shadows(self.roi, self)
+            self._vis3d.plot_2d_shadows(self.roi)
         
         # show title from labels reference if available
         self._update_structure_level(curr_offset, curr_roi_size)
@@ -1537,7 +1537,7 @@ class Visualization(HasTraits):
         self.roi = np.copy(config.image5d[0][tuple(slices)])
         self.roi[~label_mask] = 0
         self._vis3d.plot_3d_surface(
-            self.roi, self.scene.mlab, config.channel, flipz=self.flipz)
+            self.roi, config.channel, flipz=self.flipz)
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
         name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(
@@ -1551,7 +1551,7 @@ class Visualization(HasTraits):
         """
         self.reset_stale_viewers()
         self._init_channels()
-        self._vis3d = vis_3d.Vis3D()
+        self._vis3d = vis_3d.Vis3D(self.scene)
         if config.image5d is not None:
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
@@ -2034,7 +2034,7 @@ class Visualization(HasTraits):
         roi_size = self.roi_array[0].astype(int)
         show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
         self.segs_pts, scale = self._vis3d.show_blobs(
-            self.segments, self.scene.mlab, self.segs_in_mask, self.segs_cmap,
+            self.segments, self.segs_in_mask, self.segs_cmap,
             show_shadows, roi_size[2] if self.flipz else 0)
         
         # reduce number of digits to make the slider more compact

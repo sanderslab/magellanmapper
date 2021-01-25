@@ -16,6 +16,8 @@ class Vis3D:
     """3D visualization object for handling Mayavi/VTK tasks.
     
     Attributes:
+        scene (:class:`mayavi.tools.mlab_scene_model.MlabSceneModel`):
+            Mayavi scene.
         surfaces (list): List of Mayavi surfaces for each displayed channel;
             defaults to None.
     
@@ -23,8 +25,15 @@ class Vis3D:
     #: float: Maximum number of points to show.
     _MASK_DIVIDEND = 10000.0  # 3D max points
     
-    def __init__(self):
-        """Initialize a 3D visualization object."""
+    def __init__(self, scene):
+        """Initialize a 3D visualization object.
+        
+        Args:
+            scene (:class:`mayavi.tools.mlab_scene_model.MlabSceneModel`):
+                Mayavi scene.
+        
+        """
+        self.scene = scene
         self.surfaces = None
 
     def update_img_display(self, minimum=None, maximum=None, brightness=None,
@@ -54,18 +63,18 @@ class Vis3D:
             glyphs.actor.actor.scale = isotropic[::-1]
         return isotropic
 
-    def plot_3d_points(self, roi, scene_mlab, channel, flipz=False):
+    def plot_3d_points(self, roi, channel, flipz=False):
         """Plots all pixels as points in 3D space.
 
-        Points falling below a given threshold will be
-        removed, allowing the viewer to see through the presumed
-        background to masses within the region of interest.
+        Points falling below a given threshold will be removed, allowing
+        the viewer to see through the presumed background to masses within
+        the region of interest.
+        
+        The scene will be cleared before display.
 
         Args:
             roi (:obj:`np.ndarray`): Region of interest either as a 3D (z, y, x) or
                 4D (z, y, x, channel) ndarray.
-            scene_mlab (:mod:``mayavi.mlab``): Mayavi mlab module. Any
-                current image will be cleared first.
             channel (int): Channel to select, which can be None to indicate all
                 channels.
             flipz (bool): True to invert blobs along z-axis to match handedness
@@ -75,7 +84,7 @@ class Vis3D:
             bool: True if points were rendered, False if no points to render.
         """
         print("plotting as 3D points")
-        scene_mlab.clf()
+        self.scene.mlab.clf()
     
         # streamline the image
         if roi is None or roi.size < 1: return False
@@ -139,7 +148,7 @@ class Vis3D:
                 # TODO: see if some NaNs are permissible
                 print("NaN values for 3D points, will not show 3D visualization")
                 return False
-            pts = scene_mlab.points3d(
+            pts = self.scene.mlab.points3d(
                 np.delete(x, remove), np.delete(y, remove), np.delete(z, remove),
                 roi_show_1d, mode="sphere",
                 scale_mode="scalar", mask_points=mask, line_width=1.0, vmax=1.0,
@@ -153,15 +162,14 @@ class Vis3D:
         print("time for 3D points display: {}".format(time() - time_start))
         return True
 
-    def plot_3d_surface(self, roi, scene_mlab, channel, segment=False,
-                        flipz=False):
+    def plot_3d_surface(self, roi, channel, segment=False, flipz=False):
         """Plots areas with greater intensity as 3D surfaces.
 
+        The scene will be cleared before display.
+        
         Args:
             roi (:obj:`np.ndarray`): Region of interest either as a 3D
                 ``z,y,x`` or 4D ``z,y,x,channel`` ndarray.
-            scene_mlab (:mod:``mayavi.mlab``): Mayavi mlab module. Any
-                current image will be cleared first.
             channel (int): Channel to select, which can be None to indicate all
                 channels.
             segment (bool): True to denoise and segment ``roi`` before
@@ -177,8 +185,8 @@ class Vis3D:
         """
         # Plot in Mayavi
         print("viewing 3D surface")
-        pipeline = scene_mlab.pipeline
-        scene_mlab.clf()
+        pipeline = self.scene.mlab.pipeline
+        self.scene.mlab.clf()
         settings = config.roi_profile
         if flipz:
             # invert along z-axis to match handedness of Matplotlib with z up
@@ -235,7 +243,7 @@ class Vis3D:
             surface.filter.relaxation_factor = 0.015
             # distinguishing pos vs neg curvatures?
             surface = pipeline.user_defined(surface, filter="Curvatures")
-            surface = scene_mlab.pipeline.surface(surface)
+            surface = self.scene.mlab.pipeline.surface(surface)
             module_manager = surface.module_manager
             module_manager.scalar_lut_manager.data_range = np.array([-2, 0])
             module_manager.scalar_lut_manager.lut_mode = "gray"
@@ -275,7 +283,7 @@ class Vis3D:
         self.surfaces = surfaces
         return surfaces
 
-    def _shadow_blob(self, x, y, z, cmap_indices, cmap, scale, mlab):
+    def _shadow_blob(self, x, y, z, cmap_indices, cmap, scale):
         """Shows blobs as shadows projected parallel to the 3D visualization.
 
         Parmas:
@@ -286,21 +294,20 @@ class Vis3D:
                 simple ascending sequence the same size as the number of blobs.
             cmap: The colormap, usually the same as for the segments.
             scale: Array of scaled size of each blob.
-            mlab: Mayavi object.
+        
         """
-        pts_shadows = mlab.points3d(x, y, z, cmap_indices,
-                                    mode="2dcircle", scale_mode="none",
-                                    scale_factor=scale * 0.8, resolution=20)
+        pts_shadows = self.scene.mlab.points3d(
+            x, y, z, cmap_indices, mode="2dcircle", scale_mode="none",
+            scale_factor=scale * 0.8, resolution=20)
         pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
         return pts_shadows
 
-    def show_blobs(self, segments, mlab, segs_in_mask, cmap, show_shadows=False,
+    def show_blobs(self, segments, segs_in_mask, cmap, show_shadows=False,
                    flipz=None):
         """Shows 3D blob segments.
 
         Args:
             segments: Labels from 3D blob detection method.
-            mlab: Mayavi object.
             segs_in_mask: Boolean mask for segments within the ROI; all other 
                 segments are assumed to be from padding and border regions 
                 surrounding the ROI.
@@ -345,17 +352,17 @@ class Vis3D:
             # xy
             self._shadow_blob(
                 segs_in[:, 2], segs_in[:, 1], segs_ones * -10, cmap_indices,
-                cmap, scale, mlab)
+                cmap, scale)
             # xz
             shadows = self._shadow_blob(
                 segs_in[:, 2], segs_in[:, 0], segs_ones * -10, cmap_indices,
-                cmap, scale, mlab)
+                cmap, scale)
             shadows.actor.actor.orientation = [90, 0, 0]
             shadows.actor.actor.position = [0, -20, 0]
             # yz
             shadows = self._shadow_blob(
                 segs_in[:, 1], segs_in[:, 0], segs_ones * -10, cmap_indices,
-                cmap, scale, mlab)
+                cmap, scale)
             shadows.actor.actor.orientation = [90, 90, 0]
             shadows.actor.actor.position = [0, 0, 0]
     
@@ -366,7 +373,7 @@ class Vis3D:
         pts_in = None
         if len(segs_in) > 0:
             # show segs within the ROI
-            pts_in = mlab.points3d(
+            pts_in = self.scene.mlab.points3d(
                 segs_in[:, 2], segs_in[:, 1],
                 segs_in[:, 0], cmap_indices,
                 mask_points=mask, scale_mode="none", scale_factor=scale,
@@ -375,7 +382,7 @@ class Vis3D:
         # show segments within padding or border region as more transparent
         segs_out_mask = np.logical_not(segs_in_mask)
         if np.sum(segs_out_mask) > 0:
-            mlab.points3d(
+            self.scene.mlab.points3d(
                 segs[segs_out_mask, 2], segs[segs_out_mask, 1],
                 segs[segs_out_mask, 0], color=(0, 0, 0),
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
@@ -383,7 +390,7 @@ class Vis3D:
     
         return pts_in, scale
 
-    def _shadow_img2d(self, img2d, shape, axis, vis):
+    def _shadow_img2d(self, img2d, shape, axis):
         """Shows a plane along the given axis as a shadow parallel to
         the 3D visualization.
 
@@ -391,7 +398,6 @@ class Vis3D:
             img2d: The plane to show.
             shape: Shape of the ROI.
             axis: Axis along which the plane lies.
-            vis: Visualization object.
 
         Returns:
             The displayed plane.
@@ -406,15 +412,14 @@ class Vis3D:
             img2d_full = np.reshape(img2d_full, [shape[1], shape[2]])
             img2d_full[:, extra_z:extra_z + img2d.shape[1]] = img2d
             img2d = img2d_full
-        return vis.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
+        return self.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
 
-    def plot_2d_shadows(self, roi, vis):
+    def plot_2d_shadows(self, roi):
         """Plots 2D shadows in each axis around the 3D visualization.
 
         Args:
             roi: Region of interest.
-            vis: Visualization object on which to draw the contour. Any 
-                current image will be cleared first.
+        
         """
         # set up shapes, accounting for any isotropic resizing
         if len(roi.shape) > 2:
@@ -432,7 +437,7 @@ class Vis3D:
         img2d = transform.resize(
             img2d, np.multiply(img2d.shape, isotropic[1:]).astype(np.int),
             preserve_range=True)
-        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 0, vis)
+        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 0)
         # Mayavi positions are in x,y,z
         img2d_mlab.actor.position = [
             shape_iso_mid[2], shape_iso_mid[1], -10]
@@ -442,7 +447,7 @@ class Vis3D:
         img2d = transform.resize(
             img2d, np.multiply(img2d.shape, isotropic[[0, 2]]).astype(np.int),
             preserve_range=True)
-        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 2, vis)
+        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 2)
         img2d_mlab.actor.position = [
             -10, shape_iso_mid[1], shape_iso_mid[0]]
         img2d_mlab.actor.orientation = [90, 90, 0]
@@ -452,7 +457,7 @@ class Vis3D:
         img2d = transform.resize(
             img2d, np.multiply(img2d.shape, isotropic[:2]).astype(np.int),
             preserve_range=True)
-        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 1, vis)
+        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 1)
         img2d_mlab.actor.position = [
             shape_iso_mid[2], -10, shape_iso_mid[0]]
         img2d_mlab.actor.orientation = [90, 0, 0]

@@ -416,6 +416,9 @@ class Vis3D:
                 current image will be cleared first.
         """
         # 2D overlays on borders
+        if len(roi.shape) > 2:
+            # covert 4D to 3D array, using only the 1st channel
+            roi = roi[:, :, :, 0]
         shape = roi.shape
     
         # xy-plane

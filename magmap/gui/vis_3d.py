@@ -414,14 +414,20 @@ class Vis3D:
             img2d = img2d_full
         return self.scene.mlab.imshow(img2d, opacity=0.5, colormap="gray")
 
-    def plot_2d_shadows(self, roi):
+    def plot_2d_shadows(self, roi, flipz=False):
         """Plots 2D shadows in each axis around the 3D visualization.
 
         Args:
-            roi: Region of interest.
+            roi (:class:`numpy.ndarray`): Region of interest.
+            flipz (bool): True to invert ``roi`` along z-axis to match
+                handedness of Matplotlib with z progressing upward; defaults
+                to False.
         
         """
         # set up shapes, accounting for any isotropic resizing
+        if flipz:
+            # invert along z-axis to match handedness of Matplotlib with z up
+            roi = roi[::-1]
         if len(roi.shape) > 2:
             # covert 4D to 3D array, using only the 1st channel
             roi = roi[:, :, :, 0]

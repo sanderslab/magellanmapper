@@ -1501,7 +1501,7 @@ class Visualization(HasTraits):
         
         # show shadow images around the points if selected
         if self._DEFAULTS_3D[0] in self._check_list_3d:
-            self._vis3d.plot_2d_shadows(self.roi)
+            self._vis3d.plot_2d_shadows(self.roi, self.flipz)
         
         # show title from labels reference if available
         self._update_structure_level(curr_offset, curr_roi_size)

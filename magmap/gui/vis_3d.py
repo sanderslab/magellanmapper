@@ -4,7 +4,7 @@ import math
 from time import time
 
 import numpy as np
-from skimage import filters, restoration
+from skimage import filters, restoration, transform
 
 from magmap.cv import segmenter
 from magmap.io import libmag
@@ -339,7 +339,8 @@ class Vis3D:
         cmap_indices = np.arange(segs_in.shape[0])
     
         if show_shadows:
-            # show projections onto side planes
+            # show projections onto side planes, assumed to be at -10 units
+            # along the given axis
             segs_ones = np.ones(segs.shape[0])
             # xy
             self._shadow_blob(
@@ -415,28 +416,45 @@ class Vis3D:
             vis: Visualization object on which to draw the contour. Any 
                 current image will be cleared first.
         """
-        # 2D overlays on borders
+        # set up shapes, accounting for any isotropic resizing
         if len(roi.shape) > 2:
             # covert 4D to 3D array, using only the 1st channel
             roi = roi[:, :, :, 0]
+        isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
         shape = roi.shape
+        shape_iso = np.multiply(roi.shape, isotropic).astype(np.int)
+        shape_iso_mid = shape_iso // 2
+        
+        # TODO: shift z by +10?
     
-        # xy-plane
-        # roi_xy = np.swapaxes(roi, 1, 2)
-        img2d = np.copy(roi[shape[0] // 2, :, :])
-        img2d_mlab = self._shadow_img2d(img2d, shape, 0, vis)
-        img2d_mlab.actor.position = [10, 10, -10]
+        # xy-plane, positioned just below the 3D ROI
+        img2d = roi[shape[0] // 2, :, :]
+        img2d = transform.resize(
+            img2d, np.multiply(img2d.shape, isotropic[1:]).astype(np.int),
+            preserve_range=True)
+        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 0, vis)
+        # Mayavi positions are in x,y,z
+        img2d_mlab.actor.position = [
+            shape_iso_mid[2], shape_iso_mid[1], -10]
     
         # xz-plane
-        img2d = np.copy(roi[:, shape[1] // 2, :])
-        img2d_mlab = self._shadow_img2d(img2d, shape, 2, vis)
-        img2d_mlab.actor.position = [-10, 10, 5]
+        img2d = roi[:, shape[1] // 2, :]
+        img2d = transform.resize(
+            img2d, np.multiply(img2d.shape, isotropic[[0, 2]]).astype(np.int),
+            preserve_range=True)
+        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 2, vis)
+        img2d_mlab.actor.position = [
+            -10, shape_iso_mid[1], shape_iso_mid[0]]
         img2d_mlab.actor.orientation = [90, 90, 0]
     
         # yz-plane
-        img2d = np.copy(roi[:, :, shape[2] // 2])
-        img2d_mlab = self._shadow_img2d(img2d, shape, 1, vis)
-        img2d_mlab.actor.position = [10, -10, 5]
+        img2d = roi[:, :, shape[2] // 2]
+        img2d = transform.resize(
+            img2d, np.multiply(img2d.shape, isotropic[:2]).astype(np.int),
+            preserve_range=True)
+        img2d_mlab = self._shadow_img2d(img2d, shape_iso, 1, vis)
+        img2d_mlab.actor.position = [
+            shape_iso_mid[2], -10, shape_iso_mid[0]]
         img2d_mlab.actor.orientation = [90, 0, 0]
 
 

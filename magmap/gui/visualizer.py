@@ -3000,6 +3000,6 @@ class Visualization(HasTraits):
 
 
 if __name__ == "__main__":
-    print("Starting visualizer...")
+    print("Starting the MagellanMapper graphical interface...")
     cli.main()
     main()

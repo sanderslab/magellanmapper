@@ -1728,14 +1728,14 @@ class Visualization(HasTraits):
         return self.stale_viewers
     
     @on_trait_change("x_offset,y_offset,z_offset")
-    def update_plot(self):
+    def _update_roi_offset(self):
         """Respond to ROI offset slider changes.
         
         Sets all stale viewer flags to the ROI flag.
         
         """
-        print("x: {}, y: {}, z: {}".format(self.x_offset, self.y_offset, 
-                                           self.z_offset))
+        print("x: {}, y: {}, z: {}"
+              .format(self.x_offset, self.y_offset, self.z_offset))
         self.reset_stale_viewers(StaleFlags.ROI)
 
     @on_trait_change("roi_array")

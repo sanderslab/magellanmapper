@@ -126,6 +126,44 @@ sample_tasks() {
 
   # turn on WT and basic.stats profiles (requires R 3.5+)
   Rscript --verbose clrstats/run.R
+  
+  
+  # BLOB COLOCALIZATION
+  
+  # intensity-based colocalization:
+  # - perform together with whole image detection
+  # - replace channels with desired channels to colocalize
+  # - replace "profile0" and "profile1" with desired profiles for these chls
+  # - output is in the blobs NPZ file, automatically loaded with blobs
+  ./run.py --img "$IMG" --proc detect_coloc --channel 0 1 \
+    --roi_profile profile0 profile1
+
+  # match-based colocalization:
+  # - perform after whole image detection to find optimal matches between
+  #   nearby blobs
+  # - replace with desired channels and profiles
+  # - output is in the magmap.db database
+  ./run.py --img "$IMG" --proc coloc_match --channel 0 1 \
+    --roi_profile profile0 profile1
+  
+  # load blobs and match-based colocalizations
+  # - replace with desired profiles
+  ./run.py --img "$IMG" --load blobs blob_matches \
+    --roi_profile profile0 profile1
+  
+  # make density image for match-based colocalizations
+  # - replace with desired channels
+  # - heat.mhd has densities of combined blobs across the given channels
+  # - heatColoc.mhd has densities of blobs colocalized for these channels,
+  #   preferentially using blob matches if available and falling back
+  #   to intensity-based colocalizations
+  ./run.py --img "$IMG" --register make_density_images --channel 0 1
+  
+  # view match-based colocalization density image
+  ./run.py --img "$IMG" --roi_profile lightsheet,contrast --vmin 0 --vmax 2 \
+    --labels "$ABA_LABELS" --reg_suffixes heatColoc.mhd annotation.mhd \
+    --alphas 1,0.1
+
 
   # VIEW ORIGINAL IMAGE, BUILD TRUTH SETS
 

@@ -256,6 +256,7 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
         for chl_combo, chl_matches in matches.items():
             print("Generating match-based colocalization heat map "
                   "for channel combo:", chl_combo)
+            # use blobs in first channel of each channel pair for simplicity
             blobs_chl = chl_matches.get_blobs(1)
             heat_colocs.append(make_heat_map())
     

@@ -87,6 +87,9 @@ sample_tasks() {
   # full image detection
   # - detects cells in channel set in variable `CHL`
   ./run.py --img "$IMG" --proc detect --channel "$CHL" --roi_profile "$MIC"
+  
+  # load blobs to view rather than redetecting blobs in each ROI
+  ./run.py --img "$IMG" --roi_profile "$MIC" --load blobs
 
   # make and view density image (heat map)
   # TODO: not yet working on Windows
@@ -119,7 +122,7 @@ sample_tasks() {
   # - use offset and size to start at a particular ROI position
   # - use the load flag to load previously saved whole-image blobs
   # - use savefig to automatically save ROI Editor figures
-  ./run.py --img "$IMG" --roi_profile "$MIC" #--offset 800,1150,250 --size 70,70,30 -v #--proc load #--savefig pdf
+  ./run.py --img "$IMG" --roi_profile "$MIC" #--offset 800,1150,250 --size 70,70,30 -v #--load blobs #--savefig pdf
 
   # view with overlaid registered labels
   # - reg suffixes are given as `atlas annotation borders` to load, where the
@@ -137,12 +140,12 @@ sample_tasks() {
   # the truth set will be in magmap.db
   ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \
     --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" \
-    --roi_profile lightsheet,contrast --proc load #--savefig png
+    --roi_profile lightsheet,contrast --load blobs #--savefig png
 
   # edit saved truth set; load saved ROIs from the "ROIs" dropdown box,
   # then press "ROI Editor"
   ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \
-    --subimg_size "$SIZE" --roi_profile lightsheet,contrast --proc load \
+    --subimg_size "$SIZE" --roi_profile lightsheet,contrast --load blobs \
     --truth_db edit magmap.db
 
   # grid-search on single sub-image using the "test" ROC profile
@@ -153,7 +156,7 @@ sample_tasks() {
   # view verifications for single offset
   ./run.py --img "$IMG" -v --channel "$CHL" --subimg_offset "$OFFSET" \
     --subimg_size "$SIZE" --offset "$ROI_OFFSET" --size "$ROI_SIZE" \
-    --roi_profile lightsheet,contrast --proc load --truth_db verified "${THEME[@]}"
+    --roi_profile lightsheet,contrast --load blobs --truth_db verified "${THEME[@]}"
 
   # test all OFFSETS with ROC curve
   ./run.py --img "$IMG" --proc detect --channel "$CHL" \
@@ -161,7 +164,7 @@ sample_tasks() {
     --truth_db "verify" --grid_search gridtest
 
   # view annotation (ie segmentation) truth set
-  ./run.py --img "$IMG" -v --channel "$CHL" --proc load \
+  ./run.py --img "$IMG" -v --channel "$CHL" --load blobs \
     --subimg_offset "$OFFSET" --subimg_size "$SIZE" \
     --roi_profile lightsheet,contrast \
     --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"

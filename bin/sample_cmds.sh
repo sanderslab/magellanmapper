@@ -43,7 +43,7 @@ setup_atlas_paths PREFIXES "$ABA_DIR"
 # Example commands to learn ways to use MagellanMapper. Copy these commands
 # into your own scripts, such as your custom settings script described above.
 sample_tasks() {
-  # IMPORT, REGISTRATION, CELL DETECTION, AND STATS
+  # IMAGE IMPORT
 
   # initial import from original microscopy file
   # - replace `.czi` with the extension of your file
@@ -60,6 +60,9 @@ sample_tasks() {
   # view imported image
   ./run.py --img "$IMG"
 
+
+  # ATLAS REGISTRATION TO IMPORTED IMAGE
+  
   # downsample to size of atlas; the first option uses the target size in the
   # atlas profile, while the next options use a rescaling factor or specific
   # output size; use the plane option to transpose the output image
@@ -84,6 +87,9 @@ sample_tasks() {
     --roi_profile lightsheet,atlas --labels "$ABA_LABELS" \
     --reg_suffixes annotation=annotation.mhd --offset 70,350,150
 
+
+  # CELL DETECTION AND STATS
+  
   # full image detection
   # - detects cells in channel set in variable `CHL`
   ./run.py --img "$IMG" --proc detect --channel "$CHL" --roi_profile "$MIC"
@@ -169,6 +175,7 @@ sample_tasks() {
     --roi_profile lightsheet,contrast \
     --db "$(name=$(basename $IMG); echo "${name%.*}_($OFFSET)x($SIZE)_00000_annot.db")"
 
+
   # EXPORT IMAGES
 
   # export animation of image and registered atlas labels through all z-planes
@@ -182,11 +189,13 @@ sample_tasks() {
   ./run.py --img "$IMG" -v --channel "$CHL" --proc export_rois --savefig pdf \
     --truth_db view
 
+
   # PIPELINES SCRIPT
 
   # image downsampling
   bin/pipelines.sh -p transformation -i "$IMG" -z "$shape_resized" \
     -- --atlas_profile "$REG"
+
 
   # OTHER IMAGE TRANSFORMATIONS
 

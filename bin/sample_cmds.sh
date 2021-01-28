@@ -88,7 +88,7 @@ sample_tasks() {
     --reg_suffixes annotation=annotation.mhd --offset 70,350,150
 
 
-  # CELL DETECTION AND STATS
+  # CELL DETECTION AND STATS BY ATLAS REGION
   
   # full image detection
   # - detects cells in channel set in variable `CHL`
@@ -104,12 +104,17 @@ sample_tasks() {
     --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" \
     --reg_suffixes heat.mhd annotation.mhd
 
-  # volume metrics (level 13 includes hierarchical regions through this level)
+  # volume metrics for each atlas label in the image
   # TODO: not yet working on Windows
-  ./run.py --img "$IMG" --register vol_stats \
-    --atlas_profile lightsheet,finer --labels "$ABA_LABELS"
-  ./run.py --img "$IMG" --register vol_stats \
-    --atlas_profile lightsheet,finer --labels "$ABA_LABELS" 13
+  ./run.py --img "$IMG" --register vol_stats --labels "$ABA_LABELS"
+  
+  # combine metrics for hierarchical levels
+  # - eg, level 13 includes hierarchical regions through all levels in
+  #   the Allen Developing Mouse Brain Atlas; use 11 for Allen CCFv3
+  # - run after generating labels for each image label (the above command)
+  # - add `--atlas_profile combinesides` to the command to combine
+  #   corresponding regions from opposite hemispheres
+  ./run.py --img "$IMG" --register vol_stats --labels "$ABA_LABELS" 13
 
   # generate CSV of all atlas IDs with names
   ./run.py --register export_regions --labels "$ABA_LABELS" 1 --img "$ABA_DIR"

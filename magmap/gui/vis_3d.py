@@ -158,7 +158,9 @@ class Vis3D:
                 pts.module_manager.scalar_lut_manager.lut.table = cmap(
                     range(0, 256)) * 255
             self._resize_glyphs_isotropic(settings, pts)
-    
+
+        # keep visual ordering of surfaces when opacity is reduced
+        self.scene.renderer.use_depth_peeling = True
         print("time for 3D points display: {}".format(time() - time_start))
         return True
 
@@ -278,7 +280,9 @@ class Vis3D:
         
             self._resize_glyphs_isotropic(settings, surface)
             surfaces.append(surface)
-    
+        
+        # keep visual ordering of surfaces when opacity is reduced
+        self.scene.renderer.use_depth_peeling = True
         print("time to render 3D surface: {}".format(time() - time_start))
         self.surfaces = surfaces
         return surfaces

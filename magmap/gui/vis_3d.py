@@ -20,6 +20,9 @@ class Vis3D:
             Mayavi scene.
         surfaces (list): List of Mayavi surfaces for each displayed channel;
             defaults to None.
+        blobs (list[:class:`mayavi.modules.glyph.Glyph`]): List of Mayavi
+            glyphs, where each glyph typically contains many 3D points
+            representing blob positions; defaults to None.
     
     """
     #: float: Maximum number of points to show.
@@ -35,6 +38,7 @@ class Vis3D:
         """
         self.scene = scene
         self.surfaces = None
+        self.blobs = None
 
     def update_img_display(self, minimum=None, maximum=None, brightness=None,
                            contrast=None, alpha=None):
@@ -308,7 +312,7 @@ class Vis3D:
 
     def show_blobs(self, segments, segs_in_mask, cmap, show_shadows=False,
                    flipz=None):
-        """Shows 3D blob segments.
+        """Show 3D blobs as points.
 
         Args:
             segments: Labels from 3D blob detection method.
@@ -329,7 +333,11 @@ class Vis3D:
             blob, and ``scale``, the current size of the points.
         """
         if segments.shape[0] <= 0:
-            return None, None, 0
+            return None, 0
+        if self.blobs:
+            for blob in self.blobs:
+                # remove existing blob glyphs from the pipeline
+                blob.remove()
         settings = config.roi_profile
         segs = np.copy(segments)
         if flipz:
@@ -370,27 +378,31 @@ class Vis3D:
             shadows.actor.actor.orientation = [90, 90, 0]
             shadows.actor.actor.position = [0, 0, 0]
     
-        # show the blobs
+        # show blobs within the ROI
         points_len = len(segs)
         mask = math.ceil(points_len / self._MASK_DIVIDEND)
         print("points: {}, mask: {}".format(points_len, mask))
         pts_in = None
+        self.blobs = []
         if len(segs_in) > 0:
-            # show segs within the ROI
+            # each Glyph contains multiple 3D points, one for each blob
             pts_in = self.scene.mlab.points3d(
                 segs_in[:, 2], segs_in[:, 1],
                 segs_in[:, 0], cmap_indices,
                 mask_points=mask, scale_mode="none", scale_factor=scale,
                 resolution=50)
             pts_in.module_manager.scalar_lut_manager.lut.table = cmap
-        # show segments within padding or border region as more transparent
+            self.blobs.append(pts_in)
+        
+        # show blobs within padding or border region as black and more
+        # transparent
         segs_out_mask = np.logical_not(segs_in_mask)
         if np.sum(segs_out_mask) > 0:
-            self.scene.mlab.points3d(
+            self.blobs.append(self.scene.mlab.points3d(
                 segs[segs_out_mask, 2], segs[segs_out_mask, 1],
                 segs[segs_out_mask, 0], color=(0, 0, 0),
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
-                resolution=50, opacity=0.2)
+                resolution=50, opacity=0.2))
     
         return pts_in, scale
 

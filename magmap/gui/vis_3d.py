@@ -405,8 +405,26 @@ class Vis3D:
                 segs[segs_out_mask, 0], color=(0, 0, 0),
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
                 resolution=50, opacity=0.2))
-    
+        
+        def pick_callback(pick):
+            # handle picking blobs/glyphs
+            print(pick.pick_position)
+            if pick.actor in pts_in.actor.actors:
+                # move outline cube to surround picked blob; each glyph has
+                # has many points, and each point ID maps to a data index
+                # after floor division by the number of points
+                z, y, x, r = segs_in[pick.point_id // glyph_points.shape[0], :4]
+                outline.bounds = (x - r, x + r, y - r, y + r, z - r, z + r)
+            else:
+                # revert outline to full ROI
+                self.show_roi_outline(roi_size)
+        
+        # show ROI outline and make blobs pickable
         outline = self.show_roi_outline(roi_size)
+        glyph_points = pts_in.glyph.glyph_source.glyph_source.output.points.\
+            to_array()
+        picker = self.scene.mlab.gcf().on_mouse_pick(pick_callback)
+        
         return pts_in, scale
 
     def _shadow_img2d(self, img2d, shape, axis):

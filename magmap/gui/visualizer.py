@@ -2035,22 +2035,13 @@ class Visualization(HasTraits):
         roi_size = self.roi_array[0].astype(int)
         show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
         self.segs_pts, scale = self._vis3d.show_blobs(
-            self.segments, self.segs_in_mask, self.segs_cmap,
+            self.segments, self.segs_in_mask, self.segs_cmap, roi_size[::-1],
             show_shadows, roi_size[2] if self.flipz else 0)
         
         # reduce number of digits to make the slider more compact
         scale = float(libmag.format_num(scale, 4))
         self._scale_detections_high = scale * 2
         self.scale_detections = scale
-        
-        # show plot outline to show ROI borders, manually calculating extent
-        # since the default bounds do not always capture all objects and to
-        # include any empty border spaces
-        isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
-        if isotropic is not None:
-            roi_size = np.multiply(roi_size, isotropic[::-1])
-        self.scene.mlab.outline(extent=(
-            0, roi_size[0], 0, roi_size[1], 0, roi_size[2]))
 
     @on_trait_change("_colocalize")
     def _colocalize_blobs(self):

@@ -310,8 +310,8 @@ class Vis3D:
         pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
         return pts_shadows
 
-    def show_blobs(self, segments, segs_in_mask, cmap, show_shadows=False,
-                   flipz=None):
+    def show_blobs(self, segments, segs_in_mask, cmap, roi_size,
+                   show_shadows=False, flipz=None):
         """Show 3D blobs as points.
 
         Args:
@@ -321,6 +321,8 @@ class Vis3D:
                 surrounding the ROI.
             cmap (:class:`numpy.ndaarry`): Colormap as a 2D Numpy array in the
                 format  ``[[R, G, B, alpha], ...]``.
+            roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
+                Used to show the ROI outline.
             show_shadows: True if shadows of blobs should be depicted on planes 
                 behind the blobs; defaults to False.
             flipz (int): Invert blobs and shift them by this amount along the
@@ -404,6 +406,7 @@ class Vis3D:
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
                 resolution=50, opacity=0.2))
     
+        outline = self.show_roi_outline(roi_size)
         return pts_in, scale
 
     def _shadow_img2d(self, img2d, shape, axis):
@@ -484,4 +487,20 @@ class Vis3D:
             shape_iso_mid[2], -10, shape_iso_mid[0]]
         img2d_mlab.actor.orientation = [90, 0, 0]
 
+    def show_roi_outline(self, roi_size):
+        """Show plot outline to show ROI borders.
+        
+        Args:
+            roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
 
+        Returns:
+            
+
+        """
+        # manually calculate extent since the default bounds do not always
+        # capture all objects and to include any empty border spaces
+        isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
+        if isotropic is not None:
+            roi_size = np.multiply(roi_size, isotropic)
+        return self.scene.mlab.outline(extent=(
+            0, roi_size[2], 0, roi_size[1], 0, roi_size[0]))

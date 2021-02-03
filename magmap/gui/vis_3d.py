@@ -408,21 +408,33 @@ class Vis3D:
         
         def pick_callback(pick):
             # handle picking blobs/glyphs
-            print(pick.pick_position)
             if pick.actor in pts_in.actor.actors:
+                # get the blob corresponding to the picked glyph actor
+                blobi = pick.point_id // glyph_points.shape[0]
+            else:
+                # find the closest blob to the pick position
+                dists = np.linalg.norm(
+                    segs_in[:, :3] - pick.pick_position[::-1], axis=1)
+                blobi = np.argmin(dists)
+                if dists[blobi] > max_dist:
+                    # remove blob if not within a tolerated distance
+                    blobi = None
+            if blobi is None:
+                # revert outline to full ROI if no blob is found
+                self.show_roi_outline(roi_size)
+            else:
                 # move outline cube to surround picked blob; each glyph has
                 # has many points, and each point ID maps to a data index
                 # after floor division by the number of points
-                z, y, x, r = segs_in[pick.point_id // glyph_points.shape[0], :4]
+                z, y, x, r = segs_in[blobi, :4]
                 outline.bounds = (x - r, x + r, y - r, y + r, z - r, z + r)
-            else:
-                # revert outline to full ROI
-                self.show_roi_outline(roi_size)
         
-        # show ROI outline and make blobs pickable
+        # show ROI outline and make blobs pickable, falling back to closest
+        # blobs within 20% of the longest ROI edge to be picked if present
         outline = self.show_roi_outline(roi_size)
         glyph_points = pts_in.glyph.glyph_source.glyph_source.output.points.\
             to_array()
+        max_dist = max(np.multiply(roi_size[:3], isotropic)) * 0.2
         picker = self.scene.mlab.gcf().on_mouse_pick(pick_callback)
         
         return pts_in, scale

@@ -135,15 +135,15 @@ class Blobs:
             dict: Dictionary saved to :attr:`path`.
 
         """
-        with np.load(self.path) as archive:
-            if update:
+        blobs_arc = to_add
+        if update:
+            with np.load(self.path) as archive:
                 # load archive, convert to dict, and update dict
                 blobs_arc = np_io.read_np_archive(archive)
                 blobs_arc.update(to_add)
-            else:
-                blobs_arc = to_add
+        with open(self.path, "wb") as archive:
             # save as uncompressed zip Numpy archive file
-            np.savez(self.path, **blobs_arc)
+            np.savez(archive, **blobs_arc)
         if config.verbose:
             pprint.pprint(blobs_arc)
         return blobs_arc

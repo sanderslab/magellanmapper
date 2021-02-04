@@ -84,20 +84,26 @@ The multi-planar image plotter allows simplified viewing and editing of annotati
 
 To view the editor, select the `Atlas Editor` tab. The `Redraw` button in the `ROI` tab of the left panel will redraw the editor if necessary. The `Registered images` section allows selecting any available annotations and label reference files to overlay.
 
-- Mouseover over any label to see the region name
-- `Left-click` to move the crosshairs and the corresponding planes
-- Scroll or arrow `up`/`down` to move planes in the current plot
-- `Right-click` or `Ctrl+left-click` while moving the mouse up/down to zoom
-- `Middle-click` or `Shift+left-click` while dragging the mouse to pan
-- `a` to toggle between 0 and full labels alpha (opacity)
-- `shift+a` to halve alpha (press `a` twice to return to original alpha)
+| Shortcut        | Effect                    |
+| ------------- |:-------------------------:|
+| Mouseover over any label | See the region name |
+|`Left-click`| Move the crosshairs and the corresponding planes|
+|Scroll or arrow `up`/`down`| Move planes in the current plot|
+|`Right-click` or `Ctrl+left-click` while moving the mouse up/down| Zoom |
+|`Middle-click` or `Shift+left-click` while dragging the mouse | Pan |
+|`a` | Toggle between 0 and full labels alpha (opacity) |
+|`shift+a` | Halve alpha |
+| press `a` twice | Return to original alpha |
 
 Press on the "Edit" button to start painting labels using these controls:
 
-- `Left-click` to pick a color, then drag to paint over a new area
-- `Alt+Left-click`(option-click on Mac) to use the last picked color instead
-- `[`/`]` (brackets) to make the paintbrush smaller/bigger; add `shift` to halve the increment
-- Use the save button in the main window with the atlas window still open to resave
+| Shortcut        | Effect                    |
+| ------------- |:-------------------------:|
+|`Left-click`, pick a color, then drag over image | Paint over a new area |
+|`Alt+Left-click`(option-click on Mac) | Use the last picked color to paint over a new area |
+|`[`/`]` (brackets) | Make the paintbrush smaller/bigger |
+|`[`/`]` and add `shift` | Halve the increment of the paintbrush size |
+Use the save button in the main window with the atlas window still open to resave
 
 
 ## Start a processing pipeline

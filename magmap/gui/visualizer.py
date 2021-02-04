@@ -1978,7 +1978,8 @@ class Visualization(HasTraits):
             else:
                 # default to color by channel
                 cmap = colormaps.discrete_colormap(
-                    len(config.channel), alpha, True, config.seed)
+                    np_io.get_num_channels(config.image5d), alpha, True,
+                    config.seed)
                 self.segs_cmap = cmap[detector.get_blobs_channel(
                     segs_all[self.segs_in_mask]).astype(np.int)]
         

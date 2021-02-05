@@ -134,6 +134,9 @@ class VisHandler(Handler):
                 if tab is ViewerTabs.MAYAVI:
                     # initialize the camera orientation
                     info.object.orient_camera()
+            elif tab is ViewerTabs.ATLAS_ED:
+                # synchronize Atlas Editors to ROI offset if option selected
+                info.object.sync_atlas_eds_coords(check_option=True)
             info.object.update_imgadj_for_img()
 
         # change Trait to flag completion of controls creation
@@ -298,6 +301,7 @@ class RegionOptions(Enum):
 class AtlasEditorOptions(Enum):
     """Enumerations for Atlas Editor options."""
     SHOW_LABELS = "Labels"
+    SYNC_ROI = "Sync to ROI"
 
 
 class BlobsVisibilityOptions(Enum):
@@ -535,7 +539,8 @@ class Visualization(HasTraits):
     _styles_2d = List
     _atlas_ed_options = List(
         tooltip="Labels: show a description when hovering over an atlas label"
-                "in\nboth the ROI and Atlas Editors")
+                "in\nboth the ROI and Atlas Editors\n"
+                "Sync to ROI: move to the ROI offset whenever it changes")
     # select to zoom Atlas Ed into the ROI, with crosshairs at center of ROI
     # if ROI Center box also selected; unselect to zoom out to whole image
     _atlas_ed_zoom = Bool(
@@ -643,7 +648,6 @@ class Visualization(HasTraits):
                      editor=CheckListEditor(
                          values=[e.value for e in AtlasEditorOptions],
                          cols=4, format_func=lambda x: x)),
-                # Item(label="Atlas Editor:"),
                 Item("_atlas_ed_zoom", label="Zoom to ROI",
                      editor=BooleanEditor()),
             ),
@@ -905,7 +909,9 @@ class Visualization(HasTraits):
         # Matplotlib 3.2
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
-        self._atlas_ed_options = [AtlasEditorOptions.SHOW_LABELS.value]
+        self._atlas_ed_options = [
+            AtlasEditorOptions.SHOW_LABELS.value,
+            AtlasEditorOptions.SYNC_ROI.value]
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -1738,6 +1744,9 @@ class Visualization(HasTraits):
         print("x: {}, y: {}, z: {}"
               .format(self.x_offset, self.y_offset, self.z_offset))
         self.reset_stale_viewers(StaleFlags.ROI)
+        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            # immediately move to new offset if sync selected
+            self.sync_atlas_eds_coords(check_option=True)
 
     @on_trait_change("roi_array")
     def _update_roi_array(self):
@@ -2258,7 +2267,26 @@ class Visualization(HasTraits):
         atlas_ed.set_show_labels(self._get_show_labels())
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[ViewerTabs.ATLAS_ED] = None
+    
+    def sync_atlas_eds_coords(self, coords=None, check_option=False):
+        """Synchronize Atlas Editors to ROI offset.
+        
+        Args:
+            coords (Sequence[int]): ROI offset in ``z,y,x``; defaults to None
+                to find from the current ROI controls.
+            check_option (bool): True to synchronize only if the corresponding
+                Atlas Editor is selected; defaults to False.
 
+        """
+        if (check_option and AtlasEditorOptions.SYNC_ROI.value
+                not in self._atlas_ed_options):
+            return
+        if coords is None:
+            coords = self._curr_offset()[::-1]
+        for ed in self.atlas_eds:
+            if ed is None: continue
+            ed.update_coords(coords)
+    
     def _refresh_atlas_eds(self, ed_ignore):
         """Callback handler to refresh all other Atlas Editors
 
@@ -2491,10 +2519,8 @@ class Visualization(HasTraits):
             # without non-label areas; TODO: consider making default or 
             # only option
             self.show_label_3d(region_ids)
-        for ed in self.atlas_eds:
-            if ed is None: continue
-            # sync with atlas editor to point at center of region
-            ed.update_coords(centroid)
+        # sync with atlas editor to point at center of region
+        self.sync_atlas_eds_coords(centroid)
         self._roi_feedback = (
             "Found region ID {} of size x={}, y={}, z={} \u00b5m, "
             "volume {} \u00b5m^3".format(self._region_id, *meas[::-1], vol))

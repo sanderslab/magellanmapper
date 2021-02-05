@@ -18,6 +18,8 @@ class Vis3D:
     Attributes:
         scene (:class:`mayavi.tools.mlab_scene_model.MlabSceneModel`):
             Mayavi scene.
+        fn_update_coords (func): Callback to update coordinates; defaults to
+            None.
         surfaces (list): List of Mayavi surfaces for each displayed channel;
             defaults to None.
         blobs (list[:class:`mayavi.modules.glyph.Glyph`]): List of Mayavi
@@ -37,6 +39,11 @@ class Vis3D:
         
         """
         self.scene = scene
+        
+        # callbacks
+        self.fn_update_coords = None
+        
+        # generated Mayavi objects
         self.surfaces = None
         self.blobs = None
 
@@ -310,7 +317,7 @@ class Vis3D:
         pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
         return pts_shadows
 
-    def show_blobs(self, segments, segs_in_mask, cmap, roi_size,
+    def show_blobs(self, segments, segs_in_mask, cmap, roi_offset, roi_size,
                    show_shadows=False, flipz=None):
         """Show 3D blobs as points.
 
@@ -321,6 +328,9 @@ class Vis3D:
                 surrounding the ROI.
             cmap (:class:`numpy.ndaarry`): Colormap as a 2D Numpy array in the
                 format  ``[[R, G, B, alpha], ...]``.
+            roi_offset (Sequence[int]): Region of interest offset in ``z,y,x``.
+                Used to update absolute coordinates in
+                :attr:`fn_update_coords`` callback.
             roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
                 Used to show the ROI outline.
             show_shadows: True if shadows of blobs should be depicted on planes 
@@ -341,7 +351,9 @@ class Vis3D:
                 # remove existing blob glyphs from the pipeline
                 blob.remove()
         settings = config.roi_profile
-        segs = np.copy(segments)
+        # copy blobs with duplicate columns to access original values for
+        # the coordinates callback when a blob is selected
+        segs = np.concatenate((segments[:, :4], segments[:, :4]), axis=1)
         if flipz:
             # invert along z-axis within the same original space, eg to match
             # handedness of Matplotlib with z up
@@ -428,6 +440,10 @@ class Vis3D:
                 # after floor division by the number of points
                 z, y, x, r = segs_in[blobi, :4]
                 outline.bounds = (x - r, x + r, y - r, y + r, z - r, z + r)
+                if self.fn_update_coords:
+                    # callback to update coordinates using blob's orig coords
+                    self.fn_update_coords(np.add(
+                        segs_in[blobi, 4:7], roi_offset).astype(np.int))
         
         # show ROI outline and make blobs pickable, falling back to closest
         # blobs within 20% of the longest ROI edge to be picked if present

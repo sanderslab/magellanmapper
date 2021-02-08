@@ -384,12 +384,21 @@ class Visualization(HasTraits):
     _ignore_filename = False  # ignore file update trigger
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
-    _main_img_name = List
+    
+    # main registered image available and selected dropdowns
+    _main_img_name_avail = Str
+    _main_img_names_avail = Instance(TraitsList)
+    _MAIN_IMG_NAME_AVAIL_DEFAULT = "Available ({})"
+    _main_img_name = Str
     _main_img_names = Instance(TraitsList)
+    _MAIN_IMG_NAME_DEFAULT = "Selected ({})"
+    
+    # labels registered image selection dropdown
     _labels_img_name = Str
     _labels_img_names = Instance(TraitsList)
-    _labels_ref_path = File
-    _reload_btn = Button("Reload")
+    
+    _labels_ref_path = File  # labels ontology reference path
+    _reload_btn = Button("Reload")  # button to reload images
     
     # ROI selection
 
@@ -580,10 +589,13 @@ class Visualization(HasTraits):
         ),
         VGroup(
             HGroup(
-                Item("_main_img_name", label="Intensity", springy=True,
-                     style="custom",
+                Item("_main_img_name_avail", label="Intensity", springy=True,
                      editor=CheckListEditor(
-                         name="object._main_img_names.selections", cols=2,
+                         name="object._main_img_names_avail.selections",
+                         format_func=lambda x: x)),
+                Item("_main_img_name", show_label=False, springy=True,
+                     editor=CheckListEditor(
+                         name="object._main_img_names.selections",
                          format_func=lambda x: x)),
                 Item("_reload_btn", show_label=False),
             ),
@@ -924,8 +936,10 @@ class Visualization(HasTraits):
         self._imgadj_max_ignore_update = False
         
         # set up rest of registered images during image setup
+        self._main_img_names_avail = TraitsList()
         self._main_img_names = TraitsList()
         self._labels_img_names = TraitsList()
+        self._ignore_main_img_name_changes = False
         
         # set up image
         self._setup_for_image()
@@ -1552,6 +1566,55 @@ class Visualization(HasTraits):
         # turn off stale flag from ROI changes
         self.stale_viewers[ViewerTabs.MAYAVI] = None
     
+    @on_trait_change("_main_img_name_avail")
+    def _on_main_img_name_avail_changed(self):
+        """Respond to main registered image availale suffix change."""
+        self._swap_main_img_names(
+            self._main_img_name_avail, self._main_img_names_avail,
+            self._main_img_names)
+
+    @on_trait_change("_main_img_name")
+    def _on_main_img_name_changed(self):
+        """Respond to main registered image selected suffix change."""
+        self._swap_main_img_names(
+            self._main_img_name, self._main_img_names,
+            self._main_img_names_avail)
+    
+    def _swap_main_img_names(self, name_from, names_from, names_to):
+        """Swamp main image suffix from one dropdown to another.
+        
+        Args:
+            name_from (str): Name to move.
+            names_from (List[str]): List to move name from.
+            names_to (List[str]): List to move name to.
+
+        """
+        # assume that first item is label with counter and name_from is
+        # currently selected item in names_from
+        if (not self._ignore_main_img_name_changes
+                and name_from != names_from.selections[0]):
+            self._ignore_main_img_name_changes = True
+            # add item to opposite dropdown but do not select it since
+            # re-selecting the selected item does not trigger the callback
+            names_to.selections.append(name_from)
+            if name_from in names_from.selections:
+                # remove item from current dropdown, reverting selection to
+                # first item in names_from
+                names_from.selections.remove(name_from)
+            self._update_main_img_counter_disp()
+            self._ignore_main_img_name_changes = False
+    
+    def _update_main_img_counter_disp(self):
+        """Update counter in each main image dropdown for number of images."""
+        # display counters of images available to provide feedback when the
+        # user shifts an image and to clarify that multiple images can be shown
+        self._main_img_names_avail.selections[0] = (
+            self._MAIN_IMG_NAME_AVAIL_DEFAULT.format(len(
+                self._main_img_names_avail.selections) - 1))
+        self._main_img_names.selections[0] = (
+            self._MAIN_IMG_NAME_DEFAULT.format(len(
+                self._main_img_names.selections) - 1))
+    
     def _setup_for_image(self):
         """Setup GUI parameters for the loaded image5d.
         """
@@ -1574,23 +1637,23 @@ class Visualization(HasTraits):
                               else [config.roi_size])
             
             # find matching registered images to populate dropdowns
-            self._main_img_names.selections = []
+            main_img_names_avail = []
             for reg_name in config.RegNames:
-                # check for potential matches and add if existing
+                # check for potential registered image files
                 reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
                     config.filename, reg_name.value), dryrun=True)[1]
                 if reg_path:
-                    self._main_img_names.selections.append(reg_name.value)
+                    # add to list of available suffixes
+                    main_img_names_avail.append(reg_name.value)
             # show without extension since exts may differ
-            self._main_img_names.selections = [
-                os.path.splitext(s)[0] for s in self._main_img_names.selections]
-            self._labels_img_names.selections = list(
-                self._main_img_names.selections)
+            main_img_names_avail = [
+                os.path.splitext(s)[0] for s in main_img_names_avail]
+            self._labels_img_names.selections = list(main_img_names_avail)
             self._labels_img_names.selections.insert(0, "")
             
             # set any registered names based on loaded images, defaulting to
             # image5d and no labels
-            main_suffixes = []
+            main_suffixes = [self._MAIN_IMG_NAME_DEFAULT]
             labels_suffix = self._labels_img_names.selections[0]
             if config.reg_suffixes:
                 # use registered suffixes without ext, using first suffix
@@ -1601,15 +1664,29 @@ class Visualization(HasTraits):
                         suffixes = [suffixes]
                     for suffix in suffixes:
                         suffix = os.path.splitext(suffix)[0]
-                        if suffix in self._main_img_names.selections:
+                        if suffix in main_img_names_avail:
+                            # move from available to selected suffixes lists
                             main_suffixes.append(suffix)
+                            main_img_names_avail.remove(suffix)
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
                     suffix = os.path.splitext(
                         libmag.get_if_within(suffix, 0, ""))[0]
                     if suffix in self._labels_img_names.selections:
                         labels_suffix = suffix
-            self._main_img_name = main_suffixes
+            
+            # show main image lists in two dropdowns, where selecting a suffix
+            # from one list immediately moves it to the other 
+            main_img_names_avail.insert(
+                0, self._MAIN_IMG_NAME_AVAIL_DEFAULT)
+            self._main_img_names_avail.selections = main_img_names_avail
+            self._main_img_names.selections = main_suffixes
+            self._update_main_img_counter_disp()
+            
+            # select first elements in each dropdown, which display counters
+            # of the number of images in each list
+            self._main_img_name_avail = self._main_img_names_avail.selections[0]
+            self._main_img_name = self._main_img_names.selections[0]
             self._labels_img_name = labels_suffix
             
             if config.load_labels:
@@ -1686,7 +1763,7 @@ class Visualization(HasTraits):
             config.RegSuffixes.ANNOTATION: None,
         }
         atlas_suffixes = []
-        for suffix in self._main_img_name:
+        for suffix in self._main_img_names.selections[1:]:
             # add empty extension for each selected atlas suffix
             atlas_suffixes.append("{}.".format(suffix))
         if atlas_suffixes:

@@ -2394,6 +2394,11 @@ class Visualization(HasTraits):
             self.roi_ed.set_show_labels(show_labels)
         if self.atlas_eds:
             self.atlas_eds[0].set_show_labels(show_labels)
+        
+        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            # move visible Atlas Editor to ROI offset if sync selected;
+            # otherwise, defer sync to tab selection handler
+            self.sync_atlas_eds_coords(check_option=True)
     
     @on_trait_change("_atlas_ed_zoom")
     def _zoom_atlas_ed(self):

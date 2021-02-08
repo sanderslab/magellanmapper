@@ -39,16 +39,19 @@ class StackDetector(object):
         exclude_border (bool): Sequence of border pixels in x,y,z to exclude;
             defaults to None.
         coloc (bool): True to perform blob co-localizations; defaults to False.
+        channel (Sequence[int]): Sequence of channels; defaults to None to
+            detect in all channels.
     """
     img = None
     last_coord = None
     denoise_max_shape = None
     exclude_border = None
     coloc = False
+    channel = None
     
     @classmethod
     def set_data(cls, img, last_coord, denoise_max_shape, exclude_border,
-                 coloc):
+                 coloc, channel):
         """Set the class attributes to be shared during forked multiprocessing.
 
         See attributes for args.
@@ -58,6 +61,7 @@ class StackDetector(object):
         cls.denoise_max_shape = denoise_max_shape
         cls.exclude_border = exclude_border
         cls.coloc = coloc
+        cls.channel = channel
 
     @classmethod
     def detect_sub_roi_from_data(cls, coord, sub_roi_slices, offset):
@@ -79,11 +83,12 @@ class StackDetector(object):
         return cls.detect_sub_roi(
             coord, offset, cls.last_coord,
             cls.denoise_max_shape, cls.exclude_border, cls.img[sub_roi_slices],
-            coloc=cls.coloc)
+            cls.channel, coloc=cls.coloc)
 
     @classmethod
     def detect_sub_roi(cls, coord, offset, last_coord, denoise_max_shape,
-                       exclude_border, sub_roi, img_path=None, coloc=False):
+                       exclude_border, sub_roi, channel, img_path=None,
+                       coloc=False):
         """Perform 3D blob detection within a sub-ROI without accessing
         class attributes, such as for spawned multiprocessing.
         
@@ -100,6 +105,8 @@ class StackDetector(object):
                 set up the image and processing parameters.
             coloc (bool): True to perform blob co-localizations; defaults
                 to False.
+            channel (Sequence[int]): Sequence of channels, where None detects
+                in all channels.
         
         Returns:
             Tuple[int], :obj:`np.ndarray`: The coordinate given back again to
@@ -132,9 +139,9 @@ class StackDetector(object):
                              np.subtract(denoise_roi_slices.shape, 1),
                              denoise_roi.shape, sub_roi.shape))
                         denoise_roi = plot_3d.saturate_roi(
-                            denoise_roi, channel=config.channel)
+                            denoise_roi, channel=channel)
                         denoise_roi = plot_3d.denoise_roi(
-                            denoise_roi, channel=config.channel)
+                            denoise_roi, channel=channel)
                         # replace slices with denoised ROI
                         denoise_roi_slices[denoise_coord] = denoise_roi
             
@@ -154,7 +161,7 @@ class StackDetector(object):
             exclude = np.array([exclude_border, exclude_border])
             exclude[0, np.equal(coord, 0)] = 0
             exclude[1, np.equal(coord, last_coord)] = 0
-        segments = detector.detect_blobs(sub_roi, config.channel, exclude)
+        segments = detector.detect_blobs(sub_roi, channel, exclude)
         if coloc and segments is not None:
             # co-localize blobs and append to blobs array
             colocs = colocalizer.colocalize_blobs(sub_roi, segments)
@@ -273,7 +280,7 @@ def _get_truth_db_rois(subimg_path_base, filename_base, db_path_base=None):
     return name, exp_rois
 
 
-def detect_blobs_large_image(filename_base, image5d, offset, size,
+def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
                              verify=False, save_dfs=True, full_roi=False,
                              coloc=False):
     """Detect blobs within a large image through parallel processing.
@@ -283,6 +290,8 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         image5d: Large image to process as a Numpy array of t,z,y,x,[c]
         offset: Sub-image offset given as coordinates in z,y,x.
         size: Sub-image shape given in z,y,x.
+        channels (Sequence[int]): Sequence of channels, where None detects
+            in all channels.
         verify: True to verify detections against truth database; defaults 
             to False.
         save_dfs: True to save data frames to file; defaults to True.
@@ -308,7 +317,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
         roi = image5d[0]
     else:
         roi = plot_3d.prepare_subimg(image5d, offset, size)
-    _, channels = plot_3d.setup_channels(roi, config.channel, 3)
     num_chls_roi = 1 if len(roi.shape) < 4 else roi.shape[3]
     if num_chls_roi < 2:
         coloc = False
@@ -326,7 +334,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
     # for blob detection
     seg_rois = detect_blobs_sub_rois(
         roi, sub_roi_slices, sub_rois_offsets, denoise_max_shape,
-        exclude_border, coloc)
+        exclude_border, coloc, channels)
     detection_time = time() - time_detection_start
     print("blob detection time (s):", detection_time)
     
@@ -426,7 +434,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
                 stats_detection, fdbk, df_verify = detector.verify_rois(
                     rois, segments_all, config.truth_db.blobs_truth,
                     verify_tol, config.verified_db, exp_id, exp_name,
-                    config.channel)
+                    channels)
                 df_io.data_frames_to_csv(df_verify, libmag.combine_paths(
                     exp_name, "verify.csv"))
             except FileNotFoundError:
@@ -483,7 +491,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size,
 
 
 def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
-                          denoise_max_shape, exclude_border, coloc):
+                          denoise_max_shape, exclude_border, coloc, channel):
     """Process blobs in an ROI chunked into multiple sub-ROIs via 
     multiprocessing.
     
@@ -500,6 +508,8 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
         exclude_border (Tuple[int]): Sequence of border pixels in x,y,z to
             exclude; defaults to None.
         coloc (bool): True to perform blob co-localizations; defaults to False.
+        channel (Sequence[int]): Sequence of channels, where None detects
+            in all channels.
     
     Returns:
         :obj:`np.ndarray`: Numpy object array of blobs corresponding to
@@ -513,7 +523,7 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
     last_coord = np.subtract(sub_roi_slices.shape, 1)
     if is_fork:
         StackDetector.set_data(
-            img, last_coord, denoise_max_shape, exclude_border, coloc)
+            img, last_coord, denoise_max_shape, exclude_border, coloc, channel)
     pool = chunking.get_mp_pool()
     pool_results = []
     for z in range(sub_roi_slices.shape[0]):
@@ -533,7 +543,7 @@ def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
                         StackDetector.detect_sub_roi,
                         args=(coord, sub_rois_offsets[coord], last_coord,
                               denoise_max_shape, exclude_border,
-                              img[sub_roi_slices[coord]], config.filename,
+                              img[sub_roi_slices[coord]], channel, config.filename,
                               coloc)))
     
     # retrieve blobs and assign to object array corresponding to sub_rois

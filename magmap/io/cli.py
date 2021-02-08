@@ -1028,7 +1028,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         coloc = proc_type is config.ProcessTypes.DETECT_COLOC
         stats, fdbk, segments_all = stack_detect.detect_blobs_large_image(
             filename_base, config.image5d, subimg_offset, subimg_size,
-            config.truth_db_mode is config.TruthDBModes.VERIFY, 
+            config.channel, config.truth_db_mode is config.TruthDBModes.VERIFY, 
             not config.grid_search_profile, config.image5d_is_roi, coloc)
 
     elif proc_type is config.ProcessTypes.COLOC_MATCH:

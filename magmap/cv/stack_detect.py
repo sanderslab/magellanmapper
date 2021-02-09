@@ -204,7 +204,7 @@ def setup_blocks(settings, shape):
     scaling_factor = detector.calc_scaling_factor()
     print("microsope scaling factor based on resolutions: {}"
           .format(scaling_factor))
-    denoise_size = config.roi_profile["denoise_size"]
+    denoise_size = settings["denoise_size"]
     denoise_max_shape = None
     if denoise_size:
         # further subdivide each sub-ROI for local preprocessing
@@ -216,7 +216,7 @@ def setup_blocks(settings, shape):
     tol = np.multiply(overlap_base, settings["prune_tol_factor"]).astype(int)
     overlap_padding = np.copy(tol)
     overlap = np.copy(overlap_base)
-    exclude_border = config.roi_profile["exclude_border"]
+    exclude_border = settings["exclude_border"]
     if exclude_border is not None:
         # exclude border to avoid blob detector edge effects, where blobs
         # often collect at the faces of the sub-ROI;
@@ -232,8 +232,7 @@ def setup_blocks(settings, shape):
           "overlap for pruning: {}, exclude borders: {}"
           .format(overlap, tol, overlap_padding, exclude_border))
     max_pixels = np.ceil(np.multiply(
-        scaling_factor,
-        config.roi_profile["segment_size"])).astype(int)
+        scaling_factor, settings["segment_size"])).astype(int)
     print("preprocessing max shape: {}, detection max pixels: {}"
           .format(denoise_max_shape, max_pixels))
     sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(

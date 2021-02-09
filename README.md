@@ -76,7 +76,7 @@ The multi-level 2D plotter is geared toward simplifying annotation for nuclei. S
 | Cut the circle | `"x"+click` |
 | Delete the circle | `"d"+click` |
 | Increase/decrease the overview plots' z-plane | Arrow `up/right` to increase and `down/left` to decrease |
-| Jumpt to a z-plane in the overview plots | `Right-click` on the the corresponding ROI plane |
+| Jump to a z-plane in the overview plots corresponding to an ROI plane | `Right-click` on the the corresponding ROI plane |
 | Preview the ROI at a certain position | `Left-click` in the overview plot |
 | Redraw the editor at the chosen ROI settings | Double `right-click` in any overview plot |
 

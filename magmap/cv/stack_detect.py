@@ -297,6 +297,12 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
         full_roi (bool): True to treat ``image5d`` as the full ROI; defaults
             to False.
         coloc (bool): True to perform blob co-localizations; defaults to False.
+    
+    Returns:
+        tuple[int, int, int], str, :class:`magmap.cv.detector.Blobs`:
+        Accuracy metrics from :class:`magmap.cv.detector.verify_rois`,
+        feedback message from this same function, and detected blobs.
+    
     """
     time_start = time()
     subimg_path_base = filename_base
@@ -456,18 +462,14 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
             with open(subimg_base_path, "wb") as f:
                 np.save(f, roi)
 
-    # save blobs
+    # store blobs in Blobs instance
     # TODO: consider separating into blobs and blobs metadata archives
-    blobs = detector.Blobs(path=filename_blobs)
-    blobs.save_archive({
-        detector.Blobs.Keys.VER.value: blobs.BLOBS_NP_VER,
-        detector.Blobs.Keys.BLOBS.value: segments_all,
-        detector.Blobs.Keys.RESOLUTIONS.value: config.resolutions,
-        # only save name
-        detector.Blobs.Keys.BASENAME.value: os.path.basename(config.filename),
-        detector.Blobs.Keys.ROI_OFFSET.value: offset,
-        detector.Blobs.Keys.ROI_SIZE.value: size,
-        detector.Blobs.Keys.COLOCS.value: colocs})
+    blobs = detector.Blobs(
+        segments_all, colocalizations=colocs, path=filename_blobs)
+    blobs.resolutions = config.resolutions
+    blobs.basename = os.path.basename(config.filename)
+    blobs.roi_offset = offset
+    blobs.roi_size = size
     
     # whole image benchmarking time
     times = (
@@ -486,7 +488,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
     path_times = "stack_detection_times.csv" if save_dfs else None
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
-    return stats_detection, fdbk, segments_all
+    return stats_detection, fdbk, blobs
 
 
 def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,

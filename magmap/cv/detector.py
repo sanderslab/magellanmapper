@@ -44,10 +44,15 @@ class Blobs:
             signal and 1 = signal at the corresponding blob's location
             in the given and channel; defaults to None.
         path (str): Path from which blobs were loaded; defaults to None.
+        ver (int): Version number; defaults to :const:`BLOBS_NP_VER`.
         roi_offset (Sequence[int]): Offset in ``z,y,x`` from ROI in which
             blobs were detected.
         roi_size (Sequence[int]): Size in ``z,y,x`` from ROI in which
             blobs were detected.
+        resolutions (Sequence[int]): Physical unit resolution sizes in
+            ``[[z,y,x], ...]``; defaults to None.
+        basename (str): Archive name, typically the filename without extension
+            of the image file in which blobs were detected; defaults to None.
     
     """
 
@@ -75,8 +80,12 @@ class Blobs:
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
         self.path = path
+        
+        self.ver = self.BLOBS_NP_VER
         self.roi_offset = None
         self.roi_size = None
+        self.resolutions = None
+        self.basename = None
 
     def load_blobs(self, path=None):
         """Load blobs from an archive.
@@ -97,6 +106,11 @@ class Blobs:
         print("Loading blobs from", self.path)
         with np.load(self.path) as archive:
             info = np_io.read_np_archive(archive)
+
+            if self.Keys.VER.value in info:
+                # load archive version number
+                self.basename = info[self.Keys.VER.value]
+
             if self.Keys.BLOBS.value in info:
                 # load blobs as a Numpy array
                 self.blobs = info[self.Keys.BLOBS.value]
@@ -111,6 +125,14 @@ class Blobs:
                     print("Loaded blob co-localizations for {} channels"
                           .format(self.colocalizations.shape[1]))
             
+            if self.Keys.RESOLUTIONS.value in info:
+                # load resolutions of image from which blobs were detected
+                self.resolutions = info[self.Keys.RESOLUTIONS.value]
+
+            if self.Keys.BASENAME.value in info:
+                # load basename of image file from which blobs were detected
+                self.basename = info[self.Keys.BASENAME.value]
+
             if self.Keys.ROI_OFFSET.value in info:
                 # load offset of ROI from which blobs were detected
                 self.roi_offset = info[self.Keys.ROI_OFFSET.value]

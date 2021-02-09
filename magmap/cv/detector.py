@@ -145,11 +145,12 @@ class Blobs:
                 pprint.pprint(info)
         return self
 
-    def save_archive(self, to_add, update=False):
+    def save_archive(self, to_add=None, update=False):
         """Save the blobs Numpy archive file to :attr:`path`.
         
         Args:
-            to_add (dict): Dictionary of items to add.
+            to_add (dict): Dictionary of items to add; defaults to None
+                to use the current attributes.
             update (bool): True to load the Numpy archive at :attr:`path`
                 and update it.
 
@@ -157,15 +158,31 @@ class Blobs:
             dict: Dictionary saved to :attr:`path`.
 
         """
-        blobs_arc = to_add
+        if to_add is None:
+            # save current attributes
+            blobs_arc = {
+                Blobs.Keys.VER.value: self.ver,
+                Blobs.Keys.BLOBS.value: self.blobs,
+                Blobs.Keys.RESOLUTIONS.value: self.resolutions,
+                Blobs.Keys.BASENAME.value: self.basename,
+                Blobs.Keys.ROI_OFFSET.value: self.roi_offset,
+                Blobs.Keys.ROI_SIZE.value: self.roi_size,
+                Blobs.Keys.COLOCS.value: self.colocalizations,
+            }
+        else:
+            blobs_arc = to_add
+        
         if update:
             with np.load(self.path) as archive:
                 # load archive, convert to dict, and update dict
                 blobs_arc = np_io.read_np_archive(archive)
                 blobs_arc.update(to_add)
+        
         with open(self.path, "wb") as archive:
             # save as uncompressed zip Numpy archive file
             np.savez(archive, **blobs_arc)
+            print("Saved blobs archive to:", self.path)
+        
         if config.verbose:
             pprint.pprint(blobs_arc)
         return blobs_arc

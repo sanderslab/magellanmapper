@@ -64,6 +64,11 @@ class ROIProfile(profiles.SettingsDict):
         self["exclude_border"] = None
 
         # BLOCK PROCESSING AND AUTOMATED VERIFICATION
+        
+        # Whole image processing occurs in blocks to parallel processing
+        # and decreased memory utilization. If block settings are identical,
+        # the same blocks will be used for all channels (see
+        # is_identical_block_settings below for settings checked).
 
         # multiprocessing start method; if method not available for the given
         # platform, the default method for the platform will be used instead
@@ -72,13 +77,6 @@ class ROIProfile(profiles.SettingsDict):
         # max tasks per child process; use smaller integers (eg 1) to replace
         # worker processes and free their resources after fewer tasks
         self["mp_max_tasks"] = None  # does not replace workers
-        
-        # - True to process in each channel in separate blocks, specified by
-        #   each channel's profile (eg profile 2 and 3 for channels 2 and 3)
-        # - False to reuse the same blocks for all channels, specified by the
-        #   default profile (channel 0); useful to reduce redundant block
-        #   preprocessing if block sizes would otherwise be similar
-        self["separate_blocks_per_channel"] = False
         
         self["segment_size"] = 500  # detection ROI max size along longest edge
         # max size along longest edge for denoising blocks within
@@ -94,14 +92,14 @@ class ROIProfile(profiles.SettingsDict):
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
 
-        # resizing for anisotropy
-
+        # anisotropic resizing:
         # setting an isotropic factor automatically calculates isotropy
         # based on the image resolutions, and the values given here are
         # scaling factors in z,y,x applied after isotropic scaling;
         # eg (0.7, 1, 1) rescales the z-axis to be 0.7x isotropic;
         # None turns off any isotropic rescaling
         self["isotropic"] = None  # scale ROI for blob detection
+        
         self["isotropic_vis"] = (1, 1, 1)  # only for visualization
         self["resize_blobs"] = None  # z,y,x coord scaling before verification
 
@@ -308,3 +306,37 @@ class ROIProfile(profiles.SettingsDict):
             filename_prefix = ROIProfile.PATH_PREFIX
         return super(ROIProfile, ROIProfile).get_files(
             profiles_dir, filename_prefix)
+    
+    @staticmethod
+    def is_identical_block_settings(profs):
+        """Check whether profile block settings are identical.
+        
+        Args:
+            profs (Sequence[:class:`ROIProfile`]): Sequence of ROI profiles.
+
+        Returns:
+            bool: True if the settings are identical, otherwise False.
+
+        """
+        keys = (
+            "segment_size",
+            "denoise_size",
+            "prune_tol_factor",
+            "verify_tol_factor",
+            "sub_stack_max_pixels",
+            "isotropic",
+        )
+        prof_first = None
+        for prof in profs:
+            if prof_first is None:
+                # will compare to first profile
+                prof_first = prof
+            else:
+                for key in keys:
+                    if prof_first[key] != prof[key]:
+                        # any non-equal setting means profiles do not have
+                        # identical block settings
+                        print("Block settings are not identical")
+                        return False
+        print("Block settings are identical")
+        return True

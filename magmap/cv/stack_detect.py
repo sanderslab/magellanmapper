@@ -328,9 +328,11 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
         print("Unable to co-localize as image has only 1 channel")
     
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
-    # by physical units to make more independent of resolution
+    # by physical units to make more independent of resolution; use profile
+    # from first channel to be processed for block settings
     time_detection_start = time()
-    settings = detector.get_roi_profile_blocks(channels)
+    settings = config.get_roi_profile(channels[0])
+    print("Profile for block settings:", settings[settings.NAME_KEY])
     sub_roi_slices, sub_rois_offsets, denoise_max_shape, exclude_border, \
         tol, overlap_base, overlap, overlap_padding = setup_blocks(
             settings, roi.shape)

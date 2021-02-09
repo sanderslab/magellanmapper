@@ -1029,8 +1029,13 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
         # detect blobs in the full image, +/- co-localization
         coloc = proc_type is config.ProcessTypes.DETECT_COLOC
         channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
-        if not config.roi_profile["separate_blocks_per_channel"]:
+        if config.roi_profile.is_identical_block_settings(
+                [config.get_roi_profile(c) for c in channels]):
+            print("Will process channels together in the same blocks")
             channels = [channels]
+        else:
+            print("Will process channels in separate blocks defined by their "
+                  "profiles")
         
         cols = ("stats", "fdbk", "blobs")
         detection_out = {}

@@ -698,15 +698,15 @@ def get_roi_profile(i):
 #: :obj:`settings.grid_search_prof.GridSearchProfile`: Grid search profile.
 grid_search_profile = None
 
-# default colors using 7-color palatte for color blindness
+# default colors using 7-color palette for color blindness
 # (Wong, B. (2011) Nature Methods 8:441)
 colors = np.array(
-    [[213, 94, 0],  # vermillion
+    [[213, 94, 0],  # vermilion
      [0, 114, 178],  # blue
      [204, 121, 167],  # reddish purple
      [230, 159, 0],  # orange
      [86, 180, 233],  # sky blue
-     [0, 158, 115],  # blullish green
+     [0, 158, 115],  # blueish green
      [240, 228, 66],  # yellow
      [0, 0, 0]]  # black
 )

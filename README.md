@@ -66,17 +66,20 @@ From the ROI selection controls, two different 2D editors can be opened. All but
 
 The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Select the `ROI Editor` tab to view the editor. Press the `Redraw` button to redraw the editor at the selected ROI. To detect and display nuclei in the ROI, select the `Detect` tab and press the `Detect` button.
 
-- Click within dotted circles to cycle between the 3 nuclei detection flags: incorrect (red), correct (green), or questionable (yellow)
-- `Shift+click` and drag to move the circle's position (note that the original position will remain as a solid circle)
-- `Alt+click` (option-click on Mac) and drag to resize the circle's radius
-- `"c"+click` to copy the circle
-- `"v"+click` in another z-plane to duplicate that circle in the corresponding position in that plane
-- `"x"+click` to cut the circle
-- `"d"+click` to delete the circle
-- Arrow `up/right` to increase and `down/left` to decrease the overview plots' z-plane
-- `Right-click` on an ROI plane to jump to the corresponding z-plane in the overview plots
-- `Left-click` in an overview plot to preview the ROI at that position
-- Double `right-click` in an overview plot to redraw the editor at that ROI
+| To Do...        | Shortcut            |
+| ---------------- | :------------------: |
+| Cycle between the 3 nuclei detection flags | Click within the dotted circles; incorrect (red), correct (green), or questionable (yellow) |
+| Move the circle's position | `shift+click` and drag (note that the original position will remain as a solid circle) |
+| Resize the circle's radius | `Alt+click` (`option+click` on Mac) and drag |
+| Copy the circle | `"c"+click` |
+| Duplicate a circle to the same position in anothe z-plane | `"v"+click` on the corresponding position in the z-plane to which the circle will be duplicated |
+| Cut the circle | `"x"+click` |
+| Delete the circle | `"d"+click` |
+| Increase/decrease the overview plots' z-plane | Arrow `up/right` to increase and `down/left` to decrease |
+| Jumpt to a z-plane in the overview plots | `Right-click` on the the corresponding ROI plane |
+| Preview the ROI at a certain position | `Left-click` in the overview plot |
+| Redraw the editor at a particular ROI | Double `right-click` in the desired overview plot |
+
 
 ## Atlas Editor
 
@@ -84,25 +87,27 @@ The multi-planar image plotter allows simplified viewing and editing of annotati
 
 To view the editor, select the `Atlas Editor` tab. The `Redraw` button in the `ROI` tab of the left panel will redraw the editor if necessary. The `Registered images` section allows selecting any available annotations and label reference files to overlay.
 
-| Shortcut        | Effect                    |
-| ------------- |:-------------------------:|
-| Mouseover over any label | See the region name |
-|`Left-click`| Move the crosshairs and the corresponding planes|
-|Scroll or arrow `up`/`down`| Move planes in the current plot|
-|`Right-click` or `Ctrl+left-click` while moving the mouse up/down| Zoom |
-|`Middle-click` or `Shift+left-click` while dragging the mouse | Pan |
-|`a` | Toggle between 0 and full labels alpha (opacity) |
-|`shift+a` | Halve alpha |
-| press `a` twice | Return to original alpha |
+| To Do...       | Shortcut                    |
+| ------------- |:-------------------------: |
+| See the region name | Mouseover over any label |
+| Move the crosshairs and the corresponding planes | `Left-click` |
+| Move planes in the current plot | Scroll or arrow `up`/`down`|
+| Zoom | `Right-click` or `Ctrl+left-click` while moving the mouse up/down |
+| Pan | `Middle-click` or `Shift+left-click` while dragging the mouse |
+| Toggle between 0 and full labels alpha (opacity) | `a` |
+| Halve alpha | `shift+a` |
+| Return to original alpha | press `a` twice |
 
 Press on the "Edit" button to start painting labels using these controls:
 
-| Shortcut        | Effect                    |
+| To Do...        | Shortcut                    |
 | ------------- |:-------------------------:|
-|`Left-click`, pick a color, then drag over image | Paint over a new area |
-|`Alt+Left-click`(option-click on Mac) | Use the last picked color to paint over a new area |
-|`[`/`]` (brackets) | Make the paintbrush smaller/bigger |
-|`[`/`]` and add `shift` | Halve the increment of the paintbrush size |
+|Paint over a new area | `Left-click`, pick a color, then drag over image |
+| Use the last picked color to paint over a new area | `Alt+Left-click`(option-click on Mac) |
+| Make the paintbrush smaller/bigger | `[`/`]` (brackets) |
+| Halve the increment of the paintbrush size | `[`/`]` and add `shift` |
+
+
 Use the save button in the main window with the atlas window still open to resave
 
 

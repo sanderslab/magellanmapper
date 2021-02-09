@@ -982,6 +982,8 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
     fdbk = None
     filename_base = importer.filename_to_base(path, series)
     proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
+    
+    print("{}\n".format("-" * 80))
     if proc_type is config.ProcessTypes.LOAD:
         # loading completed
         return None, None
@@ -1043,6 +1045,7 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
                 not config.grid_search_profile, config.image5d_is_roi, coloc)
             for col, val in zip(cols, blobs_out):
                 detection_out.setdefault(col, []).append(val)
+            print("{}\n".format("-" * 80))
         
         if "blobs" in detection_out and detection_out["blobs"]:
             # join blobs from all channels and save archive

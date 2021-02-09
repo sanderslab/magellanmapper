@@ -78,7 +78,7 @@ The multi-level 2D plotter is geared toward simplifying annotation for nuclei. S
 | Increase/decrease the overview plots' z-plane | Arrow `up/right` to increase and `down/left` to decrease |
 | Jumpt to a z-plane in the overview plots | `Right-click` on the the corresponding ROI plane |
 | Preview the ROI at a certain position | `Left-click` in the overview plot |
-| Redraw the editor at a particular ROI | Double `right-click` in the desired overview plot |
+| Redraw the editor at the chosen ROI settings | Double `right-click` in any overview plot |
 
 
 ## Atlas Editor

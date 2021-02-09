@@ -78,7 +78,7 @@ class ROIProfile(profiles.SettingsDict):
         # - False to reuse the same blocks for all channels, specified by the
         #   default profile (channel 0); useful to reduce redundant block
         #   preprocessing if block sizes would otherwise be similar
-        self["separate_blocks_per_channel"] = True
+        self["separate_blocks_per_channel"] = False
         
         self["segment_size"] = 500  # detection ROI max size along longest edge
         # max size along longest edge for denoising blocks within

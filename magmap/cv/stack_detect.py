@@ -324,7 +324,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
     # by physical units to make more independent of resolution
     time_detection_start = time()
-    settings = config.roi_profile  # use default settings
+    settings = detector.get_roi_profile_blocks(channels)
     sub_roi_slices, sub_rois_offsets, denoise_max_shape, exclude_border, \
         tol, overlap_base, overlap, overlap_padding = setup_blocks(
             settings, roi.shape)

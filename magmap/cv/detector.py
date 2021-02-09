@@ -236,13 +236,40 @@ def show_blob_surroundings(blobs, roi, padding=1):
     np.set_printoptions()
 
 
+def get_roi_profile_blocks(channels):
+    """Get the ROI profile for block processing.
+    
+    The channel ROI profile used for block processing defaults to 0
+    unless the setting for "separate_blocks_per_channel" in the default
+    profile (ie for channel 0) is True and only one channel is given.
+
+    Args:
+        channels (Sequence[int]): Sequence of channels.
+
+    Returns:
+        :class:`magmap.settings.profiles.SettingsDict`: The first profile
+        in :attr:`roi_profiles` if ``channels`` has multiple channels, or
+        the profile corresponding to the first channel in ``channels`` if
+        it is only single channel.
+
+    """
+    # TODO: consider using the first channel in channels as default
+    # default to profile for channel 0, even if not in channels
+    profi = 0
+    if len(channels) == 1 and config.roi_profile["separate_blocks_per_channel"]:
+        # use profile for given channel if only a single channel given and
+        # default profiles is set to use block settings for each channel
+        profi = channels[0]
+    return config.get_roi_profile(profi)
+
+
 def detect_blobs(roi, channel, exclude_border=None):
     """Detects objects using 3D blob detection technique.
     
     Args:
         roi: Region of interest to segment.
-        channel: Channel to select, which can be None to indicate all 
-            channels.
+        channel (Sequence[int]): Sequence of channels to select, which can
+            be None to indicate all channels.
         exclude_border: Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     
@@ -252,13 +279,13 @@ def detect_blobs(roi, channel, exclude_border=None):
     """
     time_start = time()
     shape = roi.shape
-    isotropic = config.roi_profile["isotropic"]
+    multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
+    isotropic = get_roi_profile_blocks(channels)["isotropic"]
     if isotropic is not None:
         # interpolate for (near) isotropy during detection, using only the 
         # first process settings since applies to entire ROI
         roi = cv_nd.make_isotropic(roi, isotropic)
     
-    multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     blobs_all = []
     for chl in channels:
         roi_detect = roi[..., chl] if multichannel else roi
@@ -1283,7 +1310,9 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
     pos = df[mlearn.GridSearchStats.POS.value].sum()
     false_neg = pos - true_pos
     print("Automated verification using tol {}:\n".format(tol))
-    fdbk = atlas_stats.calc_sens_ppv(pos, true_pos, false_pos, false_neg)[2]
+    fdbk = "Accuracy metrics for channel {}:\n{}".format(
+        channel, atlas_stats.calc_sens_ppv(
+            pos, true_pos, false_pos, false_neg)[2])
     print(fdbk)
     print("ROIs with falsehood:\n{}".format(rois_falsehood))
     return (pos, true_pos, false_pos), fdbk, df

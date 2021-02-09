@@ -140,6 +140,40 @@ def pad_seq(seq, n, pad=None):
     return seq
 
 
+def combine_arrs(arrs, filter_none=True, fn=None, **kwargs):
+    """Combine arrays with array filtering.
+    
+    Args:
+        arrs (Sequence): Sequence of arrays.
+        filter_none (bool): True to filter out ``None``s in ``arrs``; defaults
+            to True.
+        fn (func): Function to combine filtered arrays; defaults to None to
+            use :meth:`numpy.concatenate`.
+        **kwargs: Additional arguments to ``fn``.
+
+    Returns:
+        Any: Output of ``fn`` applied to the filtered ``arrs``, or None if
+        the filtered ``arrs`` is None or empty. If the filtered ``arrs`` has
+        only one element, return this element as-is, without combining.
+
+    """
+    if arrs is None: return None
+    if fn is None:
+        fn = np.concatenate
+    if filter_none:
+        # filter out Nones
+        arrs = [a for a in arrs if a is not None]
+    len_arrs = len(arrs)
+    if len_arrs < 1:
+        return None
+    elif len_arrs == 1:
+        # return as-is, without combining
+        return arrs[0]
+    else:
+        # combine with given function
+        return fn(arrs, **kwargs)
+
+
 def insert_before_ext(name, insert, sep=""):
     """Merge two paths by splicing in ``insert`` just before the extention 
     in ``name``.

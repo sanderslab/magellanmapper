@@ -176,6 +176,79 @@ class StackDetector(object):
             detector.shift_blob_abs_coords(segments, offset)
             #print("segs after:\n{}".format(segments))
         return coord, segments
+    
+    @staticmethod
+    def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
+                              denoise_max_shape, exclude_border, coloc,
+                              channel):
+        """Process blobs in an ROI chunked into multiple sub-ROIs via 
+        multiprocessing.
+
+        Args:
+            img (:obj:`np.ndarray`): Array in which to detect blobs.
+            sub_roi_slices (:obj:`np.ndarray`): Numpy object array containing
+                chunked sub-ROIs within a stack.
+            sub_rois_offsets (:obj:`np.ndarray`): Numpy object array of the same
+                shape as ``sub_rois`` with offsets in z,y,x corresponding to
+                each sub-ROI. Offets are used to transpose blobs into 
+                absolute coordinates.
+            denoise_max_shape (Tuple[int]): Maximum shape of each unit within
+                each sub-ROI for denoising.
+            exclude_border (Tuple[int]): Sequence of border pixels in x,y,z to
+                exclude; defaults to None.
+            coloc (bool): True to perform blob co-localizations; defaults to
+                False.
+            channel (Sequence[int]): Sequence of channels, where None detects
+                in all channels.
+
+        Returns:
+            :obj:`np.ndarray`: Numpy object array of blobs corresponding to
+            ``sub_rois``, with each set of blobs given as a Numpy array in the
+            format, ``[n, [z, row, column, radius, ...]]``, including additional
+            elements as given in :meth:``StackDetect.detect_sub_roi``.
+        """
+        # detect nuclei in each sub-ROI, passing an index to access each 
+        # sub-ROI to minimize pickling
+        is_fork = chunking.is_fork()
+        last_coord = np.subtract(sub_roi_slices.shape, 1)
+        if is_fork:
+            StackDetector.set_data(
+                img, last_coord, denoise_max_shape, exclude_border, coloc,
+                channel)
+        pool = chunking.get_mp_pool()
+        pool_results = []
+        for z in range(sub_roi_slices.shape[0]):
+            for y in range(sub_roi_slices.shape[1]):
+                for x in range(sub_roi_slices.shape[2]):
+                    coord = (z, y, x)
+                    if is_fork:
+                        # use variables stored in class
+                        pool_results.append(pool.apply_async(
+                            StackDetector.detect_sub_roi_from_data,
+                            args=(coord, sub_roi_slices[coord],
+                                  sub_rois_offsets[coord])))
+                    else:
+                        # pickle full set of variables including sub-ROI and
+                        # filename from which to load image parameters
+                        pool_results.append(pool.apply_async(
+                            StackDetector.detect_sub_roi,
+                            args=(coord, sub_rois_offsets[coord], last_coord,
+                                  denoise_max_shape, exclude_border,
+                                  img[sub_roi_slices[coord]], channel,
+                                  config.filename, coloc)))
+    
+        # retrieve blobs and assign to object array corresponding to sub_rois
+        seg_rois = np.zeros(sub_roi_slices.shape, dtype=object)
+        for result in pool_results:
+            coord, segments = result.get()
+            num_blobs = 0 if segments is None else len(segments)
+            print("adding {} blobs from sub_roi at {} of {}"
+                  .format(num_blobs, coord, np.add(sub_roi_slices.shape, -1)))
+            seg_rois[coord] = segments
+    
+        pool.close()
+        pool.join()
+        return seg_rois
 
 
 def setup_blocks(settings, shape):
@@ -339,7 +412,7 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
     
     # TODO: option to distribute groups of sub-ROIs to different servers 
     # for blob detection
-    seg_rois = detect_blobs_sub_rois(
+    seg_rois = StackDetector.detect_blobs_sub_rois(
         roi, sub_roi_slices, sub_rois_offsets, denoise_max_shape,
         exclude_border, coloc, channels)
     detection_time = time() - time_detection_start
@@ -491,76 +564,6 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, blobs
-
-
-def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
-                          denoise_max_shape, exclude_border, coloc, channel):
-    """Process blobs in an ROI chunked into multiple sub-ROIs via 
-    multiprocessing.
-    
-    Args:
-        img (:obj:`np.ndarray`): Array in which to detect blobs.
-        sub_roi_slices (:obj:`np.ndarray`): Numpy object array containing chunked
-            sub-ROIs within a stack.
-        sub_rois_offsets (:obj:`np.ndarray`): Numpy object array of the same
-            shape as ``sub_rois`` with offsets in z,y,x corresponding to each
-            sub-ROI. Offets are used to transpose blobs into 
-            absolute coordinates.
-        denoise_max_shape (Tuple[int]): Maximum shape of each unit within
-            each sub-ROI for denoising.
-        exclude_border (Tuple[int]): Sequence of border pixels in x,y,z to
-            exclude; defaults to None.
-        coloc (bool): True to perform blob co-localizations; defaults to False.
-        channel (Sequence[int]): Sequence of channels, where None detects
-            in all channels.
-    
-    Returns:
-        :obj:`np.ndarray`: Numpy object array of blobs corresponding to
-        ``sub_rois``, with each set of blobs given as a Numpy array in the
-        format, ``[n, [z, row, column, radius, ...]]``, including additional
-        elements as given in :meth:``StackDetect.detect_sub_roi``.
-    """
-    # detect nuclei in each sub-ROI, passing an index to access each 
-    # sub-ROI to minimize pickling
-    is_fork = chunking.is_fork()
-    last_coord = np.subtract(sub_roi_slices.shape, 1)
-    if is_fork:
-        StackDetector.set_data(
-            img, last_coord, denoise_max_shape, exclude_border, coloc, channel)
-    pool = chunking.get_mp_pool()
-    pool_results = []
-    for z in range(sub_roi_slices.shape[0]):
-        for y in range(sub_roi_slices.shape[1]):
-            for x in range(sub_roi_slices.shape[2]):
-                coord = (z, y, x)
-                if is_fork:
-                    # use variables stored in class
-                    pool_results.append(pool.apply_async(
-                        StackDetector.detect_sub_roi_from_data,
-                        args=(coord, sub_roi_slices[coord],
-                              sub_rois_offsets[coord])))
-                else:
-                    # pickle full set of variables including sub-ROI and
-                    # filename from which to load image parameters
-                    pool_results.append(pool.apply_async(
-                        StackDetector.detect_sub_roi,
-                        args=(coord, sub_rois_offsets[coord], last_coord,
-                              denoise_max_shape, exclude_border,
-                              img[sub_roi_slices[coord]], channel, config.filename,
-                              coloc)))
-    
-    # retrieve blobs and assign to object array corresponding to sub_rois
-    seg_rois = np.zeros(sub_roi_slices.shape, dtype=object)
-    for result in pool_results:
-        coord, segments = result.get()
-        num_blobs = 0 if segments is None else len(segments)
-        print("adding {} blobs from sub_roi at {} of {}"
-              .format(num_blobs, coord, np.add(sub_roi_slices.shape, -1)))
-        seg_rois[coord] = segments
-    
-    pool.close()
-    pool.join()
-    return seg_rois
 
 
 class StackPruner(object):

@@ -50,20 +50,6 @@ class StackDetector(object):
     channel = None
     
     @classmethod
-    def set_data(cls, img, last_coord, denoise_max_shape, exclude_border,
-                 coloc, channel):
-        """Set the class attributes to be shared during forked multiprocessing.
-
-        See attributes for args.
-        """
-        cls.img = img
-        cls.last_coord = last_coord
-        cls.denoise_max_shape = denoise_max_shape
-        cls.exclude_border = exclude_border
-        cls.coloc = coloc
-        cls.channel = channel
-
-    @classmethod
     def detect_sub_roi_from_data(cls, coord, sub_roi_slices, offset):
         """Perform 3D blob detection within a sub-ROI using data stored
         as class attributes for forked multiprocessing.
@@ -177,12 +163,11 @@ class StackDetector(object):
             #print("segs after:\n{}".format(segments))
         return coord, segments
     
-    @staticmethod
-    def detect_blobs_sub_rois(img, sub_roi_slices, sub_rois_offsets,
+    @classmethod
+    def detect_blobs_sub_rois(cls, img, sub_roi_slices, sub_rois_offsets,
                               denoise_max_shape, exclude_border, coloc,
                               channel):
-        """Process blobs in an ROI chunked into multiple sub-ROIs via 
-        multiprocessing.
+        """Process blobs in chunked sub-ROIs via multiprocessing.
 
         Args:
             img (:obj:`np.ndarray`): Array in which to detect blobs.
@@ -206,15 +191,22 @@ class StackDetector(object):
             ``sub_rois``, with each set of blobs given as a Numpy array in the
             format, ``[n, [z, row, column, radius, ...]]``, including additional
             elements as given in :meth:``StackDetect.detect_sub_roi``.
+        
         """
         # detect nuclei in each sub-ROI, passing an index to access each 
         # sub-ROI to minimize pickling
         is_fork = chunking.is_fork()
         last_coord = np.subtract(sub_roi_slices.shape, 1)
         if is_fork:
-            StackDetector.set_data(
-                img, last_coord, denoise_max_shape, exclude_border, coloc,
-                channel)
+            # set data as class attributes for direct access during forked
+            # multiprocessing
+            cls.img = img
+            cls.last_coord = last_coord
+            cls.denoise_max_shape = denoise_max_shape
+            cls.exclude_border = exclude_border
+            cls.coloc = coloc
+            cls.channel = channel
+        
         pool = chunking.get_mp_pool()
         pool_results = []
         for z in range(sub_roi_slices.shape[0]):

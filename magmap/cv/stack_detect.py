@@ -675,13 +675,13 @@ class StackPruner(object):
                 blobs_all_non_ol = None # all blobs from non-overlapping regions
                 blobs_to_prune = []
                 coord_last = tuple(np.subtract(sub_roi_slices.shape, 1))
-                for i in range(num_sections):
+                for j in range(num_sections):
                     # build overlapping region dimensions based on size of 
                     # sub-region in the given axis
                     coord = np.zeros(3, dtype=np.int)
-                    coord[axis] = i
-                    print("** setting up blob pruning in axis {}, section {} of {}"
-                          .format(axis, i, num_sections - 1))
+                    coord[axis] = j
+                    print("** setting up blob pruning in axis {}, section {} "
+                          "of {}".format(axis, j, num_sections - 1))
                     offset = sub_rois_offsets[tuple(coord)]
                     sub_roi = img[sub_roi_slices[tuple(coord)]]
                     size = sub_roi.shape
@@ -699,7 +699,7 @@ class StackPruner(object):
                     blobs_in_non_ol = []
                     shift = overlap[axis] + overlap_padding[axis]
                     offset_axis = offset[axis]
-                    if i < num_sections - 1:
+                    if j < num_sections - 1:
                         bounds = [offset_axis + size[axis] - shift,
                                   offset_axis + size[axis]
                                   + overlap_padding[axis]]
@@ -735,7 +735,7 @@ class StackPruner(object):
                     
                     # get non-overlapping area
                     start = offset_axis
-                    if i > 0:
+                    if j > 0:
                         # shift past overlapping part at start of region
                         start += shift
                     blobs_in_non_ol.append(blobs[:, axis] >= start)

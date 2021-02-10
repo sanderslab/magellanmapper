@@ -1053,13 +1053,16 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
             print("{}\n".format("-" * 80))
         
         if "blobs" in detection_out and detection_out["blobs"]:
-            # join blobs from all channels and save archive
+            # join blobs and colocalizations from all channels and save archive
             blobs_all = detection_out["blobs"][0]
-            blobs_all.blobs = np.concatenate(
+            blobs_all.blobs = libmag.combine_arrs(
                 [b.blobs for b in detection_out["blobs"]
                  if b.blobs is not None])
             print("\nTotal blobs found across channels:", len(blobs_all.blobs))
             detector.show_blobs_per_channel(blobs_all.blobs)
+            blobs_all.colocalizations = libmag.combine_arrs(
+                [b.colocalizations for b in detection_out["blobs"]
+                 if b.colocalizations is not None])
             blobs_all.save_archive()
             print()
             

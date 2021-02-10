@@ -13,8 +13,8 @@ from time import time
 import numpy as np
 import pandas as pd
 
-from magmap.cv import chunking, colocalizer, detector
-from magmap.io import cli, df_io, importer, libmag, naming, sqlite
+from magmap.cv import chunking, colocalizer, detector, verifier
+from magmap.io import cli, df_io, importer, libmag, naming
 from magmap.plot import plot_3d
 from magmap.settings import config
 
@@ -306,44 +306,6 @@ def setup_blocks(settings, shape):
         exclude_border, tol, overlap_base, overlap, overlap_padding
 
 
-def _get_truth_db_rois(subimg_path_base, filename_base, db_path_base=None):
-    """Get ROIs from a truth database.
-    
-    Args:
-        subimg_path_base (str): Base path with sub-image.
-        filename_base (str): Base path without sub-image to find the
-            experiment, used only if an experiment cannot be found based on
-            ``subimg_path_base``.
-        db_path_base (str): Path to database to load; defaults to None
-            to use :attr:`config.truth_db`.
-
-    Returns:
-        str, list[:class:`sqlite3.Row`]: Found experiment name and
-        list of database ROI rows in that experiment, or None for each
-        if the ROIs are not found.
-
-    """
-    name = None
-    exp_rois = None
-    if db_path_base:
-        # load truth DB
-        print("Loading truth db for verifications from", db_path_base)
-        sqlite.load_truth_db(db_path_base)
-    if config.truth_db is not None:
-        # load experiment and ROIs from truth DB using the sub-image-based
-        # name; series not included in exp name since in ROI
-        name = sqlite.get_exp_name(subimg_path_base)
-        print("Loading truth ROIs from experiment:", name)
-        exp_rois = config.truth_db.get_rois(name)
-        if exp_rois is None:
-            # exp may have been named without sub-image
-            print("{} experiment name not found, will try without "
-                  "sub-image offset/size".format(name))
-            name = sqlite.get_exp_name(filename_base)
-            exp_rois = config.truth_db.get_rois(name)
-    return name, exp_rois
-
-
 def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
                         verify=False, save_dfs=True, full_roi=False,
                         coloc=False):
@@ -468,7 +430,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         # TODO: assumes ground truth is relative to any ROI offset,
         # but should make customizable
         if verify:
-            stats_detection, fdbk = verify_stack(
+            stats_detection, fdbk = verifier.verify_stack(
                 filename_base, subimg_path_base, settings, segments_all,
                 channels, overlap_base)
     
@@ -513,61 +475,6 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, blobs
-
-
-def verify_stack(filename_base, subimg_path_base, settings, segments_all,
-                 channels, overlap_base):
-    db_path_base = os.path.basename(subimg_path_base)
-    stats_detection = None
-    fdbk = None
-    try:
-        # Truth databases are any database stored with manually
-        # verified blobs and loaded at command-line with the
-        # `--truth_db` flag or loaded here. While all experiments
-        # can be stored in a single database, this verification also
-        # supports experiments saved to separate databases in the
-        # software root directory and named as a sub-image but with
-        # the `sqlite.DB_SUFFIX_TRUTH` suffix. Experiments in the
-        # database are also assumed to be named based on the full
-        # image or the sub-image filename, without any directories.
-        
-        # load ROIs from previously loaded truth database or one loaded
-        # based on sub-image filename
-        exp_name, rois = _get_truth_db_rois(
-            subimg_path_base, filename_base,
-            db_path_base if config.truth_db is None else None)
-        if rois is None:
-            # load alternate truth database based on sub-image filename
-            print("Loading truth ROIs from experiment:", exp_name)
-            exp_name, rois = _get_truth_db_rois(
-                subimg_path_base, filename_base, db_path_base)
-        if config.truth_db is None:
-            raise LookupError(
-                "No truth database found for experiment {}, will "
-                "skip detection verification".format(exp_name))
-        if rois is None:
-            raise LookupError(
-                "No truth set ROIs found for experiment {}, will "
-                "skip detection verification".format(exp_name))
-        
-        # verify each ROI and store results in a separate database
-        exp_id = sqlite.insert_experiment(
-            config.verified_db.conn, config.verified_db.cur,
-            exp_name, None)
-        verify_tol = np.multiply(
-            overlap_base, settings["verify_tol_factor"])
-        stats_detection, fdbk, df_verify = detector.verify_rois(
-            rois, segments_all, config.truth_db.blobs_truth,
-            verify_tol, config.verified_db, exp_id, exp_name,
-            channels)
-        df_io.data_frames_to_csv(df_verify, libmag.combine_paths(
-            exp_name, "verify.csv"))
-    except FileNotFoundError:
-        libmag.warn("Could not load truth DB from {}; "
-                    "will not verify ROIs".format(db_path_base))
-    except LookupError as e:
-        libmag.warn(str(e))
-    return stats_detection, fdbk
 
 
 def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):

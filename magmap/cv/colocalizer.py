@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from skimage import morphology
 
-from magmap.cv import chunking, detector, stack_detect
+from magmap.cv import chunking, detector, stack_detect, verifier
 from magmap.io import cli, df_io, libmag, sqlite
 from magmap.settings import config
 
@@ -374,7 +374,7 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     """
     if blobs is None:
         return None
-    thresh, scaling, inner_pad, resize, blobs = detector.setup_match_blobs_roi(
+    thresh, scaling, inner_pad, resize, blobs = verifier.setup_match_blobs_roi(
         blobs, tol)
     if inner_padding is None:
         inner_padding = inner_pad
@@ -390,7 +390,7 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
             # in another channel
             blobs_chl_other = detector.blobs_in_channel(blobs, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
-                size_inner, matches = detector.match_blobs_roi(
+                size_inner, matches = verifier.match_blobs_roi(
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
                     inner_padding, resize)
             

@@ -9,10 +9,11 @@ import os
 import glob
 import datetime
 import sqlite3
+
 import numpy as np
 
 from magmap.settings import config
-from magmap.cv import colocalizer, detector
+from magmap.cv import colocalizer, detector, verifier
 from magmap.io import df_io, importer, libmag
 
 DB_NAME_BASE = "magmap"
@@ -549,7 +550,7 @@ def verification_stats(cur, exp_name, treat_maybes=0):
         bb = config.db.select_blobs_by_roi(roi[0])[0]
         blobs.extend(bb)
     blobs = np.array(blobs)
-    return detector.meas_detection_accuracy(
+    return verifier.meas_detection_accuracy(
         blobs, config.verified_db is not None, treat_maybes)
 
 

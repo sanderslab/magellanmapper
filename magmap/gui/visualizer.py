@@ -53,7 +53,8 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
 from magmap.atlas import ontology
-from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter
+from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter,\
+    verifier
 from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
@@ -1356,7 +1357,7 @@ class Visualization(HasTraits):
 
         # calculate basic accuracy stats
         print(segs_transposed_np)
-        blob_stats = [detector.meas_detection_accuracy(
+        blob_stats = [verifier.meas_detection_accuracy(
             segs_transposed_np, treat_maybes=i)[2] for i in range(3)]
         for i, blob_stat in enumerate(blob_stats):
             if blob_stat is not None:

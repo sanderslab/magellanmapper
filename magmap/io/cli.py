@@ -687,10 +687,23 @@ def main(process_args_only=False, skip_dbs=False):
         from magmap.cloud import aws
         aws.main()
     else:
-        # set up image and perform any whole image processing tasks;
-        # do not shut down if not a command-line proc task
-        _process_files(series_list)
+        if config.filename:
+            for series in series_list:
+                # process files for each series, typically a tile within a
+                # microscopy image set or a single whole image
+                offset = (config.subimg_offsets[0] if config.subimg_offsets
+                          else None)
+                size = config.subimg_sizes[0] if config.subimg_sizes else None
+                np_io.setup_images(
+                    config.filename, series, offset, size, config.proc_type)
+                process_file(
+                    config.filename, config.proc_type, series, offset, size,
+                    config.roi_offsets[0] if config.roi_offsets else None,
+                    config.roi_sizes[0] if config.roi_sizes else None)
+        else:
+            print("No image filename set for processing files, skipping")
         if proc_type is None or proc_type is config.ProcessTypes.LOAD:
+            # do not shut down since not a command-line task or if loading files
             return
     shutdown()
 
@@ -931,25 +944,6 @@ def _grid_search(series_list):
         for stats_df in stats_dfs:
             # plot ROC curve
             plot_2d.plot_roc(stats_df, config.show)
-
-
-def _process_files(series_list):
-    # wrapper to process files for each series, typically a tile within
-    # an microscopy image set or a single whole image, setting up the
-    # image before each processing
-    if not config.filename:
-        print("No image filename set for processing files, skipping")
-        return
-    for series in series_list:
-        # process each series
-        offset = config.subimg_offsets[0] if config.subimg_offsets else None
-        size = config.subimg_sizes[0] if config.subimg_sizes else None
-        np_io.setup_images(
-            config.filename, series, offset, size, config.proc_type)
-        process_file(
-            config.filename, config.proc_type, series, offset, size,
-            config.roi_offsets[0] if config.roi_offsets else None,
-            config.roi_sizes[0] if config.roi_sizes else None)
 
 
 def process_file(path, proc_mode, series=None, subimg_offset=None,

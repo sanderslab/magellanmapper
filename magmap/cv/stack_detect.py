@@ -572,16 +572,6 @@ class StackPruner(object):
     blobs_to_prune = None
     
     @classmethod
-    def set_data(cls, blobs_to_prune):
-        """Set the data to be shared during multiprocessing.
-        
-        Args:
-            blobs_to_prune: List of tuples as specified for 
-                :attr:``blobs_to_prune``.
-        """
-        cls.blobs_to_prune = blobs_to_prune
-    
-    @classmethod
     def prune_overlap_by_index(cls, i):
         """Prune an overlapping region.
         
@@ -629,8 +619,8 @@ class StackPruner(object):
                 num_blobs_orig, len(blobs_after_pruning), len(blobs_next))
         return blobs_after_pruning, pruning_ratios
     
-    @staticmethod
-    def prune_blobs_mp(img, seg_rois, overlap, tol, sub_roi_slices,
+    @classmethod
+    def prune_blobs_mp(cls, img, seg_rois, overlap, tol, sub_roi_slices,
                        sub_rois_offsets, channels, overlap_padding=None):
         """Prune close blobs within overlapping regions by checking within
         entire planes across the ROI in parallel with multiprocessing.
@@ -646,6 +636,8 @@ class StackPruner(object):
             sub_roi_slices (:obj:`np.ndarray`): Object array of ub-regions, used
                 to check size.
             sub_rois_offsets: Offsets of each sub-region.
+            channels (Sequence[int]): Sequence of channels; defaults to None
+                to detect in all channels.
             overlap_padding: Sequence of z,y,x for additional padding beyond
                 ``overlap``. Defaults to None to use ``tol`` as padding.
         
@@ -759,7 +751,8 @@ class StackPruner(object):
     
                 is_fork = chunking.is_fork()
                 if is_fork:
-                    StackPruner.set_data(blobs_to_prune)
+                    # set data as class variables to share across forks
+                    cls.blobs_to_prune = blobs_to_prune
                 pool = chunking.get_mp_pool()
                 pool_results = []
                 for j in range(len(blobs_to_prune)):

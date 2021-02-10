@@ -875,8 +875,8 @@ def setup_labels(labels_arg):
     print("Set labels to {}".format(config.atlas_labels))
 
 
-def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):
-    """Processes files iteratively based on offsets.
+def _detect_subimgs(path, series, subimg_offsets, subimg_sizes):
+    """Detect blobs in an image across sub-image offsets.
     
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 
@@ -906,8 +906,8 @@ def _iterate_file_processing(path, series, subimg_offsets, subimg_sizes):
                 else subimg_sizes[0])
         np_io.setup_images(
             path, series, subimg_offsets[i], size, config.proc_type)
-        stat_roi, fdbk = process_file(
-            path, config.proc_type, series, subimg_offsets[i], size)
+        stat_roi, fdbk, _ = stack_detect.detect_blobs_stack(
+            importer.filename_to_base(path, series), subimg_offsets[i], size)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
@@ -924,7 +924,7 @@ def _grid_search(series_list):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            config.grid_search_profile, _iterate_file_processing,
+            config.grid_search_profile, _detect_subimgs,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
         parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)

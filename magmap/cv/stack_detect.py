@@ -468,54 +468,9 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         # TODO: assumes ground truth is relative to any ROI offset,
         # but should make customizable
         if verify:
-            db_path_base = os.path.basename(subimg_path_base)
-            try:
-                # Truth databases are any database stored with manually
-                # verified blobs and loaded at command-line with the
-                # `--truth_db` flag or loaded here. While all experiments
-                # can be stored in a single database, this verification also
-                # supports experiments saved to separate databases in the
-                # software root directory and named as a sub-image but with
-                # the `sqlite.DB_SUFFIX_TRUTH` suffix. Experiments in the
-                # database are also assumed to be named based on the full
-                # image or the sub-image filename, without any directories.
-                
-                # load ROIs from previously loaded truth database or one loaded
-                # based on sub-image filename
-                exp_name, rois = _get_truth_db_rois(
-                    subimg_path_base, filename_base,
-                    db_path_base if config.truth_db is None else None)
-                if rois is None:
-                    # load alternate truth database based on sub-image filename
-                    print("Loading truth ROIs from experiment:", exp_name)
-                    exp_name, rois = _get_truth_db_rois(
-                        subimg_path_base, filename_base, db_path_base)
-                if config.truth_db is None:
-                    raise LookupError(
-                        "No truth database found for experiment {}, will "
-                        "skip detection verification".format(exp_name))
-                if rois is None:
-                    raise LookupError(
-                        "No truth set ROIs found for experiment {}, will "
-                        "skip detection verification".format(exp_name))
-                
-                # verify each ROI and store results in a separate database
-                exp_id = sqlite.insert_experiment(
-                    config.verified_db.conn, config.verified_db.cur,
-                    exp_name, None)
-                verify_tol = np.multiply(
-                    overlap_base, settings["verify_tol_factor"])
-                stats_detection, fdbk, df_verify = detector.verify_rois(
-                    rois, segments_all, config.truth_db.blobs_truth,
-                    verify_tol, config.verified_db, exp_id, exp_name,
-                    channels)
-                df_io.data_frames_to_csv(df_verify, libmag.combine_paths(
-                    exp_name, "verify.csv"))
-            except FileNotFoundError:
-                libmag.warn("Could not load truth DB from {}; "
-                            "will not verify ROIs".format(db_path_base))
-            except LookupError as e:
-                libmag.warn(str(e))
+            stats_detection, fdbk = verify_stack(
+                filename_base, subimg_path_base, settings, segments_all,
+                channels, overlap_base)
     
     if config.save_subimg:
         subimg_base_path = libmag.combine_paths(
@@ -558,6 +513,61 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, blobs
+
+
+def verify_stack(filename_base, subimg_path_base, settings, segments_all,
+                 channels, overlap_base):
+    db_path_base = os.path.basename(subimg_path_base)
+    stats_detection = None
+    fdbk = None
+    try:
+        # Truth databases are any database stored with manually
+        # verified blobs and loaded at command-line with the
+        # `--truth_db` flag or loaded here. While all experiments
+        # can be stored in a single database, this verification also
+        # supports experiments saved to separate databases in the
+        # software root directory and named as a sub-image but with
+        # the `sqlite.DB_SUFFIX_TRUTH` suffix. Experiments in the
+        # database are also assumed to be named based on the full
+        # image or the sub-image filename, without any directories.
+        
+        # load ROIs from previously loaded truth database or one loaded
+        # based on sub-image filename
+        exp_name, rois = _get_truth_db_rois(
+            subimg_path_base, filename_base,
+            db_path_base if config.truth_db is None else None)
+        if rois is None:
+            # load alternate truth database based on sub-image filename
+            print("Loading truth ROIs from experiment:", exp_name)
+            exp_name, rois = _get_truth_db_rois(
+                subimg_path_base, filename_base, db_path_base)
+        if config.truth_db is None:
+            raise LookupError(
+                "No truth database found for experiment {}, will "
+                "skip detection verification".format(exp_name))
+        if rois is None:
+            raise LookupError(
+                "No truth set ROIs found for experiment {}, will "
+                "skip detection verification".format(exp_name))
+        
+        # verify each ROI and store results in a separate database
+        exp_id = sqlite.insert_experiment(
+            config.verified_db.conn, config.verified_db.cur,
+            exp_name, None)
+        verify_tol = np.multiply(
+            overlap_base, settings["verify_tol_factor"])
+        stats_detection, fdbk, df_verify = detector.verify_rois(
+            rois, segments_all, config.truth_db.blobs_truth,
+            verify_tol, config.verified_db, exp_id, exp_name,
+            channels)
+        df_io.data_frames_to_csv(df_verify, libmag.combine_paths(
+            exp_name, "verify.csv"))
+    except FileNotFoundError:
+        libmag.warn("Could not load truth DB from {}; "
+                    "will not verify ROIs".format(db_path_base))
+    except LookupError as e:
+        libmag.warn(str(e))
+    return stats_detection, fdbk
 
 
 def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):

@@ -344,10 +344,12 @@ def _get_truth_db_rois(subimg_path_base, filename_base, db_path_base=None):
     return name, exp_rois
 
 
-def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
-                             verify=False, save_dfs=True, full_roi=False,
-                             coloc=False):
-    """Detect blobs within a large image through parallel processing.
+def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
+                        verify=False, save_dfs=True, full_roi=False,
+                        coloc=False):
+    """Detect blobs by block processing of a large image.
+    
+    All channels are processed in the same blocks.
     
     Args:
         filename_base: Base path to use file output.
@@ -556,6 +558,80 @@ def detect_blobs_large_image(filename_base, image5d, offset, size, channels,
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     
     return stats_detection, fdbk, blobs
+
+
+def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
+    """Detect blobs in a full stack, such as a whole large image.
+    
+    Process channels in separate sets of blocks if their profiles specify
+    different block sizes.
+    
+    Args:
+        filename_base (str): 
+        subimg_offset (Sequence[int]): Sub-image offset as ``z,y,x`` to load
+            from :attr:`config.image5d`; defaults to None.
+        subimg_size (Sequence[int]): Sub-image size as ``z,y,x`` to load
+            from :attr:`config.image5d`; defaults to None.
+        coloc (bool): True to also detect blob-colocalizations based on image
+            intensity; defaults to False. For match-based colocalizations,
+            use the ``coloc_match`` task
+            (:meth:`magmap.colocalizer.StackColocalizer.colocalize_stack`)
+            instead.
+
+    Returns:
+        tuple[int, int, int], str, :class:`magmap.cv.detector.Blobs`:
+        Combined ccuracy metrics from :class:`magmap.cv.detector.verify_rois`,
+        feedback message from this same function, and detected blobs across
+        all channels in :attr:`magmap.settings.config.channel`.
+
+    """
+    channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
+    if config.roi_profile.is_identical_block_settings(
+            [config.get_roi_profile(c) for c in channels]):
+        print("Will process channels together in the same blocks")
+        channels = [channels]
+    else:
+        print("Will process channels in separate blocks defined by their "
+              "profiles")
+    
+    cols = ("stats", "fdbk", "blobs")
+    detection_out = {}
+    for chl in channels:
+        # detect blobs in each channel separately unless all channels
+        # are combined in a single list
+        if not libmag.is_seq(chl):
+            chl = [chl]
+        blobs_out = detect_blobs_blocks(
+            filename_base, config.image5d, subimg_offset, subimg_size,
+            chl, config.truth_db_mode is config.TruthDBModes.VERIFY, 
+            not config.grid_search_profile, config.image5d_is_roi, coloc)
+        for col, val in zip(cols, blobs_out):
+            detection_out.setdefault(col, []).append(val)
+        print("{}\n".format("-" * 80))
+    
+    stats = None
+    fdbk = None
+    blobs_all = None
+    if "blobs" in detection_out and detection_out["blobs"]:
+        # join blobs and colocalizations from all channels and save archive
+        blobs_all = detection_out["blobs"][0]
+        blobs_all.blobs = libmag.combine_arrs(
+            [b.blobs for b in detection_out["blobs"]
+             if b.blobs is not None])
+        print("\nTotal blobs found across channels:", len(blobs_all.blobs))
+        detector.show_blobs_per_channel(blobs_all.blobs)
+        blobs_all.colocalizations = libmag.combine_arrs(
+            [b.colocalizations for b in detection_out["blobs"]
+             if b.colocalizations is not None])
+        blobs_all.save_archive()
+        print()
+        
+        # combine verification stats and feedback messages
+        stats = libmag.combine_arrs(
+            detection_out["stats"], fn=np.sum)
+        fdbk = "\n".join(
+            [f for f in detection_out["fdbk"] if f is not None])
+    return stats, fdbk, blobs_all
 
 
 class StackPruner(object):

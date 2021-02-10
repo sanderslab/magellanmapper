@@ -34,8 +34,9 @@ class TestImageStackProcessing(unittest.TestCase):
         self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):
-        _, _, blobs = stack_detect.detect_blobs_large_image(
-            config.filename, config.image5d, (30, 30, 8), (70, 70, 10))
+        _, _, blobs = stack_detect.detect_blobs_blocks(
+            config.filename, config.image5d, (30, 30, 8), (70, 70, 10),
+            config.channel)
         self.assertEqual(len(blobs), 54)
 
 

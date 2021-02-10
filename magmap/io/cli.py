@@ -58,9 +58,9 @@ import numpy as np
 
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
-from magmap.cv import chunking, colocalizer, detector, stack_detect
+from magmap.cv import chunking, colocalizer, stack_detect
 from magmap.io import df_io, export_stack, importer, libmag, np_io, sqlite
-from magmap.plot import colormaps, plot_2d, plot_3d
+from magmap.plot import colormaps, plot_2d
 from magmap.settings import atlas_prof, config, grid_search_prof, roi_prof
 from magmap.stats import mlearn
 
@@ -1028,49 +1028,8 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
             config.ProcessTypes.DETECT, config.ProcessTypes.DETECT_COLOC):
         # detect blobs in the full image, +/- co-localization
         coloc = proc_type is config.ProcessTypes.DETECT_COLOC
-        channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
-        if config.roi_profile.is_identical_block_settings(
-                [config.get_roi_profile(c) for c in channels]):
-            print("Will process channels together in the same blocks")
-            channels = [channels]
-        else:
-            print("Will process channels in separate blocks defined by their "
-                  "profiles")
-        
-        cols = ("stats", "fdbk", "blobs")
-        detection_out = {}
-        for chl in channels:
-            # detect blobs in each channel separately unless all channels
-            # are combined in a single list
-            if not libmag.is_seq(chl):
-                chl = [chl]
-            blobs_out = stack_detect.detect_blobs_large_image(
-                filename_base, config.image5d, subimg_offset, subimg_size,
-                chl, config.truth_db_mode is config.TruthDBModes.VERIFY, 
-                not config.grid_search_profile, config.image5d_is_roi, coloc)
-            for col, val in zip(cols, blobs_out):
-                detection_out.setdefault(col, []).append(val)
-            print("{}\n".format("-" * 80))
-        
-        if "blobs" in detection_out and detection_out["blobs"]:
-            # join blobs and colocalizations from all channels and save archive
-            blobs_all = detection_out["blobs"][0]
-            blobs_all.blobs = libmag.combine_arrs(
-                [b.blobs for b in detection_out["blobs"]
-                 if b.blobs is not None])
-            print("\nTotal blobs found across channels:", len(blobs_all.blobs))
-            detector.show_blobs_per_channel(blobs_all.blobs)
-            blobs_all.colocalizations = libmag.combine_arrs(
-                [b.colocalizations for b in detection_out["blobs"]
-                 if b.colocalizations is not None])
-            blobs_all.save_archive()
-            print()
-            
-            # combine verification stats and feedback messages
-            stats = libmag.combine_arrs(
-                detection_out["stats"], fn=np.sum)
-            fdbk = "\n".join(
-                [f for f in detection_out["fdbk"] if f is not None])
+        stats, fdbk, _ = stack_detect.detect_blobs_stack(
+            filename_base, subimg_offset, subimg_size, coloc)
 
     elif proc_type is config.ProcessTypes.COLOC_MATCH:
         if config.blobs is not None and config.blobs.blobs is not None:

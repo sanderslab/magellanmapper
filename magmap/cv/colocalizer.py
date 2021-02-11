@@ -155,7 +155,8 @@ class StackColocalizer(object):
         if tol is None:
             tol = cls.match_tol
         if setup_cli:
-            cli.main(True, True)
+            # reload command-line parameters
+            cli.process_cli_args()
         matches = colocalize_blobs_match(blobs, offset[::-1], shape[::-1], tol)
         return coord, matches
     

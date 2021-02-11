@@ -1345,7 +1345,8 @@ class Visualization(HasTraits):
         
         # insert blob matches
         if self.blobs.blob_matches is not None:
-            self.blobs.blob_matches.shift_blobs(offset[::-1])
+            self.blobs.blob_matches.update_blobs(
+                detector.shift_blob_rel_coords, offset[::-1])
             config.db.insert_blob_matches(roi_id, self.blobs.blob_matches)
         
         # add ROI to selection dropdown
@@ -2008,7 +2009,7 @@ class Visualization(HasTraits):
                 if matches is not None:
                     matches = matches[tuple(matches.keys())[0]]
                     shift = [n * -1 for n in offset[::-1]]
-                    matches.shift_blobs(shift)
+                    matches.update_blobs(detector.shift_blob_rel_coords, shift)
                 self.blobs.blob_matches = matches
                 print("loaded blob matches:\n", self.blobs.blob_matches)
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize
@@ -2511,7 +2512,9 @@ class Visualization(HasTraits):
             
             # get matches between blobs, such as verifications
             blob_matches = config.db.select_blob_matches(roi_id)
-            blob_matches.shift_blobs([n * -1 for n in config.roi_offset[::-1]])
+            blob_matches.update_blobs(
+                detector.shift_blob_rel_coords,
+                [n * -1 for n in config.roi_offset[::-1]])
             
             # display blobs
             self.detect_blobs(segs=blobs, blob_matches=blob_matches)

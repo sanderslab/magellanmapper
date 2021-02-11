@@ -104,19 +104,19 @@ class BlobMatch:
         col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
         return np.vstack(self.df[col.value])
     
-    def shift_blobs(self, offset):
-        """Shift coordinates of blobs by offset.
+    def update_blobs(self, fn, *args):
+        """Update all blobs with the given function.
 
         Args:
-            offset (list[int]): Sequence of coordinates by which to shift
-                the corresponding elements from the start of :attr:`blob1`
-                and :attr:`blob2`.
+            fn (func): Function that accepts the output of :meth:`get_blobs`
+                separately for each set of blobs.
+            *args (Any): Additional arguments to ``fn``.
 
         """
-        self.df[BlobMatch.Cols.BLOB1.value] = detector.shift_blob_rel_coords(
-            self.get_blobs(1), offset).tolist()
-        self.df[BlobMatch.Cols.BLOB2.value] = detector.shift_blob_rel_coords(
-            self.get_blobs(2), offset).tolist()
+        self.df[BlobMatch.Cols.BLOB1.value] = fn(
+            self.get_blobs(1), *args).tolist()
+        self.df[BlobMatch.Cols.BLOB2.value] = fn(
+            self.get_blobs(2), *args).tolist()
 
 
 class StackColocalizer(object):

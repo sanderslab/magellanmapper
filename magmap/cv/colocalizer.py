@@ -120,8 +120,10 @@ class BlobMatch:
 
 
 class StackColocalizer(object):
-    """Colocalize blobs from different channels in a full image stack
-    with multiprocessing.
+    """Colocalize blobs in blocks based on matching blobs across channels.
+    
+    Support shared memory for spawned multiprocessing, with fallback to
+    pickling in forked multiprocessing.
 
     """
     blobs = None
@@ -171,6 +173,8 @@ class StackColocalizer(object):
             and values are blob match objects. 
 
         """
+        print("Colocalizing blobs based on matching blobs in each pair of "
+              "channels")
         # set up ROI blocks from which to select blobs in each block
         sub_roi_slices, sub_rois_offsets, _, _, _, overlap_base, _, _ \
             = stack_detect.setup_blocks(config.roi_profile, shape)
@@ -249,9 +253,9 @@ class StackColocalizer(object):
                         # take first in case of any ties
                         dups.append(matches_mult.iloc[[0]])
                     matches_all[key] = pd.concat((singles, pd.concat(dups)))
-                if config.verbose:
-                    print("Colocalization matches for channels", key)
-                    print(matches_all[key])
+            print("Colocalization matches for channels {}: {}"
+                  .format(key, len(matches_all[key])))
+            libmag.printv(print(matches_all[key]))
             # store data frame in BlobMatch object
             matches_all[key] = BlobMatch(df=matches_all[key])
         
@@ -289,6 +293,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
         return None
     if thresh is None:
         thresh = "min"
+    print("Colocalizing blobs based on image intensity across channels")
     threshs = []
     selem = morphology.ball(2)
     

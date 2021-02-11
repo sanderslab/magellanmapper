@@ -15,7 +15,7 @@ from scipy import optimize
 from scipy.spatial import distance
 from skimage.feature import blob_log
 
-from magmap.cv import cv_nd
+from magmap.cv import colocalizer, cv_nd
 from magmap.io import df_io, libmag, np_io, sqlite
 from magmap.plot import plot_3d
 from magmap.settings import config
@@ -1098,7 +1098,7 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
     matches_outer = _match_blobs(
         blobs_outer, blobs_base_inner_missed, found_out,
         found_base_out, dists_out)
-    matches = [*matches_inner, *matches_outer]
+    matches = colocalizer.BlobMatch([*matches_inner, *matches_outer])
     if config.verbose:
         '''
         print("blobs_roi:\n{}".format(blobs_roi))

@@ -394,13 +394,11 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
                     inner_padding, resize)
             
-            # reset truth and confirmation flags from matcher
+            # reset truth and confirmation blob flags in matches
             chl_combo = (chl, chl_other)
-            for match in matches:
-                for i, c in enumerate(chl_combo):
-                    detector.set_blob_truth(match[i], -1)
-                    detector.set_blob_confirmed(match[i], -1)
-            matches_chls[chl_combo] = BlobMatch(matches)
+            matches.update_blobs(detector.set_blob_truth, -1)
+            matches.update_blobs(detector.set_blob_confirmed, -1)
+            matches_chls[chl_combo] = matches
     return matches_chls
 
 

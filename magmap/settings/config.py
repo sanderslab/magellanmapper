@@ -57,8 +57,10 @@ filenames = None
 metadata_paths = None
 #: List[dict]: Metadata dictionaries.
 metadatas = None
-#: int: Selected series index for multi-stack files; None for no series.
+#: int: Selected image series index for multi-stack files; None for no series.
 series = None
+#: list[int]: List of image series/tiles.
+series_list = None
 #: int: Channel of interest, where None specifies all channels.
 channel = None
 

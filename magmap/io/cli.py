@@ -232,15 +232,11 @@ def _get_args_dict_help(msg, keys):
                 msg, libmag.enum_names_aslist(keys)))
 
 
-def main(process_args_only=False, skip_dbs=False):
-    """Starts the visualization GUI.
+def process_cli_args():
+    """Parse command-line arguments.
     
-    Processes command-line arguments.
+    Typically stores values as :mod:`magmap.settings.config` attributes.
     
-    Args:
-        process_args_only (bool): Processes command-line arguments and
-            returns; defaults to False.
-        skip_dbs (bool): True to skip loading databases; defaults to False.
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for MagellanMapper")
@@ -404,20 +400,20 @@ def main(process_args_only=False, skip_dbs=False):
         config.channel = args.channel
         print("Set channel to {}".format(config.channel))
     
-    series_list = [config.series]  # list of series
+    config.series_list = [config.series]  # list of series
     if args.series is not None:
         series_split = args.series.split(",")
-        series_list = []
+        config.series_list = []
         for ser in series_split:
             ser_split = ser.split("-")
             if len(ser_split) > 1:
                 ser_range = np.arange(int(ser_split[0]), int(ser_split[1]) + 1)
-                series_list.extend(ser_range.tolist())
+                config.series_list.extend(ser_range.tolist())
             else:
-                series_list.append(int(ser_split[0]))
-        config.series = series_list[0]
+                config.series_list.append(int(ser_split[0]))
+        config.series = config.series_list[0]
         print("Set to series_list to {}, current series {}".format(
-              series_list, config.series))
+              config.series_list, config.series))
 
     if args.savefig is not None:
         # save figure with file type of this extension; remove leading period
@@ -652,24 +648,32 @@ def main(process_args_only=False, skip_dbs=False):
         print("Set to use themes to {}".format(theme_names))
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
-
-    # prep filename
-    filename_base = None
-    if config.filename:
-        filename_base = importer.filename_to_base(
-            config.filename, config.series)
     
-    if not skip_dbs:
-        setup_dbs(filename_base, args.db, args.truth_db)
-    
-    # set multiprocessing start method
-    chunking.set_mp_start_method()
+    if args.db:
+        # set main database path
+        config.db_name = args.db
+        print("Set database name to {}".format(config.db_name))
 
-    # POST-ARGUMENT PARSING
-
-    if process_args_only:
-        return
+    if args.truth_db:
+        # set settings for separate database of "truth blobs"
+        config.truth_db_params = args_to_dict(
+            args.truth_db, config.TruthDB, config.truth_db_params,
+            sep_vals="|")
+        mode = config.truth_db_params[config.TruthDB.MODE]
+        config.truth_db_mode = libmag.get_enum(mode, config.TruthDBModes)
+        libmag.printv(config.truth_db_params)
+        print("Mapped \"{}\" truth_db mode to {}"
+              .format(mode, config.truth_db_mode))
     
+
+def process_tasks():
+    """Process command-line tasks.
+    
+    Perform tasks set by the ``--proc`` parameter or any other entry point,
+    such as ``--register`` tasks. Only the first identified task will be
+    performed.
+
+    """
     # if command-line driven task specified, start task and shut down
     if config.register_type:
         register.main()
@@ -680,7 +684,7 @@ def main(process_args_only=False, skip_dbs=False):
     elif config.df_task:
         df_io.main()
     elif config.grid_search_profile:
-        _grid_search(series_list)
+        _grid_search(config.series_list)
     elif config.ec2_list or config.ec2_start or config.ec2_terminate:
         # defer importing AWS module to avoid making its dependencies
         # required for MagellanMapper
@@ -688,7 +692,7 @@ def main(process_args_only=False, skip_dbs=False):
         aws.main()
     else:
         if config.filename:
-            for series in series_list:
+            for series in config.series_list:
                 # process files for each series, typically a tile within a
                 # microscopy image set or a single whole image
                 offset = (config.subimg_offsets[0] if config.subimg_offsets
@@ -702,39 +706,25 @@ def main(process_args_only=False, skip_dbs=False):
                     config.roi_sizes[0] if config.roi_sizes else None)
         else:
             print("No image filename set for processing files, skipping")
+        proc_type = libmag.get_enum(config.proc_type, config.ProcessTypes)
         if proc_type is None or proc_type is config.ProcessTypes.LOAD:
             # do not shut down since not a command-line task or if loading files
             return
     shutdown()
 
 
-def setup_dbs(filename_base, db_path=None, truth_db_config=None):
-    """Set up databases for the given image file if the given database has
-    not been set up already.
+def setup_dbs():
+    """Set up databases for the given image file.
     
-    Args:
-        filename_base (str): Image base path.
-        db_path (str): Main database path; defaults to None to use a default
-            path.
-        truth_db_config (List[str]): Sequence of truth database configuration
-            settings; defaults to None to not load truth-related databases.
+    Only sets up each database if it has not been set up already.
     
     """
-    if db_path:
-        config.db_name = db_path
-        print("Set database name to {}".format(config.db_name))
+    # prep filename
+    filename_base = None
+    if config.filename:
+        filename_base = importer.filename_to_base(
+            config.filename, config.series)
     
-    # load "truth blobs" from separate database for viewing
-    if truth_db_config is not None:
-        # set the truth database mode
-        config.truth_db_params = args_to_dict(
-            truth_db_config, config.TruthDB, config.truth_db_params,
-            sep_vals="|")
-        mode = config.truth_db_params[config.TruthDB.MODE]
-        config.truth_db_mode = libmag.get_enum(mode, config.TruthDBModes)
-        libmag.printv(config.truth_db_params)
-        print("Mapped \"{}\" truth_db mode to {}"
-              .format(mode, config.truth_db_mode))
     truth_db_path = config.truth_db_params[config.TruthDB.PATH]
     truth_db_name_base = filename_base if filename_base else sqlite.DB_NAME_BASE
     if config.truth_db_mode is config.TruthDBModes.VIEW:
@@ -783,8 +773,35 @@ def setup_dbs(filename_base, db_path=None, truth_db_config=None):
         print("Editing truth database at {}".format(config.db_name))
     
     if config.db is None:
+        # load the main database
         config.db = sqlite.ClrDB()
         config.db.load_db(None, False)
+
+
+def main(process_args_only=False, skip_dbs=False):
+    """Starts the visualization GUI.
+    
+    Processes command-line arguments.
+    
+    Args:
+        process_args_only (bool): Processes command-line arguments and
+            returns; defaults to False.
+        skip_dbs (bool): True to skip loading databases; defaults to False.
+    """
+    # parse command-line arguments
+    process_cli_args()
+    
+    if not skip_dbs:
+        # load databases
+        setup_dbs()
+    
+    # set multiprocessing start method
+    chunking.set_mp_start_method()
+    
+    if process_args_only:
+        return
+    # process tasks
+    process_tasks()
 
 
 def setup_roi_profiles(roi_profiles_names):

@@ -63,14 +63,22 @@ class ROIProfile(profiles.SettingsDict):
         # z,y,x px to exclude along border after blob detection
         self["exclude_border"] = None
 
-        # block processing and automated verification
+        # BLOCK PROCESSING AND AUTOMATED VERIFICATION
 
         # multiprocessing start method; if method not available for the given
         # platform, the default method for the platform will be used instead
         self["mp_start"] = "fork"  # fork, spawn, or forkserver
+        
         # max tasks per child process; use smaller integers (eg 1) to replace
         # worker processes and free their resources after fewer tasks
         self["mp_max_tasks"] = None  # does not replace workers
+        
+        # - True to process in each channel in separate blocks, specified by
+        #   each channel's profile (eg profile 2 and 3 for channels 2 and 3)
+        # - False to reuse the same blocks for all channels, specified by the
+        #   default profile (channel 0); useful to reduce redundant block
+        #   preprocessing if block sizes would otherwise be similar
+        self["separate_blocks_per_channel"] = True
         
         self["segment_size"] = 500  # detection ROI max size along longest edge
         # max size along longest edge for denoising blocks within
@@ -78,9 +86,11 @@ class ROIProfile(profiles.SettingsDict):
         # make much larger than segment_size (eg 2x) to cover the full segment
         # ROI because of additional overlap in segment ROIs
         self["denoise_size"] = 25
+        
         # z,y,x tolerances for pruning duplicates in overlapped regions
         self["prune_tol_factor"] = (1, 1, 1)
         self["verify_tol_factor"] = (1, 1, 1)
+        
         # module level variable will take precedence
         self["sub_stack_max_pixels"] = (1000, 1000, 1000)
 

@@ -7,6 +7,10 @@ Argument | Function | Version Added
 
 ## Changes in MagellanMapper v1.4
 
+Old | New | Version | Purpose of Change |
+--- | --- | --- | ---
+`--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
+
 ## Changes in MagellanMapper v1.3
 
 Old | New | Version | Purpose of Change |

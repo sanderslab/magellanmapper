@@ -56,15 +56,16 @@ To apply a profile, use the appropriate command-line argument followed by the pr
 ./run.py --atlas_profile abae11pt5 # ABA E11.5 atlas profile
 ```
 
-ROI profiles can be distinct for each channel. If only one profile is given for a multi-channel, that profile will be used for all channels. For example, given the profile and channel setup for whole image blob detection:
+ROI profiles can be distinct for each channel. If only one profile is given for a multi-channel image, that profile will be used for all channels. For example, given the profile and channel setup for whole image blob detection:
 
 ```
-./run.py myimage --proc detec --roi_prof profile0 profile1 profile2 profile3 ​--channel 1 2 
+./run.py --img <myimage> --proc detec --roi_prof profile0 profile1 profile2 profile3 --channel 1 2 
 ```
 
-- `profile0` is used:
-  -  For ny channel 0 detections, but skipped here because the channel arguments skips channel 0
-  -  As the "default" profile to set up block processing parameters (eg `segment_size`, `denoise_size` profile settings) and any channels where a profile is not specified
+- `profile0`:
+  -  Typically used for channel 0 detections, but skipped here because the channel arguments skips channel 0
+  -  Used as the "default" profile to set up block processing parameters (eg `segment_size`, `denoise_size` profile settings) and any channels where a profile is not specified
+  - **Changed in v1.4**: Since this channel is skipped, the profile is ignored as well for block processing. Each detection channel's profile is used separately to set up block processing specific to that channel. If all channels have the same block processing settings, blocks will be shared across channels to reduce processing time.
 - `profile1` is used for channel 1 detections (even though channel 0 is skipped)
 - `profile2` is used for channel 2
 - `profile3` is skipped, since no detections are done for channel 3

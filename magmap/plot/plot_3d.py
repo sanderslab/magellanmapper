@@ -55,14 +55,14 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
     Args:
         roi (:obj:`np.ndarray`): Region of interest.
         clip_vmin (float): Percent for lower clipping. Defaults to -1
-            to use the profile setting.
+            to use each channel's profile setting.
         clip_vmax (float): Percent for upper clipping. Defaults to -1
-            to use the profile setting.
+            to use each channel's profile setting.
         max_thresh_factor (float): Multiplier of :attr:`config.near_max`
             for ROI's scaled maximum value. If the max data range value
             adjusted through``clip_vmax``is below this product, this max
-            value will be set to this product. Defaults to -1 to use the
-            profile setting.
+            value will be set to this product. Defaults to -1 to use each
+            channel's profile setting.
         channel (List[int]): Sequence of channel indices in ``roi`` to
             saturate. Defaults to None to use all channels.
     
@@ -73,24 +73,25 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
     roi_out = None
     for chl in channels:
         roi_show = roi[..., chl] if multichannel else roi
+        
+        # get settings from channel's profile
         settings = config.get_roi_profile(chl)
-        if clip_vmin == -1:
-            clip_vmin = settings["clip_vmin"]
-        if clip_vmax == -1:
-            clip_vmax = settings["clip_vmax"]
-        if max_thresh_factor == -1:
-            max_thresh_factor = settings["max_thresh_factor"]
-        # enhance contrast and normalize to 0-1 scale
-        vmin, vmax = np.percentile(roi_show, (clip_vmin, clip_vmax))
-        libmag.printv(
-            "vmin:", vmin, "vmax:", vmax, "near max:", config.near_max[chl])
-        # adjust the near max value derived globally from image5d for the chl
-        max_thresh = config.near_max[chl] * max_thresh_factor
+        clip_vmin_prof = settings["clip_vmin"] if clip_vmin == -1 else clip_vmin
+        clip_vmax_prof = settings["clip_vmax"] if clip_vmax == -1 else clip_vmax
+        max_thresh_factor_prof = (
+            settings["max_thresh_factor"] if max_thresh_factor == -1
+            else max_thresh_factor)
+        
+        # enhance contrast and normalize to 0-1 scale, adjusting the near max
+        # value derived globally from image5d for the chl
+        vmin, vmax = np.percentile(roi_show, (clip_vmin_prof, clip_vmax_prof))
+        max_thresh = config.near_max[chl] * max_thresh_factor_prof
         if vmax < max_thresh:
             vmax = max_thresh
-            libmag.printv("adjusted vmax to {}".format(vmax))
         saturated = np.clip(roi_show, vmin, vmax)
         saturated = (saturated - vmin) / (vmax - vmin)
+        
+        # insert into output array
         if multichannel:
             if roi_out is None:
                 roi_out = np.zeros(roi.shape, dtype=saturated.dtype)

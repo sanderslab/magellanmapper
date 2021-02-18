@@ -16,7 +16,7 @@ import pandas as pd
 from magmap.cv import chunking, colocalizer, detector, verifier
 from magmap.io import cli, df_io, importer, libmag, naming
 from magmap.plot import plot_3d
-from magmap.settings import config
+from magmap.settings import config, roi_prof
 
 
 class StackTimes(Enum):
@@ -131,9 +131,7 @@ class StackDetector(object):
                         # replace slices with denoised ROI
                         denoise_roi_slices[denoise_coord] = denoise_roi
             
-            # re-merge into one large ROI (the image stack) in preparation for 
-            # segmenting with differently sized chunks, typically larger 
-            # to minimize the number of sub-ROIs and edge overlaps
+            # re-merge back into the sub-ROI
             merged_shape = chunking.get_split_stack_total_shape(
                 denoise_roi_slices)
             merged = np.zeros(
@@ -503,8 +501,9 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
 
     """
     channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
-    if config.roi_profile.is_identical_block_settings(
-            [config.get_roi_profile(c) for c in channels]):
+    if roi_prof.ROIProfile.is_identical_settings(
+            [config.get_roi_profile(c) for c in channels],
+            roi_prof.ROIProfile.BLOCK_SIZES):
         print("Will process channels together in the same blocks")
         channels = [channels]
     else:

@@ -231,3 +231,30 @@ class SettingsDict(dict):
             profile_names = self[self.NAME_KEY]
             self.__init__()
             self.update_settings(profile_names)
+
+    @staticmethod
+    def is_identical_settings(profs, keys):
+        """Check whether the given settings are identical across profiles.
+
+        Args:
+            profs (Sequence[:class:`ROIProfile`]): Sequence of ROI profiles.
+            keys (Sequence[str]): Sequence of setting keys to check.
+
+        Returns:
+            bool: True if the settings are identical, otherwise False.
+
+        """
+        prof_first = None
+        for prof in profs:
+            if prof_first is None:
+                # will compare to first profile
+                prof_first = prof
+            else:
+                for key in keys:
+                    if prof_first[key] != prof[key]:
+                        # any non-equal setting means profiles do not have
+                        # identical block settings
+                        print("Block settings are not identical")
+                        return False
+        print("Block settings are identical")
+        return True

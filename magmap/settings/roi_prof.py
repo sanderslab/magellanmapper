@@ -13,10 +13,31 @@ class ROIProfile(profiles.SettingsDict):
 
     Attributes:
         PATH_PREFIX (str): Prefix for ROI profile files.
+        BLOB_PREPROCESSING (tuple): Keys for blob preprocessing.
+        BLOCK_SIZES (tuple): Keys for block process sizing.
 
     """
 
     PATH_PREFIX = "roi"
+    BLOB_PREPROCESSING = (
+        "clip_vmin",
+        "clip_vmax",
+        "clip_min",
+        "clip_max",
+        "max_thresh_factor",
+        "tot_var_denoise",
+        "unsharp_strength",
+        "erosion_threshold",
+        "adapt_hist_lim",
+    )
+    BLOCK_SIZES = (
+        "segment_size",
+        "denoise_size",
+        "prune_tol_factor",
+        "verify_tol_factor",
+        "sub_stack_max_pixels",
+        "isotropic",
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(self)
@@ -306,37 +327,3 @@ class ROIProfile(profiles.SettingsDict):
             filename_prefix = ROIProfile.PATH_PREFIX
         return super(ROIProfile, ROIProfile).get_files(
             profiles_dir, filename_prefix)
-    
-    @staticmethod
-    def is_identical_block_settings(profs):
-        """Check whether profile block settings are identical.
-        
-        Args:
-            profs (Sequence[:class:`ROIProfile`]): Sequence of ROI profiles.
-
-        Returns:
-            bool: True if the settings are identical, otherwise False.
-
-        """
-        keys = (
-            "segment_size",
-            "denoise_size",
-            "prune_tol_factor",
-            "verify_tol_factor",
-            "sub_stack_max_pixels",
-            "isotropic",
-        )
-        prof_first = None
-        for prof in profs:
-            if prof_first is None:
-                # will compare to first profile
-                prof_first = prof
-            else:
-                for key in keys:
-                    if prof_first[key] != prof[key]:
-                        # any non-equal setting means profiles do not have
-                        # identical block settings
-                        print("Block settings are not identical")
-                        return False
-        print("Block settings are identical")
-        return True

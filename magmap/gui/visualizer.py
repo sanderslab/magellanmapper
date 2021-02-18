@@ -1885,25 +1885,16 @@ class Visualization(HasTraits):
     
     @on_trait_change("scene.activated")
     def orient_camera(self):
-        """Provide a default camera orientation, with distance based on ROI
-        size and further zoomed out based on any isotropic factor resizing.
+        """Provide a default camera orientation with orientation axes.
 
         """
-        zoom_out = 4
-        isotropic_factor = config.roi_profile["isotropic_vis"]
-        if isotropic_factor is not None:
-            # only use max dimension since this factor seems to influence the 
-            # overall zoom the most
-            zoom_out *= np.amax(isotropic_factor)
-        view = self.scene.mlab.view(
-            75, 140, np.max(self.roi_array[0]) * zoom_out)
+        view = self.scene.mlab.view(*self.scene.mlab.view()[:3], "auto")
         roll = self.scene.mlab.roll(-175)
         if self.scene_3d_shown:
             self.show_orientation_axes(self.flipz)
         #self.scene.mlab.outline() # affects zoom after segmenting
         #self.scene.mlab.axes() # need to adjust units to microns
-        print("view: {}\nroll: {}".format(
-            self.scene.mlab.view(), self.scene.mlab.roll()))
+        print("Scene activated with view:", view, "roll:", roll)
     
     def show_orientation_axes(self, flipud=False):
         """Show orientation axes with option to flip z-axis to match 

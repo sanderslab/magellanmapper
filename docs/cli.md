@@ -10,6 +10,9 @@ Argument | Function | Version Added
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
 `--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
+None | `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols` | v1.4.0 | Arithmetic operations on data frame columns
+None | `--df replace_vals` | v1.4.0 | Replace values
+None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling
 
 ## Changes in MagellanMapper v1.3
 

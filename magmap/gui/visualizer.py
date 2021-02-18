@@ -309,6 +309,7 @@ class Vis3dOptions(Enum):
     """Enumerations for 3D viewer options."""
     RAW = "Raw"
     SURFACE = "Surface"
+    CLEAR = "Clear"
     PANES = "Panes"
     SHADOWS = "Shadows"
 
@@ -542,6 +543,7 @@ class Visualization(HasTraits):
     _check_list_3d = List(
         tooltip="Raw: show raw intensity image; limit region to ROI\n"
                 "Surface: render as surface; uncheck to render as points\n"
+                "Clear: clear scene before drawing new objects\n"
                 "Panes: show back and top panes\n"
                 "Shadows: show blob shadows as circles")
     _check_list_2d = List(
@@ -1513,6 +1515,8 @@ class Visualization(HasTraits):
         
         # show raw 3D image unless selected not to
         curr_offset, curr_roi_size, feedback = self._check_roi_position()
+        if Vis3dOptions.CLEAR.value in self._check_list_3d:
+            self._vis3d.clear_scene()
         if Vis3dOptions.RAW.value in self._check_list_3d:
             # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
@@ -1530,8 +1534,6 @@ class Visualization(HasTraits):
                 # 3D point rendering
                 self.scene_3d_shown = self._vis3d.plot_3d_points(
                     self.roi, config.channel, self.flipz, curr_offset[::-1])
-        else:
-            self.scene.mlab.clf()
         
         # show shadow images around the points if selected
         if Vis3dOptions.PANES.value in self._check_list_3d:
@@ -1570,10 +1572,18 @@ class Visualization(HasTraits):
             label_mask = config.labels_img[tuple(slices)] == label_id
         self.roi = np.copy(config.image5d[0][tuple(slices)])
         self.roi[~label_mask] = 0
-        self._vis3d.plot_3d_surface(
-            self.roi, config.channel, flipz=self.flipz,
-            offset=self._curr_offset()[::-1])
-        #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
+        if Vis3dOptions.CLEAR.value in self._check_list_3d:
+            self._vis3d.clear_scene()
+        offset = self._curr_offset()
+        if Vis3dOptions.SURFACE.value in self._check_list_3d:
+            # show as surface
+            self._vis3d.plot_3d_surface(
+                self.roi, config.channel, flipz=self.flipz,
+                offset=offset[::-1])
+        else:
+            # show as points
+            self._vis3d.plot_3d_points(
+                self.roi, self.scene.mlab, self.flipz, offset[::-1])
         
         # reposition camera to show all objects in the scene
         self.scene.mlab.view(*self.scene.mlab.view()[:3], "auto")

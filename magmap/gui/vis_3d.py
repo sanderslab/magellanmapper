@@ -72,8 +72,6 @@ class Vis3D:
         Points falling below a given threshold will be removed, allowing
         the viewer to see through the presumed background to masses within
         the region of interest.
-        
-        The scene will be cleared before display.
 
         Args:
             roi (:class:`numpy.ndarray`): Region of interest either as a 3D
@@ -90,8 +88,7 @@ class Vis3D:
             bool: True if points were rendered, False if no points to render.
         
         """
-        print("plotting as 3D points")
-        self.scene.mlab.clf()
+        print("Plotting ROI as 3D points")
     
         # streamline the image
         if roi is None or roi.size < 1: return False
@@ -216,7 +213,6 @@ class Vis3D:
         # Plot in Mayavi
         print("viewing 3D surface")
         pipeline = self.scene.mlab.pipeline
-        self.scene.mlab.clf()
         settings = config.roi_profile
         if flipz:
             # invert along z-axis to match handedness of Matplotlib with z up
@@ -586,3 +582,8 @@ class Vis3D:
         return self.scene.mlab.outline(
             extent=np.array(tuple(zip(roi_offset, np.add(
                 roi_offset, roi_size)))).ravel()[::-1])
+    
+    def clear_scene(self):
+        """Clear the scene."""
+        print("Clearing 3D scene")
+        self.scene.mlab.clf()

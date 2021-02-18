@@ -66,15 +66,7 @@ class Vis3D:
                 if alpha is not None:
                     surface.actor.property.opacity = alpha
     
-    @staticmethod
-    def _resize_glyphs_isotropic(settings, glyphs=None):
-        # resize Mayavi glyphs to make them isotropic based on profile settings
-        isotropic = plot_3d.get_isotropic_vis(settings)
-        if isotropic is not None and glyphs:
-            glyphs.actor.actor.scale = isotropic[::-1]
-        return isotropic
-
-    def plot_3d_points(self, roi, channel, flipz=False):
+    def plot_3d_points(self, roi, channel, flipz=False, offset=None):
         """Plots all pixels as points in 3D space.
 
         Points falling below a given threshold will be removed, allowing
@@ -84,15 +76,19 @@ class Vis3D:
         The scene will be cleared before display.
 
         Args:
-            roi (:obj:`np.ndarray`): Region of interest either as a 3D (z, y, x) or
-                4D (z, y, x, channel) ndarray.
+            roi (:class:`numpy.ndarray`): Region of interest either as a 3D
+                ``z,y,x`` or 4D ``z,y,x,c`` array.
             channel (int): Channel to select, which can be None to indicate all
                 channels.
-            flipz (bool): True to invert blobs along z-axis to match handedness
-                of Matplotlib with z progressing upward; defaults to False.
+            flipz (bool): True to invert the ROI along the z-axis to match
+                the handedness of Matplotlib with z progressing upward;
+                defaults to False.
+            offset (Sequence[int]): Origin coordinates in ``z,y,x``; defaults
+                to None.
 
         Returns:
             bool: True if points were rendered, False if no points to render.
+        
         """
         print("plotting as 3D points")
         self.scene.mlab.clf()
@@ -108,13 +104,16 @@ class Vis3D:
         # TODO: consider using np.mgrid to construct the x,y,z arrays
         time_start = time()
         shape = roi.shape
+        isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
         z = np.ones((shape[0], shape[1] * shape[2]))
         for i in range(shape[0]):
             z[i] = z[i] * i
         if flipz:
             # invert along z-axis to match handedness of Matplotlib with z up
             z *= -1
-            z += shape[0]
+            if offset is not None:
+                offset = np.copy(offset)
+                offset[0] *= -1
         y = np.ones((shape[0] * shape[1], shape[2]))
         for i in range(shape[0]):
             for j in range(shape[1]):
@@ -122,6 +121,17 @@ class Vis3D:
         x = np.ones((shape[0] * shape[1], shape[2]))
         for i in range(shape[0] * shape[1]):
             x[i] = np.arange(shape[2])
+        
+        if offset is not None:
+            offset = np.multiply(offset, isotropic)
+        coords = [z, y, x]
+        for i, _ in enumerate(coords):
+            # scale coordinates for isotropy
+            coords[i] *= isotropic[i]
+            if offset is not None:
+                # translate by offset
+                coords[i] += offset[i]
+        
         multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
         for chl in channels:
             roi_show = roi[..., chl] if multichannel else roi
@@ -168,21 +178,26 @@ class Vis3D:
             if cmap is not None:
                 pts.module_manager.scalar_lut_manager.lut.table = cmap(
                     range(0, 256)) * 255
-            self._resize_glyphs_isotropic(settings, pts)
+            
+            # scale glyphs to partially fill in gaps from isotropic scaling;
+            # do not use actor scaling as it also translates the points when
+            # not positioned at the origin
+            pts.glyph.glyph.scale_factor = 2 * max(isotropic)
 
         # keep visual ordering of surfaces when opacity is reduced
         self.scene.renderer.use_depth_peeling = True
         print("time for 3D points display: {}".format(time() - time_start))
         return True
 
-    def plot_3d_surface(self, roi, channel, segment=False, flipz=False):
+    def plot_3d_surface(self, roi, channel, segment=False, flipz=False,
+                        offset=None):
         """Plots areas with greater intensity as 3D surfaces.
 
         The scene will be cleared before display.
         
         Args:
-            roi (:obj:`np.ndarray`): Region of interest either as a 3D
-                ``z,y,x`` or 4D ``z,y,x,channel`` ndarray.
+            roi (:class:`numpy.ndarray`): Region of interest either as a 3D
+                ``z,y,x`` or 4D ``z,y,x,c`` array.
             channel (int): Channel to select, which can be None to indicate all
                 channels.
             segment (bool): True to denoise and segment ``roi`` before
@@ -190,6 +205,8 @@ class Vis3D:
                 lead to spurious surfaces. Defaults to False.
             flipz: True to invert ``roi`` along z-axis to match handedness
                 of Matplotlib with z progressing upward; defaults to False.
+            offset (Sequence[int]): Origin coordinates in ``z,y,x``; defaults
+                to None.
 
         Returns:
             list: List of Mayavi surfaces for each displayed channel, which
@@ -204,6 +221,12 @@ class Vis3D:
         if flipz:
             # invert along z-axis to match handedness of Matplotlib with z up
             roi = roi[::-1]
+            if offset is not None:
+                # invert z-offset and translate by ROI z-size so ROI is
+                # mirrored across the xy-plane
+                offset = np.copy(offset)
+                offset[0] = -offset[0] - roi.shape[0]
+        isotropic = plot_3d.get_isotropic_vis(settings)
     
         # saturate to remove noise and normalize values
         roi = plot_3d.saturate_roi(roi, channel=channel)
@@ -289,7 +312,13 @@ class Vis3D:
                 print("ignoring min/max contour for now")
             '''
         
-            self._resize_glyphs_isotropic(settings, surface)
+            if offset is not None:
+                # translate to offset scaled by isotropic factor
+                surface.actor.actor.position = np.multiply(
+                    offset, isotropic)[::-1]
+            # scale surfaces, which expands/contracts but does not appear
+            # to translate the surface position
+            surface.actor.actor.scale = isotropic[::-1]
             surfaces.append(surface)
         
         # keep visual ordering of surfaces when opacity is reduced
@@ -329,15 +358,13 @@ class Vis3D:
             cmap (:class:`numpy.ndaarry`): Colormap as a 2D Numpy array in the
                 format  ``[[R, G, B, alpha], ...]``.
             roi_offset (Sequence[int]): Region of interest offset in ``z,y,x``.
-                Used to update absolute coordinates in
-                :attr:`fn_update_coords`` callback.
             roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
                 Used to show the ROI outline.
             show_shadows: True if shadows of blobs should be depicted on planes 
                 behind the blobs; defaults to False.
-            flipz (int): Invert blobs and shift them by this amount along the
-                z-axis to match handedness of Matplotlib with z progressing
-                upward; defaults to False.
+            flipz (bool): True to invert blobs along the z-axis to match
+                the handedness of Matplotlib with z progressing upward;
+                defaults to False.
 
         Returns:
             A 3-element tuple containing ``pts_in``, the 3D points within the 
@@ -346,6 +373,8 @@ class Vis3D:
         """
         if segments.shape[0] <= 0:
             return None, 0
+        if roi_offset is None:
+            roi_offset = np.zeros(3, dtype=np.int)
         if self.blobs:
             for blob in self.blobs:
                 # remove existing blob glyphs from the pipeline
@@ -354,14 +383,21 @@ class Vis3D:
         # copy blobs with duplicate columns to access original values for
         # the coordinates callback when a blob is selected
         segs = np.concatenate((segments[:, :4], segments[:, :4]), axis=1)
+        
+        isotropic = plot_3d.get_isotropic_vis(settings)
         if flipz:
             # invert along z-axis within the same original space, eg to match
             # handedness of Matplotlib with z up
             segs[:, 0] *= -1
-            segs[:, 0] += flipz
-        isotropic = self._resize_glyphs_isotropic(settings)
+            roi_offset = np.copy(roi_offset)
+            roi_offset[0] *= -1
+            roi_size = np.copy(roi_size)
+            roi_size[0] *= -1
+            segs[:, :3] = np.add(segs[:, :3], roi_offset)
         if isotropic is not None:
             # adjust position based on isotropic factor
+            roi_offset = np.multiply(roi_offset, isotropic)
+            roi_size = np.multiply(roi_size[:3], isotropic)
             segs[:, :3] = np.multiply(segs[:, :3], isotropic)
     
         radii = segs[:, 3]
@@ -433,7 +469,7 @@ class Vis3D:
                     blobi = None
             if blobi is None:
                 # revert outline to full ROI if no blob is found
-                self.show_roi_outline(roi_size)
+                self.show_roi_outline(roi_offset, roi_size)
             else:
                 # move outline cube to surround picked blob; each glyph has
                 # has many points, and each point ID maps to a data index
@@ -447,11 +483,12 @@ class Vis3D:
         
         # show ROI outline and make blobs pickable, falling back to closest
         # blobs within 20% of the longest ROI edge to be picked if present
-        outline = self.show_roi_outline(roi_size)
+        outline = self.show_roi_outline(roi_offset, roi_size)
+        print(outline)
         glyph_points = pts_in.glyph.glyph_source.glyph_source.output.points.\
             to_array()
-        max_dist = max(np.multiply(roi_size[:3], isotropic)) * 0.2
-        picker = self.scene.mlab.gcf().on_mouse_pick(pick_callback)
+        max_dist = max(roi_size) * 0.2
+        self.scene.mlab.gcf().on_mouse_pick(pick_callback)
         
         return pts_in, scale
 
@@ -533,20 +570,19 @@ class Vis3D:
             shape_iso_mid[2], -10, shape_iso_mid[0]]
         img2d_mlab.actor.orientation = [90, 0, 0]
 
-    def show_roi_outline(self, roi_size):
+    def show_roi_outline(self, roi_offset, roi_size):
         """Show plot outline to show ROI borders.
         
         Args:
+            roi_offset (Sequence[int]): Region of interest offset in ``z,y,x``.
             roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
 
         Returns:
-            
+            :class:`mayavi.modules.outline.Outline`: Outline object.
 
         """
         # manually calculate extent since the default bounds do not always
         # capture all objects and to include any empty border spaces
-        isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
-        if isotropic is not None:
-            roi_size = np.multiply(roi_size, isotropic)
-        return self.scene.mlab.outline(extent=(
-            0, roi_size[2], 0, roi_size[1], 0, roi_size[0]))
+        return self.scene.mlab.outline(
+            extent=np.array(tuple(zip(roi_offset, np.add(
+                roi_offset, roi_size)))).ravel()[::-1])

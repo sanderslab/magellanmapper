@@ -1438,8 +1438,6 @@ class Visualization(HasTraits):
         self.rois_check_list = _ROI_DEFAULT
         self._img_region = None
         #print("reset selected ROI to {}".format(self.rois_check_list))
-        #print("view: {}\nroll: {}".format(
-        #    self.scene.mlab.view(), self.scene.mlab.roll()))
     
     def _get_max_offset(self):
         """Get the maximum image offset based on the ROI controls
@@ -1512,12 +1510,12 @@ class Visualization(HasTraits):
                 segment = self._DEFAULTS_2D[2] in self._check_list_2d
                 self._vis3d.plot_3d_surface(
                     self.roi, config.channel, segment, 
-                    self.flipz)
+                    self.flipz, curr_offset[::-1])
                 self.scene_3d_shown = True
             else:
                 # 3D point rendering
                 self.scene_3d_shown = self._vis3d.plot_3d_points(
-                    self.roi, config.channel, self.flipz)
+                    self.roi, config.channel, self.flipz, curr_offset[::-1])
         else:
             self.scene.mlab.clf()
         
@@ -1545,7 +1543,7 @@ class Visualization(HasTraits):
             bbox, 10, config.labels_img.shape)
         
         # update GUI dimensions
-        self.roi_array = [shape[::-1]] # TODO: avoid decimal point
+        self.roi_array = [shape[::-1]]
         self.z_offset, self.y_offset, self.x_offset = [
             slices[i].start for i in range(len(slices))]
         self.scene_3d_shown = True
@@ -1559,8 +1557,12 @@ class Visualization(HasTraits):
         self.roi = np.copy(config.image5d[0][tuple(slices)])
         self.roi[~label_mask] = 0
         self._vis3d.plot_3d_surface(
-            self.roi, config.channel, flipz=self.flipz)
+            self.roi, config.channel, flipz=self.flipz,
+            offset=self._curr_offset()[::-1])
         #plot_3d.plot_3d_points(self.roi, self.scene.mlab, config.channel)
+        
+        # reposition camera to show all objects in the scene
+        self.scene.mlab.view(*self.scene.mlab.view()[:3], "auto")
         name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(
             title="label3d_{}".format(name), show_orientation=False)
@@ -2116,8 +2118,7 @@ class Visualization(HasTraits):
         show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
         self.segs_pts, scale = self._vis3d.show_blobs(
             self.segments, self.segs_in_mask, self.segs_cmap,
-            self._curr_offset()[::-1], roi_size[::-1],
-            show_shadows, roi_size[2] if self.flipz else 0)
+            self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
         
         # reduce number of digits to make the slider more compact
         scale = float(libmag.format_num(scale, 4))

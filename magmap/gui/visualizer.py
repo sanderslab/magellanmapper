@@ -305,6 +305,14 @@ class AtlasEditorOptions(Enum):
     SYNC_ROI = "Sync to ROI"
 
 
+class Vis3dOptions(Enum):
+    """Enumerations for 3D viewer options."""
+    RAW = "Raw"
+    SURFACE = "Surface"
+    PANES = "Panes"
+    SHADOWS = "Shadows"
+
+
 class BlobsVisibilityOptions(Enum):
     """Enumerations for blob visibility options."""
     VISIBLE = "Visible"
@@ -531,8 +539,11 @@ class Visualization(HasTraits):
     
     # Viewer options
     
-    _check_list_3d = List
-    _DEFAULTS_3D = ["Side panes", "Side circles", "Raw", "Surface"]
+    _check_list_3d = List(
+        tooltip="Raw: show raw intensity image; limit region to ROI\n"
+                "Surface: render as surface; uncheck to render as points\n"
+                "Panes: show back and top panes\n"
+                "Shadows: show blob shadows as circles")
     _check_list_2d = List(
         tooltip="Filtered: show filtered image after detection\n"
                 "Border: margin around ROIs\n"
@@ -660,13 +671,15 @@ class Visualization(HasTraits):
                 Item("_atlas_ed_options", style="custom", label="Atlas Editor",
                      editor=CheckListEditor(
                          values=[e.value for e in AtlasEditorOptions],
-                         cols=4, format_func=lambda x: x)),
+                         cols=len(AtlasEditorOptions),
+                         format_func=lambda x: x)),
                 Item("_atlas_ed_zoom", label="Zoom to ROI",
                      editor=BooleanEditor()),
             ),
             Item("_check_list_3d", style="custom", label="3D Viewer",
                  editor=CheckListEditor(
-                     values=_DEFAULTS_3D, cols=4, format_func=lambda x: x)),
+                     values=[e.value for e in Vis3dOptions],
+                     cols=len(Vis3dOptions), format_func=lambda x: x)),
             label="Viewer Options",
         ),
         HGroup(
@@ -873,11 +886,12 @@ class Visualization(HasTraits):
         self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
         self._styles_2d = [Styles2D.SQUARE.value]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
-        self._check_list_3d = [self._DEFAULTS_3D[2], self._DEFAULTS_3D[3]]
+        self._check_list_3d = [
+            Vis3dOptions.RAW.value, Vis3dOptions.SURFACE.value]
         if (config.roi_profile["vis_3d"].lower()
-                == self._DEFAULTS_3D[3].lower()):
+                == Vis3dOptions.SURFACE.value.lower()):
             # check "surface" if set in profile
-            self._check_list_3d.append(self._DEFAULTS_3D[3])
+            self._check_list_3d.append(Vis3dOptions.SURFACE.value)
         # self._structure_scale = self._structure_scale_high
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
         self.blobs = detector.Blobs()
@@ -1499,12 +1513,12 @@ class Visualization(HasTraits):
         
         # show raw 3D image unless selected not to
         curr_offset, curr_roi_size, feedback = self._check_roi_position()
-        if self._DEFAULTS_3D[2] in self._check_list_3d:
+        if Vis3dOptions.RAW.value in self._check_list_3d:
             # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
                 config.image5d, curr_offset, curr_roi_size)
             
-            if self._DEFAULTS_3D[3] in self._check_list_3d:
+            if Vis3dOptions.SURFACE.value in self._check_list_3d:
                 # surface rendering, segmenting to clean up image 
                 # if 2D segmentation option checked
                 segment = self._DEFAULTS_2D[2] in self._check_list_2d
@@ -1520,7 +1534,7 @@ class Visualization(HasTraits):
             self.scene.mlab.clf()
         
         # show shadow images around the points if selected
-        if self._DEFAULTS_3D[0] in self._check_list_3d:
+        if Vis3dOptions.PANES.value in self._check_list_3d:
             self._vis3d.plot_2d_shadows(self.roi, self.flipz)
         
         # show title from labels reference if available
@@ -2115,7 +2129,7 @@ class Visualization(HasTraits):
         
         # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
-        show_shadows = self._DEFAULTS_3D[1] in self._check_list_3d
+        show_shadows = Vis3dOptions.SHADOWS.value in self._check_list_3d
         self.segs_pts, scale = self._vis3d.show_blobs(
             self.segments, self.segs_in_mask, self.segs_cmap,
             self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
@@ -2582,7 +2596,7 @@ class Visualization(HasTraits):
         meas, vol = cv_nd.meas_region(
             self._img_region, config.resolutions[0])[:2]
 
-        if self._DEFAULTS_3D[2] in self._check_list_3d:
+        if Vis3dOptions.RAW.value in self._check_list_3d:
             # in "raw" mode, simply center the current ROI on the label
             # centroid, which may lie within a sub-label
             curr_roi_size = self.roi_array[0].astype(int)

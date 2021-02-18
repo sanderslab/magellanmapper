@@ -343,15 +343,16 @@ def normalize(array, minimum, maximum, in_range="image"):
     """Normalizes an array to fall within the given min and max.
     
     Args:
-        array (:obj:`np.ndarray`): Array to normalize.
-        minimum (int): Minimum value for the array.
-        maximum (int): Maximum value for the array. Assumed to be greater 
-            than ``min``.
+        array (:class:`numpy.ndarray`): Array to normalize.
+        minimum (Union[int, float]): Minimum value for the array.
+        maximum (Union[int, float]): Maximum value for the array. Assumed to
+            be greater than ``min``.
         in_range(str, List[int, float]): Range within ``array`` to rescale; 
             defaults to "image" to use the range from ``array`` itself.
     
     Returns:
-        :obj:`np.ndarray`: The normalized array. 
+        :class:`numpy.ndarray`: The normalized array.
+    
     """
     if len(array) <= 0:
         return array

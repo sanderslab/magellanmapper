@@ -2294,11 +2294,12 @@ class Visualization(HasTraits):
             curr_roi_size, curr_offset, self.segs_in_mask,
             self.segs_cmap, self._roi_ed_close_listener,
             # additional args with defaults
-            self._full_border(self.border), self._planes_2d[0].lower())
+            self._full_border(self.border))
         roi_ed = roi_editor.ROIEditor(
             config.image5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
         roi_ed.max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
+        roi_ed.plane = self._planes_2d[0].lower()
         roi_ed.zoom_shift = config.plot_labels[config.PlotLabels.ZOOM_SHIFT]
         roi_ed.fn_update_coords = self.set_offset
         roi_ed.fn_redraw = self.redraw_selected_viewer

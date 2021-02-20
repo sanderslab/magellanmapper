@@ -276,6 +276,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
             in :class:`pixel_display.PixelDisplay`; defaults to None.
         max_intens_proj: True to show overview images as local max intensity
             projections through the ROI. Defaults to Faslse.
+        plane (str): The plane to show in each 2D plot, eg "xy" to show the
+            XY plane (default) or "xz" to show the XZ plane.
         zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
             origin when zooming into ROI; defaults to None.
         fn_update_coords (func): Function to call when updating coordinates
@@ -344,7 +346,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.filename = None
         self.offset = None
         self.roi_size = None
-        self.plane = None
+        self.plane = config.PLANE[0]
         self.max_intens_proj = False
         self.zoom_shift = None
         self.fn_update_coords = None
@@ -502,9 +504,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 self.fn_redraw()
                 break
     
-    def plot_2d_stack(self, fn_update_seg, filename, channel,
-                      roi_size, offset, mask_in, blobs_cmap,
-                      fn_close_listener, border=None, plane=config.PLANE[0],
+    def plot_2d_stack(self, fn_update_seg, filename, channel, roi_size, offset,
+                      mask_in, blobs_cmap, fn_close_listener, border=None,
                       zoom_levels=1, single_roi_row=False,
                       z_level=ZLevels.BOTTOM, roi=None, labels=None,
                       blobs_truth=None, circles=None, mlab_screenshot=None,
@@ -523,8 +524,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             fn_close_listener: Handle figure close events.
             border: Border dimensions in pixels given as (x, y, z); defaults
                 to None.
-            plane: The plane to show in each 2D plot, with "xy" to show the
-                XY plane (default) and "xz" to show XZ plane.
             zoom_levels (int, List[int]): Number of overview zoom levels to
                 include or sequence of zoom multipliers; defaults to 1.
             single_roi_row: True if the ROI-sized plots should be
@@ -554,7 +553,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.filename = filename
         self.offset = offset
         self.roi_size = roi_size
-        self.plane = plane
         self._channel = [channel]
 
         if not roi_cols:
@@ -600,7 +598,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         border_full = np.copy(border)
         border[2] = 0
         blobs = self.blobs.blobs if self.blobs else None
-        if plane == config.PLANE[1]:
+        if self.plane == config.PLANE[1]:
             # "xz" planes; flip y-z to give y-planes instead of z
             roi_size = libmag.swap_elements(roi_size, 1, 2)
             offset = libmag.swap_elements(offset, 1, 2)
@@ -608,7 +606,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             border_full = libmag.swap_elements(border_full, 1, 2)
             if blobs is not None and len(blobs) > 0:
                 blobs[:, [0, 1]] = blobs[:, [1, 0]]
-        elif plane == config.PLANE[2]:
+        elif self.plane == config.PLANE[2]:
             # "yz" planes; roll backward to flip x-z and x-y
             roi_size = libmag.roll_elements(roi_size, -1)
             offset = libmag.roll_elements(offset, -1)
@@ -640,12 +638,12 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if self.img_region is not None:
             arrs3d.append(self.img_region)
         arrs_3d, aspect, origin, scaling = plot_support.setup_images_for_plane(
-            plane, arrs3d)
+            self.plane, arrs3d)
         scaling = config.labels_scaling
         if scaling is not None: scaling = [scaling]
         max_sizes = plot_support.get_downsample_max_sizes()
         max_size = max_sizes[plot_support.get_plane_axis(
-            plane, get_index=True)] if max_sizes else None
+            self.plane, get_index=True)] if max_sizes else None
 
         # plot layout depending on number of z-planes
         if single_roi_row:
@@ -897,15 +895,16 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
                 # show the zoomed subplot with scale bar for the current z-plane
                 ax_z, ax_z_imgs = self.show_subplot(
-                    fig, gs_zoomed, i, j, channel, roi_size,
-                    zoom_offset, fn_update_seg,
-                    blobs_in, blobs_out, blobs_cmap, alpha, z_relative,
-                    z == self._z_overview, border_full if show_border else None,
-                    plane, roi_show, labels, blobs_truth_z, circles=circles,
-                    aspect=aspect, grid=grid, cmap_labels=cmap_labels)
+                    fig, gs_zoomed, i, j, channel, roi_size, zoom_offset,
+                    fn_update_seg, blobs_in, blobs_out, blobs_cmap, alpha,
+                    z_relative, z == self._z_overview,
+                    border_full if show_border else None,
+                    self.plane, roi_show, labels, blobs_truth_z,
+                    circles=circles, aspect=aspect, grid=grid,
+                    cmap_labels=cmap_labels)
                 if (i == 0 and j == 0
                         and config.plot_labels[config.PlotLabels.SCALE_BAR]):
-                    plot_support.add_scale_bar(ax_z, plane=plane)
+                    plot_support.add_scale_bar(ax_z, plane=self.plane)
                 self._ax_subplots[ax_z] = ax_z_imgs
         update_subplot_border()
 

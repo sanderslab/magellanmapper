@@ -1875,6 +1875,8 @@ class Visualization(HasTraits):
             shape = self.get_roi_size()
         for ed in self.atlas_eds:
             ed.update_max_intens_proj(shape, True)
+        if self.roi_ed is not None:
+            self.roi_ed.update_max_intens_proj(shape, True)
 
     def update_status_bar_msg(self, msg):
         """Update the message displayed in the status bar.
@@ -2298,8 +2300,10 @@ class Visualization(HasTraits):
         roi_ed = roi_editor.ROIEditor(
             config.image5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
-        roi_ed.max_intens_proj = self._DEFAULTS_2D[4] in self._check_list_2d
         roi_ed.plane = self._planes_2d[0].lower()
+        if self._DEFAULTS_2D[4] in self._check_list_2d:
+            # set MIP for the current plane
+            roi_ed.update_max_intens_proj(curr_roi_size)
         roi_ed.zoom_shift = config.plot_labels[config.PlotLabels.ZOOM_SHIFT]
         roi_ed.fn_update_coords = self.set_offset
         roi_ed.fn_redraw = self.redraw_selected_viewer

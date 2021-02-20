@@ -274,8 +274,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             which case the region will be ignored.
         fn_status_bar (func): Function to call during status bar updates
             in :class:`pixel_display.PixelDisplay`; defaults to None.
-        max_intens_proj: True to show overview images as local max intensity
-            projections through the ROI. Defaults to Faslse.
         plane (str): The plane to show in each 2D plot, eg "xy" to show the
             XY plane (default) or "xz" to show the XZ plane.
         zoom_shift (List[float]): Sequence of x,y shift in zoomed plot
@@ -347,11 +345,14 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self.offset = None
         self.roi_size = None
         self.plane = config.PLANE[0]
-        self.max_intens_proj = False
         self.zoom_shift = None
         self.fn_update_coords = None
         self.fn_redraw = None
         self.blobs = None
+        
+        #: int: Planes to show in overview images as local max intensity
+        # projections (MIP) through the ROI; 0 to not show as MIP.
+        self._max_intens_proj = 0
         self._blobs_coloc_text = None
         self._z_overview = None
         self._channel = None  # list of channel lists
@@ -454,7 +455,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             fn_show_label_3d=self.fn_show_label_3d)
         plot_ed.scale_bar = True
         plot_ed.enable_painting = False
-        plot_ed.max_intens_proj = self.roi_size[2] if self.max_intens_proj else 0
+        plot_ed.max_intens_proj = self._max_intens_proj
         update_coords((self._z_overview, *self.offset[1::-1]), self.plane)
         plot_ed.show_roi(self.offset[1::-1], self.roi_size[1::-1])
         if offsets and sizes:
@@ -487,7 +488,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             tot_zoom = "{}x of original".format(zoom)
         plot_support.set_overview_title(
             ax_ov, self.plane, self._z_overview, tot_zoom, lev,
-            self.max_intens_proj)
+            self._max_intens_proj != 0)
     
     def _redraw(self, event):
         """Trigger :attr:`fn_redraw` if the event was a right button
@@ -965,6 +966,26 @@ class ROIEditor(plot_support.ImageSyncMixin):
             plot_editor.PlotEditor.update_plot_ax_img_display(
                 img, **kwargs)
         return plot_ax_img
+
+    def update_max_intens_proj(self, shape, show=False):
+        """Update max intensity projection planes.
+        
+        Args:
+            shape (Sequence[int]): Number of planes in ``z,y,x``, of which
+                the value corresponding to :attr:`plane` will be used.
+            show (bool): True to trigger an update in the Plot Editors;
+                defaults to False.
+
+        """
+        # get dimension corresponding to planar orientation
+        self._max_intens_proj = shape[plot_support.get_plane_axis(
+            self.plane, get_index=True)]
+        for ed in self.plot_eds.values():
+            if self._max_intens_proj != ed.max_intens_proj:
+                # update Plot Editor MIP value
+                ed.max_intens_proj = self._max_intens_proj
+                if show: ed.show_overview()
+        if show: self.fig.canvas.draw_idle()
     
     def plot_roi(self, roi, segments, channel, show=True, title=""):
         """Plot ROI as sequence of z-planes containing only the ROI itself.

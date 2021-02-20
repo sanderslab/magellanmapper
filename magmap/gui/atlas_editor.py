@@ -85,6 +85,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.color_picker_box = None
         self.fn_update_coords = None
         
+        #: Sequence[int]: Number of planes in ``z,y,x`` for maximum intensity
+        # projections.
+        self._max_intens_proj = None
         self._labels_img_sitk = None  # for saving labels image
         
     def show_atlas(self):
@@ -199,7 +202,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.edit_btn.on_clicked(self.toggle_edit_mode)
         self.color_picker_box.on_text_change(self.color_picker_changed)
         
-        # initialize planes in all plot editors
+        # initialize and show planes in all plot editors
+        if self._max_intens_proj is not None:
+            self.update_max_intens_proj(self._max_intens_proj)
         self.update_coords(coord, config.PLANE[0])
 
         plt.ion()  # avoid the need for draw calls
@@ -438,17 +443,20 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         for i, ed in enumerate(self.plot_eds.values()):
             ed.intensity_spec = intensity
     
-    def update_max_intens_proj(self, roi_size):
+    def update_max_intens_proj(self, shape, show=False):
         """Update max intensity projection planes.
         
         Args:
-            roi_size (Sequence[int]): ROI size in ``z,y,x``.
+            shape (Sequence[int]): Number of planes in ``z,y,x``.
+            show (bool): True to trigger an update in the Plot Editors;
+                defaults to False.
 
         """
-        for n, ed in zip(roi_size, self.plot_eds.values()):
+        self._max_intens_proj = shape
+        for n, ed in zip(shape, self.plot_eds.values()):
             if n != ed.max_intens_proj:
                 ed.max_intens_proj = n
-                ed.show_overview()
+                if show: ed.show_overview()
 
 
 def enable_btn(btn, enable=True, color=None, max_color=0.99):

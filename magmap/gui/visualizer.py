@@ -1874,7 +1874,7 @@ class Visualization(HasTraits):
         if shape is None:
             shape = self.get_roi_size()
         for ed in self.atlas_eds:
-            ed.update_max_intens_proj(shape)
+            ed.update_max_intens_proj(shape, True)
 
     def update_status_bar_msg(self, msg):
         """Update the message displayed in the status bar.
@@ -2371,14 +2371,16 @@ class Visualization(HasTraits):
             self._refresh_atlas_eds, self._atlas_ed_fig,
             self.update_status_bar_msg)
         self.atlas_eds.append(atlas_ed)
+        
+        # show the Atlas Editor
+        if self._DEFAULTS_2D[4] in self._check_list_2d:
+            # show max intensity projection planes based on ROI size
+            atlas_ed.update_max_intens_proj(self.get_roi_size())
         atlas_ed.fn_update_coords = self.set_offset
         atlas_ed.show_atlas()
         atlas_ed.set_show_labels(self._get_show_labels())
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[ViewerTabs.ATLAS_ED] = None
-        if self._DEFAULTS_2D[4] in self._check_list_2d:
-            # show max intensity projection based on ROI size
-            atlas_ed.update_max_intens_proj(self.get_roi_size())
     
     def sync_atlas_eds_coords(self, coords=None, check_option=False):
         """Synchronize Atlas Editors to ROI offset.

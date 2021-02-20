@@ -107,8 +107,9 @@ class StackPlaneIO(object):
 
 
 def _build_stack(ax, images, process_fnc, rescale=1, aspect=None, 
-                 origin=None, cmaps_labels=None, scale_bar=True):
-    """Builds an animated GIF from a stack of images.
+                 origin=None, cmaps_labels=None, scale_bar=True,
+                 start_planei=0):
+    """Builds a stack of Matploblit 2D images.
     
     Uses multiprocessing to load or resize each image.
     
@@ -126,11 +127,17 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
             defaults to None. Length should be equal to that of 
             ``images`` - 1.
         scale_bar: True to include scale bar; defaults to True.
+        start_planei (int): Index of start plane, used for labeling the
+            plane; defaults to 0. The plane is only annotated when
+            :attr:`config.plot_labels[config.PlotLabels.TEXT_POS]` is given
+            to specify the position of the text in ``x,y`` relative to the
+            axes.
     
     Returns:
         :List[List[:obj:`matplotlib.image.AxesImage`]]: Nested list of 
         axes image objects. The first list level contains planes, and
         the second level are channels within each plane.
+    
     """
     # number of image types (eg atlas, labels) and corresponding planes
     num_image_types = len(images)
@@ -162,6 +169,7 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
     cmaps_all = [config.cmaps, *cmaps_labels]
 
     img_size = None
+    text_pos = config.plot_labels[config.PlotLabels.TEXT_POS]
     for result in pool_results:
         i, imgs = result.get()
         if img_size is None: img_size = imgs[0].shape
@@ -178,6 +186,16 @@ def _build_stack(ax, images, process_fnc, rescale=1, aspect=None,
             cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
             plot_support.set_scinot(cbar.ax, lbls=None, units=None)
         plotted_imgs[i] = np.array(ax_imgs).flatten()
+        
+        if libmag.is_seq(text_pos) and len(text_pos) > 1:
+            # write plane index in axes rather than data coordinates
+            text = ax.text(
+                *text_pos[:2], "{}-plane: {}".format(
+                    plot_support.get_plane_axis(config.plane),
+                    start_planei + i),
+                transform=ax.transAxes, color="w")
+            plotted_imgs[i] = [*plotted_imgs[i], text]
+        
     pool.close()
     pool.join()
     
@@ -331,6 +349,7 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
     origin = None
     cmaps_labels = []
     extracted_planes = []
+    start_planei = 0
     if path and os.path.isdir(path):
         # builds animations from all files in a directory
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
@@ -368,12 +387,15 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
                     offset[0]:offset[0]+roi_size[0]]
             extracted_planes.append(planes)
         fnc = StackPlaneIO.process_plane
+        if img_sl.start:
+            start_planei = img_sl.start
     
     # export planes
     plotted_imgs = _build_stack(
         ax, extracted_planes, fnc, rescale, aspect=aspect, 
         origin=origin, cmaps_labels=cmaps_labels,
-        scale_bar=config.plot_labels[config.PlotLabels.SCALE_BAR])
+        scale_bar=config.plot_labels[config.PlotLabels.SCALE_BAR],
+        start_planei=start_planei)
     
     if fit and plotted_imgs:
         # fit frame to first plane's first available image
@@ -400,10 +422,10 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
         paths (List[str]): Image paths, which can each be either an image 
             directory or a base path to a single image, including 
             volumetric images.
-        roi_offset (List[int]): Tuple of offset given in user order (x, y, z);
-            defaults to None. Requires ``roi_size`` to not be None.
-        roi_size (List[int]): Size of the region of interest in user order 
-            (x, y, z); defaults to None. Requires ``offset`` to not be None.
+        roi_offset (Sequence[int]): Tuple of offset given in user order
+            ``x,y,z``; defaults to None. Requires ``roi_size`` to not be None.
+        roi_size (Sequence[int]): Size of the region of interest in user order 
+            ``x,y,z``; defaults to None. Requires ``roi_offset`` to not be None.
         series (int): Image series number; defaults to None.
         subimg_offset (List[int]): Sub-image offset as (z,y,x) to load;
             defaults to None.

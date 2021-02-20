@@ -210,7 +210,9 @@ plot_2d_type = None
 # plot label keys for command-line parsing
 PlotLabels = Enum(
     "PlotLabels", (
-        "TITLE", "X_LABEL", "Y_LABEL", "X_UNIT", "Y_UNIT", 
+        "TITLE",  # figure title
+        "X_LABEL", "Y_LABEL",  # axes labels
+        "X_UNIT", "Y_UNIT",  # axes units
         "X_LIM", "Y_LIM",  # (min, max) for x-, y-axes
         "X_TICK_LABELS", "Y_TICK_LABELS",  # labels for axis tick marks
         "X_SCALE", "Y_SCALE",  # scaling, eg "log", "linear" (see Matplotlib)
@@ -233,6 +235,7 @@ PlotLabels = Enum(
         "DROP_DUPS",  # drop duplicates
         "DPI",  # dots per inch
         "NAN_COLOR",  # color for NaN values (Matplotlib or RGBA string)
+        "TEXT_POS",  # text (annotation) position in x,y
     )
 )
 #: dict[Any]: Plot labels set from command-line.

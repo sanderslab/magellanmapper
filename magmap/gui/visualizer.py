@@ -2663,6 +2663,15 @@ class Visualization(HasTraits):
                 offset, self.roi_array[0].astype(int)[::-1], reverse=True)
         self.z_offset, self.y_offset, self.x_offset = offset
     
+    def get_roi_size(self):
+        """Get the current ROI size.
+        
+        Returns:
+            list(int): ROI size in ``z,y,x``.
+
+        """
+        return self.roi_array[0].astype(int)[::-1]
+    
     def _full_border(self, border=None):
         """Gets the full border array, typically based on 
             :meth:`chunking.cal_overlap`.

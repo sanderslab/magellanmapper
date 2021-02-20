@@ -437,6 +437,18 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         print("updating specified color to", intensity)
         for i, ed in enumerate(self.plot_eds.values()):
             ed.intensity_spec = intensity
+    
+    def update_max_intens_proj(self, roi_size):
+        """Update max intensity projection planes.
+        
+        Args:
+            roi_size (Sequence[int]): ROI size in ``z,y,x``.
+
+        """
+        for n, ed in zip(roi_size, self.plot_eds.values()):
+            if n != ed.max_intens_proj:
+                ed.max_intens_proj = n
+                ed.show_overview()
 
 
 def enable_btn(btn, enable=True, color=None, max_color=0.99):

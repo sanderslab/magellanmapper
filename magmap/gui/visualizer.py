@@ -1855,12 +1855,26 @@ class Visualization(HasTraits):
 
     @on_trait_change("roi_array")
     def _update_roi_array(self):
-        """Respond to ROI size array changes.
-
-        Sets all stale viewer flags to the ROI flag.
+        """Respond to ROI size array changes."""
+        # flag ROI changed for viewers
+        self.reset_stale_viewers(StaleFlags.ROI)
+        if self._DEFAULTS_2D[4] in self._check_list_2d:
+            # update max intensity projection settings
+            self._update_mip()
+    
+    def _update_mip(self, shape=None):
+        """Update maximum intensity projection settings for Atlas Editors.
+        
+        Args:
+            shape (Sequence[int]): Number of planes to include in the
+                projection in ``z,y,x``; default to None to use the current
+                ROI size settings.
 
         """
-        self.reset_stale_viewers(StaleFlags.ROI)
+        if shape is None:
+            shape = self.get_roi_size()
+        for ed in self.atlas_eds:
+            ed.update_max_intens_proj(shape)
 
     def update_status_bar_msg(self, msg):
         """Update the message displayed in the status bar.
@@ -2362,6 +2376,9 @@ class Visualization(HasTraits):
         atlas_ed.set_show_labels(self._get_show_labels())
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[ViewerTabs.ATLAS_ED] = None
+        if self._DEFAULTS_2D[4] in self._check_list_2d:
+            # show max intensity projection based on ROI size
+            atlas_ed.update_max_intens_proj(self.get_roi_size())
     
     def sync_atlas_eds_coords(self, coords=None, check_option=False):
         """Synchronize Atlas Editors to ROI offset.
@@ -2554,6 +2571,12 @@ class Visualization(HasTraits):
             self._border_on = border_checked
             self.rois_check_list = _ROI_DEFAULT
             self._reset_segments()
+        
+        # immediately update in Atlas Editors, where None uses the default max
+        # intensity projection settings and 0's turns it off
+        mip_shape = (None if self._DEFAULTS_2D[4] in self._check_list_2d
+                     else (0, 0, 0))
+        self._update_mip(mip_shape)
     
     @on_trait_change("_region_id")
     def _region_id_changed(self):

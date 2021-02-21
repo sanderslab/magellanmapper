@@ -978,13 +978,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
         """
         # get dimension corresponding to planar orientation
-        self._max_intens_proj = shape[plot_support.get_plane_axis(
-            self.plane, get_index=True)]
-        for ed in self.plot_eds.values():
-            if self._max_intens_proj != ed.max_intens_proj:
-                # update Plot Editor MIP value
-                ed.max_intens_proj = self._max_intens_proj
-                if show: ed.show_overview()
+        super().update_max_intens_proj(shape[plot_support.get_plane_axis(
+            self.plane, get_index=True)], show)
         if show: self.fig.canvas.draw_idle()
     
     def plot_roi(self, roi, segments, channel, show=True, title=""):

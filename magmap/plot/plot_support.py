@@ -39,6 +39,9 @@ class ImageSyncMixin:
         self.fig = None
         self.plot_eds = OrderedDict()
 
+        #: Union[int, Sequence[int]]: Plane(s) for max intensity projections.
+        self._max_intens_proj = None
+
     def get_img_display_settings(self, imgi, chl=None):
         """Get display settings for the given image.
         
@@ -107,6 +110,24 @@ class ImageSyncMixin:
         """
         for plot_ed in self.plot_eds.values():
             plot_ed._show_labels = val
+    
+    def update_max_intens_proj(self, shape, display=False):
+        """Update max intensity projection planes.
+        
+        Args:
+            shape (Union[int, Sequence[int]]): Number of planes for all
+                Plot Editors or sequence of plane counts in ``z,y,x``.
+            display (bool): True to trigger an update in the Plot Editors;
+                defaults to False.
+
+        """
+        self._max_intens_proj = shape
+        is_seq = libmag.is_seq(shape)
+        for i, ed in enumerate(self.plot_eds.values()):
+            n = shape[i] if is_seq else shape
+            if n != ed.max_intens_proj:
+                ed.max_intens_proj = n
+                if show: ed.show_overview()
 
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,

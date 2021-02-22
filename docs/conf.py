@@ -180,6 +180,9 @@ intersphinx_mapping = {
     'https://docs.scipy.org/doc/scipy/reference': None,
     'https://matplotlib.org': None,
     'https://pandas.pydata.org/pandas-docs/stable/': None,
+    "http://docs.enthought.com/mayavi/mayavi/": None,
+    "https://www.riverbankcomputing.com/static/Docs/PyQt5/": None,
+    "http://docs.enthought.com/mayavi/tvtk/": None,
 }
 
 

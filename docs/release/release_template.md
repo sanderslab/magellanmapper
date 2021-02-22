@@ -14,6 +14,8 @@ Atlas refinement
 
 Atlas registration
 
+Cell detection
+
 Volumetric image processing
 
 I/O

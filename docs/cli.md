@@ -9,10 +9,14 @@ Argument | Function | Version Added
 
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
-`--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
 None | `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols` | v1.4.0 | Arithmetic operations on data frame columns
 None | `--df replace_vals` | v1.4.0 | Replace values
 None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling
+`--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
+None | `--proc detec_coloc` | v1.4.0 | Intensity-based co-localizations during blob detection
+None | `--proc coloc_match` | v1.4.0 | Match-based co-localizations after blob detection
+`--proc load` | `--load [data0], [data1], ...` | v1.4.0 | Load different data types, such as `blobs`, `blob_matches`
+`--register export_regions --labels level=None` | `--register export_regions --labels level=None orig_colors=1` | v1.4.0 | Use `orig_colors=1` rather than `level` to export only labels present in the image itself; `level=None` gets the parent rather than labels only up to that level
 None | `--register labels_dist` | v1.4.0 | Measure the distance from labels to specified landmarks
 
 ## Changes in MagellanMapper v1.3

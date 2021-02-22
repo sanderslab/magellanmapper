@@ -20,23 +20,45 @@ GUI
 - Fixed error when looking up atlas label without a loaded reference file
 
 CLI
+- The new `--load` parameter replaces `--proc load` as a more flexible way to specify data to load, including `--load blobs` and `--load blobs blob_matches`
 
 Atlas refinement
 - Set an alternative intensity image for edge detection using the registration suffixes atlas flag (`--reg_suffixes [atlas]`)
 - Added a `watershed_mask_filter` setting in the `edge_aware_reannotation` atlas profile group to set the filter type and size for the watershed mask
 - Added a `crop_to_first_image` option to compare matching volumes between two images by cropping the second image to the size of the first image
+- `atlas_mirror` profile setting to toggle mirroring the intensity image across hemispheres during atlas curation
 - Fixed to exclude labels that were not eroded from undergoing watershed-based reannotation
 
 Atlas registration
 - Customize the atlas images used during image registration by using the `--reg_suffixes` CLI parameter
 - Measure the distance from labels to specified landmarks before and after registration through the `--register labels_dist` task
+- The `carve_threshold` and `holes_area` atlas profile settings are also applied to regular (non-groupwise) registration
+
+Cell detection
+- Blob co-localization
+    - Detected blobs can now be co-localized two ways:
+        1. Intensity-based: intensities above threshold at each blob's location in the remaining channels are considered co-localized signal
+        2. Match-based: blobs from different channels are matched to find spatially overlapping blobs, similarly to automated blob verification against ground truth
+    - The co-localization method can be set in the GUI when detecting blobs for a given ROI, shown as overlaid channel numbers (intensity-based) or corresponding blob numbers (match-based)
+    - The `--proc detec_coloc` task performs intensity-based co-localization during whole image detections
+    - The `--proc coloc_match` task performs match-based co-localization after detections were completed
+    - Load blob matches with `--load blob_matches`
 
 Volumetric image processing
 - Volume comparisons: include raw pixel and volume counts
 - Option to compare volumes of only ROIs within a whole image
+- Option to specify the registered image using `--reg_suffixes`
 
 I/O
-- PDF exports use nearest neighbor interpolation for consistency with 2D image export to other formats
+- PDF export
+    - Use nearest neighbor interpolation for consistency with 2D image export to other formats
+    - Avoid merging layers by turning off image compositing
+- Matplotlib style is set more consistently to "default"
+- Intensity-based co-localizations are stored in the blobs archive
+- Database
+    - New table for blob matche
+    - Support foreign keys
+- Atlas labels export to CSV can output the immediate parent of each label to reconstruct label hierarchy by using `--register export_regions --labels level=None orig_colors=1`, where `level=None` gets the parent rather than labels only up to that level, and `orig_colors=1` gets only labels present in the image itself
 
 Server pipelines
 
@@ -54,6 +76,7 @@ R stats and plots
 
 Code base and docs
 - More links to external packages in API docs
+- `Blobs` and `Image5d` are being migrated to class structures
 
 ### Dependency Updates
 

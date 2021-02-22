@@ -13,6 +13,7 @@ Old | New | Version | Purpose of Change |
 None | `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols` | v1.4.0 | Arithmetic operations on data frame columns
 None | `--df replace_vals` | v1.4.0 | Replace values
 None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling
+None | `--register labels_dist` | v1.4.0 | Measure the distance from labels to specified landmarks
 
 ## Changes in MagellanMapper v1.3
 

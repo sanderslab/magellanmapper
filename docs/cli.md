@@ -9,6 +9,7 @@ Argument | Function | Version Added
 
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
+None | `--atlas_labels translate_labels=<translation.csv> translate_children=1` | v1.4.0 | Translate labels, where `translation.csv` is a CSV file with `FromLabel` and `ToLabel` columns, and `translate_children` is `1` to also translate all children of each label
 None | `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols` | v1.4.0 | Arithmetic operations on data frame columns
 None | `--df replace_vals` | v1.4.0 | Replace values
 None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling

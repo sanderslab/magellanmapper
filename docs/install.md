@@ -24,7 +24,7 @@ These scripts perform a full installation of Conda if not already present. Speci
 
 - [Miniconda](https://conda.io/miniconda.html), a free minimal installer for the Anaconda Python Distribution, if not already present based on the `conda` command
 - A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
-- Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s environment_light.yml` for headless systems that do not require a GUI
+- Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s envs/environment_light.yml` for headless systems that do not require a GUI
 
 Alternatively, those who already have Conda installed can set up an envirionment directly based on the environment spec:
 
@@ -67,8 +67,8 @@ pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 
 You can also install MagellanMapper these ways in the shell and Python environment of your choice:
 
-- In a Python environment of your choice or none at all, run `pip install -r requirements.txt` to match dependencies in a pinned, current test setup (cross-platform)
-- To create a similar environment in Conda, run `conda env create -n [name] -f environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
+- In a Python environment of your choice or none at all, run `pip install -r envs/requirements.txt` to match dependencies in a pinned, current test setup (cross-platform)
+- To create a similar environment in Conda, run `conda env create -n [name] -f envs/environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
 - To install without Pip, run `python setup.py install` to install the package and only required dependencies
 
 ## Dependencies
@@ -226,7 +226,7 @@ As an alternative to Cygwin, MSYS2 can use binaries for many dependencies, minim
 Numpy is required to build Mayavi correctly, please install it first
 ```
 
-- During installation via `pip install -r requirements.txt`, the Mayavi package [may fail to install](https://github.com/enthought/mayavi/issues/782)
+- During installation via `pip install -r envs/requirements.txt`, the Mayavi package [may fail to install](https://github.com/enthought/mayavi/issues/782)
 - Rerunning this command appears to allow Mayavi to find Numpy now that it has been installed
 
 
@@ -238,7 +238,7 @@ qt.qpa.xcb: could not connect to display
 - As of at least 2018-01-05, Mayavi installation requires a GUI so will not work directly in headless cloud instances
 - For servers, use RDP or an X11 forwarding instead
 - For non-graphical setups such as WSL, start an X11 server (eg in Windows)
-- `setup_conda.sh -s environment_light.yml` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
+- `setup_conda.sh -s envs/environment_light.yml` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ```
 ImportError: libGL.so.1: cannot open shared object file: No such file or directory

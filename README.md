@@ -1,8 +1,14 @@
 # MagellanMapper
 
-MagellanMapper is a graphical imaging informatics suite and pipeline for high-throughput, automated analysis of whole specimens. Its design philosophy is to make the raw 3D images as accessible as possible, simplify annotation from nuclei to atlases, and scale from the laptop or desktop to the cloud in cross-platform environments.
+MagellanMapper is a graphical imaging informatics suite and pipeline for 3D reconstruction and automated analysis of and whole specimens and atlases. Its design philosophy is to make the raw 3D images as accessible as possible, simplify annotation from nuclei to atlases, and scale from the laptop or desktop to the cloud in cross-platform environments.
 
 ![ROI Editor and Atlas Editor screenshots](https://user-images.githubusercontent.com/1258953/83934132-f699aa00-a7e0-11ea-932c-0e58366d5061.png)
+
+<img align="right" width="200" src="https://currentprotocols.onlinelibrary.wiley.com/cms/asset/14209f75-4368-40c9-b83b-1bb866991a8b/cpns76-gra-0001-m.jpg" title="Current Protocols cover image">
+
+- For more information on the methods used for 3D atlas construction, please see: https://elifesciences.org/articles/61408
+- For step-by-step instructions on using the software, please see: https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104
+
 
 ## Installation
 
@@ -145,4 +151,4 @@ You can launch a standard server, deploy MagellanMapper code, and run a pipeline
 
 Licensed under the open-source [BSD-3 license](LICENSE.txt)
 
-Author: David Young, 2017, 2020, Stephan Sanders Lab
+Author: David Young, 2017, 2021, Stephan Sanders Lab

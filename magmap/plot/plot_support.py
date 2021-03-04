@@ -127,7 +127,7 @@ class ImageSyncMixin:
             n = shape[i] if is_seq else shape
             if n != ed.max_intens_proj:
                 ed.max_intens_proj = n
-                if show: ed.show_overview()
+                if display: ed.show_overview()
 
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,

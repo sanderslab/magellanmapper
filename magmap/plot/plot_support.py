@@ -111,6 +111,16 @@ class ImageSyncMixin:
         for plot_ed in self.plot_eds.values():
             plot_ed._show_labels = val
     
+    def set_show_crosslines(self, val):
+        """Set the attribute to show crosslines for all Plot Editors.
+
+        Args:
+            val (bool): True to show crosslines, false otherwise.
+
+        """
+        for plot_ed in self.plot_eds.values():
+            plot_ed._show_crosslines = val
+
     def update_max_intens_proj(self, shape, display=False):
         """Update max intensity projection planes.
         
@@ -127,7 +137,7 @@ class ImageSyncMixin:
             n = shape[i] if is_seq else shape
             if n != ed.max_intens_proj:
                 ed.max_intens_proj = n
-                if display: ed.show_overview()
+                if display: ed.update_coord()
 
 
 def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,

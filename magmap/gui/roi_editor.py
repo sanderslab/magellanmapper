@@ -395,7 +395,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         def update_coords(coord, plane):
             # update displayed overview plot for the given coordinates and
             # show preview ROI
-            plot_ed.update_coord(coord, show_crosslines=False)
+            plot_ed.update_coord(coord)
             plot_ed.show_roi(coord[1:], self.roi_size[1::-1], preview=True)
             if self.fn_update_coords:
                 # trigger callback with coordinates in z-plane orientation

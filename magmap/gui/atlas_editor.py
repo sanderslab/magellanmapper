@@ -185,6 +185,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         for i, gs_viewer in enumerate(
                 (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])):
             self.plot_eds[config.PLANE[i]] = setup_plot_ed(i, gs_viewer)
+        self.set_show_crosslines(True)
         
         # attach listeners
         fig.canvas.mpl_connect("scroll_event", self.scroll_overview)

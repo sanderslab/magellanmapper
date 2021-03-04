@@ -167,6 +167,7 @@ class PlotEditor:
         # track label editing during mouse click/movement for plane interp
         self._editing = False
         self._show_labels = True  # show atlas labels on mouseover
+        self._show_crosslines = False  # show crosslines to orthogonal views
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -223,22 +224,26 @@ class PlotEditor:
                 self._ax_img_labels.figure.canvas.mpl_disconnect(listener)
         self.connected = False
 
-    def update_coord(self, coord, show_crosslines=True):
+    def update_coord(self, coord=None):
         """Update the displayed image for the given coordinates.
 
         Scroll to the given z-plane if changed and draw crosshairs to
         indicated the corresponding ``x,y`` values.
 
         Args:
-            coord (List[int]): Coordinates in ``(z, y, x)``.
-            show_crosslines (bool): True to show crosslines; defaults to True.
+            coord (List[int]): Coordinates in `z,y,x`, assumed to be transposed
+                so the z-plane is show in this editor; defaults to None
+                to use :attr:`coord`.
 
         """
-        update_overview = self.coord is None or coord[0] != self.coord[0]
-        self.coord = coord
+        update_overview = True
+        if coord is not None:
+            # no need to refresh z-plane if same coordinate
+            update_overview = self.coord is None or coord[0] != self.coord[0]
+            self.coord = coord
         if update_overview:
             self.show_overview()
-        if show_crosslines:
+        if self._show_crosslines:
             self.draw_crosslines()
 
     def translate_coord(self, coord, up=False, coord_slice=None):

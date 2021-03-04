@@ -302,7 +302,8 @@ class RegionOptions(Enum):
 class AtlasEditorOptions(Enum):
     """Enumerations for Atlas Editor options."""
     SHOW_LABELS = "Labels"
-    SYNC_ROI = "Sync to ROI"
+    SYNC_ROI = "Sync ROI"
+    CROSSHAIRS = "Crosshairs"
 
 
 class Vis3dOptions(Enum):
@@ -563,7 +564,7 @@ class Visualization(HasTraits):
     _atlas_ed_options = List(
         tooltip="Labels: show a description when hovering over an atlas label"
                 "in\nboth the ROI and Atlas Editors\n"
-                "Sync to ROI: move to the ROI offset whenever it changes")
+                "Sync ROI: move to the ROI offset whenever it changes")
     # select to zoom Atlas Ed into the ROI, with crosshairs at center of ROI
     # if ROI Center box also selected; unselect to zoom out to whole image
     _atlas_ed_zoom = Bool(
@@ -940,7 +941,8 @@ class Visualization(HasTraits):
         self._atlas_ed_fig = figure.Figure()
         self._atlas_ed_options = [
             AtlasEditorOptions.SHOW_LABELS.value,
-            AtlasEditorOptions.SYNC_ROI.value]
+            AtlasEditorOptions.SYNC_ROI.value,
+            AtlasEditorOptions.CROSSHAIRS.value]
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -2430,12 +2432,21 @@ class Visualization(HasTraits):
     @on_trait_change("_atlas_ed_options")
     def _atlas_ed_options_changed(self):
         """Respond to atlas editor option changes."""
-        # toggle atlas show labels attributes in ROI and Atlas Editors
+        # toggle atlas show labels attributes in ROI and Atlas Editors, which
+        # are applied during Plot Editor mouseovers/refreshes
         show_labels = self._get_show_labels()
         if self.roi_ed:
             self.roi_ed.set_show_labels(show_labels)
         if self.atlas_eds:
-            self.atlas_eds[0].set_show_labels(show_labels)
+            for atlas_ed in self.atlas_eds:
+                atlas_ed.set_show_labels(show_labels)
+                
+                # toggle Atlas Editor crosslines
+                atlas_ed.set_show_crosslines(
+                    AtlasEditorOptions.CROSSHAIRS.value
+                    in self._atlas_ed_options)
+                for plot_ed in atlas_ed.plot_eds.values():
+                    plot_ed.draw_crosslines()
         
         if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             # move visible Atlas Editor to ROI offset if sync selected;

@@ -279,9 +279,17 @@ class PlotEditor:
         # print("translated from {} to {}".format(coord, coord_tr))
         return coord_tr
 
-    def draw_crosslines(self):
+    def draw_crosslines(self, show=None):
         """Draw crosshairs depicting the x and y values in orthogonal viewers.
+        
+        Args:
+            show (bool): True to show crosslines, False to make them invisible;
+                defaults to None to use :attr:`show_crosslines`.
+        
         """
+        if show is None:
+            show = self._show_crosslines
+        
         # translate coordinate down for any downsampling
         coord = self.translate_coord(self.coord)
         if self.hline is None:
@@ -289,9 +297,13 @@ class PlotEditor:
             self.hline = self.axes.axhline(coord[1], linestyle=":")
             self.vline = self.axes.axvline(coord[2], linestyle=":")
         else:
-            # update positions of current crosshairs
-            self.hline.set_ydata(coord[1])
-            self.vline.set_xdata(coord[2])
+            # toggle visibility
+            self.hline.set_visible(show)
+            self.vline.set_visible(show)
+            if show:
+                # update positions of current crosshairs
+                self.hline.set_ydata(coord[1])
+                self.vline.set_xdata(coord[2])
 
     def _get_img2d(self, i, img, max_intens=0):
         """Get the 2D image from the given 3D image, scaling and downsampling

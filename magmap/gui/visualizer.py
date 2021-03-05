@@ -571,6 +571,7 @@ class Visualization(HasTraits):
         tooltip="Select: zoom into ROI; select Center to center ROI on "
                 "crosshairs\n"
                 "Unselect: zoom out to full image")
+    _atlas_ed_options_prev = []  # last atlas ed option settings
     
     # atlas labels
     _atlas_label = None
@@ -946,6 +947,7 @@ class Visualization(HasTraits):
             AtlasEditorOptions.SHOW_LABELS.value,
             AtlasEditorOptions.SYNC_ROI.value,
             AtlasEditorOptions.CROSSHAIRS.value]
+        self._atlas_ed_options_prev = list(self._atlas_ed_options)
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -2361,7 +2363,8 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
-        roi_ed.set_show_labels(self._get_show_labels())
+        roi_ed.set_show_labels(
+            AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
         self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[ViewerTabs.ROI_ED] = None
@@ -2391,7 +2394,8 @@ class Visualization(HasTraits):
             atlas_ed.update_max_intens_proj(self.get_roi_size())
         atlas_ed.fn_update_coords = self.set_offset
         atlas_ed.show_atlas()
-        atlas_ed.set_show_labels(self._get_show_labels())
+        atlas_ed.set_show_labels(
+            AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[ViewerTabs.ATLAS_ED] = None
     
@@ -2427,38 +2431,43 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
     
-    def _get_show_labels(self):
-        """Get the current value of the show atlas labels option.
-        
-        Returns:
-            bool: True if the box is selected, False otherwise.
-
-        """
-        return AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options
-    
     @on_trait_change("_atlas_ed_options")
     def _atlas_ed_options_changed(self):
         """Respond to atlas editor option changes."""
-        # toggle atlas show labels attributes in ROI and Atlas Editors, which
-        # are applied during Plot Editor mouseovers/refreshes
-        show_labels = self._get_show_labels()
+        # boolean dicts of option settings and whether option changed
+        options = {e: e.value in self._atlas_ed_options
+                   for e in AtlasEditorOptions}
+        changed = {e: options[e] != (e.value in self._atlas_ed_options_prev)
+                   for e in options}
+        
         if self.roi_ed:
-            self.roi_ed.set_show_labels(show_labels)
+            if changed[AtlasEditorOptions.SHOW_LABELS]:
+                # toggle showing atlas labels, applied during Plot Editor
+                # mouseovers/refreshes
+                self.roi_ed.set_show_labels(
+                    options[AtlasEditorOptions.SHOW_LABELS])
+        
         if self.atlas_eds:
             for atlas_ed in self.atlas_eds:
-                atlas_ed.set_show_labels(show_labels)
+                if changed[AtlasEditorOptions.SHOW_LABELS]:
+                    # toggle showing atlas labels
+                    atlas_ed.set_show_labels(
+                        options[AtlasEditorOptions.SHOW_LABELS])
                 
-                # toggle Atlas Editor crosslines
-                atlas_ed.set_show_crosslines(
-                    AtlasEditorOptions.CROSSHAIRS.value
-                    in self._atlas_ed_options)
-                for plot_ed in atlas_ed.plot_eds.values():
-                    plot_ed.draw_crosslines()
+                if changed[AtlasEditorOptions.CROSSHAIRS]:
+                    # toggle Atlas Editor crosslines
+                    atlas_ed.set_show_crosslines(
+                        options[AtlasEditorOptions.CROSSHAIRS])
+                    for plot_ed in atlas_ed.plot_eds.values():
+                        plot_ed.draw_crosslines()
         
-        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED and changed[
+                AtlasEditorOptions.SYNC_ROI]:
             # move visible Atlas Editor to ROI offset if sync selected;
             # otherwise, defer sync to tab selection handler
             self.sync_atlas_eds_coords(check_option=True)
+        
+        self._atlas_ed_options_prev = list(self._atlas_ed_options)
     
     @on_trait_change("_atlas_ed_zoom")
     def _zoom_atlas_ed(self):

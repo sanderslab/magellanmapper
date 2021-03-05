@@ -2403,7 +2403,8 @@ class Visualization(HasTraits):
                 not in self._atlas_ed_options):
             return
         if coords is None:
-            coords = self._curr_offset()[::-1]
+            # Atlas Editor uses offset as-is, without centering
+            coords = self._curr_offset(False)[::-1]
         for ed in self.atlas_eds:
             if ed is None: continue
             ed.update_coords(coords)

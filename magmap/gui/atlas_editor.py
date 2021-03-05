@@ -268,6 +268,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                 self.offset = coord_transposed[::-1]
                 if self.fn_update_coords:
                     # update offset based on xy plane, without centering
+                    # planes are centered on the offset as-is
                     self.fn_update_coords(coord_transposed, False)
             self.plot_eds[plane].update_coord(coord_transposed)
 

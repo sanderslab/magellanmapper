@@ -12,11 +12,14 @@ Old | New | Version | Purpose of Change |
 None | `--atlas_labels translate_labels=<translation.csv> translate_children=1` | v1.4.0 | Translate labels, where `translation.csv` is a CSV file with `FromLabel` and `ToLabel` columns, and `translate_children` is `1` to also translate all children of each label
 None | `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols` | v1.4.0 | Arithmetic operations on data frame columns
 None | `--df replace_vals` | v1.4.0 | Replace values
+None | `--plot_labels text_pos=<x,y>` | v1.4.0 | Add plane number annotation at the `x,y` position in stack animations
 None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling
 `--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
 None | `--proc detec_coloc` | v1.4.0 | Intensity-based co-localizations during blob detection
 None | `--proc coloc_match` | v1.4.0 | Match-based co-localizations after blob detection
-`--proc load` | `--load [data0], [data1], ...` | v1.4.0 | Load different data types, such as `blobs`, `blob_matches`
+None | `--proc export_planes` | v1.4.0 | Export all channels together into each plane
+`--proc export_planes` | `--proc export_planes_channels` | v1.4.0 | Export each channel into a separate plane
+`--proc load` | `--load [data0], [data1]=<path>, ...` | v1.4.0 | Load different data types, such as `blobs`, `blob_matches`, including custom path
 `--register export_regions --labels level=None` | `--register export_regions --labels level=None orig_colors=1` | v1.4.0 | Use `orig_colors=1` rather than `level` to export only labels present in the image itself; `level=None` gets the parent rather than labels only up to that level
 None | `--register labels_dist` | v1.4.0 | Measure the distance from labels to specified landmarks
 

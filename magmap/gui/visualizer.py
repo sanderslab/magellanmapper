@@ -303,6 +303,7 @@ class AtlasEditorOptions(Enum):
     """Enumerations for Atlas Editor options."""
     SHOW_LABELS = "Labels"
     SYNC_ROI = "Sync ROI"
+    ZOOM_ROI = "Zoom ROI"
     CROSSHAIRS = "Crosshairs"
 
 
@@ -564,13 +565,10 @@ class Visualization(HasTraits):
     _atlas_ed_options = List(
         tooltip="Labels: show a description when hovering over an atlas label"
                 "in\nboth the ROI and Atlas Editors\n"
-                "Sync ROI: move to the ROI offset whenever it changes")
-    # select to zoom Atlas Ed into the ROI, with crosshairs at center of ROI
-    # if ROI Center box also selected; unselect to zoom out to whole image
-    _atlas_ed_zoom = Bool(
-        tooltip="Select: zoom into ROI; select Center to center ROI on "
+                "Sync ROI: move to the ROI offset whenever it changes\n"
+                "Zoom ROI: zoom into ROI; select Center to center ROI on "
                 "crosshairs\n"
-                "Unselect: zoom out to full image")
+                "Crosslines: show lines for orthogonal planes")
     _atlas_ed_options_prev = []  # last atlas ed option settings
     
     # atlas labels
@@ -677,8 +675,6 @@ class Visualization(HasTraits):
                          values=[e.value for e in AtlasEditorOptions],
                          cols=len(AtlasEditorOptions),
                          format_func=lambda x: x)),
-                Item("_atlas_ed_zoom", label="Zoom to ROI",
-                     editor=BooleanEditor()),
             ),
             Item("_check_list_3d", style="custom", label="3D Viewer",
                  editor=CheckListEditor(
@@ -2454,6 +2450,11 @@ class Visualization(HasTraits):
                     atlas_ed.set_show_labels(
                         options[AtlasEditorOptions.SHOW_LABELS])
                 
+                if changed[AtlasEditorOptions.ZOOM_ROI]:
+                    # toggle ROI zoom
+                    self._zoom_atlas_ed(
+                        atlas_ed, options[AtlasEditorOptions.ZOOM_ROI])
+
                 if changed[AtlasEditorOptions.CROSSHAIRS]:
                     # toggle Atlas Editor crosslines
                     atlas_ed.set_show_crosslines(
@@ -2469,8 +2470,7 @@ class Visualization(HasTraits):
         
         self._atlas_ed_options_prev = list(self._atlas_ed_options)
     
-    @on_trait_change("_atlas_ed_zoom")
-    def _zoom_atlas_ed(self):
+    def _zoom_atlas_ed(self, atlas_ed, zoom):
         """Zoom the Atlas Editor into the ROI.
         
         The ROI offset is normally at the crosshairs unless the ROI offset
@@ -2479,10 +2479,7 @@ class Visualization(HasTraits):
         upper left corner.
         
         """
-        # assume that the first Atlas Editor is to be zoomed
-        if not self.atlas_eds: return
-        atlas_ed = self.atlas_eds[0]
-        if self._atlas_ed_zoom:
+        if zoom:
             # zoom into the ROI
             offset = self._curr_offset()
             shape = self.roi_array[0].astype(int)

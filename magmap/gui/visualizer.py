@@ -881,7 +881,10 @@ class Visualization(HasTraits):
     def __init__(self):
         """Initialize GUI."""
         HasTraits.__init__(self)
-
+        
+        # set up callback flags
+        self._ignore_roi_offset_change = False
+        
         # default options setup
         self._set_border(True)
         self._circles_2d = [
@@ -1851,6 +1854,9 @@ class Visualization(HasTraits):
         print("x: {}, y: {}, z: {}"
               .format(self.x_offset, self.y_offset, self.z_offset))
         self.reset_stale_viewers(StaleFlags.ROI)
+        
+        # additional callbacks
+        if self._ignore_roi_offset_change: return
         if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
             # immediately move to new offset if sync selected
             self.sync_atlas_eds_coords(check_option=True)
@@ -2701,9 +2707,14 @@ class Visualization(HasTraits):
 
         """
         if center or (center is None and self._roi_center):
+            # convert offset to position it at the center of the ROI
             offset = plot_3d.roi_center_to_offset(
                 offset, self.roi_array[0].astype(int)[::-1], reverse=True)
+        
+        # update offset sliders without triggering additional callbacks
+        self._ignore_roi_offset_change = True
         self.z_offset, self.y_offset, self.x_offset = offset
+        self._ignore_roi_offset_change = False
     
     def get_roi_size(self):
         """Get the current ROI size.

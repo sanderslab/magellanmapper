@@ -224,6 +224,7 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None, suffix=None):
             defaults to None to ignore.
 
     """
+    # set up animation output path and time interval
     if ext is None: ext = "gif"
     out_path = libmag.combine_paths(base_path, "animated", ext=ext)
     if suffix: out_path = libmag.insert_before_ext(out_path, suffix, "_")
@@ -235,6 +236,20 @@ def animate_imgs(base_path, plotted_imgs, delay, ext=None, suffix=None):
     else:
         libmag.warn("No images available to animate")
         return
+    
+    # WORKAROUND: FFMpeg may give a "height not divisible by 2" error, fixed
+    # by padding with a pixel
+    # TODO: check if needed for width
+    # TODO: account for difference in FFMpeg height and fig height
+    for fn, size in {
+            # fig.set_figwidth: fig.get_figwidth(),
+            fig.set_figheight: fig.get_figheight()}.items():
+        if size * fig.dpi % 2 != 0:
+            fn(size + 1. / fig.dpi)
+            print("Padded size with", fn, fig.get_figwidth(), "to new size of",
+                  fig.get_figheight())
+    
+    # generate and save animation
     anim = animation.ArtistAnimation(
         fig, plotted_imgs, interval=delay, repeat_delay=0, blit=False)
     try:

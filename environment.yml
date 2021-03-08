@@ -17,6 +17,8 @@ dependencies:
   - openjdk=8
   - pyqt
   - pyface
+  - importlib_metadata  # required for pyface
+  - importlib_resources  # required for pyface
   - traitsui
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/

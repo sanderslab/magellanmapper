@@ -44,13 +44,11 @@ Atlas refinement
 - Added a `watershed_mask_filter` setting in the `edge_aware_reannotation` atlas profile group to set the filter type and size for the watershed mask
 - `atlas_mirror` profile setting to toggle mirroring the intensity image across hemispheres during atlas curation
 - Fixed to exclude labels that were not eroded from undergoing watershed-based reannotation
-- Fixed incorrect color mapping for some corresponding labels (ie same region in opposite hemispheres)
 
 Atlas registration
 - Customize the atlas images used during image registration by using the `--reg_suffixes` CLI parameter
 - Measure the distance from labels to specified landmarks before and after registration through the `--register labels_dist` task
 - The `carve_threshold` and `holes_area` atlas profile settings are also applied to regular (non-groupwise) registration
-- Specify a full fallback atlas profile rather than only a fallback similarity metric if the post-registration DSC falls below threshold (`metric_sim_fallback` setting)
 - The similarity metric used for registration is included in the summary CSV file
 - Fixed smoothing metrics for non-existent labels
 
@@ -66,7 +64,6 @@ Cell detection
 - Block processing settings can be set per channel rather than using the same settings for all channels; any block setting difference compared with other channels' profiles will trigger processing in separate blocks
 - Accuracy metrics for each ROI are saved to CSV file
 - Compare atlases translated to labels from different references and children
-- Fixed applying the first channel's profile setting for image saturation to all channels during blob detection
 
 Volumetric image processing
 - Volume comparisons: include raw pixel and volume counts
@@ -93,9 +90,6 @@ I/O
 - `--proc export_planes` now exports multi-channel images combined into single planes (eg RGB images), while the new `--proc export_planes_channels` exports each image to a separate channel
 - Animations can display the plane number by using the `--plot_labels text_pos=<x,y>` to specify where to place the label
 - The `--series` flag is now supported for import in the GUI
-- Fixed reading image size and resolution metadata when values for some dimensions are missing
-- Fixed import RGB images
-- Fixed redundant channel import for some formats (eg some OME-TIFF files)
 - Fixed to reset blobs when loading a new image
 
 Server pipelines

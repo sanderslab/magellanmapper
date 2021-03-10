@@ -58,5 +58,6 @@ config = {
     }, 
 }
 
-# perform setup
-setuptools.setup(**config)
+if __name__ == "__main__":
+    # perform setup
+    setuptools.setup(**config)

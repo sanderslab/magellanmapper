@@ -1,5 +1,36 @@
 # MagellanMapper v1.3 Release Notes
 
+## MagellanMapper v1.3.8
+
+This is a bugfix release for MagellanMapper.
+
+### Changes
+
+Installation
+- Fixed missing dependencies required by Pyface Conda dependency
+
+GUI
+- Fixed incorrect color mapping for some corresponding labels (ie same region in opposite hemispheres)
+
+Atlas refinement
+- Fixed error in compactness measurement when no surface is found
+
+Atlas registration
+- Specify a full fallback atlas profile rather than only a fallback similarity metric if the post-registration DSC falls below threshold (`metric_sim_fallback` setting)
+
+Cell detection
+- Fixed applying the first channel's profile setting for image saturation to all channels during blob detection
+
+I/O
+- Fixed reading image size and resolution metadata when values for some dimensions are missing
+- Fixed importing RGB images
+- Fixed redundant channel import for some formats (eg some OME-TIFF files)
+
+### Dependency Updates
+
+- Added `import_metadata` and `import_resources` packages required by Pyface
+
+
 ## MagellanMapper v1.3.7
 
 This is a bugfix release for MagellanMapper.

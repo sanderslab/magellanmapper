@@ -2,6 +2,7 @@
 
 from cx_Freeze import setup, Executable
 
+from magmap.io import packaging
 import setup as mag_setup
 
 
@@ -12,7 +13,7 @@ build_exe_options = {
         "skimage.feature._orb_descriptor_positions",
     ],
     "include_files": [
-        mag_setup.get_pkg_dirs(p, "lib") for p
+        packaging.get_pkg_egg(p, "lib") for p
         in ("mayavi", "pyface", "traitsui")],
     "excludes": "Tkinter",
 }

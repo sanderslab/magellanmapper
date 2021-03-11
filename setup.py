@@ -1,8 +1,6 @@
 # MagellanMapper setup script
 # Author: David Young, 2017, 2020
 
-import os
-import pkg_resources
 import setuptools
 
 # optional dependencies to import files via BioFormats, which req Java 8+
@@ -60,27 +58,6 @@ config = {
         ]
     }, 
 }
-
-
-def get_pkg_dirs(name, prefix=None):
-    """Get package directory names
-
-    Args:
-        name (str): Package name.
-        prefix (str): Start of output path; defaults to None.
-
-    Returns:
-        tuple(str, str): Tuples in the form,
-        ``(egg-info-path, output-path)`, for the given package.
-
-    """
-    distrib = pkg_resources.get_distribution(name)
-    egg_name = os.path.basename(distrib.egg_info)
-    if prefix:
-        egg_name = os.path.join(prefix, egg_name)
-    paths = (distrib.egg_info, egg_name)
-    print("Adding package path:", paths)
-    return paths
 
 
 if __name__ == "__main__":

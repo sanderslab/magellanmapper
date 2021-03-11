@@ -26,15 +26,19 @@ Attributes:
 
 from enum import Enum, auto
 
+from appdirs import AppDirs
 import numpy as np
 
 from magmap.settings import logs
 
+APP_NAME = "MagellanMapper"
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to
 # use the number determined by the CPU count.
 cpus = None
+#: str: Accessor to user application directories.
+app_dirs = AppDirs(APP_NAME, False)
 
 
 # LOGGING
@@ -396,7 +400,7 @@ TruthDBModes = Enum(
 truth_db_mode = None
 
 DB_NAME = "magmap.db"
-db_name = DB_NAME  # path to main DB
+db_path = DB_NAME  # path to main DB
 db = None  # main DB
 truth_db = None  # truth blobs DB
 verified_db = None  # automated verifications DB

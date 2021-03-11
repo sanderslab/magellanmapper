@@ -45,6 +45,7 @@ config = {
         "scikit-learn",
         "simpleitk==1.2.0rc2.dev1162+g2a79d",  # pre-built SimpleElastix
         "PyYAML",
+        "appdirs",
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 

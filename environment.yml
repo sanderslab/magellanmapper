@@ -20,6 +20,7 @@ dependencies:
   - importlib_metadata  # required for pyface
   - importlib_resources  # required for pyface
   - traitsui
+  - appdirs
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar

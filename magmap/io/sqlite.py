@@ -163,7 +163,7 @@ def start_db(path=None, new_db=False):
         cur: Connection's cursor.
     """
     if path is None:
-        path = config.db_name
+        path = config.db_path
     if new_db or not os.path.exists(path):
         conn, cur = _create_db(path)
         print("Created a new database at {}".format(path))

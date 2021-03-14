@@ -185,6 +185,28 @@ check_gcc() {
 }
 
 ############################################
+# Build a Java Runtime Environment image.
+# Globals:
+#   JAVA_HOME: Path to JRE home directory.
+# Arguments:
+#   1: Path for jdeps to find dependencies.
+#   2: Output path.
+# Returns:
+#   NONE
+############################################
+build_jre() {
+  echo "Building custom JRE in $2"
+  # find dependencies for the given CLASS or JAR file
+  deps="$(jdeps --print-module-deps --recursive --ignore-missing-deps -q "$1")"
+  echo "Includes dependencies: $deps"
+  
+  # build a lightweight runtime image
+  "$JAVA_HOME/bin/jlink" --no-header-files --no-man-pages \
+    --compress=2 --strip-java-debug-attributes --add-modules "$deps" \
+    --output "$2"
+}
+
+############################################
 # Check for existing Git executable.
 # Globals:
 #   NONE

@@ -7,6 +7,8 @@ modules and packages not detected but required for MagellanMapper.
 
 """
 
+import platform
+
 from magmap.io import packaging
 from magmap.settings import config
 import setup as mag_setup
@@ -34,6 +36,10 @@ a = Analysis(
             "pyface",
             "traitsui",
         )],
+        # assume that Java Runtime Environment extracted by jlink is in
+        # the parent directory of the project's directory and designated by
+        # platform to accommodate JREs across platforms
+        (f"../../jre_{platform.system().lower()}", "jre"),
     ],
     hiddenimports=[
         "sklearn.utils._weight_vector",

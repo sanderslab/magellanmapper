@@ -29,7 +29,7 @@ config = {
     "version": "1.4.0",
     "packages": setuptools.find_packages(),
     "scripts": [], 
-    "python_requires": ">=3.6",  # may work on earlier versions
+    "python_requires": ">=3.6",
     "install_requires": [
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1

@@ -122,6 +122,9 @@ R stats and plots
 - Fixed to generate plots in both interactive and non-interactive environments
 
 Code base and docs
+- Python APIs
+    - Previously Python APIs compatible with both Python 2 and 3 have been used when possible, but much of the package requires Python 3, and testing has been on Python >= 3.6
+    - For a more consistent and modern codebase, we are initiating use of Python 3 APIs such as `pathlib` and specifically 3.6+ features such as f-strings
 - More links to external packages in API docs
 - Instructions on building the API docs
 - `Blobs` and `Image5d` are being migrated to class structures for better encapsulation and additional metadata

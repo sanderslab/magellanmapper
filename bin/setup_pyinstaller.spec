@@ -25,9 +25,6 @@ a = Analysis(
     ],
     hiddenimports=[
         "sklearn.utils._weight_vector",
-        "pyface.ui.qt4.clipboard",
-        "pyface.ui.qt4.image_resource",
-        "pyface.ui.qt4.resource_manager",
         "traits.util.clean_strings",
     ],
     hookspath=[],

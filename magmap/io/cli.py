@@ -672,7 +672,7 @@ def process_cli_args():
     plot_2d.setup_style()
     
     # set up application directories
-    user_dir = config.app_dirs.user_data_dir
+    user_dir = config.user_app_dirs.user_data_dir
     if not os.path.isdir(user_dir):
         # make application data directory
         if os.path.exists(user_dir):
@@ -762,7 +762,7 @@ def setup_dbs():
     # get any user-supplied truth database path, falling back to name based
     # on filename or default name
     truth_db_path = config.truth_db_params[config.TruthDB.PATH]
-    user_dir = config.app_dirs.user_data_dir
+    user_dir = config.user_app_dirs.user_data_dir
     truth_db_name_base = filename_base if filename_base else os.path.join(
         user_dir, sqlite.DB_NAME_BASE)
     

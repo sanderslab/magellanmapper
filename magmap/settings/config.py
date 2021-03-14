@@ -25,20 +25,24 @@ Attributes:
 """
 
 from enum import Enum, auto
+import pathlib
 
 from appdirs import AppDirs
 import numpy as np
 
 from magmap.settings import logs
 
+#: str: Application name.
 APP_NAME = "MagellanMapper"
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to
 # use the number determined by the CPU count.
 cpus = None
-#: str: Accessor to user application directories.
-app_dirs = AppDirs(APP_NAME, False)
+#: PurePath: Application root directory path.
+app_dir = pathlib.Path(__file__).resolve().parent.parent.parent
+#: str: Accessor to application-related user directories.
+user_app_dirs = AppDirs(APP_NAME, False)
 
 
 # LOGGING

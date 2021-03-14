@@ -24,6 +24,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 The script will also install the Conda package manager if it is not already installed. This process may take up to 5 minutes, depending on internet connection speed.
 
 ### Install Notes
+- To update the environment, rerun the `setup_conda` script above
 - On Mac, it may be necessary to right-click and "Open with" the Terminal app.
 - On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
 - See [Installation](docs/install.md) for more details, including installation without Conda, using Pip or Venv+Pip instead.

@@ -71,6 +71,18 @@ You can also install MagellanMapper these ways in the shell and Python environme
 - To create a similar environment in Conda, run `conda env create -n [name] -f envs/environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
 - To install without Pip, run `python setup.py install` to install the package and only required dependencies
 
+## Update MagellanMapper
+
+### Update the MagellanMapper package
+
+- From a cloned Git repository: run `git pull` to pull in all software updates
+- From a source code release: download the desired [release](https://github.com/sanderslab/magellanmapper/releases), extract it, and run MagellanMapper from there
+
+### Update the Conda environment
+
+- Typically the existing Conda environment can be used without updating, but sometimes an update is required for new depdendencies
+- To update the environment, rerun the `setup_conda` script (`bin/setup_conda` for Mac/Linux or `bin\setup_conda.bat` for Windows)
+
 ## Dependencies
 
 The main required and optional dependencies in MagellanMapper are:

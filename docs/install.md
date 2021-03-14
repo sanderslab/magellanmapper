@@ -256,6 +256,7 @@ qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it 
   - `libxkbcommon-x11.so.0`: `xkbcommon` was removed from Qt [starting in 5.12.1](https://code.qt.io/cgit/qt/qtbase.git/tree/dist/changes-5.12.1?h=5.12.1); install `libxkbcommon-x11-0`
   - `libfontconfig.so.1`: Install `libfontconfig1`
   - `libXrender.so.1`: Install `libxrender1`
+  - `libxcb-xinerama.so.0`: Install `libxcb-xinerama0`
 
 ```
 ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 686

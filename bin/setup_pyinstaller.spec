@@ -18,10 +18,22 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        *[packaging.get_pkg_path(p)
-          for p in ("mayavi", "pyface", "traitsui", "tvtk")],
-        *[packaging.get_pkg_egg(p)
-          for p in ("mayavi", "pyface", "traitsui")],
+        # add full package folders since they contain many modules that
+        # are dynamically discovered or otherwise not found by Pyinstaller
+        *[packaging.get_pkg_path(p) for p in (
+            "mayavi",
+            "pyface",
+            "traitsui",
+            "tvtk",
+            "bioformats",
+            "javabridge",
+        )],
+        # add egg-info folders required for these packages' entry points
+        *[packaging.get_pkg_egg(p) for p in (
+            "mayavi",
+            "pyface",
+            "traitsui",
+        )],
     ],
     hiddenimports=[
         "sklearn.utils._weight_vector",

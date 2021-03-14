@@ -699,6 +699,16 @@ def process_cli_args():
         print("Mapped \"{}\" truth_db mode to {}"
               .format(mode, config.truth_db_mode))
     
+    java_home = os.getenv("JAVA_HOME")
+    app_dir_key = f".{os.sep}"
+    if java_home.startswith(app_dir_key):
+        # WORKAROUND: Mac .app bundles use "/" as the working directory;
+        # translate "./" at the start of the path to the app's directory
+        os.environ["JAVA_HOME"] = os.path.join(
+            config.app_dir, java_home[len(app_dir_key):])
+        print(f"Converted JAVA_HOME from {java_home} to "
+              f"{os.environ['JAVA_HOME']}")
+    
 
 def process_tasks():
     """Process command-line tasks.

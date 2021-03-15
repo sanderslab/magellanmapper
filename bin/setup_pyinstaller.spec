@@ -7,6 +7,7 @@ modules and packages not detected but required for MagellanMapper.
 
 """
 
+import pathlib
 import platform
 
 from magmap.io import packaging
@@ -14,6 +15,13 @@ from magmap.settings import config
 import setup as mag_setup
 
 block_cipher = None
+
+# WORKAROUND: PyQt5 as of v5.15.4 gives a segmentation fault when the "Qt5"
+# folder is not present; even an empty folder bypasses this error, but a stub
+# must be added here for Pyinstaller to include the file
+path_qt5 = pathlib.Path("build") / "Qt5"
+path_qt5.mkdir(parents=True, exist_ok=True)
+(path_qt5 / "stub").touch(exist_ok=True)
 
 a = Analysis(
     ["../run.py"],
@@ -36,6 +44,8 @@ a = Analysis(
             "pyface",
             "traitsui",
         )],
+        # workaround for error when folder is missing
+        (path_qt5.resolve(), pathlib.Path("Pyqt5") / "Qt5"),
         # assume that Java Runtime Environment extracted by jlink is in
         # the parent directory of the project's directory and designated by
         # platform to accommodate JREs across platforms

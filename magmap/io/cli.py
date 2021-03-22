@@ -699,15 +699,21 @@ def process_cli_args():
         print("Mapped \"{}\" truth_db mode to {}"
               .format(mode, config.truth_db_mode))
     
-    java_home = os.getenv("JAVA_HOME")
-    app_dir_key = f".{os.sep}"
-    if java_home.startswith(app_dir_key):
-        # WORKAROUND: Mac .app bundles use "/" as the working directory;
-        # translate "./" at the start of the path to the app's directory
-        os.environ["JAVA_HOME"] = os.path.join(
-            config.app_dir, java_home[len(app_dir_key):])
-        print(f"Converted JAVA_HOME from {java_home} to "
-              f"{os.environ['JAVA_HOME']}")
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        # adjust JAVA_HOME environment variable for frozen environment,
+        # using the PyInstaller-specific attributes indicating this env 
+        print("Running from frozen environment")
+        java_home_orig = os.getenv("JAVA_HOME")
+        java_home = None
+        if not os.path.isabs(java_home_orig):
+            # treat relative paths as relative to app root dir, not working dir
+            java_home = config.app_dir / java_home_orig
+        if not java_home or not java_home.exists():
+            # if Java home not set, check if custom JRE is in app root dir
+            java_home = config.app_dir / "jre"
+        if java_home and java_home.exists():
+            os.environ["JAVA_HOME"] = str(java_home)
+            print(f"Converted JAVA_HOME from {java_home_orig} to {java_home}")
     
 
 def process_tasks():

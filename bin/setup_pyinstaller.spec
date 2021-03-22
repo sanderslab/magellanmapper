@@ -93,6 +93,6 @@ app = BUNDLE(
         "LSEnvironment": {
             # "./" at the start will be translated to the .app root directory
             # since the working directory is "/" rather than the app root
-            "JAVA_HOME": "./../Resources/jre"
+            "JAVA_HOME": "../Resources/jre"
         }
     })

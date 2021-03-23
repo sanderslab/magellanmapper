@@ -13,6 +13,7 @@
   !include "MUI2.nsh"
   !include x64.nsh
   !include LogicLib.nsh
+  !include StrFunc.nsh
 
 ;--------------------------------
 ; set up defaults
@@ -36,6 +37,9 @@
   RequestExecutionLevel user
   
   Var StartMenuFolder
+  
+  ; prep string location function
+  ${StrLoc}
 
 ;--------------------------------
 ; set up interface settings
@@ -55,6 +59,20 @@
   
   ; install directory selection
   !insertmacro MUI_PAGE_DIRECTORY
+  
+  ; ensure that the selected install directory has app folder name to avoid
+  ; installing directly into general purpose folders such as Documents
+  ; or Program Files (though no UAC privileges are elevated) 
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE instFilesPre
+  Function instFilesPre
+    ${If} ${FileExists} "$INSTDIR\*"
+      ${StrLoc} $0 $INSTDIR "${APP_NAME}" ">"
+      ${If} $0 == ""
+        StrCpy $INSTDIR "$INSTDIR\${APP_NAME_VER}"
+      ${endIf}
+    ${endIf}
+  FunctionEnd
+  
   
   ; Start Menu folder configuration
   !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU" 
@@ -139,8 +157,10 @@ SectionEnd
 
 Section "Uninstall"
   ;SetShellVarContext all
-
-  Delete "$INSTDIR\*.*"
+  
+  ; remove entire installation directory, which was limited to a custom
+  ; user-defined directory that contains the app name in the path
+  RMDir /r "$INSTDIR"
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
 

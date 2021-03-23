@@ -12,7 +12,6 @@ import platform
 
 from magmap.io import packaging
 from magmap.settings import config
-import setup as mag_setup
 
 block_cipher = None
 
@@ -68,7 +67,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name=mag_setup.config["name"],
+    name=config.APP_NAME,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -86,7 +85,7 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="run")
+    name=config.APP_NAME)
 app = BUNDLE(
     coll,
     name="{}.app".format(config.APP_NAME),

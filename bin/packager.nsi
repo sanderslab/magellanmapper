@@ -16,20 +16,23 @@
 
 ;--------------------------------
 ; set up defaults
-  !define VER "1.4.0"
+  ; should pass version as `/DVER=x.y.z`
+  !ifndef VER
+    !define VER ""
+  !endif
   !define BASEDIR "..\..\dist\win"
   !define APP_NAME "MagellanMapper"
+  !define APP_NAME_VER "${APP_NAME}-${VER}"
 
-  ;Name and file
+  ; application name and output installer file
   Name "${APP_NAME} ${VER}"
-  OutFile "${BASEDIR}\${APP_NAME}-${VER}-installer.exe"
+  OutFile "${BASEDIR}\${APP_NAME_VER}-installer.exe"
 
-  ;Default installation folder
-  InstallDir "$LOCALAPPDATA\${APP_NAME}\${APP_NAME}-${VER}"
-
-  ;Get installation folder from registry if available
-  InstallDirRegKey HKCU "Software\${APP_NAME}-${VER}" ""
-
+  ; default installation folder, overriding with registry key if available
+  InstallDir "$LOCALAPPDATA\${APP_NAME}\${APP_NAME_VER}"
+  InstallDirRegKey HKCU "Software\${APP_NAME_VER}" ""
+  
+  ; use standard privileges
   RequestExecutionLevel user
   
   Var StartMenuFolder
@@ -55,7 +58,7 @@
   
   ; Start Menu folder configuration
   !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU" 
-  !define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\${APP_NAME}-${VER}" 
+  !define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\${APP_NAME_VER}" 
   !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
 
   !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
@@ -89,7 +92,7 @@ Section "MagellanMapper" SecMagMap
   File /r "${BASEDIR}\${APP_NAME}\*.*"
 
   ; store installation folder in registry
-  WriteRegStr HKCU "Software\${APP_NAME}-${VER}" "" $INSTDIR
+  WriteRegStr HKCU "Software\${APP_NAME_VER}" "" $INSTDIR
 
   ; create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -138,7 +141,7 @@ Section "Uninstall"
   RMDir "$INSTDIR"
 
   ; remove shortcuts, if any
-  Delete "$SMPROGRAMS\${APP_NAME}-${VER}\*.*"
+  Delete "$SMPROGRAMS\${APP_NAME_VER}\*.*"
 
   !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
     
@@ -148,8 +151,8 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\$StartMenuFolder"
 
   ; remove installation directory path to avoid reinstalling to old version num
-  DeleteRegKey HKCU "Software\${APP_NAME}-${VER}"
-  DeleteRegKey /ifempty HKCU "Software\${APP_NAME}-${VER}"
+  DeleteRegKey HKCU "Software\${APP_NAME_VER}"
+  DeleteRegKey /ifempty HKCU "Software\${APP_NAME_VER}"
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
 SectionEnd

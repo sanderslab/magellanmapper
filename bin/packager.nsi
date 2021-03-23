@@ -1,0 +1,155 @@
+; MagellanMapper Installer Script
+
+; Based on NSIS example script:
+; NSIS Modern User Interface
+; Welcome/Finish Page Example Script
+; Written by Joost Verburg
+
+
+
+;--------------------------------
+; use Modern UI
+
+  !include "MUI2.nsh"
+  !include x64.nsh
+  !include LogicLib.nsh
+
+;--------------------------------
+; set up defaults
+  !define VER "1.4.0"
+  !define BASEDIR "..\..\dist\win"
+  !define APP_NAME "MagellanMapper"
+
+  ;Name and file
+  Name "${APP_NAME} ${VER}"
+  OutFile "${BASEDIR}\${APP_NAME}-${VER}-installer.exe"
+
+  ;Default installation folder
+  InstallDir "$LOCALAPPDATA\${APP_NAME}\${APP_NAME}-${VER}"
+
+  ;Get installation folder from registry if available
+  InstallDirRegKey HKCU "Software\${APP_NAME}-${VER}" ""
+
+  RequestExecutionLevel user
+  
+  Var StartMenuFolder
+
+;--------------------------------
+; set up interface settings
+
+  !define MUI_ABORTWARNING
+
+
+
+;--------------------------------
+; set up pages
+
+  !define MUI_WELCOMEPAGE_TEXT "Welcome to ${APP_NAME}, a graphical imaging informatics suite for 3D reconstruction and automated analysis of whole specimens and atlases."
+  !insertmacro MUI_PAGE_WELCOME
+  !insertmacro MUI_PAGE_LICENSE "..\LICENSE.txt"
+  !insertmacro MUI_PAGE_COMPONENTS
+  
+  
+  ; install directory selection
+  !insertmacro MUI_PAGE_DIRECTORY
+  
+  ; Start Menu folder configuration
+  !define MUI_STARTMENUPAGE_REGISTRY_ROOT "HKCU" 
+  !define MUI_STARTMENUPAGE_REGISTRY_KEY "Software\${APP_NAME}-${VER}" 
+  !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "Start Menu Folder"
+
+  !insertmacro MUI_PAGE_STARTMENU Application $StartMenuFolder
+  
+  ; install files page
+  !insertmacro MUI_PAGE_INSTFILES
+
+  !define MUI_FINISHPAGE_TEXT "${APP_NAME} has been installed and can be launched from $INSTDIR\${APP_NAME}.exe or from the Start Menu."
+  !insertmacro MUI_PAGE_FINISH
+
+
+  ; uninstaller page
+  !define MUI_WELCOMEPAGE_TEXT "Thanks for using ${APP_NAME}. We will uninstall ${APP_NAME} and leave user settings intact. You can delete them from the $LOCALAPPDATA\${APP_NAME} folder. Hope to see you again."
+  !insertmacro MUI_UNPAGE_WELCOME
+  !insertmacro MUI_UNPAGE_CONFIRM
+  !insertmacro MUI_UNPAGE_INSTFILES
+  !insertmacro MUI_UNPAGE_FINISH
+
+;--------------------------------
+; languages
+  !insertmacro MUI_LANGUAGE "English"
+
+;--------------------------------
+; installer
+
+Section "MagellanMapper" SecMagMap
+ 
+  SetOutPath "$INSTDIR"
+
+  ; install MagellanMapper folder built by PyInstaller
+  File /r "${BASEDIR}\${APP_NAME}\*.*"
+
+  ; store installation folder in registry
+  WriteRegStr HKCU "Software\${APP_NAME}-${VER}" "" $INSTDIR
+
+  ; create uninstaller
+  WriteUninstaller "$INSTDIR\Uninstall.exe"
+
+  ; write apps add/remove descriptions
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+                 "DisplayName" "${APP_NAME}: a graphical imaging informatics suite for 3D reconstruction"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+                 "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+
+  !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
+    
+    ; create shortcuts
+    ; need to set shell var context to appear in all users
+    ;SetShellVarContext all
+    CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${APP_NAME}.lnk" "$INSTDIR\${APP_NAME}.exe" "" "$INSTDIR\images\magmap.ico" 0 "SW_SHOWNORMAL" "" "${APP_NAME}: a graphical imaging informatics suite for 3D reconstruction"
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${APP_NAME} Website.lnk" "https://github.com/sanderslab/magellanmapper" "" "" 0
+    CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\Uninstall.exe" ""
+
+  
+  !insertmacro MUI_STARTMENU_WRITE_END
+
+SectionEnd
+
+;--------------------------------
+; languages
+
+  ;Language strings
+  LangString DESC_MAGMAP ${LANG_ENGLISH} "The ${APP_NAME} imaging informatics suite."
+
+  ;Assign language strings to sections
+  !insertmacro MUI_FUNCTION_DESCRIPTION_BEGIN
+    !insertmacro MUI_DESCRIPTION_TEXT ${SecMagMap} $(DESC_MAGMAP)
+  !insertmacro MUI_FUNCTION_DESCRIPTION_END
+
+
+;--------------------------------
+; uninstaller
+
+Section "Uninstall"
+  ;SetShellVarContext all
+
+  Delete "$INSTDIR\*.*"
+  Delete "$INSTDIR\Uninstall.exe"
+  RMDir "$INSTDIR"
+
+  ; remove shortcuts, if any
+  Delete "$SMPROGRAMS\${APP_NAME}-${VER}\*.*"
+
+  !insertmacro MUI_STARTMENU_GETFOLDER Application $StartMenuFolder
+    
+  Delete "$SMPROGRAMS\$StartMenuFolder\${APP_NAME}.lnk"
+  Delete "$SMPROGRAMS\$StartMenuFolder\${APP_NAME} Website.lnk"
+  Delete "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk"
+  RMDir "$SMPROGRAMS\$StartMenuFolder"
+
+  ; remove installation directory path to avoid reinstalling to old version num
+  DeleteRegKey HKCU "Software\${APP_NAME}-${VER}"
+  DeleteRegKey /ifempty HKCU "Software\${APP_NAME}-${VER}"
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+
+SectionEnd

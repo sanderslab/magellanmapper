@@ -138,6 +138,12 @@ def main():
         launch_magmap()
         return
     
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        # bypass environment activation when in PyIntaller frozen env
+        print("Launching from from bundled environment")
+        launch_magmap()
+        return
+
     use_sys_shell = False
     if platform.system() == "Windows":
         # replace Conda hook with Command Prompt shell hook

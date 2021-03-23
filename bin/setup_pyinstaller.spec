@@ -49,7 +49,7 @@ a = Analysis(
         # assume that Java Runtime Environment extracted by jlink is in
         # the parent directory of the project's directory and designated by
         # platform to accommodate JREs across platforms
-        (f"../../jre_{platform.system().lower()}", "jre"),
+        (f"../../JREs/jre_{platform.system().lower()}", "jre"),
     ],
     hiddenimports=[
         "sklearn.utils._weight_vector",
@@ -74,6 +74,10 @@ exe = EXE(
     strip=False,
     upx=True,
     console=False)
+
+# remove Java virtual machine library that takes precedence over any Java home
+# setting on Windows, preventing JVM initialization and causing an exception 
+a.binaries = a.binaries - [("jvm.dll", None, None)]
 coll = COLLECT(
     exe,
     a.binaries,

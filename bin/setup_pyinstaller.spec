@@ -27,6 +27,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
+        # images folder with icons
+        ("../images", "images"),
         # add full package folders since they contain many modules that
         # are dynamically discovered or otherwise not found by Pyinstaller
         *[packaging.get_pkg_path(p) for p in (
@@ -72,7 +74,8 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False)
+    console=False,
+    icon="../images/magmap.ico")
 
 # remove Java virtual machine library that takes precedence over any Java home
 # setting on Windows, preventing JVM initialization and causing an exception 
@@ -89,7 +92,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="{}.app".format(config.APP_NAME),
-    icon=None,
+    icon="../images/magmap.icns",
     bundle_identifier=None,
     info_plist={
         "NSRequiresAquaSystemAppearance": False,

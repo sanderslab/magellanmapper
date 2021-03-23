@@ -65,8 +65,12 @@
   
   ; install files page
   !insertmacro MUI_PAGE_INSTFILES
-
+  
+  ; finish page with option to launch app
   !define MUI_FINISHPAGE_TEXT "${APP_NAME} has been installed and can be launched from $INSTDIR\${APP_NAME}.exe or from the Start Menu."
+  !define MUI_FINISHPAGE_RUN "$INSTDIR/${APP_NAME}.exe"
+  !define MUI_FINISHPAGE_LINK "${APP_NAME} website"
+  !define MUI_FINISHPAGE_LINK_LOCATION https://github.com/sanderslab/magellanmapper
   !insertmacro MUI_PAGE_FINISH
 
 

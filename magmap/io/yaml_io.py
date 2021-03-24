@@ -2,6 +2,7 @@
 # Author: David Young, 2020
 """YAML file format input/output."""
 
+import numpy as np
 import yaml
 
 from magmap.io import libmag
@@ -59,4 +60,58 @@ def load_yaml(path, enums=None):
             if enums:
                 doc = parse_enum(doc)
             data.append(doc)
+    return data
+
+
+def save_yaml(path, data, use_primitives=False):
+    """Save a dictionary to YAML file format.
+    
+    Args:
+        path (str): Output path.
+        data (dict): Dictionary to output.
+        use_primitives (bool): True to replace Numpy data types to primitives;
+            defaults to False.
+
+    Returns:
+        dict: ``data`` with Numpy arrays and data types converted to Python
+        primitives if ``use_primitives`` is true, otherwise ``data``
+        unchanged.
+
+    """
+    def strip_numpy_val(val):
+        # recursively convert Numpy data types to primitives
+        if isinstance(val, dict):
+            val = strip_numpy(val)
+        elif libmag.is_seq(val):
+            val = [strip_numpy_val(v) for v in val]
+        else:
+            try:
+                val = val.item()
+            except AttributeError:
+                pass
+        return val
+    
+    def strip_numpy(d):
+        # recursively convert Numpy arrays to lists
+        out = {}
+        for key, val in d.items():
+            if isinstance(val, dict):
+                # recursively parse nested dictionaries
+                val = strip_numpy(val)
+            elif isinstance(val, np.ndarray):
+                # parse vals within lists
+                val = [strip_numpy_val(v) for v in val]
+                print("converted", key, val)
+            out[key] = strip_numpy_val(val)
+            print("adding", key, val, type(val))
+        return out
+    
+    if use_primitives:
+        # replace Numpy arrays and types with Python primitives
+        data = strip_numpy(data)
+    
+    with open(path, "w") as yaml_file:
+        # save to YAML format
+        yaml.dump(data, yaml_file)
+    print("Saved data to:", path)
     return data

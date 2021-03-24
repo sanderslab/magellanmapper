@@ -59,7 +59,7 @@ logger = logs.setup_logger()
 #: str: Suffix for main image.
 SUFFIX_IMAGE5D = "image5d.npy"
 #: str: Suffix for metadata of main image.
-SUFFIX_META = "meta.npz"
+SUFFIX_META = "meta.yml"
 #: str: Suffix for ROI image.
 SUFFIX_SUBIMG = "subimg.npy"
 #: str: Suffix for blobs archive.

@@ -22,7 +22,12 @@ def load_yaml(path, enums=None):
 
     """
     def parse_enum_val(val):
-        if isinstance(val, str):
+        # recursively parse Enum values
+        if isinstance(val, dict):
+            val = parse_enum(val)
+        elif libmag.is_seq(val):
+            val = [parse_enum_val(v) for v in val]
+        elif isinstance(val, str):
             val_split = val.split(".")
             if len(val_split) > 1 and val_split[0] in enums:
                 # replace with the corresponding Enum class

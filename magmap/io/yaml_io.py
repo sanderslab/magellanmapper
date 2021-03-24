@@ -8,6 +8,35 @@ import yaml
 from magmap.io import libmag
 
 
+def _filter_dict(d, fn_parse_val):
+    """Recursively filter keys and values within nested dictionaries
+    
+    Args:
+        d (dict): Dictionary to filter.
+        fn_parse_val (func): Function to apply to each value. Should call
+            this parent function if deep recursion is desired.
+
+    Returns:
+        dict: Filtered dictionary.
+
+    """
+    out = {}
+    for key, val in d.items():
+        if isinstance(val, dict):
+            # recursively filter nested dictionaries
+            val = fn_parse_val(val)
+        elif libmag.is_seq(val):
+            # filter each val within list
+            val = [fn_parse_val(v) for v in val]
+        else:
+            # filter a single val
+            val = fn_parse_val(val)
+        # filter key
+        key = fn_parse_val(key)
+        out[key] = val
+    return out
+
+
 def load_yaml(path, enums=None):
     """Load a YAML file with support for multiple documents and Enums.
 
@@ -25,7 +54,7 @@ def load_yaml(path, enums=None):
     def parse_enum_val(val):
         # recursively parse Enum values
         if isinstance(val, dict):
-            val = parse_enum(val)
+            val = _filter_dict(val, parse_enum_val)
         elif libmag.is_seq(val):
             val = [parse_enum_val(v) for v in val]
         elif isinstance(val, str):
@@ -35,30 +64,13 @@ def load_yaml(path, enums=None):
                 val = enums[val_split[0]][val_split[1]]
         return val
 
-    def parse_enum(d):
-        # recursively parse Enum keys and values within nested dictionaries
-        out = {}
-        for key, val in d.items():
-            if isinstance(val, dict):
-                # recursively parse nested dictionaries
-                val = parse_enum(val)
-            elif libmag.is_seq(val):
-                # parse vals within lists
-                val = [parse_enum_val(v) for v in val]
-            else:
-                # parse a single val
-                val = parse_enum_val(val)
-            key = parse_enum_val(key)
-            out[key] = val
-        return out
-
     with open(path) as yaml_file:
         # load all documents into a generator
         docs = yaml.load_all(yaml_file, Loader=yaml.FullLoader)
         data = []
         for doc in docs:
             if enums:
-                doc = parse_enum(doc)
+                doc = _filter_dict(doc, parse_enum_val)
             data.append(doc)
     return data
 
@@ -78,12 +90,14 @@ def save_yaml(path, data, use_primitives=False):
         unchanged.
 
     """
-    def strip_numpy_val(val):
+    def convert_numpy_val(val):
         # recursively convert Numpy data types to primitives
         if isinstance(val, dict):
-            val = strip_numpy(val)
+            val = _filter_dict(val, convert_numpy_val)
         elif libmag.is_seq(val):
-            val = [strip_numpy_val(v) for v in val]
+            # also replaces any tuples with lists, avoiding tuple flags in
+            # the output file for simplicity
+            val = [convert_numpy_val(v) for v in val]
         else:
             try:
                 val = val.item()
@@ -91,24 +105,9 @@ def save_yaml(path, data, use_primitives=False):
                 pass
         return val
     
-    def strip_numpy(d):
-        # recursively convert Numpy arrays to lists
-        out = {}
-        for key, val in d.items():
-            if isinstance(val, dict):
-                # recursively parse nested dictionaries
-                val = strip_numpy(val)
-            elif isinstance(val, np.ndarray):
-                # parse vals within lists
-                val = [strip_numpy_val(v) for v in val]
-                print("converted", key, val)
-            out[key] = strip_numpy_val(val)
-            print("adding", key, val, type(val))
-        return out
-    
     if use_primitives:
         # replace Numpy arrays and types with Python primitives
-        data = strip_numpy(data)
+        data = _filter_dict(data, convert_numpy_val)
     
     with open(path, "w") as yaml_file:
         # save to YAML format

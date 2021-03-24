@@ -27,8 +27,10 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        # images folder with icons
-        ("../images", "images"),
+        # app resources
+        ("../images", "images"),  # images folder with icons
+        ("../LICENSE.txt", "."),
+        
         # add full package folders since they contain many modules that
         # are dynamically discovered or otherwise not found by Pyinstaller
         *[packaging.get_pkg_path(p) for p in (
@@ -39,14 +41,17 @@ a = Analysis(
             "bioformats",
             "javabridge",
         )],
+        
         # add egg-info folders required for these packages' entry points
         *[packaging.get_pkg_egg(p) for p in (
             "mayavi",
             "pyface",
             "traitsui",
         )],
+        
         # workaround for error when folder is missing
         (path_qt5.resolve(), pathlib.Path("Pyqt5") / "Qt5"),
+        
         # assume that Java Runtime Environment extracted by jlink is in
         # the parent directory of the project's directory and designated by
         # platform to accommodate JREs across platforms

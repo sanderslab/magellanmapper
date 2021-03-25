@@ -23,6 +23,7 @@ configuration such as Python launched via Finder in the MacOS platform.
 
 """
 
+import multiprocessing
 import os
 import platform
 import subprocess
@@ -181,5 +182,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # support multiprocessing in frozen environments, necessary for Windows;
+    # no effect on other platforms or non-frozen environments
+    multiprocessing.freeze_support()
+    
+    # start MagellanMapper
     print("Starting MagellanMapper run script...")
     main()

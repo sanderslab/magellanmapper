@@ -61,7 +61,7 @@ from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
 from magmap.io import df_io, export_stack, importer, libmag, np_io, sqlite
 from magmap.plot import colormaps, plot_2d
-from magmap.settings import atlas_prof, config, grid_search_prof, roi_prof
+from magmap.settings import atlas_prof, config, grid_search_prof, logs, roi_prof
 from magmap.stats import mlearn
 
 _logger = config.logger.getChild(__name__)
@@ -386,9 +386,25 @@ def process_cli_args():
     parser.add_argument(
         "--groups", nargs="*", help="Group values corresponding to each image")
     parser.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="Verbose output to assist with debugging")
+        "-v", "--verbose", nargs="*",
+        help=_get_args_dict_help(
+            "Verbose output to assist with debugging; see config.Verbosity.",
+            config.Verbosity))
     args = parser.parse_args()
+
+    if args.verbose:
+        # verbose mode, including printing longer Numpy arrays for debugging
+        config.verbose = True
+        config.verbosity = args_to_dict(
+            args.verbose, config.Verbosity, config.verbosity)
+        logs.update_log_level(
+            config.logger, config.verbosity[config.Verbosity.LEVEL])
+        log_path = config.verbosity[config.Verbosity.LOG_PATH]
+        if log_path:
+            # log to file
+            logs.add_file_handler(config.logger, log_path)
+        np.set_printoptions(linewidth=200, threshold=10000)
+        _logger.info("Set verbose to {}".format(config.verbosity))
     
     if args.img is not None or args.img_paths:
         # set image file path and convert to basis for additional paths
@@ -431,12 +447,6 @@ def process_cli_args():
         # save figure with file type of this extension; remove leading period
         config.savefig = _parse_none(args.savefig.lstrip("."))
         print("Set savefig extension to {}".format(config.savefig))
-
-    if args.verbose:
-        # verbose mode, including printing longer Numpy arrays for debugging
-        config.verbose = args.verbose
-        np.set_printoptions(linewidth=200, threshold=10000)
-        print("Set verbose to {}".format(config.verbose))
 
     # parse sub-image offsets and sizes;
     # expects x,y,z input but stores as z,y,x by convention

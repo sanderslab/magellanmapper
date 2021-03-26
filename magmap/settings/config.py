@@ -25,12 +25,11 @@ Attributes:
 """
 
 from enum import Enum, auto
-import logging
 
 import numpy as np
 
-#: bool: True for verbose debugging output.
-verbose = False
+from magmap.settings import logs
+
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to
@@ -40,25 +39,19 @@ cpus = None
 
 # LOGGING
 
+class Verbosity(Enum):
+    LEVEL = auto()
+    LOG_PATH = auto()
+
+
+#: dict: Command-line arguments for verbosity.
+verbosity = dict.fromkeys(Verbosity, None)
+
+#: bool: True for verbose debugging output.
+verbose = False
+
 #: :class:`logging.Logger`: Root logger for the application.
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# set up handler for console
-_log_handler_stream = logging.StreamHandler()
-_log_handler_stream.setLevel(logging.INFO)
-_log_handler_stream.setFormatter(logging.Formatter(
-    "%(name)s - %(levelname)s - %(message)s"))
-
-# set up file handler
-_log_handler_file = logging.FileHandler("out.log")
-_log_handler_file.setLevel(logging.INFO)
-_log_handler_file.setFormatter(logging.Formatter(
-    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
-
-# add logging handlers to root logger
-logger.addHandler(_log_handler_stream)
-logger.addHandler(_log_handler_file)
+logger = logs.setup_logger()
 
 
 # IMAGE FILES

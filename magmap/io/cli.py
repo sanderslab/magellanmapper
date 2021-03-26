@@ -64,6 +64,8 @@ from magmap.plot import colormaps, plot_2d
 from magmap.settings import atlas_prof, config, grid_search_prof, roi_prof
 from magmap.stats import mlearn
 
+_logger = config.logger.getChild(__name__)
+
 
 def _parse_coords(arg, rev=False):
     # parse a list of strings into 3D coordinates
@@ -1102,5 +1104,5 @@ def shutdown():
 
     
 if __name__ == "__main__":
-    print("Starting MagellanMapper command-line interface...")
+    _logger.info("Starting MagellanMapper command-line interface...")
     main()

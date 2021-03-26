@@ -18,6 +18,8 @@ from magmap.io import cli, df_io, importer, libmag, naming
 from magmap.plot import plot_3d
 from magmap.settings import config, roi_prof
 
+_logger = config.logger.getChild(__name__)
+
 
 class StackTimes(Enum):
     """Stack processing durations."""
@@ -118,12 +120,11 @@ class StackDetector(object):
                     for x in range(denoise_roi_slices.shape[2]):
                         denoise_coord = (z, y, x)
                         denoise_roi = sub_roi[denoise_roi_slices[denoise_coord]]
-                        libmag.printv_format(
-                            "preprocessing sub-sub-ROI {} of {} (shape {}"
-                            " within sub-ROI shape {})", 
-                            (denoise_coord,
-                             np.subtract(denoise_roi_slices.shape, 1),
-                             denoise_roi.shape, sub_roi.shape))
+                        _logger.debug(
+                            f"preprocessing sub-sub-ROI {denoise_coord} of "
+                            f"{np.subtract(denoise_roi_slices.shape, 1)} "
+                            f"(shape {denoise_roi.shape} within sub-ROI shape "
+                            f"{sub_roi.shape})")
                         denoise_roi = plot_3d.saturate_roi(
                             denoise_roi, channel=channel)
                         denoise_roi = plot_3d.denoise_roi(
@@ -677,7 +678,7 @@ class StackPruner(object):
                     offset = sub_rois_offsets[tuple(coord)]
                     sub_roi = img[sub_roi_slices[tuple(coord)]]
                     size = sub_roi.shape
-                    libmag.printv_format("offset: {}, size: {}", (offset, size))
+                    _logger.debug(f"offset: {offset}, size: {size}")
                     
                     # overlapping region: each region but the last extends 
                     # into the next region, with the overlapping volume from 

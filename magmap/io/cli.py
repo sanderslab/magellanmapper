@@ -242,10 +242,20 @@ def process_cli_args():
         description="Setup environment for MagellanMapper")
 
     # image specification arguments
+    
+    # image path(s) specified as an optional argument; takes precedence
+    # over positional argument
     parser.add_argument(
-        "--img", nargs="*",
+        "--img", nargs="*", default=None,
         help="Main image path(s); after import, the filename is often "
              "given as the original name without its extension")
+    # alternatively specified as the first and only positional parameter
+    # with as many arguments as desired
+    parser.add_argument(
+        "img_paths", nargs="*", default=None,
+        help="Main image path(s); can also be given as --img, which takes "
+             "precedence over this argument")
+    
     parser.add_argument(
         "--meta", nargs="*",
         help="Metadata path(s), which can be given as multiple files "
@@ -378,9 +388,9 @@ def process_cli_args():
         help="Verbose output to assist with debugging")
     args = parser.parse_args()
     
-    if args.img is not None:
+    if args.img is not None or args.img_paths:
         # set image file path and convert to basis for additional paths
-        config.filenames = args.img
+        config.filenames = args.img if args.img else args.img_paths
         config.filename = config.filenames[0]
         print("Set filenames to {}, current filename {}"
               .format(config.filenames, config.filename))

@@ -122,19 +122,3 @@ def add_file_handler(logger, path, backups=5):
         # create a new log file if exists, backing up the old one
         handler_file.doRollover()
     return logger
-
-
-def has_file_handler(logger):
-    """Checks if a file handler exists in the give logger.
-    
-    Args:
-        logger (:class:`logging.Logger`): Logger.
-
-    Returns:
-        bool: True if any file handler exists, False otherwise.
-
-    """
-    for handler in logger.handlers:
-        if isinstance(handler, logging.FileHandler):
-            return True
-    return False

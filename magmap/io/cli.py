@@ -399,12 +399,21 @@ def process_cli_args():
             args.verbose, config.Verbosity, config.verbosity)
         logs.update_log_level(
             config.logger, config.verbosity[config.Verbosity.LEVEL])
-        log_path = config.verbosity[config.Verbosity.LOG_PATH]
-        if log_path:
-            # log to file
-            logs.add_file_handler(config.logger, log_path)
         np.set_printoptions(linewidth=200, threshold=10000)
         _logger.info("Set verbose to {}".format(config.verbosity))
+    
+    # set up logging to given file unless explicitly given an empty string
+    log_path = config.verbosity[config.Verbosity.LOG_PATH]
+    if log_path != "":
+        if log_path is None:
+            log_path = os.path.join(
+                config.user_app_dirs.user_data_dir, "out.log")
+        # log to file
+        logs.add_file_handler(config.logger, log_path)
+    
+    # redirect standard out/error to logging
+    sys.stdout = logs.LogWriter(config.logger.info)
+    sys.stderr = logs.LogWriter(config.logger.error)
     
     if args.img is not None or args.img_paths:
         # set image file path and convert to basis for additional paths
@@ -714,15 +723,6 @@ def process_cli_args():
         if java_home and java_home.exists():
             os.environ["JAVA_HOME"] = str(java_home)
             print(f"Converted JAVA_HOME from {java_home_orig} to {java_home}")
-        
-        if (sys.executable.endswith(f"Contents/MacOS/{config.APP_NAME}") or
-                sys.executable.endswith(f"{config.APP_NAME}.exe")):
-            if not logs.has_file_handler(_logger):
-                logs.add_file_handler(config.logger, os.path.join(
-                    config.user_app_dirs.user_data_dir, "out.log"))
-            
-            sys.stdout = logs.LogWriter(config.logger.info)
-            sys.stderr = logs.LogWriter(config.logger.error)
     
 
 def process_tasks():

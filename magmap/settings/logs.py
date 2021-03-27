@@ -4,6 +4,40 @@
 import logging
 
 
+class LogWriter:
+    """File-like object to write standard output to logging functions.
+    
+    Attributes:
+        fn_logging (func): Logging function
+        buffer (list[str]): String buffer.
+    
+    """
+    def __init__(self, fn_logging):
+        """Create a writer for a logging function."""
+        self.fn_logger = fn_logging
+        self.buffer = []
+
+    def write(self, msg):
+        """Write to logging function with buffering.
+        
+        Args:
+            msg (str): Line to write, from which trailing newlines will be
+                removed.
+
+        """
+        if msg.endswith("\n"):
+            # remove trailing newlines in buffer and pass to logging function
+            self.buffer.append(msg.rstrip("\n"))
+            self.fn_logger("".join(self.buffer))
+            self.buffer = []
+        else:
+            self.buffer.append(msg)
+
+    def flush(self):
+        """Empty function, deferring to logging handler's flush."""
+        pass
+
+
 def setup_logger():
     """Set up a basic root logger with a stream handler.
     
@@ -76,3 +110,19 @@ def add_file_handler(logger, path):
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler_file)
     return logger
+
+
+def has_file_handler(logger):
+    """Checks if a file handler exists in the give logger.
+    
+    Args:
+        logger (:class:`logging.Logger`): Logger.
+
+    Returns:
+        bool: True if any file handler exists, False otherwise.
+
+    """
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler):
+            return True
+    return False

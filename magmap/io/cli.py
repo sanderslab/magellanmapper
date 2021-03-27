@@ -714,6 +714,15 @@ def process_cli_args():
         if java_home and java_home.exists():
             os.environ["JAVA_HOME"] = str(java_home)
             print(f"Converted JAVA_HOME from {java_home_orig} to {java_home}")
+        
+        if (sys.executable.endswith(f"Contents/MacOS/{config.APP_NAME}") or
+                sys.executable.endswith(f"{config.APP_NAME}.exe")):
+            if not logs.has_file_handler(_logger):
+                logs.add_file_handler(config.logger, os.path.join(
+                    config.user_app_dirs.user_data_dir, "out.log"))
+            
+            sys.stdout = logs.LogWriter(config.logger.info)
+            sys.stderr = logs.LogWriter(config.logger.error)
     
 
 def process_tasks():

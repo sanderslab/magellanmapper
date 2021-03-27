@@ -5,6 +5,10 @@
 ### Changes
 
 Installation
+- Windows, macOS, and Linux standalone packages are now provided!
+- MagellanMapper can now be installed without the command-line
+- The Windows installer allows launching the application from the Start Menu
+- The macOS app can be dragged to the Applications to access from Launchpad
 
 GUI
 - Reorganized options to group by viewer

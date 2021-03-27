@@ -3,6 +3,7 @@
 
 import logging
 from logging import handlers
+import pathlib
 
 
 class LogWriter:
@@ -94,23 +95,32 @@ def update_log_level(logger, level):
     return logger
 
 
-def add_file_handler(logger, path):
-    """Add a log timed rotating file handler.
+def add_file_handler(logger, path, backups=5):
+    """Add a rotating log file handler with a new log file.
     
     Args:
         logger (:class:`logging.Logger`): Logger to update.
         path (str): Path to log.
+        backups (int): Number of backups to maintain; defaults to 5.
 
     Returns:
         :class:`logging.Logger`: The logger for chained calls.
 
     """
-    handler_file = handlers.TimedRotatingFileHandler(
-        path, "midnight", backupCount=5)
+    # check if log file already exists
+    roll = pathlib.Path(path).is_file()
+    
+    # create a rotations file handler to manage number of backups while
+    # manually managing rollover based on file presence rather than size
+    handler_file = handlers.RotatingFileHandler(path, backupCount=backups)
     handler_file.setLevel(logger.level)
     handler_file.setFormatter(logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler_file)
+    
+    if roll:
+        # create a new log file if exists, backing up the old one
+        handler_file.doRollover()
     return logger
 
 

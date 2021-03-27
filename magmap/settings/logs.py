@@ -2,6 +2,7 @@
 """Logging utilities."""
 
 import logging
+from logging import handlers
 
 
 class LogWriter:
@@ -94,7 +95,7 @@ def update_log_level(logger, level):
 
 
 def add_file_handler(logger, path):
-    """Add a log file handler.
+    """Add a log timed rotating file handler.
     
     Args:
         logger (:class:`logging.Logger`): Logger to update.
@@ -104,7 +105,8 @@ def add_file_handler(logger, path):
         :class:`logging.Logger`: The logger for chained calls.
 
     """
-    handler_file = logging.FileHandler(path)
+    handler_file = handlers.TimedRotatingFileHandler(
+        path, "midnight", backupCount=5)
     handler_file.setLevel(logger.level)
     handler_file.setFormatter(logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"))

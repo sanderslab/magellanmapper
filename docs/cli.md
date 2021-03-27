@@ -22,6 +22,7 @@ None | `--proc export_planes` | v1.4.0 | Export all channels together into each 
 `--proc load` | `--load [data0], [data1]=<path>, ...` | v1.4.0 | Load different data types, such as `blobs`, `blob_matches`, including custom path
 `--register export_regions --labels level=None` | `--register export_regions --labels level=None orig_colors=1` | v1.4.0 | Use `orig_colors=1` rather than `level` to export only labels present in the image itself; `level=None` gets the parent rather than labels only up to that level
 None | `--register labels_dist` | v1.4.0 | Measure the distance from labels to specified landmarks
+`--verbose` | `--verbose level=<n> log_path=<path>` | v1.4.0 | Log level from 1 (`DEBUG`, most verbose) to 5 (`CRITICAL`, least verbose) and log output path
 
 ## Changes in MagellanMapper v1.3
 

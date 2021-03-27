@@ -78,6 +78,9 @@ Volumetric image processing
 - Blobs positions are scaled to the main image
 
 I/O
+- Logging
+    - Logging using the in-built Python `logging` facility is not supported, including output to log files
+    - The `--verbose level=<n> log_path=<path>` flag specifies the log level from 1 (`DEBUG`, most verbose) to 5 (`CRITICAL`, least verbose) and log output path
 - PDF export
     - Use nearest neighbor interpolation for consistency with 2D image export to other formats
     - Avoid merging layers by turning off image compositing

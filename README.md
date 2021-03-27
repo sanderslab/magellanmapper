@@ -12,6 +12,8 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 ## Installation
 
+**Note**: the forthcoming [v1.4 release](docs/release/release_v1.4.md) contains many new features and changes, avaiable on the main branch. The current latest release is the stabler version. All feedback is welcome!
+
 1. Download MagellanMapper
     - Download and extract the [latest release.](https://github.com/sanderslab/magellanmapper/releases/latest)
     - Or clone the git repo: `git clone https://github.com/sanderslab/magellanmapper.git`

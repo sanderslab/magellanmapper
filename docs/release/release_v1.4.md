@@ -78,6 +78,7 @@ Volumetric image processing
 - Blobs positions are scaled to the main image
 
 I/O
+- Image file metadata now uses YAML format for human-readable files; NPZ files are still supported for backward-compatibility
 - Logging
     - Logging using the in-built Python `logging` facility is not supported, including output to log files
     - The `--verbose level=<n> log_path=<path>` flag specifies the log level from 1 (`DEBUG`, most verbose) to 5 (`CRITICAL`, least verbose) and log output path

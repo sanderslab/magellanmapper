@@ -133,6 +133,8 @@ Code base and docs
 
 #### Python Dependency Changes
 
+- The `appdirs` [package](https://github.com/ActiveState/appdirs) has been added to store user application files in standard operating system-dependent locations, eg `~/Library/Application Support/MagellanMapper` on macOS and `%HOME%\AppData\Local\MagellanMapper` on Windows platforms, allowing the application to be stored in locations without standard write access
+
 #### R Dependency Changes
 
 #### Server dependency Changes

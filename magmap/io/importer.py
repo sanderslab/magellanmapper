@@ -473,14 +473,12 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         if "pixel_type" in info:
             del info["pixel_type"]
 
-    print("Updated metadata:\n{}".format(info))
     # backup and save updated info
+    print("Updating image5d metadata:\n", info)
     libmag.backup_file(
         filename_info_npz, modifier="_v{}".format(curr_ver))
     info["ver"] = IMAGE5D_NP_VER
-    outfile_info = open(filename_info_npz, "wb")
-    np.savez(outfile_info, **info)
-    outfile_info.close()
+    yaml_io.save_yaml(filename_info_npz, info, True)
     
     return True
 

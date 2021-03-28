@@ -714,7 +714,7 @@ def process_cli_args():
         print("Running from frozen environment")
         java_home_orig = os.getenv("JAVA_HOME")
         java_home = None
-        if not os.path.isabs(java_home_orig):
+        if java_home_orig and not os.path.isabs(java_home_orig):
             # treat relative paths as relative to app root dir, not working dir
             java_home = config.app_dir / java_home_orig
         if not java_home or not java_home.exists():

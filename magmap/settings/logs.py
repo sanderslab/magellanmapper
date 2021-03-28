@@ -108,10 +108,12 @@ def add_file_handler(logger, path, backups=5):
 
     """
     # check if log file already exists
-    roll = pathlib.Path(path).is_file()
+    pathl = pathlib.Path(path)
+    roll = pathl.is_file()
     
     # create a rotations file handler to manage number of backups while
     # manually managing rollover based on file presence rather than size
+    pathl.parent.mkdir(parents=True, exist_ok=True)
     handler_file = handlers.RotatingFileHandler(path, backupCount=backups)
     handler_file.setLevel(logger.level)
     handler_file.setFormatter(logging.Formatter(

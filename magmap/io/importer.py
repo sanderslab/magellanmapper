@@ -66,7 +66,8 @@ PIXEL_DTYPE = {
 #     "scaling" and "plane" fields for transposed images
 # 14: removed pixel_type since redundant with image5d.dtype; 
 #     avoids storing object array, which requires loading by pickling
-IMAGE5D_NP_VER = 14  # image5d Numpy saved array version number
+# 15: file format changed from NPZ to YAML
+IMAGE5D_NP_VER = 15  # image5d Numpy saved array version number
 
 #: str: String preceding channel number for multi-channel image import.
 CHANNEL_SEPARATOR = "_ch_"

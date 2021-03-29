@@ -7,6 +7,7 @@ modules and packages not detected but required for MagellanMapper.
 
 """
 
+import os
 import pathlib
 import platform
 
@@ -21,6 +22,15 @@ block_cipher = None
 path_qt5 = pathlib.Path("build") / "Qt5"
 path_qt5.mkdir(parents=True, exist_ok=True)
 (path_qt5 / "stub").touch(exist_ok=True)
+
+# get path to the Java Runtime Environment extracted by jlink from environment
+# variable, defaulting to a relative path designated by platform to accommodate
+# JREs across platforms
+path_jre = os.getenv("JRE_PATH")
+if not path_jre:
+    path_jre = str(pathlib.Path(
+        "..") / ".." / "JREs" / f"jre_{platform.system().lower()}")
+print("Using JRE from:", path_jre)
 
 a = Analysis(
     ["../run.py"],
@@ -52,10 +62,8 @@ a = Analysis(
         # workaround for error when folder is missing
         (path_qt5.resolve(), pathlib.Path("Pyqt5") / "Qt5"),
         
-        # assume that Java Runtime Environment extracted by jlink is in
-        # the parent directory of the project's directory and designated by
-        # platform to accommodate JREs across platforms
-        (f"../../JREs/jre_{platform.system().lower()}", "jre"),
+        # JRE distributable
+        (path_jre, "jre"),
     ],
     hiddenimports=[
         "sklearn.utils._weight_vector",

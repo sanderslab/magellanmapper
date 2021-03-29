@@ -197,7 +197,8 @@ check_gcc() {
 build_jre() {
   echo "Building custom JRE in $2"
   # find dependencies for the given CLASS or JAR file
-  deps="$(jdeps --print-module-deps --recursive --ignore-missing-deps -q "$1")"
+  deps="$("$JAVA_HOME"/bin/jdeps --print-module-deps --recursive \
+    --ignore-missing-deps -q "$1")"
   echo "Includes dependencies: $deps"
   
   # build a lightweight runtime image

@@ -77,6 +77,7 @@ DEFAULT_IMG_STACK_NAME = "myvolume"
 
 _KEY_ANY_CHANNEL = "1+"  # 1+ channel files
 
+_logger = config.logger.getChild(__name__)
 
 def is_javabridge_loaded():
     """Check if Javabridge and Python-Bioformats have been loaded.
@@ -104,6 +105,8 @@ def start_jvm(heap_size="8G"):
     Args:
         heap_size (str): JVM heap size, defaulting to 8G.
     """
+    _logger.info(f"Starting Java for Bioformats using JAVA_HOME set to: "
+                 f"{os.getenv('JAVA_HOME')}")
     if not jb:
         libmag.warn("Python-Javabridge not available, cannot start JVM")
         return

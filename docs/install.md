@@ -286,7 +286,11 @@ ERROR: In ..\Rendering\OpenGL2\vtkOpenGLRenderWindow.cxx, line 741
 vtkWin32OpenGLRenderWindow (00000252735E3450): GLEW could not be initialized: Missing GL version
 ```
 
-Windows Virtual Machines may require installation of Mesa for OpenGL support. Pre-built Mesa software is available from [mesa-dist-win](https://github.com/pal1000/mesa-dist-win). The Desktop OpenGL drivers can be installed system-wide.
+Windows running as a virtual machine (eg in VirtualBox) may require installation of Mesa for OpenGL support. Pre-built Mesa software is available from [Mesa-Dist-Win](https://github.com/pal1000/mesa-dist-win).
+
+1. Download and extract Mesa-Dist-Win [20.3.4](https://github.com/pal1000/mesa-dist-win/releases/tag/20.3.4) (later versions apparently require an additional Vulkan library download)
+1. Run `systemwidedeploy.cmd`
+1. Install the "desktop OpenGL" drivers
 
 ```
 ERROR: In ../Rendering/OpenGL2/vtkOpenGLRenderWindow.cxx, line 754

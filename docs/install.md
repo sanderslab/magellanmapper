@@ -1,6 +1,6 @@
 # Installation of MagellanMapper
 
-MagellanMapper can be installed many different ways dependening on one's Python preferences.
+MagellanMapper can be installed many ways depending on one's Python preferences.
 
 ## Recommended: Install in a Conda environment
 
@@ -232,15 +232,7 @@ As an alternative to WSL, Cygwin itself can be used to build MagellanMapper and 
 As an alternative to Cygwin, MSYS2 can use binaries for many dependencies, minimizing build time. It can also use the MS Visual Studio compiler to build the dependencies that do require compilation. Note that `vcvars64.bat` or equivalent scripts do not appear to be required for these compilations.
 
 
-### Qt/Mayavi/VTK errors
-
-```
-Numpy is required to build Mayavi correctly, please install it first
-```
-
-- During installation via `pip install -r envs/requirements.txt`, the Mayavi package [may fail to install](https://github.com/enthought/mayavi/issues/782)
-- Rerunning this command appears to allow Mayavi to find Numpy now that it has been installed
-
+### Qt errors
 
 ```
 QXcbConnection: Could not connect to display
@@ -253,13 +245,6 @@ qt.qpa.xcb: could not connect to display
 - `setup_conda.sh -s envs/environment_light.yml` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ```
-ImportError: libGL.so.1: cannot open shared object file: No such file or directory
-```
-
-- Leads to `ImportError: No module named 'vtkRenderingOpenGL2Python'`
-- Install the `libgl1-mesa-glx` package in Ubuntu (or similar in other distros)
-
-```
 qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.
 ```
 
@@ -269,6 +254,26 @@ qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it 
   - `libfontconfig.so.1`: Install `libfontconfig1`
   - `libXrender.so.1`: Install `libxrender1`
   - `libxcb-xinerama.so.0`: Install `libxcb-xinerama0`
+
+Additional errors:
+
+- PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
+
+### Mayavi/VTK errors
+
+```
+Numpy is required to build Mayavi correctly, please install it first
+```
+
+- During installation via `pip install -r envs/requirements.txt`, the Mayavi package [may fail to install](https://github.com/enthought/mayavi/issues/782)
+- Rerunning this command appears to allow Mayavi to find Numpy now that it has been installed
+
+```
+ImportError: libGL.so.1: cannot open shared object file: No such file or directory
+```
+
+- Leads to `ImportError: No module named 'vtkRenderingOpenGL2Python'`
+- Install the `libgl1-mesa-glx` package in Ubuntu (or similar in other distros)
 
 ```
 ERROR: In ..\Rendering\OpenGL2\vtkWin32OpenGLRenderWindow.cxx, line 686
@@ -296,7 +301,6 @@ This error may occur in WSL even with an X11 server open. Workarounds include:
 Additional errors:
 
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
-- PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
 
 ### Display issues
 

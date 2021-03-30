@@ -90,9 +90,15 @@ exe = EXE(
     console=False,
     icon="../images/magmap.ico")
 
-# remove Java virtual machine library that takes precedence over any Java home
-# setting on Windows, preventing JVM initialization and causing an exception 
-a.binaries = a.binaries - [("jvm.dll", None, None)]
+a.binaries = a.binaries - [
+    # remove Java virtual machine library that takes precedence over bundled
+    # JRE or any Java home setting on Windows, preventing JVM initialization
+    ("jvm.dll", None, None),
+    
+    # may conflict with corresponding library on newer platforms for VTK
+    ("libstdc++.so.6", None, None),
+]
+
 coll = COLLECT(
     exe,
     a.binaries,

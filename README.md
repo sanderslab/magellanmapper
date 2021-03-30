@@ -12,12 +12,18 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 ## Installation
 
-**Note**: the forthcoming [v1.4 release](docs/release/release_v1.4.md) contains many new features and changes, avaiable on the main branch. The current latest release is the stabler version. All feedback is welcome!
+### Standalone packages
+
+**UPDATE**: the forthcoming [v1.4 release](docs/release/release_v1.4.md) contains many new features and changes. Standlone [installers](https://github.com/sanderslab/magellanmapper/releases) are available for Windows, macOS, and Linux!
+
+These packages do not require use of the terminal, and you can skip the installation steps below. As they are likely rough around the edges, please file any [issues](https://github.com/sanderslab/magellanmapper/issues) you may enounter.
+
+### Install from source
 
 1. Download MagellanMapper
-    - Download and extract the [latest release.](https://github.com/sanderslab/magellanmapper/releases/latest)
-    - Or clone the git repo: `git clone https://github.com/sanderslab/magellanmapper.git`
-1. Install MagellanMapper using the following script in the `magellanmapper` folder.
+    - Download and extract the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest), which is the stable version
+    - Or clone the git repo, which contains all the latest (potentially unstable) updates: `git clone https://github.com/sanderslab/magellanmapper.git`
+1. Install MagellanMapper using the following script in the `magellanmapper` folder
     - On Mac or Linux: `bin/setup_conda`
     - On Windows: `bin\setup_conda.bat`
 

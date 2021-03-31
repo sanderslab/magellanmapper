@@ -27,7 +27,16 @@ Attributes:
 from enum import Enum, auto
 import pathlib
 
-from appdirs import AppDirs
+try:
+    from appdirs import AppDirs
+except ImportError as e:
+    raise ImportError(
+        "The appdirs package requirement was added in v1.4.0. Please install "
+        "it by one of these methods:\n"
+        "- Conda env: run `bin/setup_conda` (Mac/Linux) or "
+        "`bin\\setup_conda.bat (Windows)\n"
+        "- Venv env: run `bin/setup_venv.sh`\n"
+        "- Or after activating your env: run `pip install appdirs`") from e
 import numpy as np
 
 from magmap.settings import logs

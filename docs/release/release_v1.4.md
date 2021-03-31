@@ -6,9 +6,13 @@
 
 Installation
 - Windows, macOS, and Linux standalone packages are now provided!
-- MagellanMapper can now be installed without the command-line
-- The Windows installer allows launching the application from the Start Menu
-- The macOS app can be dragged to the Applications to access from Launchpad
+    - MagellanMapper can now be installed without the command-line
+    - The Windows installer allows launching the application from the Start Menu
+    - The macOS app can be dragged to the Applications to access from Launchpad
+- Environment setup scripts support package updates
+    - As we added a [new dependency](#python-dependency-changes), we made it easier to update existing environments
+    - Re-running `bin\setup_conda.bat` on Windows updates as `bin/setup_conda` has on Mac/Linux
+    - `bin/venv.sh` can now also be re-run to update Venv environments
 
 GUI
 - Reorganized options to group by viewer

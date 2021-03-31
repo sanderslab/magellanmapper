@@ -3,6 +3,7 @@ channels:
   - defaults
 dependencies:
   - aiocontextvars=0.2.2=py_0
+  - appdirs=1.4.4=pyh9f0ad1d_0
   - apptools=5.1.0=pyh44b312d_0
   - awscli=1.19.22=py36ha15d459_0
   - boto3=1.17.22=pyhd8ed1ab_0
@@ -82,19 +83,19 @@ dependencies:
   - networkx=2.5=py_0
   - numpy=1.19.5=py36hd1b969e_1
   - olefile=0.46=pyh9f0ad1d_1
-  - openjdk=8.0.265=0
+  - openjdk=8.0.282=h57928b3_0
   - openmp=5.0.0=vc14_1
-  - openpyxl=3.0.6=pyhd8ed1ab_0
-  - openssl=1.1.1j=h8ffe710_0
+  - openpyxl=3.0.7=pyhd8ed1ab_0
+  - openssl=1.1.1k=h8ffe710_0
   - pandas=1.1.5=py36he38d939_0
   - pillow=8.1.1=py36h9cbe6be_0
   - pip=21.0.1=pyhd8ed1ab_0
   - proj=7.2.0=h1cfcee9_2
   - pugixml=1.11.4=h0e60522_0
-  - pyamg=4.0.0=py36h62f253e_1003
+  - pyamg=4.0.0=py36h352ec11_1004
   - pyasn1=0.4.8=py_0
   - pycparser=2.20=pyh9f0ad1d_2
-  - pyface=7.3.0=pyh44b312d_0
+  - pyface=7.3.0=pyh44b312d_1
   - pygments=2.8.0=pyhd8ed1ab_0
   - pyopenssl=20.0.1=pyhd8ed1ab_0
   - pyparsing=2.4.7=pyh9f0ad1d_0

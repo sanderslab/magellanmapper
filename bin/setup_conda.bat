@@ -37,7 +37,18 @@ CALL conda init
 ECHO Creating a Conda environment for MagellanMapper with all supporting packages.
 ECHO This may take awhile, especially during the 'Solving environment' and after the 'Executing transaction' steps.
 ECHO Clicking this window may cause it to pause; try pressing 'Esc' to recontinue.
-CALL conda env create -n mag -f environment.yml
+conda env list | >nul find /i "mag" && set "check_env=0" || set "check_env=1"
+IF "%check_env%" == "0" (
+  :: update existing environment
+  ECHO 'mag' environment exists, updating...
+  CALL conda activate mag
+  CALL conda env update -f environment.yml
+) ELSE (
+  :: create a new environment and install dependencies
+  CALL conda env create -n mag -f environment.yml
+)
+
+:: check for successful environment creation
 conda env list | >nul find /i "mag" && set "check_env=0" || set "check_env=1"
 IF "%check_env%" == "0" (
   ECHO MagellanMapper setup complete! Please run 'conda activate mag' before running MagellanMapper.

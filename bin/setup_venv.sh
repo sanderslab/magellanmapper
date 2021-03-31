@@ -3,8 +3,10 @@
 # Author: David Young 2019
 
 HELP="
-Sets up the initial MagellanMapper environment using the built-in
+Sets up the MagellanMapper environment using the Python built-in
 venv environment manager.
+
+Also handles package updates for existing environments.
 
 Arguments:
   -h: Show help and exit.
@@ -103,19 +105,39 @@ if $warn_prebuilt; then
   #check_git # only necessary if deps req git
 fi
 
-# create new virtual environment
-env_path="${venv_dir}/${env_name}"
-if [[ -e "$env_path" ]]; then
-  # prevent environment directory conflict
-  echo "$env_path already exists. Please give a different venv directory name."
-  exit 1
-fi
 if [[ ! -d "$venv_dir" ]]; then
   # create directory structure to hold new environment folder
   mkdir -p "$venv_dir"
 fi
-"$python" -m venv "$env_path"
+
+env_path="${venv_dir}/${env_name}"
 env_act="${env_path}/bin/activate"
+update=""
+if [[ -e "$env_path" ]]; then
+  # target venv dir exists
+  if [[ ! -e "$env_act" ]]; then
+    # assume that dir is not a venv dir if activation file is absent
+    echo "$env_path exists but does not appear to be a venv."
+    echo "Please choose another venv path. Exiting."
+    exit 1
+  fi
+  
+  # check whether user wishes to update existing directory
+  read -r -p "$env_path already exists. Update all packages (y/n)? " update
+  case "${update:0:1}" in
+    y|Y )
+      echo "Will update all packages..."
+    ;;
+    * )
+      echo "Will only add new dependencies..."
+    ;;
+  esac
+else
+  # create new virtual environment
+  "$python" -m venv "$env_path"
+fi
+
+# activate the environment
 if [[ ! -e "$env_act" ]]; then
   # env generated in Windows does not contain bin folder; will need to 
   # change line endings if running in Cygwin (works as-is in MSYS2)
@@ -127,10 +149,19 @@ if [[ ! -e "$env_act" ]]; then
   fi
 fi
 source "$env_act"
+if [[ -z "$VIRTUAL_ENV" ]]; then
+  echo "Could not activate new venv environment at $env_path, exiting"
+  exit 1
+fi
 
 # update pip and install MagellanMapper including required dependencies
 "$python" -m pip install -U pip
-pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
+if [[ -n "$update" ]]; then
+  # update all dependencies based on setup.py
+  args_update=(--upgrade --upgrade-strategy eager)
+fi
+pip install "${args_update[@]}" -e .[all] --extra-index-url \
+  https://pypi.fury.io/dd8/
 
 echo "MagellanMapper environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"

@@ -2,14 +2,14 @@
 # Sets up the MagellanMapper environment
 # Author: David Young 2017, 2020
 
+CONDA_ENV="mag" # default conda env name
+ENV_CONFIG="environment.yml" # default environment spec file
 HELP="
-Sets up the initial MagellanMapper environment with Anaconda and all
-packages including git repositories.
+Set up the MagellanMapper environment with Conda.
 
-Downloads and installs Miniconda3 if it is not already present. 
-Installs or updates a Conda environment named \"clr\" by 
-default in a standard graphical setup or \"clrclu\" for a 
-lightweight setup.
+Downloads and installs Miniconda3 if it is not already present. Creates the
+given Conda environment and installs all dependencies, or updates the
+environment if already present.
 
 Although this installation generally makes use of Conda 
 packages, Pip packages are occasionally used instead if the 
@@ -20,17 +20,13 @@ clones will be downloaded and installed through Pip.
 
 Arguments:
   -h: Show help and exit.
-  -n [name]: Set the Conda environment name; defaults to CONDA_ENV.
+  -n [name]: Set the Conda environment name; defaults to \"${CONDA_ENV}\".
   -s [spec]: Specify the environment specification file; defaults to 
-    ENV_CONFIG.
+    \"${ENV_CONFIG}\".
 "
 
-# default Conda environment names as found in .yml configs
-CONDA_ENV="mag"
+# set to default Conda environment name and spec file
 env_name="$CONDA_ENV"
-
-# default .yml files
-ENV_CONFIG="environment.yml"
 config="$ENV_CONFIG"
 
 OPTIND=1

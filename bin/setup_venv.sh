@@ -154,8 +154,10 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
   exit 1
 fi
 
-# update pip and install MagellanMapper including required dependencies
-"$python" -m pip install -U pip
+# update pip, using python3 since python3.y may not be in env
+python3 -m pip install -U pip
+
+# install MagellanMapper including required dependencies
 if [[ -n "$update" ]]; then
   # update all dependencies based on setup.py
   args_update=(--upgrade --upgrade-strategy eager)

@@ -25,7 +25,7 @@ RUN mkdir /home/$username \
     && mkdir $BASE_DIR \
     && chown -R $username:$username $BASE_DIR
 
-# set up appliction base diretory and change to non-root user
+# set up appliction base directory and change to non-root user
 WORKDIR $BASE_DIR
 USER $username
 

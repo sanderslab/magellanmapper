@@ -61,8 +61,10 @@ from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
 from magmap.io import df_io, export_stack, importer, libmag, np_io, sqlite
 from magmap.plot import colormaps, plot_2d
-from magmap.settings import atlas_prof, config, grid_search_prof, roi_prof
+from magmap.settings import atlas_prof, config, grid_search_prof, logs, roi_prof
 from magmap.stats import mlearn
+
+_logger = config.logger.getChild(__name__)
 
 
 def _parse_coords(arg, rev=False):
@@ -242,10 +244,20 @@ def process_cli_args():
         description="Setup environment for MagellanMapper")
 
     # image specification arguments
+    
+    # image path(s) specified as an optional argument; takes precedence
+    # over positional argument
     parser.add_argument(
-        "--img", nargs="*",
+        "--img", nargs="*", default=None,
         help="Main image path(s); after import, the filename is often "
              "given as the original name without its extension")
+    # alternatively specified as the first and only positional parameter
+    # with as many arguments as desired
+    parser.add_argument(
+        "img_paths", nargs="*", default=None,
+        help="Main image path(s); can also be given as --img, which takes "
+             "precedence over this argument")
+    
     parser.add_argument(
         "--meta", nargs="*",
         help="Metadata path(s), which can be given as multiple files "
@@ -374,13 +386,38 @@ def process_cli_args():
     parser.add_argument(
         "--groups", nargs="*", help="Group values corresponding to each image")
     parser.add_argument(
-        "-v", "--verbose", action="store_true",
-        help="Verbose output to assist with debugging")
+        "-v", "--verbose", nargs="*",
+        help=_get_args_dict_help(
+            "Verbose output to assist with debugging; see config.Verbosity.",
+            config.Verbosity))
     args = parser.parse_args()
+
+    if args.verbose:
+        # verbose mode, including printing longer Numpy arrays for debugging
+        config.verbose = True
+        config.verbosity = args_to_dict(
+            args.verbose, config.Verbosity, config.verbosity)
+        logs.update_log_level(
+            config.logger, config.verbosity[config.Verbosity.LEVEL])
+        np.set_printoptions(linewidth=200, threshold=10000)
+        _logger.info("Set verbose to {}".format(config.verbosity))
     
-    if args.img is not None:
+    # set up logging to given file unless explicitly given an empty string
+    log_path = config.verbosity[config.Verbosity.LOG_PATH]
+    if log_path != "":
+        if log_path is None:
+            log_path = os.path.join(
+                config.user_app_dirs.user_data_dir, "out.log")
+        # log to file
+        logs.add_file_handler(config.logger, log_path)
+    
+    # redirect standard out/error to logging
+    sys.stdout = logs.LogWriter(config.logger.info)
+    sys.stderr = logs.LogWriter(config.logger.error)
+    
+    if args.img is not None or args.img_paths:
         # set image file path and convert to basis for additional paths
-        config.filenames = args.img
+        config.filenames = args.img if args.img else args.img_paths
         config.filename = config.filenames[0]
         print("Set filenames to {}, current filename {}"
               .format(config.filenames, config.filename))
@@ -419,12 +456,6 @@ def process_cli_args():
         # save figure with file type of this extension; remove leading period
         config.savefig = _parse_none(args.savefig.lstrip("."))
         print("Set savefig extension to {}".format(config.savefig))
-
-    if args.verbose:
-        # verbose mode, including printing longer Numpy arrays for debugging
-        config.verbose = args.verbose
-        np.set_printoptions(linewidth=200, threshold=10000)
-        print("Set verbose to {}".format(config.verbose))
 
     # parse sub-image offsets and sizes;
     # expects x,y,z input but stores as z,y,x by convention
@@ -649,10 +680,22 @@ def process_cli_args():
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
     
+    # set up application directories
+    user_dir = config.user_app_dirs.user_data_dir
+    if not os.path.isdir(user_dir):
+        # make application data directory
+        if os.path.exists(user_dir):
+            # backup any non-directory file
+            libmag.backup_file(user_dir)
+        os.makedirs(user_dir)
+    
     if args.db:
-        # set main database path
-        config.db_name = args.db
-        print("Set database name to {}".format(config.db_name))
+        # set main database path to user arg
+        config.db_path = args.db
+        print("Set database name to {}".format(config.db_path))
+    else:
+        # set default path
+        config.db_path = os.path.join(user_dir, config.db_path)
 
     if args.truth_db:
         # set settings for separate database of "truth blobs"
@@ -725,8 +768,13 @@ def setup_dbs():
         filename_base = importer.filename_to_base(
             config.filename, config.series)
     
+    # get any user-supplied truth database path, falling back to name based
+    # on filename or default name
     truth_db_path = config.truth_db_params[config.TruthDB.PATH]
-    truth_db_name_base = filename_base if filename_base else sqlite.DB_NAME_BASE
+    user_dir = config.user_app_dirs.user_data_dir
+    truth_db_name_base = filename_base if filename_base else os.path.join(
+        user_dir, sqlite.DB_NAME_BASE)
+    
     if config.truth_db_mode is config.TruthDBModes.VIEW:
         # loads truth DB as a separate database in parallel with the given 
         # editable database, with name based on filename by default unless 
@@ -741,7 +789,8 @@ def setup_dbs():
         if not config.verified_db:
             # creates a new verified DB to store all ROC results
             config.verified_db = sqlite.ClrDB()
-            config.verified_db.load_db(sqlite.DB_NAME_VERIFIED, True)
+            config.verified_db.load_db(
+                os.path.join(user_dir, sqlite.DB_NAME_VERIFIED), True)
         if truth_db_path:
             # load truth DB path to verify against if explicitly given
             try:
@@ -753,7 +802,7 @@ def setup_dbs():
     elif config.truth_db_mode is config.TruthDBModes.VERIFIED:
         # loads verified DB as the main DB, which includes copies of truth 
         # values with flags for whether they were detected
-        path = sqlite.DB_NAME_VERIFIED
+        path = os.path.join(user_dir, sqlite.DB_NAME_VERIFIED)
         if truth_db_path: path = truth_db_path
         try:
             config.db = sqlite.ClrDB()
@@ -766,11 +815,11 @@ def setup_dbs():
     elif config.truth_db_mode is config.TruthDBModes.EDIT:
         # loads truth DB as the main database for editing rather than 
         # loading as a truth database
-        config.db_name = truth_db_path
-        if not config.db_name: 
-            config.db_name = "{}{}".format(
+        config.db_path = truth_db_path
+        if not config.db_path: 
+            config.db_path = "{}{}".format(
                 os.path.basename(truth_db_name_base), sqlite.DB_SUFFIX_TRUTH)
-        print("Editing truth database at {}".format(config.db_name))
+        print("Editing truth database at {}".format(config.db_path))
     
     if config.db is None:
         # load the main database
@@ -1092,5 +1141,5 @@ def shutdown():
 
     
 if __name__ == "__main__":
-    print("Starting MagellanMapper command-line interface...")
+    _logger.info("Starting MagellanMapper command-line interface...")
     main()

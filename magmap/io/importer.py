@@ -22,10 +22,9 @@ import re
 from xml import etree as et
 import warnings
 
-from magmap.settings import config
-from magmap.io import np_io
+from magmap.io import libmag, np_io, yaml_io
 from magmap.plot import plot_3d
-from magmap.io import libmag
+from magmap.settings import config
 
 import numpy as np
 try:
@@ -67,7 +66,8 @@ PIXEL_DTYPE = {
 #     "scaling" and "plane" fields for transposed images
 # 14: removed pixel_type since redundant with image5d.dtype; 
 #     avoids storing object array, which requires loading by pickling
-IMAGE5D_NP_VER = 14  # image5d Numpy saved array version number
+# 15: file format changed from NPZ to YAML
+IMAGE5D_NP_VER = 15  # image5d Numpy saved array version number
 
 #: str: String preceding channel number for multi-channel image import.
 CHANNEL_SEPARATOR = "_ch_"
@@ -77,6 +77,7 @@ DEFAULT_IMG_STACK_NAME = "myvolume"
 
 _KEY_ANY_CHANNEL = "1+"  # 1+ channel files
 
+_logger = config.logger.getChild(__name__)
 
 def is_javabridge_loaded():
     """Check if Javabridge and Python-Bioformats have been loaded.
@@ -104,6 +105,8 @@ def start_jvm(heap_size="8G"):
     Args:
         heap_size (str): JVM heap size, defaulting to 8G.
     """
+    _logger.info(f"Starting Java for Bioformats using JAVA_HOME set to: "
+                 f"{os.getenv('JAVA_HOME')}")
     if not jb:
         libmag.warn("Python-Javabridge not available, cannot start JVM")
         return
@@ -362,45 +365,44 @@ def deconstruct_np_filename(np_filename, sep="_", keep_subimg=False):
 def save_image_info(filename_info_npz, names, sizes, resolutions, 
                     magnification, zoom, near_min, near_max, 
                     scaling=None, plane=None):
-    """Save image metadata.
+    """Save image metadata to YAML file format.
     
     Args:
-        filename_info_npz: Output path.
-        names: Sequence of names for each series.
-        sizes: Sequence of sizes for each series.
-        resolutions: Sequence of resolutions for each series.
-        magnification: Objective magnification.
-        zoom: Objective zoom.
-        near_min: Sequence of near minimum intensities, with each element 
-            in turn holding a sequence with values for each channel.
-        near_max: Sequence of near maximum intensities, with each element 
-            in turn holding a sequence with values for each channel.
-        scaling: Rescaling value for up/downsampled images; defaults 
+        filename_info_npz (str): Output path.
+        names (Sequence): Sequence of names for each series.
+        sizes (Sequence): Sequence of sizes for each series.
+        resolutions (Sequence): Sequence of resolutions for each series.
+        magnification (float): Objective magnification.
+        zoom (float): Objective zoom.
+        near_min (list[float]): Sequence of near minimum intensities, with
+            each element in turn holding a sequence with values for each
+            channel.
+        near_max (list[float]): Sequence of near maximum intensities, with
+            each element in turn holding a sequence with values for each
+            channel.
+        scaling (float): Rescaling value for up/downsampled images; defaults 
             to None.
-        plane: Planar orientation compared with original for transposed 
+        plane (str): Planar orientation compared with original for transposed 
             images; defaults to None.
 
     Returns:
-        :dict: The saved metadata as a dictionary.
+        dict: The saved metadata as a dictionary.
     
     """
-    outfile_info = open(filename_info_npz, "wb")
-    time_start = time()
-    np.savez(outfile_info, ver=IMAGE5D_NP_VER, names=names, sizes=sizes, 
-             resolutions=resolutions, magnification=magnification, zoom=zoom, 
-             near_min=near_min, near_max=near_max, scaling=scaling, plane=plane)
-    outfile_info.close()
-    print("info file saved to {}".format(filename_info_npz))
-    print("file save time: {}".format(time() - time_start))
-    
-    # reload and show info file contents
-    print("Saved image metadata:")
-    info = np.load(filename_info_npz)
-    output = np_io.read_np_archive(info)
-    info.close()
-    for key, value in output.items():
-        print("{}: {}".format(key, value))
-    return output
+    data = {
+        "ver": IMAGE5D_NP_VER,
+        "names": names,
+        "sizes": sizes,
+        "resolutions": resolutions,
+        "magnification": magnification,
+        "zoom": zoom,
+        "near_min": near_min,
+        "near_max": near_max,
+        "scaling": scaling,
+        "plane": plane,
+    }
+    yaml_io.save_yaml(filename_info_npz, data, True)
+    return data
 
 
 def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
@@ -474,14 +476,12 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
         if "pixel_type" in info:
             del info["pixel_type"]
 
-    print("Updated metadata:\n{}".format(info))
     # backup and save updated info
+    print("Updating image5d metadata:\n", info)
     libmag.backup_file(
         filename_info_npz, modifier="_v{}".format(curr_ver))
     info["ver"] = IMAGE5D_NP_VER
-    outfile_info = open(filename_info_npz, "wb")
-    np.savez(outfile_info, **info)
-    outfile_info.close()
+    yaml_io.save_yaml(filename_info_npz, info, True)
     
     return True
 
@@ -504,11 +504,23 @@ def load_metadata(path, check_ver=False, assign=True):
     print("Reading image metadata from {}".format(path))
     image5d_ver_num = -1
     try:
-        archive = np.load(path)
+        # load metadata in YAML format (v1.4+)
+        output = yaml_io.load_yaml(path)
+        if output:
+            # metadata is in first document
+            output = output[0]
     except FileNotFoundError:
-        libmag.warn("Could not find metadata file {}".format(path))
-        return None, image5d_ver_num
-    output = np_io.read_np_archive(archive)
+        # fall back to pre-v1.4 NPZ file format
+        libmag.warn("Could not find metadata file '{}', will check NPZ format"
+                    .format(path))
+        path_npz = f"{os.path.splitext(path)[0]}.npz"
+        try:
+            output = np_io.read_np_archive(np.load(path_npz))
+        except FileNotFoundError:
+            libmag.warn("Could not find metadata file '{}', skipping"
+                        .format(path_npz))
+            return None, image5d_ver_num
+    
     try:
         # find the info version number
         image5d_ver_num = output["ver"]
@@ -540,7 +552,7 @@ def assign_metadata(md):
     except KeyError:
         print("could not find sizes")
     try:
-        config.resolutions = md["resolutions"]
+        config.resolutions = np.array(md["resolutions"])
         print("set resolutions to {}".format(config.resolutions))
     except KeyError:
         print("could not find resolutions")
@@ -563,7 +575,7 @@ def assign_metadata(md):
         config.near_max = md["near_max"]
         print("set near_max to {}".format(config.near_max))
         if config.vmaxs is None:
-            config.vmax_overview = config.near_max * 1.1
+            config.vmax_overview = np.multiply(config.near_max, 1.1)
         print("Set vmax_overview to {}".format(config.vmax_overview))
     except KeyError:
         print("could not find near_max")

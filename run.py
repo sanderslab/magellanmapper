@@ -23,6 +23,7 @@ configuration such as Python launched via Finder in the MacOS platform.
 
 """
 
+import multiprocessing
 import os
 import platform
 import subprocess
@@ -138,6 +139,28 @@ def main():
         launch_magmap()
         return
     
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+        # adjust JAVA_HOME environment variable for frozen environment,
+        # using the PyInstaller-specific attributes indicating this env 
+        java_home_orig = os.getenv("JAVA_HOME")
+        java_home = None
+        if java_home_orig and not os.path.isabs(java_home_orig):
+            # treat relative paths as relative to app root dir, not working dir
+            java_home = os.path.join(sys._MEIPASS, java_home_orig)
+        if not java_home or not os.path.isdir(java_home):
+            # if Java home not set, check if custom JRE is in app root dir
+            java_home = os.path.join(sys._MEIPASS, "jre")
+        if java_home and os.path.isdir(java_home):
+            os.environ["JAVA_HOME"] = str(java_home)
+            home_orig = (java_home_orig if java_home_orig is None
+                         else f"\"{java_home_orig}\"")
+            print(f"Converted JAVA_HOME from {home_orig} to \"{java_home}\"")
+        
+        # bypass environment activation
+        print("Launching from from bundled environment")
+        launch_magmap()
+        return
+
     use_sys_shell = False
     if platform.system() == "Windows":
         # replace Conda hook with Command Prompt shell hook
@@ -175,5 +198,10 @@ def main():
 
 
 if __name__ == "__main__":
+    # support multiprocessing in frozen environments, necessary for Windows;
+    # no effect on other platforms or non-frozen environments
+    multiprocessing.freeze_support()
+    
+    # start MagellanMapper
     print("Starting MagellanMapper run script...")
     main()

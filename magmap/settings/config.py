@@ -24,16 +24,51 @@ Attributes:
         in the labels image.
 """
 
-import numpy as np
 from enum import Enum, auto
+import pathlib
 
-#: bool: True for verbose debugging output.
-verbose = False
+try:
+    from appdirs import AppDirs
+except ImportError as e:
+    raise ImportError(
+        "The appdirs package requirement was added in v1.4.0. Please install "
+        "it by one of these methods:\n"
+        "- Conda env: run `bin/setup_conda` (Mac/Linux) or "
+        "`bin\\setup_conda.bat (Windows)\n"
+        "- Venv env: run `bin/setup_venv.sh`\n"
+        "- Or after activating your env: run `pip install appdirs`") from e
+import numpy as np
+
+from magmap.settings import logs
+
+#: str: Application name.
+APP_NAME = "MagellanMapper"
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to
 # use the number determined by the CPU count.
 cpus = None
+#: PurePath: Application root directory path.
+app_dir = pathlib.Path(__file__).resolve().parent.parent.parent
+#: str: Accessor to application-related user directories.
+user_app_dirs = AppDirs(APP_NAME, False)
+
+
+# LOGGING
+
+class Verbosity(Enum):
+    LEVEL = auto()
+    LOG_PATH = auto()
+
+
+#: dict: Command-line arguments for verbosity.
+verbosity = dict.fromkeys(Verbosity, None)
+
+#: bool: True for verbose debugging output.
+verbose = False
+
+#: :class:`logging.Logger`: Root logger for the application.
+logger = logs.setup_logger()
 
 
 # IMAGE FILES
@@ -41,7 +76,7 @@ cpus = None
 #: str: Suffix for main image.
 SUFFIX_IMAGE5D = "image5d.npy"
 #: str: Suffix for metadata of main image.
-SUFFIX_META = "meta.npz"
+SUFFIX_META = "meta.yml"
 #: str: Suffix for ROI image.
 SUFFIX_SUBIMG = "subimg.npy"
 #: str: Suffix for blobs archive.
@@ -378,7 +413,7 @@ TruthDBModes = Enum(
 truth_db_mode = None
 
 DB_NAME = "magmap.db"
-db_name = DB_NAME  # path to main DB
+db_path = DB_NAME  # path to main DB
 db = None  # main DB
 truth_db = None  # truth blobs DB
 verified_db = None  # automated verifications DB

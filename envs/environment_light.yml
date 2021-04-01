@@ -9,6 +9,7 @@ dependencies:
   - pandas
   - scikit-image
   - scikit-learn
+  - appdirs
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - simpleitk==1.2.0rc2.dev1162+g2a79d

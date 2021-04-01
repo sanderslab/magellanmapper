@@ -382,18 +382,6 @@ def printv(*s):
         print(*s)
 
 
-def printv_format(s, form):
-    """Print a formatted string to console only if verbose.
-    
-    Args:
-        s: String to be formatted and printed if :attr:``config.verbose`` 
-            is true.
-        form: String by which to format ``s``.
-    """
-    if config.verbose:
-        print(s.format(*form))
-
-
 def printcb(s, fn_callback):
     """Print a string to the terminal and call a callback function.
     

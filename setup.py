@@ -29,7 +29,7 @@ config = {
     "version": "1.4.0",
     "packages": setuptools.find_packages(),
     "scripts": [], 
-    "python_requires": ">=3.6",  # may work on earlier versions
+    "python_requires": ">=3.6",
     "install_requires": [
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
@@ -43,6 +43,7 @@ config = {
         "scikit-learn",
         "simpleitk==1.2.0rc2.dev1162+g2a79d",  # pre-built SimpleElastix
         "PyYAML",
+        "appdirs",
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 
@@ -58,5 +59,7 @@ config = {
     }, 
 }
 
-# perform setup
-setuptools.setup(**config)
+
+if __name__ == "__main__":
+    # perform setup
+    setuptools.setup(**config)

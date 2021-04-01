@@ -37,6 +37,7 @@ except AttributeError:
 
 # import PyFace components after HiDPI adjustment
 from pyface.api import FileDialog, OK
+from pyface.image_resource import ImageResource
 from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
                         Int, List, Array, Str, Bool, Any,
                         push_exception_handler, Property, File)
@@ -61,8 +62,11 @@ from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config
 
 
-# default ROI name
+#: str: default ROI name.
 _ROI_DEFAULT = "None selected"
+
+#: `pathlib.Path`: Absolute path to image icon.
+_ICON_PATH = config.app_dir / "images" / "magmap.png"
 
 
 def main():
@@ -147,6 +151,11 @@ class VisHandler(Handler):
         # first found widget
         tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
         tab_widgets[0].currentChanged.connect(handle_tab_changed)
+        
+        # WORKAROUND: TraitsUI icon does not work in Mac; use PyQt directly to
+        # display application window icon using abs path; ignored in Windows
+        QtWidgets.QApplication.instance().setWindowIcon(QtGui.QIcon(
+            str(_ICON_PATH)))
         return True
 
     def closed(self, info, is_ok):
@@ -861,6 +870,9 @@ class Visualization(HasTraits):
              editor=SceneEditor(scene_class=MayaviScene)),
     )
 
+    # icon as a Pyface resource if image file exists
+    icon_img = ImageResource(str(_ICON_PATH)) if _ICON_PATH.exists() else None
+    
     # set up the GUI layout; control the HSplit width ratio using a width
     # for this whole view and a width for an item in panel_figs
     view = View(
@@ -873,6 +885,7 @@ class Visualization(HasTraits):
         title="MagellanMapper",
         statusbar="_status_bar_msg",
         resizable=True,
+        icon=icon_img,
     )
 
     def __init__(self):

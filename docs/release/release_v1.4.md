@@ -5,6 +5,14 @@
 ### Changes
 
 Installation
+- Windows, macOS, and Linux standalone packages are now provided!
+    - MagellanMapper can now be installed without the command-line
+    - The Windows installer allows launching the application from the Start Menu
+    - The macOS app can be dragged to the Applications to access from Launchpad
+- Environment setup scripts support package updates
+    - As we added a [new dependency](#python-dependency-changes), we made it easier to update existing environments
+    - Re-running `bin\setup_conda.bat` on Windows updates as `bin/setup_conda` has on Mac/Linux
+    - `bin/venv.sh` can now also be re-run to update Venv environments
 
 GUI
 - Reorganized options to group by viewer
@@ -78,6 +86,10 @@ Volumetric image processing
 - Blobs positions are scaled to the main image
 
 I/O
+- Image file metadata now uses YAML format for human-readable files; NPZ files are still supported for backward-compatibility
+- Logging
+    - Logging using the in-built Python `logging` facility is not supported, including output to log files
+    - The `--verbose level=<n> log_path=<path>` flag specifies the log level from 1 (`DEBUG`, most verbose) to 5 (`CRITICAL`, least verbose) and log output path
 - PDF export
     - Use nearest neighbor interpolation for consistency with 2D image export to other formats
     - Avoid merging layers by turning off image compositing
@@ -118,6 +130,9 @@ R stats and plots
 - Fixed to generate plots in both interactive and non-interactive environments
 
 Code base and docs
+- Python APIs
+    - Previously Python APIs compatible with both Python 2 and 3 have been used when possible, but much of the package requires Python 3, and testing has been on Python >= 3.6
+    - For a more consistent and modern codebase, we are initiating use of Python 3 APIs such as `pathlib` and specifically 3.6+ features such as f-strings
 - More links to external packages in API docs
 - Instructions on building the API docs
 - `Blobs` and `Image5d` are being migrated to class structures for better encapsulation and additional metadata
@@ -125,6 +140,8 @@ Code base and docs
 ### Dependency Updates
 
 #### Python Dependency Changes
+
+- The `appdirs` [package](https://github.com/ActiveState/appdirs) has been added to store user application files in standard operating system-dependent locations, eg `~/Library/Application Support/MagellanMapper` on macOS and `%HOME%\AppData\Local\MagellanMapper` on Windows platforms, allowing the application to be stored in locations without standard write access
 
 #### R Dependency Changes
 

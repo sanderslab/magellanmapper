@@ -5,7 +5,6 @@ __pycache__
 *.jpg
 *.npz
 *.pdf
-*.png
 *.sif
 *.zip
 docs/_build

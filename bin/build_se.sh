@@ -109,6 +109,7 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   # turn off virtual environment creation
   cmake -DCMAKE_CXX_COMPILER:STRING=/usr/bin/$compiler_cpp \
     -DCMAKE_C_COMPILER:STRING=/usr/bin/$compiler_c \
+    -DWRAP_PYTHON:BOOL=ON \
     -DWRAP_JAVA:BOOL=OFF -DWRAP_LUA:BOOL=OFF \
     -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF \
     -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF \

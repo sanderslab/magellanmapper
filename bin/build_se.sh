@@ -23,6 +23,10 @@ Arguments:
     to this script's directory. Default to \"../SimpleElastix\".
 "
 
+# attempt compatibility with lowest Mac target; Python must have been
+# compiled with at least this target, or setting will be ignored
+export MACOSX_DEPLOYMENT_TARGET=10.9
+
 build_dir=""
 se_dir=""
 PKG="SimpleITK-build/Wrapping/Python"

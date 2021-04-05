@@ -98,10 +98,13 @@ class BlobMatch:
             n (int): 1 for blob1, otherwise blob 2.
 
         Returns:
-            :class:`numpy.ndarray`: Numpy array of the given blob type.
+            :class:`numpy.ndarray`: Numpy array of the given blob type, or
+            None if the blob column does not exist.
 
         """
         col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
+        if col.value not in self.df:
+            return None
         return np.vstack(self.df[col.value])
     
     def update_blobs(self, fn, *args):
@@ -113,10 +116,11 @@ class BlobMatch:
             *args (Any): Additional arguments to ``fn``.
 
         """
-        self.df[BlobMatch.Cols.BLOB1.value] = fn(
-            self.get_blobs(1), *args).tolist()
-        self.df[BlobMatch.Cols.BLOB2.value] = fn(
-            self.get_blobs(2), *args).tolist()
+        if self.df is None: return
+        for i, col in enumerate((BlobMatch.Cols.BLOB1, BlobMatch.Cols.BLOB2)):
+            blobs = self.get_blobs(i + 1)
+            if blobs is not None:
+                self.df[col.value] = fn(blobs, *args).tolist()
 
 
 class StackColocalizer(object):

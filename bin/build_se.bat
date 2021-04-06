@@ -53,6 +53,24 @@ IF NOT "%CONDA_PREFIX%" == "" (
   SET "python_exe=-DPYTHON_EXECUTABLE="%CONDA_PREFIX%\python.exe""
 )
 
+:: discover Python include directory from distutils
+FOR /f "tokens=*" %%g IN ('python -c "from distutils.sysconfig import get_python_inc; import os; print(os.path.dirname(get_python_inc()))"') DO (set var=%%g)
+SET "python_ver_path=%var%"
+SET "python_incl_dir=%python_ver_path%\include"
+SET "python_incl_arg=-DPYTHON_INCLUDE_DIR=%python_incl_dir%"
+
+:: parse Python library
+for /F "delims=" %%i in (%python_ver_path%) do set dirname="%%~dpi"
+SET "python_ver_majmin=%python_ver_path:~-5,-2%"
+SET "python_ver_majmin=%python_ver_majmin:.=%"
+SET "python_lib_path=%python_ver_path%\libs\libpython%python_ver_majmin%.a"
+SET "python_lib_arg="
+IF EXIST "%python_lib_path%" (
+  SET "python_lib_arg=-DPYTHON_LIBRARY=%python_lib_path%"
+)
+ECHO Set Python include dir arg to: %python_incl_arg%
+ECHO Set Python library arg to: %python_lib_arg%
+
 :: make build folder
 pushd "%~dp0"
 cd ../..
@@ -61,8 +79,10 @@ cd "%build_dir%"
 
 :: configure with CMake to generate only a Python wrapper, running twice
 :: since some paths may not be exposed until the 2nd run
-"%cmake%" -G "%generator%" -A "%arch%" -T host="%arch%" -DWRAP_JAVA:BOOL=OFF^
- %python_exe% -DWRAP_LUA:BOOL=OFF -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF^
+"%cmake%" -G "%generator%" -A "%arch%" -T host="%arch%"^
+ "%python_exe%" "%python_incl_arg%" "%python_lib_arg%"^
+ -DWRAP_PYTHON:BOOL=ON -DWRAP_JAVA:BOOL=OFF^
+ -DWRAP_LUA:BOOL=OFF -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF^
  -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF^
  -DBUILD_TESTING:BOOL=OFF -DSimpleITK_PYTHON_USE_VIRTUALENV:BOOL=OFF^
  "%se_dir%\SuperBuild"

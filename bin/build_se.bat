@@ -63,10 +63,12 @@ SET "python_incl_arg=-DPYTHON_INCLUDE_DIR=%python_incl_dir%"
 for /F "delims=" %%i in (%python_ver_path%) do set dirname="%%~dpi"
 SET "python_ver_majmin=%python_ver_path:~-5,-2%"
 SET "python_ver_majmin=%python_ver_majmin:.=%"
-SET "python_lib_path=%python_ver_path%\libs\libpython%python_ver_majmin%.a"
+:: TODO: the .lib file may be sufficient
+SET "python_lib_path_a=%python_ver_path%\libs\libpython%python_ver_majmin%.a"
+SET "python_lib_path_lib=%python_ver_path%\libs\python%python_ver_majmin%.lib"
 SET "python_lib_arg="
-IF EXIST "%python_lib_path%" (
-  SET "python_lib_arg=-DPYTHON_LIBRARY=%python_lib_path%"
+IF EXIST "%python_lib_path_a%" (
+  SET "python_lib_arg=-DPYTHON_LIBRARY=%python_lib_path_a%;%python_lib_path_lib%"
 )
 ECHO Set Python include dir arg to: %python_incl_arg%
 ECHO Set Python library arg to: %python_lib_arg%

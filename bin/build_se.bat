@@ -94,7 +94,7 @@ msbuild ALL_BUILD.vcxproj /p:Configuration=Release
 
 :: build Python source and wheel packages for distribution
 cd SimpleITK-build/Wrapping/Python
-python Packaging/setup.py build sdist bdist_wheel
+python setup.py build sdist bdist_wheel
 
 popd
 

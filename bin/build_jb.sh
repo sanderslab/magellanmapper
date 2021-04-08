@@ -64,13 +64,20 @@ fi
 
 echo "Initating build of Javabridge..."
 
-# base directory is script's parent directory, and default repo and build dirs 
-# are in parent directory of base dir
+# base directory is script's parent directory
 BASE_DIR="$(dirname "$0")/.."
 cd "$BASE_DIR" || { echo "Unable to find folder $BASE_DIR, exiting"; exit 1; }
 base_dir="$PWD"
 if [[ -z "$jb_dir" ]]; then
+  # default to look for repo in parent of base dir
   jb_dir="${base_dir}/../python-javabridge"
+elif [[ "$jb_dir" != /* ]]; then
+  # convert relative Javabridge to abs dir path
+  jb_dir="${base_dir}/${jb_dir}"
+fi
+if [[ "$out_dir" != /* ]]; then
+  # convert relative output to abs dir path
+  out_dir="${base_dir}/${out_dir}"
 fi
 
 # get and/or enter git repo

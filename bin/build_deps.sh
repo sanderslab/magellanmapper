@@ -102,8 +102,12 @@ build_se_ver() {
 # Also installs Cython and Numpy.
 build_jb_ver() {
   pip install cython
-  pip install numpy<=1.19 # v1.19 is last ver supporting Python 3.6
-  bin/build_jb.sh "${jb_dir[@]}" -o "$output_dir" -j "$(/usr/libexec/java_home -v 1.8)"
+  pip install 'numpy~=1.19' # v1.19 is last ver supporting Python 3.6
+  local java_args=()
+  if command -v "/usr/libexec/java_home" &> /dev/null; then
+    java_args+=(-j "$(/usr/libexec/java_home -v 1.8)")
+  fi
+  bin/build_jb.sh "${jb_dir[@]}" -o "$output_dir" "${java_args[@]}"
 }
 
 if [[ ! -d "$output_dir" ]]; then

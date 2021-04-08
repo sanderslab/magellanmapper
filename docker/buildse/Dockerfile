@@ -64,9 +64,9 @@ COPY --chown=$username:$username bin/libmag.sh bin/build_se.sh \
     bin/setup_multi_venvs.sh bin/build_deps.sh ./bin/
 
 # afterward, build SimpleElastix for multiple Python version by running,
-# assuming the output parent directory `data` has been mounted:
-# `bin/build_deps.sh -d data/builds_se -e venvs -s SimpleElastix`
+# assuming the output parent directory `<out>` has been mounted and contains
+# the SimpleElastix (otherwise it will be cloned there):
+# `bin/build_deps.sh -d <out>/builds_se -e venvs -s <out>/SimpleElastix`
 RUN echo 'export PATH=/opt/cmake-3.10.3-Linux-x86_64/bin:$PATH' >> ~/.bashrc \
     && . ~/.bashrc \
-    && git clone https://github.com/SuperElastix/SimpleElastix.git \
     && bin/setup_multi_venvs.sh -d venvs

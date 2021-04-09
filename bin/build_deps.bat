@@ -27,13 +27,21 @@ pushd "%~dp0"
 cd ..
 
 rem build binaries within each Python version Venv environment
-for %%v in (3.6.8) do (
+for %%v in (3.6.8 3.7.7 3.8.7 3.9.1) do (
   echo Activating Venv for py%%v
   call "%venvs_dir%\py%%v\Scripts\Activate.bat"
   call pip install wheel
+  
+  rem build SimpleElastix
   call bin\build_se.bat "%output_dir%\build_se_py%%v"
   call copy "%output_dir%\build_se_py%%v\SimpleITK-build\Wrapping\Python\dist\"*.whl "%output_dir%"
   call copy "%output_dir%\build_se_py%%v\SimpleITK-build\Wrapping\Python\dist\"*.tar.gz "%output_dir%"
+  
+  rem build Javabridge; Numpy 1.19 is latest ver for Python 3.6
+  pip install cython
+  pip install numpy~=1.19
+  call bin\build_jb.bat "%output_dir%"
+  
   call deactivate
 )
 

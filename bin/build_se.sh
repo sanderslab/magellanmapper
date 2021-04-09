@@ -126,8 +126,8 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   # build distributions
   echo "Generating source and platform wheel distributions..."
   cd "$PKG" || { echo "$PKG does not exist, exiting"; exit 1; }
-  python Packaging/setup.py sdist
-  python Packaging/setup.py bdist_wheel
+  python setup.py sdist
+  python setup.py bdist_wheel
   cd - || exit 1
 fi
 

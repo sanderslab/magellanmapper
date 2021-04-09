@@ -61,9 +61,9 @@ RUN mkdir /home/$username \
 WORKDIR $BASE_DIR
 USER $username
 
-# copy in custom SimpleElastix build and Conda setup scripts
-COPY --chown=$username:$username bin/libmag.sh bin/build_se.sh \
-    bin/setup_multi_venvs.sh bin/build_deps.sh ./bin/
+# copy in scripts for setting up multiple Venv environments
+COPY --chown=$username:$username bin/libmag.sh bin/setup_multi_venvs.sh \
+        ./bin/
 
 # afterward, build SimpleElastix for multiple Python version by running,
 # assuming the output parent directory `<out>` has been mounted and contains
@@ -74,3 +74,7 @@ RUN echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> ~/.bashrc \
         >> ~/.bashrc \
     && . ~/.bashrc \
     && bin/setup_multi_venvs.sh -d venvs
+
+# copy in custom build scripts
+COPY --chown=$username:$username bin/build_se.sh bin/build_jb.sh \
+        bin/build_deps.sh ./bin/

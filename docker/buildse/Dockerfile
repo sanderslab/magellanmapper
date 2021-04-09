@@ -9,6 +9,7 @@ ENV BASE_DIR /app
 # install build tools
 # - multiple Python version from deadsnakes PPA
 # - build tools including specific CMake version required for SimpleElastix
+# - OpenJDK 8 to build Python-Javabridge
 # - vim to allow editing
 RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main" \
         >> /etc/apt/sources.list \
@@ -37,6 +38,7 @@ RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main" \
         python3.9 \
         python3.9-venv \
         python3.9-dev \
+        default-jdk \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && apt-get autoclean \
@@ -67,6 +69,8 @@ COPY --chown=$username:$username bin/libmag.sh bin/build_se.sh \
 # assuming the output parent directory `<out>` has been mounted and contains
 # the SimpleElastix (otherwise it will be cloned there):
 # `bin/build_deps.sh -d <out>/builds_se -e venvs -s <out>/SimpleElastix`
-RUN echo 'export PATH=/opt/cmake-3.10.3-Linux-x86_64/bin:$PATH' >> ~/.bashrc \
+RUN echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> ~/.bashrc \
+    && echo 'export PATH=/opt/cmake-3.10.3-Linux-x86_64/bin:$JAVA_HOME/bin:$PATH' \
+        >> ~/.bashrc \
     && . ~/.bashrc \
     && bin/setup_multi_venvs.sh -d venvs

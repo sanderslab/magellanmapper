@@ -14,15 +14,19 @@ Arguments:
   -d [path]: Path to build directory; defaults to \"$output_dir\".
   -e [path]: Path to folder where the new venv directory will be placed. 
     Defaults to \"$venv_dir\".
-  -j [path]: Path to Javabridge directory, passed to \"build_jb.sh\".
-  -s [path]: Path to SimpleElastix directory, passed to \"build_se.sh\".
+  -j [opt1:arg1[:...]]: Arguments to \"build_jb.sh\" for Javabridge build,
+    delimted by \":\". Javabridge will only be built if this option is set.
+    To set while retaining defauls, pass as ' '.
+  -s [opt1:arg1[:...]]: Arguments to \"build_se.sh\" for SimpleElastix,
+    build delimted by \":\". SimpleElastix will only be built if this option
+    is set. To set while retaining defauls, pass as ' '.
 "
 
-se_dir=()
-jb_dir=()
+se_args=()
+jb_args=()
 
 OPTIND=1
-while getopts hd:e:j:s: opt; do
+while getopts hd:e:j::s: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -37,12 +41,13 @@ while getopts hd:e:j:s: opt; do
       echo "Set the venv directory to $venv_dir"
       ;;
     j)
-      jb_dir+=(-d "$OPTARG")
-      echo "Changed Python-Javabridge directory to $OPTARG"
+      IFS=':' read -r -a jb_args <<< "$OPTARG"
+      echo "Set Python-Javabridge arguments to: ${jb_args[*]}"
+      ;;
       ;;
     s)
-      se_dir+=(-s "$OPTARG")
-      echo "Changed SimpleElastix directory to $OPTARG"
+      IFS=':' read -r -a se_args <<< "$OPTARG"
+      echo "Set SimpleElastix arguments to: ${se_args[*]}"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -55,7 +60,7 @@ while getopts hd:e:j:s: opt; do
   esac
 done
 
-echo "Initating build of SimpleElastix..."
+echo "Initating build of dependencies for MagellanMapper..."
 
 # base directory is script's parent directory
 BASE_DIR="$(dirname "$0")/.."
@@ -91,7 +96,7 @@ build_se_ver() {
   # build SimpleElastix
   local ver="$1"
   local output="${output_dir}/build_se_py${ver}"
-  bin/build_se.sh -d "$output" "${se_dir[@]}"
+  bin/build_se.sh -d "$output" "${se_args[@]}"
   
   # copy wheel to output dir
   local dist="${output}/SimpleITK-build/Wrapping/Python/dist"
@@ -107,7 +112,7 @@ build_jb_ver() {
   if command -v "/usr/libexec/java_home" &> /dev/null; then
     java_args+=(-j "$(/usr/libexec/java_home -v 1.8)")
   fi
-  bin/build_jb.sh "${jb_dir[@]}" -o "$output_dir" "${java_args[@]}"
+  bin/build_jb.sh -o "$output_dir" "${java_args[@]}" "${jb_args[@]}"
 }
 
 if [[ ! -d "$output_dir" ]]; then
@@ -118,9 +123,19 @@ fi
 # build dependencies for each of all supported Python versions
 py_vers=(3.6 3.7 3.8 3.9)
 for py_ver in "${py_vers[@]}"; do
+  # activate Venv environment for the given Python version
   if activate_venv "$py_ver"; then
-    build_se_ver "$py_ver"
-    build_jb_ver
+    if [[ ${#se_args} -gt 0 ]]; then
+      # build SimpleElastix
+      build_se_ver "$py_ver"
+    fi
+    
+    if [[ ${#jb_args} -gt 0 ]]; then
+      # build Javabridge
+      build_jb_ver
+    fi
+    
+    # deactivate Venv
     deactivate
   fi
 done

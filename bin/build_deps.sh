@@ -17,6 +17,8 @@ Arguments:
   -j [opt1:arg1[:...]]: Arguments to \"build_jb.sh\" for Javabridge build,
     delimted by \":\". Javabridge will only be built if this option is set.
     To set while retaining defauls, pass as ' '.
+  -p [ver1:ver2[:...]]: Python versions delimted by \":\", for which binaries
+    will be built. Defaults to 3.6-3.9.
   -s [opt1:arg1[:...]]: Arguments to \"build_se.sh\" for SimpleElastix,
     build delimted by \":\". SimpleElastix will only be built if this option
     is set. To set while retaining defauls, pass as ' '.
@@ -24,9 +26,10 @@ Arguments:
 
 se_args=()
 jb_args=()
+py_vers=(3.6 3.7 3.8 3.9)
 
 OPTIND=1
-while getopts hd:e:j::s: opt; do
+while getopts hd:e:j:p:s: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -44,6 +47,9 @@ while getopts hd:e:j::s: opt; do
       IFS=':' read -r -a jb_args <<< "$OPTARG"
       echo "Set Python-Javabridge arguments to: ${jb_args[*]}"
       ;;
+    p)
+      IFS=':' read -r -a py_vers <<< "$OPTARG"
+      echo "Set Python versions to: ${py_vers[*]}"
       ;;
     s)
       IFS=':' read -r -a se_args <<< "$OPTARG"
@@ -121,7 +127,6 @@ if [[ ! -d "$output_dir" ]]; then
 fi
 
 # build dependencies for each of all supported Python versions
-py_vers=(3.6 3.7 3.8 3.9)
 for py_ver in "${py_vers[@]}"; do
   # activate Venv environment for the given Python version
   if activate_venv "$py_ver"; then

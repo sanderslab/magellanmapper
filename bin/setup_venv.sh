@@ -66,8 +66,10 @@ py_ver_min=(3 6) # minimum supported Python version
 py_vers=(3.6 3.7 3.8) # range of versions currently supported
 py_vers_prebuilt_deps=(3.6) # vers for which custom prebuilt deps are avail
 for ver in "${py_vers[@]}"; do
-  # prioritize specific versions in case "python" points to lower version
-  if command -v "python$ver" &> /dev/null; then
+  # prioritize specific versions in case "python" points to lower version,
+  # calling Python directly since `command` will show Pyenv Python binaries
+  # exist even if they will not work with a global/local version conflict
+  if "python$ver" -V >/dev/null 2>&1; then
     python=python$ver
     py_ver_majmin="$ver"
     break

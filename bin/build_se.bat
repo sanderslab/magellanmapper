@@ -8,9 +8,9 @@
 ::   build_se.bat [build-dir] [path-to-SimpleElastix]
 ::
 :: Args:
-::   build-dir: Path to output build directory.
+::   build-dir: Path to output build directory; defaults to "..\build_se".
 ::   path-to-SimpleElastix: Path to existing SimpleElastix directory or
-::     where it will be stored.
+::     where it will be stored; defaults to "..\SimpleElastix".
 ::
 :: MSVC requirements:
 :: - MSVC C++ x64/x86 build tools (tested on MSVC v142 VS 2019 C++ with the
@@ -26,11 +26,15 @@
 ::   the CONDA_PREFIX environment variable
 :: Tested with CMake 3.15; has *not* worked with MSVS CMake 3.14 on our testing.
 
+@ECHO off
+
 :: parse arg for output build directory
 SET "build_dir=build_se"
 IF NOT "%~1" == "" (
   SET "build_dir=%~1"
 )
+call :get_abs_path "%build_dir%"
+SET "build_dir=%abs_path%"
 ECHO Setting the build directory path to %build_dir%
 
 :: parse arg for SimpleElastix, converting to an absolute path
@@ -54,16 +58,13 @@ IF NOT "%CONDA_PREFIX%" == "" (
 )
 
 :: discover Python include directory from distutils
-FOR /f "tokens=*" %%g IN ('python -c "from distutils.sysconfig import get_python_inc; import os; print(os.path.dirname(get_python_inc()))"') DO (set var=%%g)
-SET "python_ver_path=%var%"
+FOR /f "tokens=*" %%g IN ('python -c "from distutils.sysconfig import get_python_inc; import os; print(os.path.dirname(get_python_inc()))"') DO (set "python_ver_path=%%g")
 SET "python_incl_dir=%python_ver_path%\include"
 SET "python_incl_arg=-DPYTHON_INCLUDE_DIR=%python_incl_dir%"
 
 :: parse Python library
-for /F "delims=" %%i in (%python_ver_path%) do set dirname="%%~dpi"
-SET "python_ver_majmin=%python_ver_path:~-5,-2%"
-SET "python_ver_majmin=%python_ver_majmin:.=%"
-SET "python_lib_path=%python_ver_path%\libs\python%python_ver_majmin%.lib"
+FOR /f "tokens=*" %%g IN ('python -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')"') DO (set var=%%g)
+SET "python_lib_path=%python_ver_path%\libs\python%var%.lib"
 SET "python_lib_arg="
 IF EXIST "%python_lib_path%" (
   SET "python_lib_arg=-DPYTHON_LIBRARY=%python_lib_path%"
@@ -73,7 +74,6 @@ ECHO Set Python library arg to: %python_lib_arg%
 
 :: make build folder
 pushd "%~dp0"
-cd ../..
 mkdir "%build_dir%"
 cd "%build_dir%"
 

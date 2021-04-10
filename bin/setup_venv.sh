@@ -84,7 +84,8 @@ if [[ -z "$python" ]]; then
     fi
   fi
   if [[ -z "$python" ]]; then
-    echo "Please install Python >= version ${py_ver_min[0]}.${py_ver_min[1]}"
+    echo "Sorry, could not detect a compatible Python version."
+    echo "Please install one of the following Python versions: ${py_vers[*]}"
     exit 1
   fi
 fi

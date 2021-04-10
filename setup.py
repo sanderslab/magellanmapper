@@ -34,14 +34,14 @@ config = {
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
-        "vtk<9.0.0",  # Mayavi 4.7.1 is not compatible with VTK 9
+        "vtk",
         "mayavi", 
         "pandas", 
         "PyQt5",
         "pyface",
         "traitsui",
         "scikit-learn",
-        "simpleitk==1.2.0rc2.dev1162+g2a79d",  # pre-built SimpleElastix
+        "simpleitk==2.0.2rc2.dev785+g8ac4f",  # pre-built SimpleElastix
         "PyYAML",
         "appdirs",
     ], 

@@ -157,8 +157,10 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
   exit 1
 fi
 
-# update pip, using python3 since python3.y may not be in env
-python3 -m pip install -U pip
+# update pip, using python since python3.y may not be in env, and wheel
+# package to speed up installs  
+python -m pip install -U pip
+pip install -U wheel
 
 # install MagellanMapper including required dependencies
 if [[ -n "$update" ]]; then

@@ -2,6 +2,9 @@ rem Build Python-Javabridge with MSVC and OpenJDK on Windows
 
 rem Build Python-Javabridge wheels for Windows using MSVC build tools.
 rem
+rem Assumes that "JDK_HOME" has been set as an environment variable to the
+rem Java installation, typically JDK 8 to maximize compatibility.
+rem
 rem Usage:
 rem   build_jb.bat [build-dir] [path-to-Javabridge]
 rem

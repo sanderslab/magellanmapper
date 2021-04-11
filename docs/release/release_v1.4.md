@@ -142,7 +142,9 @@ Code base and docs
 
 #### Python Dependency Changes
 
-- The `appdirs` [package](https://github.com/ActiveState/appdirs) has been added to store user application files in standard operating system-dependent locations, eg `~/Library/Application Support/MagellanMapper` on macOS and `%HOME%\AppData\Local\MagellanMapper` on Windows platforms, allowing the application to be stored in locations without standard write access
+- The `appdirs` [package](https://github.com/ActiveState/appdirs) has been added to store user application files in standard operating system-dependent locations, allowing the application to be stored in locations without standard write access (see [settings](../settings.md#user-application-folder) for more details)
+  - The database (`magmap.db`) is generated and stored there
+  - Any existing `magmap.db` in the project root folder is left in place; copy it to the user application folder if you would like to use it
 - Custom wheels have been built for SimpleElastix and Javabridge on Python 3.6-3.9
   - Wheels are compatible with macOS 10.9+, Windows 10, and Linux glibc 2.23 (eg Ubuntu 16.04)
   - Python 3.9 is not yet supported for MagellanMapper because VTK 9 currently does not support this Python version

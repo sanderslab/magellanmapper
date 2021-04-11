@@ -1,10 +1,21 @@
 # Settings in MagellanMapper
 
-MagellanMapper supports settings configuration at several different levels of "permanence." Starting from the most transient to more enduring settings, these settings are:
+MagellanMapper supports settings configuration at different levels of "permanence." Starting from the most transient to more enduring settings, these settings are:
 
 1. Graphical user interface (GUI) controls, configurable during runtime
 1. Command-line arguments, set at launch time
 1. Profiles, groups of settings saved in a file and set at launch time or loaded through the GUI
+
+Additional data and settings such as blob detections are stored in the user application folder.
+
+## User Application Folder
+
+As of v1.4, application support files such as the MagellanMapper database are stored in the following folder locations:
+- macOS: `~/Library/Application Support/MagellanMapper`
+- Windows: `%HOME%\AppData\Local\MagellanMapper`
+- Linux: `~/.local/share/MagellanMapper`
+
+Previously, the database (`magmap.db`) was stored in the application root folder. A new database will be generated in the user application folder, but the original file can be copied from there to use it insead if desired.
 
 ## GUI Parameters
 

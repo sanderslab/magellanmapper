@@ -13,6 +13,7 @@ Installation
     - As we added a [new dependency](#python-dependency-changes), we made it easier to update existing environments
     - Re-running `bin\setup_conda.bat` on Windows updates as `bin/setup_conda` has on Mac/Linux
     - `bin/venv.sh` can now also be re-run to update Venv environments
+- Python version support has been expanded to 3.6-3.8 now that we have [built](#python-dependency-changes) custom dependencies for these Python versions
 
 GUI
 - Reorganized options to group by viewer
@@ -142,6 +143,9 @@ Code base and docs
 #### Python Dependency Changes
 
 - The `appdirs` [package](https://github.com/ActiveState/appdirs) has been added to store user application files in standard operating system-dependent locations, eg `~/Library/Application Support/MagellanMapper` on macOS and `%HOME%\AppData\Local\MagellanMapper` on Windows platforms, allowing the application to be stored in locations without standard write access
+- Custom wheels have been built for SimpleElastix and Javabridge on Python 3.6-3.9
+  - Wheels are compatible with macOS 10.9+, Windows 10, and Linux glibc 2.23 (eg Ubuntu 16.04)
+  - Python 3.9 is not yet supported for MagellanMapper because VTK 9 currently does not support this Python version
 
 #### R Dependency Changes
 

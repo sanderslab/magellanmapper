@@ -36,17 +36,20 @@ See the [Readme](../README.md#run-magellanmapper) for instructions on running Ma
 
 ## Option 2: Install through Venv+Pip
 
-Venv is a virtual environment manager included with Python 3.3+. We have provided a convenient script to set up a new environment and install all dependencies using Pip:
+Venv is a virtual environment manager included with Python (3.3+). We have provided a convenient script to set up a new environment and install all dependencies using Pip:
 
 ```
 bin/setup_venv.sh [-n name]
 ```
 
-This option assumes that you have already installed Python 3.6 and a Java Development Kit (JDK) 8. Other versions of Python 3 and the JDK may work but with varying other requirements, such as a C compiler to build dependencies (see [below](#custom-precompiled-packages)).
+This option assumes that you have already installed Python 3.6 and Java 8+.
+
+**UPDATE**: In MagellanMapper 1.4, Python versions 3.6-3.8 are supported now that we have built custom dependencies for these version.
 
 This setup script will check and install the following dependencies:
 
-- Checks for an existing Python 3.6+, which already includes Venv
+- Checks for an existing compatible Python version
+- Checks for other requirements, such as a C compiler to [build some dependencies](#custom-precompiled-packages)
 - Performs a Pip install of MagellanMapper and all dependencies
 
 ## Option 3: Install in another virtual environment or system-wide
@@ -103,10 +106,12 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 
 | Dependency | Precompiled Available? | Precompiled Run Req | Build Req | Purpose | 
 | --- | --- | --- | --- | --- |
-| Python-Javabridge | Yes, via custom package | Python 3.6, Java 8+ | JDK, C compiler| Import proprietary image formats |
+| Python-Javabridge | Yes, via custom package | Python 3.6-3.9[^\*], Java 8+ | JDK, C compiler| Import proprietary image formats |
 | Traits, Pyface, Traitsui | Yes, via Conda (not PyPI) | Python 3.6+ | C compiler, Python dev | GUI |
-| SimpleElastix | Yes, via custom package | Python 3.6 | C, C++ compilers | Load medical 3D formats, image regsitration |
+| SimpleElastix | Yes, via custom package | Python 3.6-3.9 | C, C++ compilers | Load medical 3D formats, image regsitration |
 | ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
+
+[^\*]: Extended wheels to Python 3.7-3.9 in MagellanMapper 1.4, though Python 3.9 is not supported yet until VTK also provides wheels for this version
 
 C compilers by platform:
 

@@ -66,8 +66,10 @@ py_ver_min=(3 6) # minimum supported Python version
 py_vers=(3.6 3.7 3.8) # range of versions currently supported
 py_vers_prebuilt_deps=(3.6) # vers for which custom prebuilt deps are avail
 for ver in "${py_vers[@]}"; do
-  # prioritize specific versions in case "python" points to lower version
-  if command -v "python$ver" &> /dev/null; then
+  # prioritize specific versions in case "python" points to lower version,
+  # calling Python directly since `command` will show Pyenv Python binaries
+  # exist even if they will not work with a global/local version conflict
+  if "python$ver" -V >/dev/null 2>&1; then
     python=python$ver
     py_ver_majmin="$ver"
     break
@@ -82,7 +84,8 @@ if [[ -z "$python" ]]; then
     fi
   fi
   if [[ -z "$python" ]]; then
-    echo "Please install Python >= version ${py_ver_min[0]}.${py_ver_min[1]}"
+    echo "Sorry, could not detect a compatible Python version."
+    echo "Please install one of the following Python versions: ${py_vers[*]}"
     exit 1
   fi
 fi
@@ -154,8 +157,10 @@ if [[ -z "$VIRTUAL_ENV" ]]; then
   exit 1
 fi
 
-# update pip, using python3 since python3.y may not be in env
-python3 -m pip install -U pip
+# update pip, using python since python3.y may not be in env, and wheel
+# package to speed up installs  
+python -m pip install -U pip
+pip install -U wheel
 
 # install MagellanMapper including required dependencies
 if [[ -n "$update" ]]; then

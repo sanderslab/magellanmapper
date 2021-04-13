@@ -4,20 +4,47 @@
 
 FROM ubuntu:16.04
 
-# run with login Bash shell to allow Conda init
-SHELL ["/bin/bash", "--login", "-c"]
 ENV BASE_DIR /app
 
-# installer build tools
-RUN  apt-get update && apt-get install -y \
-    wget \
-    git \
-    gcc \
-    gawk \
-    bison \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+# install build tools
+# - multiple Python version from deadsnakes PPA
+# - build tools including specific CMake version required for SimpleElastix
+# - OpenJDK 8 to build Python-Javabridge
+# - vim to allow editing
+RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main" \
+        >> /etc/apt/sources.list \
+    && echo "deb-src http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main" \
+        >> /etc/apt/sources.list \
+    && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys \
+        F23C5A6CF475977595C89F51BA6932366A755776 \
+    && apt-get update && apt-get install -y \
+        wget \
+        git \
+        gcc \
+        gawk \
+        bison \
+        make \
+        g++ \
+        vim \
+        python3.6 \
+        python3.6-venv \
+        python3.6-dev \
+        python3.7 \
+        python3.7-venv \
+        python3.7-dev \
+        python3.8 \
+        python3.8-venv \
+        python3.8-dev \
+        python3.9 \
+        python3.9-venv \
+        python3.9-dev \
+        default-jdk \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean \
+    && apt-get autoclean \
+    && wget https://cmake.org/files/v3.10/cmake-3.10.3-Linux-x86_64.tar.gz -P /opt \
+    && tar xzvf /opt/cmake-3.10.3-Linux-x86_64.tar.gz -C /opt \
+    && rm /opt/cmake-3.10.3-Linux-x86_64.tar.gz
 
 # set up non-root user with sudo access
 ARG username=magellan
@@ -34,25 +61,20 @@ RUN mkdir /home/$username \
 WORKDIR $BASE_DIR
 USER $username
 
-# copy in custom SimpleElastix build and Conda setup scripts
-COPY --chown=$username:$username bin/setup_conda bin/libmag.sh bin/build_se.sh \
-    ./bin/
+# copy in scripts for setting up multiple Venv environments
+COPY --chown=$username:$username bin/libmag.sh bin/setup_multi_venvs.sh \
+        ./bin/
 
-# download and extract CMake version required for SimpleElastix
-RUN wget https://cmake.org/files/v3.10/cmake-3.10.3-Linux-x86_64.tar.gz \
-    && tar xzvf cmake-3.10.3-Linux-x86_64.tar.gz \
-    && echo "export PATH=\"/$BASE_DIR/cmake-3.10.3-Linux-x86_64/bin:$PATH\"" \
-    >> ~/.bashrc
+# afterward, build SimpleElastix for multiple Python version by running,
+# assuming the output parent directory `<out>` has been mounted and contains
+# the SimpleElastix (otherwise it will be cloned there):
+# `bin/build_deps.sh -d <out>/builds_se -e venvs -s <out>/SimpleElastix`
+RUN echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> ~/.bashrc \
+    && echo 'export PATH=/opt/cmake-3.10.3-Linux-x86_64/bin:$JAVA_HOME/bin:$PATH' \
+        >> ~/.bashrc \
+    && . ~/.bashrc \
+    && bin/setup_multi_venvs.sh -d venvs
 
-# set up basic Conda environment with Python 3.6 and build SimpleElastix
-# within this environment
-RUN export PATH="$BASE_DIR/cmake-3.10.3-Linux-x86_64/bin:$PATH" \
-    && echo -e "dependencies:\n  - python=3.6" > env.yml \
-    && echo "y" | bin/setup_conda -n sd -s env.yml \
-    && echo "conda activate sd" >> ~/.bashrc \
-    && eval "$(/home/"$username"/miniconda3/bin/conda shell.bash hook)" \
-    && conda clean --all \
-    && rm -rf /home/$username/.cache/pip \
-    && rm Miniconda3-latest-Linux-x86_64.sh \
-    && conda activate sd \
-    && bin/build_se.sh -s SimpleElastix -d build_se
+# copy in custom build scripts
+COPY --chown=$username:$username bin/build_se.sh bin/build_jb.sh \
+        bin/build_deps.sh ./bin/

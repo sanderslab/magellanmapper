@@ -23,6 +23,10 @@ Arguments:
     to this script's directory. Default to \"../SimpleElastix\".
 "
 
+# attempt compatibility with lowest Mac target; Python must have been
+# compiled with at least this target, or setting will be ignored
+export MACOSX_DEPLOYMENT_TARGET=10.9
+
 build_dir=""
 se_dir=""
 PKG="SimpleITK-build/Wrapping/Python"
@@ -102,6 +106,17 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   backup_file "$build_dir"
   mkdir "$build_dir"
   cd "$build_dir" || { echo "Unable to enter $build_dir, exiting"; exit 1; }
+  
+  # identify the Python include and library dirs from the Python executable
+  # since Cmake may discover paths for other Python installations
+  inc_cmd="from distutils.sysconfig import get_python_inc; "
+  inc_cmd+="print(get_python_inc())"
+  py_inc_dir=$(python -c "$inc_cmd")
+  lib_cmd="import distutils.sysconfig as sysconfig; "
+  lib_cmd+="print(sysconfig.get_config_var('LIBDIR'))"
+  py_lib=$(python -c "$lib_cmd")
+  echo "Python include directory: $py_inc_dir"
+  echo "Python library directory: $py_lib"
 
   echo "Building SimpleElastix"
   # run SuperBuild with flags to find clang on later Mac versions,
@@ -109,6 +124,8 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   # turn off virtual environment creation
   cmake -DCMAKE_CXX_COMPILER:STRING=/usr/bin/$compiler_cpp \
     -DCMAKE_C_COMPILER:STRING=/usr/bin/$compiler_c \
+    -DWRAP_PYTHON:BOOL=ON \
+    -DPYTHON_INCLUDE_DIR="$py_inc_dir" -DPYTHON_LIBRARY="$py_lib" \
     -DWRAP_JAVA:BOOL=OFF -DWRAP_LUA:BOOL=OFF \
     -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF \
     -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF \
@@ -121,8 +138,8 @@ if [[ $install_wrapper -ne 1 ]] || [[ ! -d "${build_dir}/${PKG}" ]]; then
   # build distributions
   echo "Generating source and platform wheel distributions..."
   cd "$PKG" || { echo "$PKG does not exist, exiting"; exit 1; }
-  python Packaging/setup.py sdist
-  python Packaging/setup.py bdist_wheel
+  python setup.py sdist
+  python setup.py bdist_wheel
   cd - || exit 1
 fi
 

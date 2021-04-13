@@ -5,8 +5,8 @@ import setuptools
 
 # optional dependencies to import files via BioFormats, which req Java 8+
 _EXTRAS_IMPORT = [
-    # pre-built Javabridge with Python 3.6, Java 8
-    "javabridge==1.0.18.post21+g4526f53",
+    # Javabridge pre-built on Java 8
+    "javabridge==1.0.19.post4+gbebed64",
     "python-bioformats==1.1.0",
 ]
 
@@ -34,14 +34,14 @@ config = {
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
-        "vtk<9.0.0",  # Mayavi 4.7.1 is not compatible with VTK 9
+        "vtk",
         "mayavi", 
         "pandas", 
         "PyQt5",
         "pyface",
         "traitsui",
         "scikit-learn",
-        "simpleitk==1.2.0rc2.dev1162+g2a79d",  # pre-built SimpleElastix
+        "simpleitk==2.0.2rc2.dev785+g8ac4f",  # pre-built SimpleElastix
         "PyYAML",
         "appdirs",
     ], 

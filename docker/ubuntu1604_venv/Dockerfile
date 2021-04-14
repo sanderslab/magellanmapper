@@ -52,21 +52,16 @@ USER $username
 
 # set up Venv environment for MagellanMapper
 COPY --chown=$username:$username bin/setup_venv.sh bin/libmag.sh ./bin/
-COPY --chown=$username:$username setup.py \
-    "SimpleITK-2.0.0rc2.dev908+g8244e-cp36-cp36m-linux_x86_64.whl" ./
+COPY --chown=$username:$username setup.py ./
 RUN bin/setup_venv.sh -e /home/$username/venvs \
     && rm -rf /home/$username/.cache/pip \
     && echo "export JAVA_HOME=/usr/lib/jvm/adoptopenjdk-15-hotspot-jre-amd64" \
         >> ~/.bashrc \
     && echo ". /home/$username/venvs/mag/bin/activate" >> ~/.bashrc \
-    && . /home/$username/venvs/mag/bin/activate \
-    && pip uninstall -y SimpleITK \
-    && pip install "SimpleITK-2.0.0rc2.dev908+g8244e-cp36-cp36m-linux_x86_64.whl"
+    && . /home/$username/venvs/mag/bin/activate
 
 # extract application contents from a git archive to use only files in
 # the repository; copy after Venv setup to avoid triggering rebuilding
 # prior layers for code updates
 COPY --chown=$username:$username magellanmapper_gitarc.tar.gz ./
-RUN tar xzvf magellanmapper_gitarc.tar.gz \
-    && rm magellanmapper_gitarc.tar.gz \
-    "SimpleITK-2.0.0rc2.dev908+g8244e-cp36-cp36m-linux_x86_64.whl"
+RUN tar xzvf magellanmapper_gitarc.tar.gz && rm magellanmapper_gitarc.tar.gz

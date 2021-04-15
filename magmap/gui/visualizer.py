@@ -1688,10 +1688,9 @@ class Visualization(HasTraits):
                     config.filename, reg_name.value), dryrun=True)[1]
                 if reg_path:
                     # add to list of available suffixes
-                    main_img_names_avail.append(reg_name.value)
-            # show without extension since exts may differ
-            main_img_names_avail = [
-                os.path.splitext(s)[0] for s in main_img_names_avail]
+                    main_img_names_avail.append(
+                        f"{os.path.splitext(reg_name.value)[0]}"
+                        f"{os.path.splitext(reg_path)[1]}")
             self._labels_img_names.selections = list(main_img_names_avail)
             self._labels_img_names.selections.insert(0, "")
             
@@ -1707,15 +1706,13 @@ class Visualization(HasTraits):
                     if not libmag.is_seq(suffixes):
                         suffixes = [suffixes]
                     for suffix in suffixes:
-                        suffix = os.path.splitext(suffix)[0]
                         if suffix in main_img_names_avail:
                             # move from available to selected suffixes lists
                             main_suffixes.append(suffix)
                             main_img_names_avail.remove(suffix)
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
-                    suffix = os.path.splitext(
-                        libmag.get_if_within(suffix, 0, ""))[0]
+                    suffix = libmag.get_if_within(suffix, 0, "")
                     if suffix in self._labels_img_names.selections:
                         labels_suffix = suffix
             
@@ -1806,10 +1803,8 @@ class Visualization(HasTraits):
             config.RegSuffixes.ATLAS: None,
             config.RegSuffixes.ANNOTATION: None,
         }
-        atlas_suffixes = []
-        for suffix in self._main_img_names.selections[1:]:
-            # add empty extension for each selected atlas suffix
-            atlas_suffixes.append("{}.".format(suffix))
+        # skip first element, which serves as a dropdown box label
+        atlas_suffixes = self._main_img_names.selections[1:]
         if atlas_suffixes:
             if len(atlas_suffixes) == 1:
                 # reduce to str if only one element
@@ -1818,8 +1813,7 @@ class Visualization(HasTraits):
         
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
             # add if not the empty first selection
-            reg_suffixes[config.RegSuffixes.ANNOTATION] = "{}.".format(
-                self._labels_img_name)
+            reg_suffixes[config.RegSuffixes.ANNOTATION] = self._labels_img_name
         config.reg_suffixes.update(reg_suffixes)
         
         if self._labels_ref_path:

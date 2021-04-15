@@ -43,6 +43,8 @@ from magmap.settings import logs
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
+#: str: Uniform Resource Identifier scheme.
+URI_SCHEME = "magmap"
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to

@@ -138,4 +138,20 @@ app = BUNDLE(
     info_plist={
         # support dark theme
         "NSRequiresAquaSystemAppearance": False,
+        
+        # open files passed as magmap:<path>[?query]
+        # TODO: implement file handling
+        "CFBundleURLTypes": [{
+            "CFBundleURLName": f"{config.APP_NAME}_{config.URI_SCHEME}",
+            "CFBundleTypeRole": "Viewer",
+            "CFBundleURLSchemes": [config.URI_SCHEME],
+        }],
+        
+        # open files passed through file browser or drag-n-drop
+        # TODO: implement drag-n-drop file handling
+        "CFBundleDocumentTypes": [{
+            "CFBundleTypeName": f"{config.APP_NAME}_NPY",
+            "CFBundleTypeExtensions": ["npy"],
+            "CFBundleTypeRole": "Viewer",
+        }],
     })

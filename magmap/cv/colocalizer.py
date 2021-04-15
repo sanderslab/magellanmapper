@@ -107,6 +107,22 @@ class BlobMatch:
             return None
         return np.vstack(self.df[col.value])
     
+    def get_blobs_all(self):
+        """Get all blobs in the blob matches.
+        
+        Returns:
+            tuple[:class:`numpy.ndarray`, :class:`numpy.ndarray`]:
+            Tuple of ``(blobs1, blobs2)``, or None if either are None.
+
+        """
+        blobs_all = []
+        for n in (1, 2):
+            blobs = self.get_blobs(n)
+            if blobs is None:
+                return None
+            blobs_all.append(blobs)
+        return blobs_all
+    
     def update_blobs(self, fn, *args):
         """Update all blobs with the given function.
 
@@ -451,9 +467,10 @@ def insert_matches(db, matches):
     
     for chl_matches in matches.values():
         # insert blobs and matches for the given channel combo
-        sqlite.insert_blobs(db.conn, db.cur, roi_id, np.vstack(
-            (chl_matches.get_blobs(1), chl_matches.get_blobs(2))))
-        config.db.insert_blob_matches(roi_id, chl_matches)
+        blobs = chl_matches.get_blobs_all()
+        if blobs is not None:
+            sqlite.insert_blobs(db.conn, db.cur, roi_id, np.vstack(blobs))
+            config.db.insert_blob_matches(roi_id, chl_matches)
 
 
 def select_matches(db, channels, offset=None, shape=None, exp_name=None):

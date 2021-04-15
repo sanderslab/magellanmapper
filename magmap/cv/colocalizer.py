@@ -99,11 +99,11 @@ class BlobMatch:
 
         Returns:
             :class:`numpy.ndarray`: Numpy array of the given blob type, or
-            None if the blob column does not exist.
+            None if the :attr:`df` is None or the blob column does not exist.
 
         """
         col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
-        if col.value not in self.df:
+        if self.df is None or col.value not in self.df:
             return None
         return np.vstack(self.df[col.value])
     
@@ -502,8 +502,9 @@ def select_matches(db, channels, offset=None, shape=None, exp_name=None):
             chl_matches = db.select_blob_matches_by_blob_id(
                 roi_id, 1,
                 blob_ids[detector.get_blobs_channel(blobs) == chl])
-            if chl_matches.df is not None:
+            blobs2 = chl_matches.get_blobs(2)
+            if blobs2 is not None:
                 chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
-                    chl_matches.get_blobs(2)) == chl_other]
+                    blobs2) == chl_other]
                 matches[(chl, chl_other)] = BlobMatch(df=chl_matches)
     return matches

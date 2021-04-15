@@ -1304,18 +1304,18 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 
                 if (self.blobs is not None
                         and self.blobs.blob_matches is not None):
-                    # show blob matches by corresponding number labels
-                    for i, (blob1, blob2) in enumerate(zip(
-                            self.blobs.blob_matches.get_blobs(1),
-                            self.blobs.blob_matches.get_blobs(2))):
-                        for j, blob in enumerate((blob1, blob2)):
-                            if blob[0] != z_relative: continue
-                            # add label with number; italicize if 1st blob
-                            style = "italic" if j == 0 else "normal"
-                            ax.text(blob[2], blob[1], i, color="w",
-                                    alpha=0.5, style=style,
-                                    horizontalalignment="center",
-                                    verticalalignment="center")
+                    blobs_matched = self.blobs.blob_matches.get_blobs_all()
+                    if blobs_matched is not None:
+                        # show blob matches by corresponding number labels
+                        for i, (blob1, blob2) in enumerate(zip(*blobs_matched)):
+                            for j, blob in enumerate((blob1, blob2)):
+                                if blob[0] != z_relative: continue
+                                # add label with number; italicize if 1st blob
+                                style = "italic" if j == 0 else "normal"
+                                ax.text(blob[2], blob[1], i, color="w",
+                                        alpha=0.5, style=style,
+                                        horizontalalignment="center",
+                                        verticalalignment="center")
 
             # adds a simple border to highlight the border of the ROI
             if border is not None:

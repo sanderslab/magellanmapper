@@ -747,13 +747,21 @@ def process_tasks():
             for series in config.series_list:
                 # process files for each series, typically a tile within a
                 # microscopy image set or a single whole image
-                offset = (config.subimg_offsets[0] if config.subimg_offsets
-                          else None)
-                size = config.subimg_sizes[0] if config.subimg_sizes else None
+                filename, offset, size, reg_suffixes = \
+                    importer.deconstruct_img_name(config.filename)
+                set_subimg, _ = importer.parse_deconstructed_name(
+                    filename, offset, size, reg_suffixes)
+                if not set_subimg:
+                    # sub-image parameters set in filename takes precedence for
+                    # the loaded image, but fall back to user-supplied args
+                    offset = (config.subimg_offsets[0] if config.subimg_offsets
+                              else None)
+                    size = (config.subimg_sizes[0] if config.subimg_sizes
+                            else None)
                 np_io.setup_images(
-                    config.filename, series, offset, size, config.proc_type)
+                    filename, series, offset, size, config.proc_type)
                 process_file(
-                    config.filename, config.proc_type, series, offset, size,
+                    filename, config.proc_type, series, offset, size,
                     config.roi_offsets[0] if config.roi_offsets else None,
                     config.roi_sizes[0] if config.roi_sizes else None)
         else:

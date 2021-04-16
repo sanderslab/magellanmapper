@@ -211,7 +211,7 @@ def get_exp_name(path):
         while preserving the sub-image string.
 
     """
-    path_decon = importer.deconstruct_np_filename(
+    path_decon = importer.deconstruct_img_name(
         path, keep_subimg=True)[0]
     if path_decon:
         path_decon = os.path.splitext(os.path.basename(path_decon))[0]

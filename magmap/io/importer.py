@@ -79,6 +79,7 @@ _KEY_ANY_CHANNEL = "1+"  # 1+ channel files
 
 _logger = config.logger.getChild(__name__)
 
+
 def is_javabridge_loaded():
     """Check if Javabridge and Python-Bioformats have been loaded.
     
@@ -287,7 +288,7 @@ def filename_to_base(filename, series=None, modifier=""):
     return path
 
 
-def deconstruct_np_filename(np_filename, sep="_", keep_subimg=False):
+def deconstruct_img_name(np_filename, sep="_", keep_subimg=False):
     """Deconstruct Numpy or registered image filename to the original name
     from which it was based.
 
@@ -360,6 +361,37 @@ def deconstruct_np_filename(np_filename, sep="_", keep_subimg=False):
         # default to returning path as-is
         base_path = np_filename
     return base_path, offset, size, reg_suffixes
+
+
+def parse_deconstructed_name(filename, offset, size, reg_suffixes):
+    """Parse deconstructed image name into :module:`config` settings.
+    
+    Args:
+        filename (str): Deconstructed image path.
+        offset (tuple[int, int, int]): Deconstructed sub-image offset.
+        size (tuple[int, int, int]): Deconstructed sub-image size.
+        reg_suffixes (dict): Registered image suffixes.
+
+    Returns:
+        bool, bool: True if the sub-image parameters were set, True if the
+        registered suffixes were set.
+
+    """
+    config.filename = filename
+    _logger.debug("Changed filename to", config.filename)
+    set_subimg = offset is not None and size is not None
+    if set_subimg:
+        config.subimg_offsets = [offset]
+        config.subimg_sizes = [size]
+        _logger.debug("Change sub-image offset to {}, size to {}"
+                      .format(config.subimg_offsets, config.subimg_sizes))
+    # TODO: consider loading processed images, blobs, etc
+    set_reg_suffixes = False
+    if reg_suffixes:
+        config.reg_suffixes.update(reg_suffixes)
+        set_reg_suffixes = True
+        _logger.debug("Update registered image suffixes to:", reg_suffixes)
+    return set_subimg, set_reg_suffixes
 
 
 def save_image_info(filename_info_npz, names, sizes, resolutions, 

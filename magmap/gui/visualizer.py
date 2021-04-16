@@ -1765,20 +1765,13 @@ class Visualization(HasTraits):
             self._ignore_filename = False
             return
         
-        # load image if possible without allowing import
-        filename, offset, size, reg_suffixes = importer.deconstruct_np_filename(
+        # load image if possible without allowing import, deconstructing
+        # filename from the selected imported image
+        filename, offset, size, reg_suffixes = importer.deconstruct_img_name(
             self._filename)
         if filename is not None:
-            config.filename = filename
-            print("Changed filename to", config.filename)
-            if offset is not None and size is not None:
-                config.subimg_offsets = [offset]
-                config.subimg_sizes = [size]
-                print("Change sub-image offset to {}, size to {}"
-                      .format(config.subimg_offsets, config.subimg_sizes))
-            # TODO: consider loading processed images, blobs, etc
-            if reg_suffixes:
-                config.reg_suffixes.update(reg_suffixes)
+            importer.parse_deconstructed_name(
+                filename, offset, size, reg_suffixes)
             np_io.setup_images(
                 config.filename, offset=offset, size=size, allow_import=False)
             self._setup_for_image()

@@ -45,6 +45,8 @@ from magmap.settings import logs
 APP_NAME = "MagellanMapper"
 #: str: Uniform Resource Identifier scheme.
 URI_SCHEME = "magmap"
+#: str: Reverse Domain Name System identifier.
+DNS_REVERSE = f"io.github.sanderslab.{APP_NAME}"
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to

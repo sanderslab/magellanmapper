@@ -139,6 +139,10 @@ app = BUNDLE(
         # support dark theme
         "NSRequiresAquaSystemAppearance": False,
         
+        # set identifier and name
+        "CFBundleIdentifier": config.DNS_REVERSE,
+        "CFBundleName": config.APP_NAME,
+        
         # open files passed as magmap:<path>[?query]
         # TODO: implement file handling
         "CFBundleURLTypes": [{

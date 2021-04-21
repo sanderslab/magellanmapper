@@ -390,7 +390,9 @@ def process_cli_args():
         help=_get_args_dict_help(
             "Verbose output to assist with debugging; see config.Verbosity.",
             config.Verbosity))
-    args = parser.parse_args()
+    
+    # only parse recognized arguments to avoid error for unrecognized ones
+    args, args_unknown = parser.parse_known_args()
 
     if args.verbose:
         # verbose mode, including printing longer Numpy arrays for debugging
@@ -707,6 +709,13 @@ def process_cli_args():
         libmag.printv(config.truth_db_params)
         print("Mapped \"{}\" truth_db mode to {}"
               .format(mode, config.truth_db_mode))
+    
+    # notify user of full args list, including unrecognized args
+    _logger.debug(f"All command-line arguments: {sys.argv}")
+    if args_unknown:
+        _logger.info(
+            f"The following command-line arguments were unrecognized and "
+            f"ignored: {args_unknown}")
     
 
 def process_tasks():

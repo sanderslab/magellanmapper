@@ -148,8 +148,9 @@ def main():
             # treat relative paths as relative to app root dir, not working dir
             java_home = os.path.join(sys._MEIPASS, java_home_orig)
         if not java_home or not os.path.isdir(java_home):
-            # if Java home not set, check if custom JRE is in app root dir
-            java_home = os.path.join(sys._MEIPASS, "jre")
+            # set to JRE path in app root dir; non-symlink required for Mac
+            # .app bundle
+            java_home = os.path.realpath(os.path.join(sys._MEIPASS, "jre"))
         if java_home and os.path.isdir(java_home):
             os.environ["JAVA_HOME"] = str(java_home)
             home_orig = (java_home_orig if java_home_orig is None

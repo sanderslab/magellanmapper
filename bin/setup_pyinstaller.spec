@@ -114,10 +114,6 @@ app = BUNDLE(
     icon="../images/magmap.icns",
     bundle_identifier=None,
     info_plist={
+        # support dark theme
         "NSRequiresAquaSystemAppearance": False,
-        "LSEnvironment": {
-            # "./" at the start will be translated to the .app root directory
-            # since the working directory is "/" rather than the app root
-            "JAVA_HOME": "../Resources/jre"
-        }
     })

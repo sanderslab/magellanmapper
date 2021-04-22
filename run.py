@@ -140,18 +140,13 @@ def main():
         return
     
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
-        # adjust JAVA_HOME environment variable for frozen environment,
-        # using the PyInstaller-specific attributes indicating this env 
-        java_home_orig = os.getenv("JAVA_HOME")
-        java_home = None
-        if java_home_orig and not os.path.isabs(java_home_orig):
-            # treat relative paths as relative to app root dir, not working dir
-            java_home = os.path.join(sys._MEIPASS, java_home_orig)
-        if not java_home or not os.path.isdir(java_home):
-            # set to JRE path in app root dir; non-symlink required for Mac
-            # .app bundle
-            java_home = os.path.realpath(os.path.join(sys._MEIPASS, "jre"))
+        # detect frozen env using the PyInstaller-specific attributes
+        
+        # prioritize JRE in app root dir; non-symlink required for Mac .app
+        java_home = os.path.realpath(os.path.join(sys._MEIPASS, "jre"))
         if java_home and os.path.isdir(java_home):
+            # adjust JAVA_HOME environment variable for frozen environment
+            java_home_orig = os.getenv("JAVA_HOME")
             os.environ["JAVA_HOME"] = str(java_home)
             home_orig = (java_home_orig if java_home_orig is None
                          else f"\"{java_home_orig}\"")

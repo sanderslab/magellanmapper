@@ -154,8 +154,9 @@ app = BUNDLE(
         # open files passed through file browser or drag-n-drop
         # TODO: implement drag-n-drop file handling
         "CFBundleDocumentTypes": [{
-            "CFBundleTypeName": f"{config.APP_NAME}_NPY",
-            "CFBundleTypeExtensions": ["npy"],
+            "CFBundleTypeName": f"{config.APP_NAME}_FileTypes",
+            "CFBundleTypeExtensions": [
+                "npy", "mhd", "mha", "nii", "nii.gz", "nrrd", "nhdr"],
             "CFBundleTypeRole": "Viewer",
         }],
     })

@@ -68,6 +68,17 @@ a = Analysis(
     hiddenimports=[
         "sklearn.utils._weight_vector",
         "traits.util.clean_strings",
+        
+        # modules requiring starting in VTK 8.2 on Windows
+        "vtkmodules",
+        "vtkmodules.all",
+        "vtkmodules.qt.QVTKRenderWindowInteractor",
+        "vtkmodules.util",
+        "vtkmodules.util.colors",
+        "vtkmodules.util.numpy_support",
+        "vtkmodules.numpy_interface",
+        "vtkmodules.numpy_interface.algorithms",
+        "vtkmodules.numpy_interface.dataset_adapter",
     ],
     hookspath=[],
     runtime_hooks=[],

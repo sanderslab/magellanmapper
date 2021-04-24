@@ -56,6 +56,8 @@ cpus = None
 app_dir = pathlib.Path(__file__).resolve().parent.parent.parent
 #: str: Accessor to application-related user directories.
 user_app_dirs = AppDirs(APP_NAME, False)
+#: PurePath: Absolution path to main application icon.
+ICON_PATH = app_dir / "images" / "magmap.png"
 
 
 # LOGGING

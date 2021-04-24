@@ -23,7 +23,7 @@ matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
-from PyQt5 import QtWidgets, QtCore, QtGui
+from PyQt5 import QtWidgets, QtCore
 
 # adjust for HiDPI screens before QGuiApplication is created, necessary
 # on Windows and Linux (not needed but no apparent affect on MacOS)
@@ -39,12 +39,11 @@ except AttributeError:
 # import PyFace components after HiDPI adjustment
 from pyface.api import FileDialog, OK
 from pyface.image_resource import ImageResource
-from traits.api import (HasTraits, Instance, on_trait_change, Button, Float,
-                        Int, List, Array, Str, Bool, Any,
-                        push_exception_handler, Property, File)
-from traitsui.api import (View, Item, HGroup, VGroup, Tabbed, Handler,
-                          RangeEditor, HSplit, TabularEditor, CheckListEditor, 
-                          FileEditor, TextEditor, ArrayEditor, BooleanEditor)
+from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
+    Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
+from traitsui.api import View, Item, HGroup, VGroup, Tabbed, RangeEditor, \
+    HSplit, TabularEditor, CheckListEditor, FileEditor, TextEditor, \
+    ArrayEditor, BooleanEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -58,8 +57,8 @@ import run
 from magmap.atlas import ontology
 from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter,\
     verifier
-from magmap.gui import atlas_editor, event_handlers, import_threads, \
-    roi_editor, vis_3d
+from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
+    vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config
@@ -67,9 +66,6 @@ from magmap.settings import config
 
 #: str: default ROI name.
 _ROI_DEFAULT = "None selected"
-
-#: `pathlib.Path`: Absolute path to image icon.
-_ICON_PATH = config.app_dir / "images" / "magmap.png"
 
 
 def main():
@@ -109,144 +105,6 @@ class _MPLFigureEditor(Editor):
 class MPLFigureEditor(BasicEditorFactory):
     """Custom TraitsUI editor for a Matplotlib figure."""
     klass = _MPLFigureEditor
-
-
-class VisHandler(Handler):
-    """Custom handler for Visualization object events."""
-    
-    #: :class:`magmap.gui.event_handlers.FileOpenHandler`: File open event
-    # handler to retain the object reference.
-    _file_open_handler = None
-
-    def init(self, info):
-        """Handle events after controls have been generated but prior to
-        their display.
-
-        Args:
-            info (UIInfo): TraitsUI UI info.
-
-        Returns:
-            bool: True.
-
-        """
-        def handle_tab_changed(i):
-            # set the enum for the currently selected tab and initialize
-            # viewers if necessary
-            tab = ViewerTabs(i + 1)  # enums auto-index starting from 1
-            info.object.selected_viewer_tab = tab
-            print("Changed to tab", i, tab)
-            if (info.object.stale_viewers[tab] is StaleFlags.IMAGE
-                    or tab is ViewerTabs.ROI_ED and not info.object.roi_ed
-                    or tab is ViewerTabs.ATLAS_ED and not info.object.atlas_eds
-                    or tab is ViewerTabs.MAYAVI
-                    and not info.object.scene_3d_shown):
-                # redraw if new image has not been drawn for tab, or the
-                # corresponding viewer has not been shown before
-                info.object.redraw_selected_viewer(clear=False)
-                if tab is ViewerTabs.MAYAVI:
-                    # initialize the camera orientation
-                    info.object.orient_camera()
-            elif tab is ViewerTabs.ATLAS_ED:
-                # synchronize Atlas Editors to ROI offset if option selected
-                info.object.sync_atlas_eds_coords(check_option=True)
-            info.object.update_imgadj_for_img()
-
-        # change Trait to flag completion of controls creation
-        info.object.controls_created = True
-
-        # add a change listener for the viewer tab widget, which is the
-        # first found widget
-        tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
-        tab_widgets[0].currentChanged.connect(handle_tab_changed)
-        
-        # handle file open events such as Apple Events from PyInstaller
-        app = QtWidgets.QApplication.instance()
-        self._file_open_handler = event_handlers.FileOpenHandler(
-            info.object.open_image)
-        app.installEventFilter(self._file_open_handler)
-        
-        # WORKAROUND: TraitsUI icon does not work in Mac; use PyQt directly to
-        # display application window icon using abs path; ignored in Windows
-        app.setWindowIcon(QtGui.QIcon(str(_ICON_PATH)))
-        return True
-
-    def closed(self, info, is_ok):
-        """Shuts down the application when the GUI is closed."""
-        cli.shutdown()
-
-    def object_mpl_fig_active_changed(self, info):
-        """Change keyboard focus depending on the shown tab.
-
-        TraitsUI does not hand Matplotlib figures keyboard focus except
-        when the ``Item`` initially requests focus in ``has_focus``, and
-        even then the figure cannot regain focus once lost. As a workaround,
-        store the active figure in a Trait and request focus on the
-        figure from the underlying Qt widget.
-
-        Args:
-            info (UIInfo): TraitsUI UI info.
-
-        """
-        if info.object.mpl_fig_active is None:
-            # into.object is the Visualization object
-            return
-
-        # get all Matplotlib figure canvases displayed via TraitsUI as
-        # Qt widgets; the control is a _StickyDialog that extends QDialog
-        mpl_figs = info.ui.control.findChildren(
-            matplotlib.backends.backend_qt5agg.FigureCanvasQTAgg)
-        for fig in mpl_figs:
-            if fig.figure == info.object.mpl_fig_active:
-                # shift keyboard focus to canvas matching the currently
-                # shown Matplotlib figure
-                fig.setFocus()
-    
-    @staticmethod
-    def scroll_to_bottom(eds, ed_name):
-        """Scroll to the bottom of the given Qt editor.
-
-        Args:
-            eds (List): Sequence of Qt editors.
-            ed_name (str): Name of editor to scroll.
-
-        """
-        for ed in eds:
-            if ed.name == ed_name:
-                # scroll to end of text display
-                ed.control.moveCursor(QtGui.QTextCursor.End)
-    
-    def object__roi_feedback_changed(self, info):
-        """Scroll to the bottom of the ROI feedback text display
-        when the value is changed.
-
-        Args:
-            info (UIInfo): TraitsUI UI info.
-
-        """
-        self.scroll_to_bottom(info.ui._editors, "_roi_feedback")
-
-    def object__import_feedback_changed(self, info):
-        """Scroll to the bottom of the import feedback text display
-        when the value is changed.
-        
-        Args:
-            info (UIInfo): TraitsUI UI info.
-
-        """
-        self.scroll_to_bottom(info.ui._editors, "_import_feedback")
-    
-    def object_select_controls_tab_changed(self, info):
-        """Select the given tab specified by
-        :attr:`Visualization.select_controls_tab`.
-        
-        Args:
-            info (UIInfo): TraitsUI UI info.
-
-        """
-        # the tab widget is the second found QTabWidget; subtract one since
-        # Enums auto-increment from 1
-        tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
-        tab_widgets[1].setCurrentIndex(info.object.select_controls_tab - 1)
 
 
 class ListSelections(HasTraits):
@@ -365,19 +223,6 @@ class ControlsTabs(Enum):
     IMPORT = auto()
 
 
-class ViewerTabs(Enum):
-    """Enumerations for viewer tabs."""
-    ROI_ED = auto()
-    ATLAS_ED = auto()
-    MAYAVI = auto()
-
-
-class StaleFlags(Enum):
-    """Enumerations for stale viewer states."""
-    IMAGE = auto()  # loaded new image
-    ROI = auto()  # changed ROI offset or size
-
-
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
     
@@ -405,10 +250,13 @@ class Visualization(HasTraits):
             tab in the viewer panel.
         select_controls_tab (int): Enum value from :class:`ControlsTabs` to
             select the controls panel tab.
-        stale_viewers (dict[:class:`ViewerTabs`, :class:`StaleFlags`]):
+        stale_viewers (
+            dict[:class:`magmap.gui.vis_handler.vis_handler.ViewerTabs`,
+            :class:`magmap.gui.vis_handler.vis_handler.StaleFlags`]):
             Dictionary of viewer tab Enums to stale flag Enums, where the
             flag indicates the update that the viewer would require.
-            Defaults to all viewers set to :class:`StaleFlags.IMAGE`.
+            Defaults to all viewers set to
+            :class:`vis_handler.StaleFlags.IMAGE`.
     
     """
     # File selection
@@ -558,7 +406,7 @@ class Visualization(HasTraits):
     mpl_fig_active = Any
     scene = Instance(MlabSceneModel, ())
     scene_3d_shown = False  # 3D Mayavi display shown
-    selected_viewer_tab = ViewerTabs.ROI_ED
+    selected_viewer_tab = vis_handler.ViewerTabs.ROI_ED
     select_controls_tab = Int(-1)
     
     # Viewer options
@@ -883,7 +731,8 @@ class Visualization(HasTraits):
     )
 
     # icon as a Pyface resource if image file exists
-    icon_img = ImageResource(str(_ICON_PATH)) if _ICON_PATH.exists() else None
+    icon_img = (ImageResource(str(config.ICON_PATH))
+                if config.ICON_PATH.exists() else None)
     
     # set up the GUI layout; control the HSplit width ratio using a width
     # for this whole view and a width for an item in panel_figs
@@ -893,7 +742,7 @@ class Visualization(HasTraits):
             panel_figs,
         ),
         width=1500,
-        handler=VisHandler(),
+        handler=vis_handler.VisHandler(),
         title="MagellanMapper",
         statusbar="_status_bar_msg",
         resizable=True,
@@ -1092,9 +941,9 @@ class Visualization(HasTraits):
         
         # get the currently selected viewer
         ed = None
-        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
             ed = self.roi_ed
-        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
                 ed = self.atlas_eds[0]
         if ed is None: return
@@ -1238,15 +1087,15 @@ class Visualization(HasTraits):
 
         """
         plot_ax_img = None
-        if self.selected_viewer_tab is ViewerTabs.MAYAVI:
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
             # update 3D visualization Mayavi/VTK settings
             self._vis3d.update_img_display(**kwargs)
         else:
             # update any selected Matplotlib-based viewer settings
             eds = []
-            if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+            if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
                 eds.append(self.roi_ed)
-            elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
                 # support multiple Atlas Editors (currently only have one)
                 eds.extend(self.atlas_eds)
             plot_ax_img = None
@@ -1572,7 +1421,7 @@ class Visualization(HasTraits):
 
         if feedback:
             self._update_roi_feedback(" ".join(feedback), print_out=True)
-        self.stale_viewers[ViewerTabs.MAYAVI] = None
+        self.stale_viewers[vis_handler.ViewerTabs.MAYAVI] = None
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.
@@ -1620,7 +1469,7 @@ class Visualization(HasTraits):
             title="label3d_{}".format(name), show_orientation=False)
         
         # turn off stale flag from ROI changes
-        self.stale_viewers[ViewerTabs.MAYAVI] = None
+        self.stale_viewers[vis_handler.ViewerTabs.MAYAVI] = None
     
     @on_trait_change("_main_img_name_avail")
     def _on_main_img_name_avail_changed(self):
@@ -1876,14 +1725,15 @@ class Visualization(HasTraits):
         self._reset_segments()
         print("Changed channel to {}".format(config.channel))
     
-    def reset_stale_viewers(self, val=StaleFlags.IMAGE):
+    def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
         """Reset the stale viewer flags for all viewers.
         
         Args:
-            val (:class:`StaleFlags`): Enumeration to set for all viewers.
+            val (:class:`vis_handler.StaleFlags`): Enumeration to set for all
+                viewers.
 
         """
-        self.stale_viewers = dict.fromkeys(ViewerTabs, val)
+        self.stale_viewers = dict.fromkeys(vis_handler.ViewerTabs, val)
         return self.stale_viewers
     
     @on_trait_change("x_offset,y_offset,z_offset")
@@ -1895,11 +1745,11 @@ class Visualization(HasTraits):
         """
         print("x: {}, y: {}, z: {}"
               .format(self.x_offset, self.y_offset, self.z_offset))
-        self.reset_stale_viewers(StaleFlags.ROI)
+        self.reset_stale_viewers(vis_handler.StaleFlags.ROI)
         
         # additional callbacks
         if self._ignore_roi_offset_change: return
-        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
             # immediately move to new offset if sync selected
             self.sync_atlas_eds_coords(check_option=True)
 
@@ -1907,7 +1757,7 @@ class Visualization(HasTraits):
     def _update_roi_array(self):
         """Respond to ROI size array changes."""
         # flag ROI changed for viewers
-        self.reset_stale_viewers(StaleFlags.ROI)
+        self.reset_stale_viewers(vis_handler.StaleFlags.ROI)
         if self._DEFAULTS_2D[4] in self._check_list_2d:
             # update max intensity projection settings
             self._update_mip()
@@ -1964,14 +1814,14 @@ class Visualization(HasTraits):
             self._reset_segments()
 
         # redraw the currently selected viewer tab
-        if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
             self._launch_roi_editor()
-        elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
                 # TODO: re-support multiple Atlas Editor windows
                 self.atlas_eds = []
             self.launch_atlas_editor()
-        elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
             self.show_3d()
             self._post_3d_display()
     
@@ -2180,16 +2030,16 @@ class Visualization(HasTraits):
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         
-        if (self.selected_viewer_tab is ViewerTabs.ROI_ED or
-                self.selected_viewer_tab is ViewerTabs.MAYAVI and
-                self.stale_viewers[ViewerTabs.MAYAVI]):
+        if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
+                self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and
+                self.stale_viewers[vis_handler.ViewerTabs.MAYAVI]):
             # currently must redraw ROI Editor to include blobs; redraw
             # 3D viewer if stale and only if shown to limit performance impact
             # of 3D display; Atlas Editor does not show blobs
             self.redraw_selected_viewer(clear=False)
         
-        if (self.selected_viewer_tab is ViewerTabs.MAYAVI or
-                not self.stale_viewers[ViewerTabs.MAYAVI]):
+        if (self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI or
+                not self.stale_viewers[vis_handler.ViewerTabs.MAYAVI]):
             # show 3D blobs if 3D viewer is showing; if not, add to 3D display
             # if it is not stale so blobs do not need to be redetected to show
             self.show_3d_blobs()
@@ -2407,7 +2257,7 @@ class Visualization(HasTraits):
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
         self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
-        self.stale_viewers[ViewerTabs.ROI_ED] = None
+        self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
 
     def launch_atlas_editor(self):
         if config.image5d is None:
@@ -2437,7 +2287,7 @@ class Visualization(HasTraits):
         atlas_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
         self._add_mpl_fig_handlers(atlas_ed.fig)
-        self.stale_viewers[ViewerTabs.ATLAS_ED] = None
+        self.stale_viewers[vis_handler.ViewerTabs.ATLAS_ED] = None
     
     def sync_atlas_eds_coords(self, coords=None, check_option=False):
         """Synchronize Atlas Editors to ROI offset.
@@ -2506,8 +2356,8 @@ class Visualization(HasTraits):
                     for plot_ed in atlas_ed.plot_eds.values():
                         plot_ed.draw_crosslines()
         
-        if self.selected_viewer_tab is ViewerTabs.ATLAS_ED and changed[
-                AtlasEditorOptions.SYNC_ROI]:
+        if (self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED
+                and changed[AtlasEditorOptions.SYNC_ROI]):
             # move visible Atlas Editor to ROI offset if sync selected;
             # otherwise, defer sync to tab selection handler
             self.sync_atlas_eds_coords(check_option=True)
@@ -2561,18 +2411,18 @@ class Visualization(HasTraits):
         """Save the figure in the currently selected viewer."""
         path = None
         try:
-            if self.selected_viewer_tab is ViewerTabs.ROI_ED:
+            if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
                 if self.roi_ed is not None:
                     # save screenshot of current ROI Editor
                     path = self._get_save_path(self.roi_ed.get_save_path())
                     self.roi_ed.save_fig(path)
-            elif self.selected_viewer_tab is ViewerTabs.ATLAS_ED:
+            elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
                 if self.atlas_eds:
                     # save screenshot of first Atlas Editor
                     # TODO: find active editor
                     path = self._get_save_path(self.atlas_eds[0].get_save_path())
                     self.atlas_eds[0].save_fig(path)
-            elif self.selected_viewer_tab is ViewerTabs.MAYAVI:
+            elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
                 if config.filename:
                     # save 3D image with extension in config
                     screenshot = self.scene.mlab.screenshot(

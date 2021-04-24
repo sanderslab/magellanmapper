@@ -12,10 +12,11 @@ Examples:
         
         ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
-
 from collections import OrderedDict
-from enum import Enum, auto
+from enum import auto, Enum 
 import os
+import subprocess
+import sys
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -53,10 +54,12 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
+import run
 from magmap.atlas import ontology
 from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter,\
     verifier
-from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d
+from magmap.gui import atlas_editor, event_handlers, import_threads, \
+    roi_editor, vis_3d
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config
@@ -110,6 +113,10 @@ class MPLFigureEditor(BasicEditorFactory):
 
 class VisHandler(Handler):
     """Custom handler for Visualization object events."""
+    
+    #: :class:`magmap.gui.event_handlers.FileOpenHandler`: File open event
+    # handler to retain the object reference.
+    _file_open_handler = None
 
     def init(self, info):
         """Handle events after controls have been generated but prior to
@@ -152,10 +159,15 @@ class VisHandler(Handler):
         tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
         tab_widgets[0].currentChanged.connect(handle_tab_changed)
         
+        # handle file open events such as Apple Events from PyInstaller
+        app = QtWidgets.QApplication.instance()
+        self._file_open_handler = event_handlers.FileOpenHandler(
+            info.object.open_image)
+        app.installEventFilter(self._file_open_handler)
+        
         # WORKAROUND: TraitsUI icon does not work in Mac; use PyQt directly to
         # display application window icon using abs path; ignored in Windows
-        QtWidgets.QApplication.instance().setWindowIcon(QtGui.QIcon(
-            str(_ICON_PATH)))
+        app.setWindowIcon(QtGui.QIcon(str(_ICON_PATH)))
         return True
 
     def closed(self, info, is_ok):
@@ -1749,6 +1761,38 @@ class Visualization(HasTraits):
                 self._append_roi(roi, self._rois_dict)
         self._rois_selections.selections = list(self._rois_dict.keys())
         self.rois_check_list = _ROI_DEFAULT
+
+    def update_filename(self, filename):
+        """Update main image filename, triggering image load.
+        
+        Args:
+            filename (str): Path to image file to load.
+
+        """
+        # reset path so that new path triggers an image load
+        self._filename = ""
+        self._filename = filename
+    
+    def open_image(self, filename, new_window=True):
+        """Open an image with handling for a new window.
+        
+        Args:
+            filename (str): Path to image file to load.
+            new_window (bool): True to load the image in a new app instance
+                unless no image is loaded in the current instance.
+
+        """
+        if new_window and self._filename:
+            # load the image in a completely separate app instance if an
+            # image is currently loaded
+            popen_args = [sys.executable, filename]
+            if not getattr(sys, "frozen", False):
+                # launch the run script unless in a frozen environment
+                popen_args.insert(1, run.__file__)
+            subprocess.Popen(popen_args)
+        else:
+            # load the image in the empty current app window
+            self.update_filename(filename)
     
     @on_trait_change("_filename")
     def _image_path_updated(self):
@@ -3112,10 +3156,6 @@ class Visualization(HasTraits):
     def _import_files(self):
         """Import files based on paths in the import table.
         """
-        def update_filename():
-            # update image path and trigger loading the image
-            self._filename = ""
-            self._filename = self._import_prefix
         
         # repopulate channel paths dict, including any user edits
         chl_paths = OrderedDict()
@@ -3142,7 +3182,9 @@ class Visualization(HasTraits):
             # loading thew newly imported image
             self._import_thread = import_threads.ImportThread(
                 self._import_mode, self._import_prefix, chl_paths, md,
-                self._update_import_feedback, update_filename)
+                self._update_import_feedback,
+                # update image path and trigger loading the image
+                lambda: self.update_filename(self._import_prefix))
             self._import_thread.start()
     
     @on_trait_change("_import_clear_btn")

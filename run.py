@@ -23,11 +23,13 @@ configuration such as Python launched via Finder in the MacOS platform.
 
 """
 
+import logging
 import multiprocessing
 import os
 import platform
 import subprocess
 import sys
+import tempfile
 
 #: str: Name of Conda or Venv environment
 ENV_NAME = "mag"
@@ -126,6 +128,35 @@ def launch_magmap():
     visualizer.main()
 
 
+def log_uncaught_exception(exc_type, exc, trace):
+    """Handle uncaught exceptions globally with logging.
+    
+    Args:
+        exc_type: Exception class. 
+        exc: Exception instance.
+        trace: Traceback object.
+
+    Returns:
+
+    """
+    logger = logging.getLogger()
+    if not (any([isinstance(h, logging.StreamHandler)
+                 for h in logger.handlers])):
+        # add stream handler to output to terminal if not set up yet
+        logger.addHandler(logging.StreamHandler())
+    
+    # log to temp file in case file logging has not been set up yet,
+    # in additional to any existing log file handler
+    log_file = tempfile.NamedTemporaryFile(
+        prefix="magellanmapper_error_", suffix=".log", delete=False)
+    logger.addHandler(logging.FileHandler(log_file.name))
+    
+    # log the exception
+    logger.critical(
+        "Unhandled exception. Additional log saved to: %s", log_file.name,
+        exc_info=(exc_type, exc, trace))
+
+
 def main():
     """Launch MagellanMapper with environment activation.
 
@@ -197,6 +228,9 @@ if __name__ == "__main__":
     # support multiprocessing in frozen environments, necessary for Windows;
     # no effect on other platforms or non-frozen environments
     multiprocessing.freeze_support()
+
+    # log any unhandled exception
+    sys.excepthook = log_uncaught_exception
     
     # start MagellanMapper
     print("Starting MagellanMapper run script...")

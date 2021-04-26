@@ -53,6 +53,7 @@ Atlas refinement
 - Added a `watershed_mask_filter` setting in the `edge_aware_reannotation` atlas profile group to set the filter type and size for the watershed mask
 - `atlas_mirror` profile setting to toggle mirroring the intensity image across hemispheres during atlas curation
 - Fixed to exclude labels that were not eroded from undergoing watershed-based reannotation
+- Fixed saving edited images loaded through the GUI (#11)
 
 Atlas registration
 - Customize the atlas images used during image registration by using the `--reg_suffixes` CLI parameter
@@ -87,6 +88,9 @@ Volumetric image processing
 - Blobs positions are scaled to the main image
 
 I/O
+- Open image files through file browsers (eg macOS Finder, Windows Explorer) (#18)
+    - Open files in key supported file formats (eg `.npy`, `.mhd`, `.nii.gz`) by double-clicking or using "Open with...", or drag-n-drop onto the application icon in macOS
+    - If MagellanMapper already has a loaded image, another application instance will be opened with the new image
 - Image file metadata now uses YAML format for human-readable files; NPZ files are still supported for backward-compatibility
 - Logging
     - Logging using the in-built Python `logging` facility is not supported, including output to log files
@@ -134,10 +138,12 @@ Code base and docs
 - Python APIs
     - Previously Python APIs compatible with both Python 2 and 3 have been used when possible, but much of the package requires Python 3, and testing has been on Python >= 3.6
     - For a more consistent and modern codebase, we are initiating use of Python 3 APIs such as `pathlib` and specifically 3.6+ features such as f-strings
-- Unhandled exceptions are now logged (saved to a temp file if caught before logging is set up)
+- Unhandled exceptions are now logged (saved to a temp file if caught before logging is set up) (#17)
 - More links to external packages in API docs
-- Instructions on building the API docs
+- Instructions on building the API docs (#3)
+- Readme cleanup (#2) and tabular format for Atlas Editor shortcuts (#5)
 - `Blobs` and `Image5d` are being migrated to class structures for better encapsulation and additional metadata
+- Initial additions of unit testing, starting with `libmag` (#7)
 
 ### Dependency Updates
 
@@ -146,7 +152,7 @@ Code base and docs
 - The `appdirs` [package](https://github.com/ActiveState/appdirs) has been added to store user application files in standard operating system-dependent locations, allowing the application to be stored in locations without standard write access (see [settings](../settings.md#user-application-folder) for more details)
   - The database (`magmap.db`) is generated and stored there
   - Any existing `magmap.db` in the project root folder is left in place; copy it to the user application folder if you would like to use it
-- Custom wheels have been built for SimpleElastix and Javabridge on Python 3.6-3.9
+- Custom wheels have been built for SimpleElastix and Javabridge on Python 3.6-3.9 (#9)
   - Wheels are compatible with macOS 10.9+, Windows 10, and Linux glibc 2.23 (eg Ubuntu 16.04)
   - Python 3.9 is not yet supported for MagellanMapper because VTK 9 currently does not support this Python version
 

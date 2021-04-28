@@ -98,9 +98,15 @@ def update_log_level(logger, level):
 def add_file_handler(logger, path, backups=5):
     """Add a rotating log file handler with a new log file.
     
+    Rotates the file each time this function is called for the given number
+    of backups rather than by size or time. Avoids file conflicts from
+    multiple instances when permission errors occur (eg on Windows), instead
+    creating a log filed named with an incremented number (eg ``out1.log``).
+    
     Args:
         logger (:class:`logging.Logger`): Logger to update.
-        path (str): Path to log.
+        path (str): Path to log. Increments to ``path<n>.<ext>`` if the
+            file at ``path`` cannot be rotated.
         backups (int): Number of backups to maintain; defaults to 5.
 
     Returns:
@@ -114,13 +120,31 @@ def add_file_handler(logger, path, backups=5):
     # create a rotations file handler to manage number of backups while
     # manually managing rollover based on file presence rather than size
     pathl.parent.mkdir(parents=True, exist_ok=True)
-    handler_file = handlers.RotatingFileHandler(path, backupCount=backups)
+    i = 0
+    handler_file = None
+    while handler_file is None:
+        try:
+            # if the existing file at path cannot be rotated, increment the
+            # filename to create a new series of rotating log files
+            path_log = (pathl if i == 0 else
+                        f"{pathl.parent / pathl.stem}{i}{pathl.suffix}")
+            logger.debug(f"Trying logger path: {path_log}")
+            handler_file = handlers.RotatingFileHandler(
+                path_log, backupCount=backups)
+            if roll:
+                # create a new log file if exists, backing up the old one
+                handler_file.doRollover()
+        except (PermissionError, FileNotFoundError) as e:
+            # permission errors occur on Windows if the log is opened by
+            # another application instance; file not found errors occur if a
+            # backup file is skipped in backup series
+            logger.debug(e)
+            handler_file = None
+            i += 1
+    
     handler_file.setLevel(logger.level)
     handler_file.setFormatter(logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler_file)
     
-    if roll:
-        # create a new log file if exists, backing up the old one
-        handler_file.doRollover()
     return logger

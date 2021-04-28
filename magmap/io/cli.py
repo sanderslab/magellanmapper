@@ -51,6 +51,7 @@ Command-line arguments in addition to those from attributes listed below:
 """
 
 import argparse
+import logging
 import os
 import sys
 
@@ -394,15 +395,20 @@ def process_cli_args():
     # only parse recognized arguments to avoid error for unrecognized ones
     args, args_unknown = parser.parse_known_args()
 
-    if args.verbose:
-        # verbose mode, including printing longer Numpy arrays for debugging
+    if args.verbose is not None:
+        # verbose mode and logging setup
         config.verbose = True
         config.verbosity = args_to_dict(
             args.verbose, config.Verbosity, config.verbosity)
+        if config.verbosity[config.Verbosity.LEVEL] is None:
+            # default to debug mode if any verbose flag is set without level
+            config.verbosity[config.Verbosity.LEVEL] = logging.DEBUG
         logs.update_log_level(
             config.logger, config.verbosity[config.Verbosity.LEVEL])
+        
+        # print longer Numpy arrays for debugging
         np.set_printoptions(linewidth=200, threshold=10000)
-        _logger.info("Set verbose to {}".format(config.verbosity))
+        _logger.info("Set verbose to %s", config.verbosity)
     
     # set up logging to given file unless explicitly given an empty string
     log_path = config.verbosity[config.Verbosity.LOG_PATH]

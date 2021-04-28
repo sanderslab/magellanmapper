@@ -378,7 +378,7 @@ def parse_deconstructed_name(filename, offset, size, reg_suffixes):
 
     """
     config.filename = filename
-    _logger.debug("Changed filename to", config.filename)
+    _logger.debug("Changed filename to %s", config.filename)
     set_subimg = offset is not None and size is not None
     if set_subimg:
         config.subimg_offsets = [offset]

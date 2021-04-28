@@ -90,6 +90,9 @@ def update_log_level(logger, level):
         logger.setLevel(level)
         for handler in logger.handlers:
             handler.setLevel(level)
+        if level < logging.INFO:
+            # avoid lots of debugging messages from Matplotlib
+            logging.getLogger("matplotlib").setLevel(logging.INFO)
     except (TypeError, ValueError) as e:
         logger.error(e, exc_info=True)
     return logger

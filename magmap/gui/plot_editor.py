@@ -547,17 +547,18 @@ class PlotEditor:
         """Get a plotted image based on image group and channel.
 
         Args:
-            plot_ax_imgs (List[List[:obj:`PlotAxImg`]]): Plotted image objects,
-                organized as
+            plot_ax_imgs (list[list[:class:`PlotAxImg`]]): Plotted image
+                objects, organized as
                 ``[[img0_chl0, img0_chl1, ...], [img1_chl0, ...], ....]``.
             imgi (int): Index of image group in ``plot_ax_imgs``.
-            channels (List[List[int]]): List of channel lists corresponding
+            channels (list[list[int]]): List of channel lists corresponding
                 to ``plot_ax_imgs``; defalts to None to use ``chl`` directly.
             chl (int): Index of channel within the selected image group;
                 defaults to None to use the first channel.
 
         Returns:
-            :obj:`PlotAxImg`: The selected plotted image.
+            :class:`PlotAxImg`: The selected plotted image, or None if image
+            corresponding to ``imgi`` and ``chl`` is not found.
 
         """
         plot_ax_img = None
@@ -569,7 +570,9 @@ class PlotEditor:
                 if chl not in channels[imgi]:
                     return None
                 chl = channels[imgi].index(chl)
-            plot_ax_img = plot_ax_imgs[imgi][chl]
+            if plot_ax_imgs[imgi] and chl < len(plot_ax_imgs[imgi]): 
+                # get image channel within given set of images
+                plot_ax_img = plot_ax_imgs[imgi][chl]
         return plot_ax_img
 
     def get_displayed_img(self, imgi, chl=None):

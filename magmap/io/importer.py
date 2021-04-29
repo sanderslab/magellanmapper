@@ -1081,18 +1081,34 @@ def setup_import_dir(path):
         dict[int, List[str]], dict[:obj:`config.MetaKeys`]: Ordered dictionary
         of channel numbers to sequences of image file paths to import and
         dictionary of metadata.
+    
+    Raise:
+        FileNotFoundError: if no file from the directory can be loaded as
+            an image.
 
     """
     # all files in the given folder will be imported in alphabetical order
     print("Importing files in directory {}:".format(path))
     paths = sorted(glob.glob(os.path.join(path, "*")))
     
-    # set shape and data type based on first image in first channel
+    # set up paths for each channel and metadata dict
     chl_paths = _parse_import_chls(paths)
-    chl_files = tuple(chl_paths.values())[0]
-    path = chl_files[0]
     md = dict.fromkeys(config.MetaKeys)
-    img = io.imread(path)
+    
+    # set shape and data type based on first loadable image in first channel
+    # TODO: consider filtering all files for images
+    chl_files = tuple(chl_paths.values())[0]
+    img = None
+    for chl_file in chl_files:
+        try:
+            img = io.imread(chl_file)
+            break
+        except ValueError:
+            _logger.debug(
+                "Could not read %s as an image, reading next", chl_file)
+    if img is None:
+        raise FileNotFoundError(
+            f"Could not find image files in the directory: {path}")
     md[config.MetaKeys.SHAPE] = [
         1, len(chl_files), *img.shape[:2], len(chl_paths.keys())]
     md[config.MetaKeys.DTYPE] = img.dtype.str

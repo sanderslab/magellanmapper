@@ -73,16 +73,19 @@ sample_tasks() {
   # view downsampled image (assumes filename output using the first option)
   ./run.py --img "$IMG_RESIZED"
 
-  # register imported atlas to downsampled image and view
+  # register imported atlas to downsampled image
   # - defaults to using channel 0; add `--channel x` to use channel x instead
-  # - use the `transform` parameter for a 180 degree rotation (2 x 90 deg)
+  # - to rotate: `--transform rotate=<n>`, where n = number of 90 deg rotations
+  # - to transpose: `--plane <xy|xz|yz>`, where xz transposes y-plane to z-plane
   ./run.py --img "$IMG_RESIZED" "$ABA_IMPORT_DIR" --prefix "$IMG" \
-    --register single --atlas_profile "${REG},raw" -v #--transform rotate=2
+    --register single --atlas_profile "$REG" -v #--transform rotate=2
+  
+  # view registered atlas on exported, single-channel downsampled image
   ./run.py --img "$IMG_MHD" --roi_profile lightsheet,atlas \
     --labels "$ABA_LABELS" --reg_suffixes exp.mhd annotation.mhd
 
-  # similar view of registered labels but overlaid on downsampled image
-  # including all of its channels
+  # similar view of registered labels but overlaid on original downsampled image
+  # including all of its channels; prefix is used to find registered images
   ./run.py --img "$IMG_RESIZED" --prefix "$IMG_MHD" \
     --roi_profile lightsheet,atlas --labels "$ABA_LABELS" \
     --reg_suffixes annotation=annotation.mhd --offset 70,350,150

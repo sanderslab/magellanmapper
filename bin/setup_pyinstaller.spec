@@ -143,8 +143,7 @@ app = BUNDLE(
         "CFBundleIdentifier": config.DNS_REVERSE,
         "CFBundleName": config.APP_NAME,
         
-        # open files passed as magmap:<path>[?query]
-        # TODO: implement file handling
+        # open files passed as magmap:<path>[?query] or magmap://...
         "CFBundleURLTypes": [{
             "CFBundleURLName": f"{config.APP_NAME}_{config.URI_SCHEME}",
             "CFBundleTypeRole": "Viewer",
@@ -152,7 +151,6 @@ app = BUNDLE(
         }],
         
         # open files passed through file browser or drag-n-drop
-        # TODO: implement drag-n-drop file handling
         "CFBundleDocumentTypes": [{
             "CFBundleTypeName": f"{config.APP_NAME}_FileTypes",
             "CFBundleTypeExtensions": [

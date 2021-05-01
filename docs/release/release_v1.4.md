@@ -91,6 +91,7 @@ I/O
 - Open image files through file browsers (eg macOS Finder, Windows Explorer) (#18)
     - Open files in key supported file formats (eg `.npy`, `.mhd`, `.nii.gz`) by double-clicking or using "Open with...", or drag-n-drop onto the application icon in macOS
     - If MagellanMapper already has a loaded image, another application instance will be opened with the new image
+- Open files on macOS through URIs: `open magmap:<path>`
 - Image file metadata now uses YAML format for human-readable files; NPZ files are still supported for backward-compatibility
 - Logging
     - Logging using the in-built Python `logging` facility is not supported, including output to log files

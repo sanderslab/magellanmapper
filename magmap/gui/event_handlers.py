@@ -18,6 +18,10 @@ class FileOpenHandler(QObject):
         fn_open_image (func): Function to open an image, taking the image path.
     
     """
+    
+    #: tuple: URI schemes that may be passed to MagellanMapper.
+    _SCHEMES = ("file://", f"{config.URI_SCHEME}:", f"{config.URI_SCHEME}://")
+    
     def __init__(self, fn_open_image, parent=None):
         """Create a new instance of the file open handler.
         
@@ -42,12 +46,12 @@ class FileOpenHandler(QObject):
 
         """
         if event.type() == QEvent.FileOpen:
-            _logger.debug("File open event:", event.url())
             url = event.url().toString()
-            scheme = "file://"
-            if url.startswith(scheme):
-                # remove file scheme and trigger file opening
-                url = url[len(scheme):]
-                self.fn_open_image(url)
-                return True
+            _logger.info("File open event: %s", url)
+            for scheme in self._SCHEMES:
+                if url.startswith(scheme):
+                    # remove scheme and trigger file opening
+                    url = url[len(scheme):]
+                    self.fn_open_image(url)
+                    return True
         return super().eventFilter(watched, event)

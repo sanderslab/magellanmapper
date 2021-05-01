@@ -13,6 +13,8 @@ from magmap.io import importer, libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
 
+_logger = config.logger.getChild(__name__)
+
 
 class Image5d:
     """Main image storage.
@@ -377,7 +379,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     config.labels_ref_lookup = (
                         ontology.create_aba_reverse_lookup(labels_ref))
         except FileNotFoundError as e:
-            print(e)
+            _logger.error(e)
     
     borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
     if borders_suffix is not None:

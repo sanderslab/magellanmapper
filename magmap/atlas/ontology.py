@@ -10,6 +10,7 @@ import json
 
 import numpy as np
 import pandas as pd
+from pandas.errors import ParserError
 
 from magmap.settings import config
 from magmap.io import libmag
@@ -19,6 +20,8 @@ PARENT_IDS = "parent_ids"
 MIRRORED = "mirrored"
 RIGHT_SUFFIX = " (R)"
 LEFT_SUFFIX = " (L)"
+
+_logger = config.logger.getChild(__name__)
 
 
 class LabelColumns(Enum):
@@ -37,13 +40,21 @@ def load_labels_ref(path):
         Union[dict, :class:`pandas.DataFrame`]: A JSON decoded object
         (eg dictionary) if the path has a JSON extension, or a data frame.
     
+    Raises:
+        FileNotFoundError: if ``path`` could not be loaded or parsed.
+    
     """
     path_split = os.path.splitext(path)
-    if path_split[1] == ".json":
-        with open(path, "r") as f:
-            labels_ref = json.load(f)
-    else:
-        labels_ref = pd.read_csv(path)
+    try:
+        if path_split[1] == ".json":
+            with open(path, "r") as f:
+                labels_ref = json.load(f)
+        else:
+            labels_ref = pd.read_csv(path)
+    except (ParserError, FileNotFoundError) as e:
+        _logger.exception(e)
+        raise FileNotFoundError(
+            f"Could not load labels reference file from '{path}', skipping")
     return labels_ref
 
 

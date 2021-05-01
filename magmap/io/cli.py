@@ -423,6 +423,11 @@ def process_cli_args():
     sys.stdout = logs.LogWriter(config.logger.info)
     sys.stderr = logs.LogWriter(config.logger.error)
     
+    # log the app launch path
+    path_launch = (sys._MEIPASS if getattr(sys, "frozen", False)
+                   and hasattr(sys, "_MEIPASS") else sys.argv[0])
+    _logger.info(f"Launched MagellanMapper from {path_launch}")
+    
     if args.img is not None or args.img_paths:
         # set image file path and convert to basis for additional paths
         config.filenames = args.img if args.img else args.img_paths

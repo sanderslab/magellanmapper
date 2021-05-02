@@ -27,7 +27,7 @@
 
   ; application name and output installer file
   Name "${APP_NAME} ${VER}"
-  OutFile "${BASEDIR}\${APP_NAME_VER}-installer.exe"
+  OutFile "${BASEDIR}\${APP_NAME_VER}-win-installer.exe"
 
   ; default installation folder, overriding with registry key if available
   InstallDir "$LOCALAPPDATA\${APP_NAME}\${APP_NAME_VER}"
@@ -120,9 +120,9 @@ Section "MagellanMapper" SecMagMap
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
   ; write apps add/remove descriptions
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
                  "DisplayName" "${APP_NAME}: a graphical imaging informatics suite for 3D reconstruction"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
+  WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" \
                  "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
 
   !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
@@ -177,6 +177,6 @@ Section "Uninstall"
   ; remove installation directory path to avoid reinstalling to old version num
   DeleteRegKey HKCU "Software\${APP_NAME_VER}"
   DeleteRegKey /ifempty HKCU "Software\${APP_NAME_VER}"
-  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
+  DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
 SectionEnd

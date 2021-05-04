@@ -304,7 +304,19 @@ class PlotEditor:
                 # update positions of current crosshairs
                 self.hline.set_ydata(coord[1])
                 self.vline.set_xdata(coord[2])
+    
+    def set_show_label(self, val):
+        """Set whether to show labels.
+        
+        Args:
+            val (bool): True to show labels, False otherwise.
 
+        """
+        if not val:
+            # reset text to trigger a figure refresh
+            self.region_label.set_text("")
+        self._show_labels = val
+    
     def _get_img2d(self, i, img, max_intens=0):
         """Get the 2D image from the given 3D image, scaling and downsampling
         as necessary.

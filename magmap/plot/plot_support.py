@@ -102,14 +102,14 @@ class ImageSyncMixin:
         save_fig(path, fig=self.fig)
     
     def set_show_labels(self, val):
-        """Set the attribute to show labels for all Plot Editors.
+        """Set whether to show labels for all Plot Editors.
         
         Args:
             val (bool): True to show labels, false otherwise.
 
         """
         for plot_ed in self.plot_eds.values():
-            plot_ed._show_labels = val
+            plot_ed.set_show_label(val)
     
     def set_show_crosslines(self, val):
         """Set the attribute to show crosslines for all Plot Editors.

@@ -2,6 +2,19 @@
 
 ## MagellanMapper v1.4.0
 
+This release brings many usability enhancements, foremost of which is our new standalone installers. Install and run MagellanMapper through point-and-click (no terminal required!) and open new files through your file browser.
+
+We also added new options to the editors such as ROI centering/zooming and labels toggle, and we reorganized the tool panel for a cleaner, clearer look. Several tools are more responsive, such as Maximum Intensity Projections and Atlas Editor positioning.
+
+Under the hood, we added blob co-localization across channels. Image volumes can be compared using different atlases. Imported images store metadata in a YAML file for readability as plain text files. Python support is extended to 3.6-3.8, and the R stats package supports a basic command-line interface and profiles.
+
+For a complete list of command-line changes, please see this [table](../cli.md#changes-in-magellanmapper-v14).
+
+For debugging, logs are now saved to `out.log` located in:
+- Windows: `C:\Users\<your-username>\AppData\Local\MagellanMapper`
+- macOS: `/Users/<your-username>Library/Application Support/MagellanMapper`
+- Linux: `/home/<your-username>/.local/share/MagellanMapper`
+
 ### Changes
 
 Installation
@@ -44,6 +57,7 @@ GUI
 - Fixed the size of the ROI outline after detecting blobs
 
 CLI
+- Unrecognized arguments are simply ignored rather than giving an error
 - The new `--load` parameter replaces `--proc load` as a more flexible way to specify data to load, including `--load blobs` and `--load blobs blob_matches`
 - Output of profiles settings is now pretty printed for readability
 
@@ -94,8 +108,9 @@ I/O
 - Open files on macOS through URIs: `open magmap:<path>`
 - Image file metadata now uses YAML format for human-readable files; NPZ files are still supported for backward-compatibility
 - Logging
-    - Logging using the in-built Python `logging` facility is not supported, including output to log files
+    - Logging using the in-built Python `logging` facility is now supported, including output to log files
     - The `--verbose level=<n> log_path=<path>` flag specifies the log level from 1 (`DEBUG`, most verbose) to 5 (`CRITICAL`, least verbose) and log output path
+    - Unhandled exceptions are now logged (saved to a temp file if caught before logging is set up) (#17)
 - PDF export
     - Use nearest neighbor interpolation for consistency with 2D image export to other formats
     - Avoid merging layers by turning off image compositing
@@ -109,8 +124,6 @@ I/O
 - Animations can display the plane number by using the `--plot_labels text_pos=<x,y>` to specify where to place the label
 - The `--series` flag is now supported for import in the GUI
 - Fixed to reset blobs when loading a new image
-
-Server pipelines
 
 Python stats and plots
 - Perform arithmetic operations on data frame columns using `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols`
@@ -139,7 +152,6 @@ Code base and docs
 - Python APIs
     - Previously Python APIs compatible with both Python 2 and 3 have been used when possible, but much of the package requires Python 3, and testing has been on Python >= 3.6
     - For a more consistent and modern codebase, we are initiating use of Python 3 APIs such as `pathlib` and specifically 3.6+ features such as f-strings
-- Unhandled exceptions are now logged (saved to a temp file if caught before logging is set up) (#17)
 - More links to external packages in API docs
 - Instructions on building the API docs (#3)
 - Readme cleanup (#2) and tabular format for Atlas Editor shortcuts (#5)
@@ -156,7 +168,3 @@ Code base and docs
 - Custom wheels have been built for SimpleElastix and Javabridge on Python 3.6-3.9 (#9)
   - Wheels are compatible with macOS 10.9+, Windows 10, and Linux glibc 2.23 (eg Ubuntu 16.04)
   - Python 3.9 is not yet supported for MagellanMapper because VTK 9 currently does not support this Python version
-
-#### R Dependency Changes
-
-#### Server dependency Changes

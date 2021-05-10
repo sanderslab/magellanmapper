@@ -2,8 +2,23 @@
 
 ## Command-Line argument reference
 
-Argument | Function | Version Added
---- | --- | ---
+Argument | Sub-argument | Function | Ver Added | Last updated
+--- | --- | --- | --- | ---
+`--img` | `<path> [path2] ...` | Image paths. `--img` can be omitted if paths are given as the first argument. Can be given as the original filename (eg `myvolume.tiff`), the imported name, (`myvolume_image5d.npy`), a sub-image name (`myvolume_(x,y,z)x(x,y,z)_subimg.npy`), or a registered image (`myvolume_atlasVolume.mhd`). | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
+`--meta` | `<metadata-path> [path2] ...` | Metadata paths corresponding to images from `--img`. | v1.0.0 | v1.0.0
+`--prefix` | `<path>` | Path prefix, typically used for the start of output paths. | v1.0.0 | v1.0.0
+`--suffix` | `<path>` | Path suffix, typically used for the end of output paths. | v1.0.0 | v1.0.0
+`--channel` | `<n> [n2] ...` | Indices of channels to include, starting from 0. | v1.0.0 | v1.0.0
+`--series` | `<n>` | Index of image series such as image tile, starting from 0. | v1.0.0 | v1.0.0
+`--subimg_offset` | `<x,y,z> [x2,y2,z2] ...` | Sub-image offset coordinates given as `x, y, z`. Sub-images are 3D or 3D+channel subsets of full images that can be saved as separate files. Multiple sets of coordinates can be given to load different sub-images. | v1.2.0 | v1.2.0
+`--subimg_size` | `<x,y,z> [x2,y2,z2] ...` | Sub-image size given as `x, y, z`. | v1.2.0 | v1.2.0
+`--offset` | `<x,y,z> [x2,y2,z2] ...` | ROI (region of interest) offset coordinates given as `x, y, z`. ROIs are regions zoomed into within larger images. Multiple sets of coordinates can be given to set different ROIs, such as an ROI per loaded image. | v1.0.0 | v1.0.0
+`--size` | `<x,y,z> [x2,y2,z2] ...` | ROI size given as `x, y, z`. | v1.0.0 | v1.0.0
+`--db` | `<path>` | The main to the main SQlite database. | v1.0.0 | v1.0.0
+`--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | [v1.3.6](#changes-in-magellanmapper-v13)
+`--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | v1.3.6
+`--load` | `blobs=<path> blob_matches=<path>` | Paths to load data. `blobs` are objects detected as blobs. `blob_matches` are co-localized blobs among channels. | v1.4.0 | [v1.4.0](#changes-in-magellanmapper-v14)
+TODO: finish arguments
 
 ## Changes in MagellanMapper v1.4
 
@@ -12,6 +27,7 @@ Old | New | Version | Purpose of Change |
 None | `--atlas_labels translate_labels=<translation.csv> translate_children=1` | v1.4.0 | Translate labels, where `translation.csv` is a CSV file with `FromLabel` and `ToLabel` columns, and `translate_children` is `1` to also translate all children of each label
 None | `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols` | v1.4.0 | Arithmetic operations on data frame columns
 None | `--df replace_vals` | v1.4.0 | Replace values
+`--img <orig-name>.` | Can be given as `--img <orig-name>_image5d.npy`, or `python run.py <path1> [path2] ...` | v1.4.0 | The full imported filename can be given, and the `--img` can be omitted when the paths are given as first arguments
 None | `--plot_labels text_pos=<x,y>` | v1.4.0 | Add plane number annotation at the `x,y` position in stack animations
 None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling
 `--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes

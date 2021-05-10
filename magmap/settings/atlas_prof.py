@@ -181,10 +181,10 @@ class AtlasProfile(profiles.SettingsDict):
             # starting filter size for labels to markers, decreasing iteratively
             # if eroded size is not above target vol ratio to original
             RegKeys.MARKER_EROSION: 8,
-            # minimum filter size, below which label reverts to no erosion;
-            # None for default (half of MARKER_EROSION); 0 for no min or
-            # reversion, using size of 1 even if below vol ratio; default
-            # of 1 uses 1 if above vol ratio, otherwise reverts to orig
+            # minimum filter size, below which label reverts to no erosion:
+            # - None: half of MARKER_EROSION
+            # - 0: no minimum, instead using size of 1 even if below vol ratio
+            # - n: min size of n if above vol ratio, otherwise reverts to orig
             RegKeys.MARKER_EROSION_MIN: 1,
             RegKeys.WATERSHED_MASK_FILTER: (config.SmoothingModes.opening, 2),
         }

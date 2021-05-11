@@ -149,10 +149,14 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
             labels_sitk, interior)
     
     # make labels edge and edge distance images
-    dist_to_orig, labels_edge = edge_distances(
-        labels_img_np, atlas_edge, spacing=atlas_sitk.GetSpacing()[::-1])
-    dist_sitk = sitk_io.replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
-    labels_sitk_edge = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_edge)
+    dist_sitk = None
+    labels_sitk_edge = None
+    if config.atlas_profile["meas_edge_dists"]:
+        dist_to_orig, labels_edge = edge_distances(
+            labels_img_np, atlas_edge, spacing=atlas_sitk.GetSpacing()[::-1])
+        dist_sitk = sitk_io.replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
+        labels_sitk_edge = sitk_io.replace_sitk_with_numpy(
+            labels_sitk, labels_edge)
     
     # show all images
     imgs_write = {
@@ -413,25 +417,33 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if suffix is not None:
             mod_path = libmag.insert_before_ext(path, suffix)
         
-        # make edge distance images and stats
-        labels_sitk = sitk_io.load_registered_img(
-            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-        labels_np = sitk.GetArrayFromImage(labels_sitk)
-        dist_to_orig, labels_edge = edge_distances(
-            labels_np, path=path, spacing=labels_sitk.GetSpacing()[::-1])
-        dist_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, dist_to_orig)
-        labels_sitk_edge = sitk_io.replace_sitk_with_numpy(
-            labels_sitk, labels_edge)
-
+        dist_sitk = None
+        labels_sitk_edge = None
         labels_sitk_interior = None
-        if erode["interior"]:
-            # make interior images from labels using given targeted 
-            # post-erosion frac
-            interior, _ = erode_labels(
-                labels_np, erosion, erosion_frac=erosion_frac, 
-                mirrored=mirrored, mirror_mult=mirror_mult)
-            labels_sitk_interior = sitk_io.replace_sitk_with_numpy(
-                labels_sitk, interior)
+        meas_edge_dist = config.atlas_profile["meas_edge_dists"]
+        erode_interior = erode["interior"]
+        if meas_edge_dist or erode_interior:
+            labels_sitk = sitk_io.load_registered_img(
+                mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
+            labels_np = sitk.GetArrayFromImage(labels_sitk)
+            if meas_edge_dist:
+                # make edge distance images and stats
+                dist_to_orig, labels_edge = edge_distances(
+                    labels_np, path=path,
+                    spacing=labels_sitk.GetSpacing()[::-1])
+                dist_sitk = sitk_io.replace_sitk_with_numpy(
+                    labels_sitk, dist_to_orig)
+                labels_sitk_edge = sitk_io.replace_sitk_with_numpy(
+                    labels_sitk, labels_edge)
+    
+            if erode_interior:
+                # make interior images from labels using given targeted 
+                # post-erosion frac
+                interior, _ = erode_labels(
+                    labels_np, erosion, erosion_frac=erosion_frac, 
+                    mirrored=mirrored, mirror_mult=mirror_mult)
+                labels_sitk_interior = sitk_io.replace_sitk_with_numpy(
+                    labels_sitk, interior)
         
         # write images to same directory as atlas
         imgs_write = {

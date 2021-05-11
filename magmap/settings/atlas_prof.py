@@ -227,6 +227,10 @@ class AtlasProfile(profiles.SettingsDict):
         self["overlap_meas_add_lbls"] = None
 
         # METRICS
+        
+        # generate labels border/surface image and measure distances to
+        # anatomical border/surface map
+        self["meas_edge_dists"] = True
 
         # sequence of :class:`config.MetricGroups` enums to measure in
         # addition to basic metrics

@@ -318,10 +318,10 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
             atlas_edge, markers, labels_img_np, **seg_args)
     
     smoothing = config.atlas_profile["smooth"]
+    smoothing_mode = config.atlas_profile["smoothing_mode"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
-        atlas_refiner.smooth_labels(
-            labels_seg, smoothing, config.SmoothingModes.opening)
+        atlas_refiner.smooth_labels(labels_seg, smoothing, smoothing_mode)
     
     if mirrorred:
         # mirror back to other half

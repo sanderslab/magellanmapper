@@ -299,8 +299,8 @@ class LabelToMarkerErosion(object):
             wt = (np.median(cls.wt_dists[cls.labels_img == label_id]) 
                   / np.amax(cls.wt_dists))
             filter_size = int(filter_size * wt)
-            print("label {}: distance weight {}, adjusted filter size to {}"
-                  .format(label_id, wt, filter_size))
+            print(f"Label {label_id}: distance weight {wt}, adjusted filter "
+                  f"size to {filter_size}")
             if use_min_filter and filter_size < min_filter_size:
                 filter_size = min_filter_size
         
@@ -312,51 +312,19 @@ class LabelToMarkerErosion(object):
         region = cls.labels_img[tuple(slices)]
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
-        region_size_filtered = region_size
-        fn_selem = cv_nd.get_selem(cls.labels_img.ndim)
-        
-        # erode the labels, starting with the given filter size and decreasing
-        # if the resulting label size falls below a given size ratio
-        chosen_selem_size = np.nan
-        filtered = label_mask_region
-        size_ratio = 1
-        for selem_size in range(filter_size, -1, -1):
-            if selem_size < min_filter_size:
-                if not use_min_filter:
-                    print("label {}: could not erode without dropping below "
-                          "minimum filter size of {}, reverting to original "
-                          "region size of {}"
-                          .format(label_id, min_filter_size, region_size))
-                    filtered = label_mask_region
-                    region_size_filtered = region_size
-                    chosen_selem_size = np.nan
-                break
-            # erode check size ratio
-            filtered = morphology.binary_erosion(
-                label_mask_region, fn_selem(selem_size))
-            region_size_filtered = np.sum(filtered)
-            size_ratio = region_size_filtered / region_size
-            thresh = 0.2 if target_frac is None else target_frac
-            chosen_selem_size = selem_size
-            if region_size_filtered < region_size and size_ratio > thresh:
-                # stop eroding if underwent some erosion but stayed above
-                # threshold size; skimage erosion treats border outside image
-                # as True, so images may not undergo erosion and should
-                # continue until lowest filter size is taken (eg NaN)
-                break
-
-        if not np.isnan(chosen_selem_size):
-            print("label {}: changed num of pixels from {} to {} "
-                  "(size ratio {}), initial filter size {}, chosen {}"
-                  .format(label_id, region_size, region_size_filtered, 
-                          size_ratio, filter_size, chosen_selem_size))
+        filtered, chosen_selem_size = cv_nd.filter_adaptive_size(
+            label_mask_region, morphology.binary_erosion, filter_size,
+            min_filter_size, use_min_filter, target_frac,
+            f"Label ID: {label_id}")
+        region_size_filtered = np.sum(filtered)
 
         if skel_eros_filt_size and np.sum(filtered) > 0:
             # skeletonize the labels to recover details from erosion;
             # need another labels erosion before skeletonization to avoid
             # preserving too much of the original labels' extent
             label_mask_region = morphology.binary_erosion(
-                label_mask_region, fn_selem(skel_eros_filt_size))
+                label_mask_region,
+                cv_nd.get_selem(label_mask_region.ndim)(skel_eros_filt_size))
             filtered = np.logical_or(
                 filtered, 
                 morphology.skeletonize_3d(label_mask_region).astype(bool))

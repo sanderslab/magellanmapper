@@ -921,6 +921,61 @@ def zero_crossing(img, filter_size):
     return crossed
 
 
+def filter_adaptive_size(mask, fn_filter, filter_size, min_filter_size=1,
+                         use_min_filter=False, min_size_ratio=None, name=""):
+    """Filter morphologically with adaptive kernel sizes.
+    
+    Args:
+        mask (:class:`numpy.ndarray`): Numpy array as a mask.
+        fn_filter (func): Morphological filter function to apply.
+        filter_size (int): Starting filter kernel size.
+        min_filter_size (int): Minimum kernel size.
+        use_min_filter (bool): True to use the filtered result if the kernel
+            size is below ``min_filter_size`` even if filter criteria are
+            not met; defaults to False.
+        min_size_ratio (float): Minimum size ratio of filtered to original mask;
+            defaults to None to use a ratio of 0.2.
+        name (str): Name to prepend to output message; defaults to "".
+
+    Returns:
+        :class:`numpy.ndarray`, int: Filtered ``mask`` and kernel size at which
+        ``mask`` was filtered, or ``np.nan`` if not filtered.
+
+    """
+    if min_size_ratio is None:
+        min_size_ratio = 0.2
+    region_size = np.sum(mask)
+    fn_selem = get_selem(mask.ndim)
+    print("selem", fn_selem, mask.ndim)
+    
+    # filter the label, starting with the given filter size and decreasing
+    # if the resulting label size falls below a given min size ratio
+    chosen_selem_size = np.nan
+    filtered = mask
+    for selem_size in range(filter_size, -1, -1):
+        if selem_size < min_filter_size:
+            if not use_min_filter:
+                filtered = mask
+                chosen_selem_size = np.nan
+            break
+        # erode check size ratio
+        filtered = fn_filter(mask, fn_selem(selem_size))
+        region_size_filtered = np.sum(filtered)
+        size_ratio = region_size_filtered / region_size
+        chosen_selem_size = selem_size
+        if region_size_filtered < region_size and size_ratio > min_size_ratio:
+            # stop filtering if filter made some change but stayed above
+            # threshold size; skimage erosion treats border outside image
+            # as True, so images may not undergo erosion and should
+            # continue until lowest filter size is taken (eg NaN)
+            break
+    region_size_filt = np.sum(filtered)
+    print(f"{name}: changed pixels from {region_size} to {region_size_filt} "
+          f"(size ratio {region_size_filt / region_size}), initial filter size "
+          f"of {filter_size}, chosen size of {chosen_selem_size}")
+    return filtered, chosen_selem_size
+
+
 def calc_isotropic_factor(scale):
     """Calculate the isotropic factor based on the current image resolutions.
     

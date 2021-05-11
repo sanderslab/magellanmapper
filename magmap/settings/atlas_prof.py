@@ -87,8 +87,10 @@ class AtlasProfile(profiles.SettingsDict):
         # start (float): fractions of the total planes (0-1); use -1 to
         # set automatically, None to turn off the entire setting group
 
-        self["smooth"] = None  # smooth labels
-        self["crop_to_labels"] = False  # crop labels and atlas to non-0 labels
+        # type of label smoothing
+        self["smoothing_mode"] = config.SmoothingModes.opening
+        # size of filter for label smoothing
+        self["smooth"] = None
 
         # mirror labels onto the unlabeled hemisphere
         self["labels_mirror"] = {
@@ -192,6 +194,9 @@ class AtlasProfile(profiles.SettingsDict):
         # of regions but not for watershed seeds; can be None
         self["erosion_frac"] = 0.5
         self["erode_labels"] = {"markers": True, "interior": False}
+        
+        # crop labels and atlas to non-0 labels
+        self["crop_to_labels"] = False
 
         # crop labels back to their original background after smoothing
         # (ignored during atlas import if no smoothing), given as the filter
@@ -201,9 +206,6 @@ class AtlasProfile(profiles.SettingsDict):
         
         # crop labels images to foreground of first labels image
         self["crop_to_first_image"] = False
-
-        # type of label smoothing
-        self["smoothing_mode"] = config.SmoothingModes.opening
 
         # combine values from opposite sides when measuring volume stats;
         # default to use raw values for each label and side to generate

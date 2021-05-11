@@ -666,10 +666,18 @@ class HemSides(Enum):
     BOTH = "both"
 
 
-# label smoothing modes
+#: :class:`Enum`: Label smoothing modes.
 SmoothingModes = Enum(
     "SmoothingModes", [
-        "opening", "gaussian", "closing"
+        # morphological opening, which decreases in size for vols < 5000px
+        # and switches to a closing filter if the label would be lost
+        "opening",
+        # morphological filters that adaptively decrease in size if
+        # vol_new:vol_old is < a size ratio
+        "adaptive_opening",  # opening filter
+        "adaptive_erosion",  # erosion filter
+        "gaussian",  # gaussian blur
+        "closing",  # closing morphological filter
     ]
 )
 

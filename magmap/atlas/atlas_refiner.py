@@ -805,20 +805,41 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
         
         # smoothing based on mode
         region_size_smoothed = 0
-        if mode is config.SmoothingModes.opening:
-            # smooth region with opening filter, reducing filter size for 
-            # small volumes and changing to closing filter 
-            # if region would be lost or severely reduced
-            selem_size = filter_size
-            if region_size < 5000:
-                selem_size = selem_size // 2
-                print("using a smaller filter size of {} for a small region "
-                      "of {} pixels".format(selem_size, region_size))
-            selem = fn_selem(selem_size)
-            smoothed = morphology.binary_opening(label_mask_region, selem)
+        if mode in (config.SmoothingModes.opening,
+                    config.SmoothingModes.adaptive_opening,
+                    config.SmoothingModes.adaptive_erosion):
+            # smoothing by erosion-based filters
+            if mode in (config.SmoothingModes.adaptive_opening,
+                        config.SmoothingModes.adaptive_erosion):
+                if mode is config.SmoothingModes.adaptive_erosion:
+                    # erode with adaptive filter sizes, relying on in-painting
+                    # to fill in eroded spaces
+                    fn_filter = morphology.binary_erosion
+                else:
+                    # opening filter with adaptive filter sizes; uses
+                    # in-painting but to lesser extent, only for opened spaces
+                    fn_filter = morphology.binary_opening
+                smoothed, selem_size = cv_nd.filter_adaptive_size(
+                    label_mask_region, fn_filter, filter_size,
+                    name=f"Label ID: {label_id}")
+                selem = fn_selem(1)
+            
+            else:
+                # opening filter with simpler size adaptation by reducing filter
+                # size for small volumes
+                selem_size = filter_size
+                if region_size < 5000:
+                    selem_size = selem_size // 2
+                    print("using a smaller filter size of {} for a small region "
+                          "of {} pixels".format(selem_size, region_size))
+                selem = fn_selem(selem_size)
+                smoothed = morphology.binary_opening(label_mask_region, selem)
+            
             region_size_smoothed = np.sum(smoothed)
             size_ratio = region_size_smoothed / region_size
             if size_ratio < 0.01:
+                # change to closing filter if region would be lost or severely
+                # reduced in size
                 print("region would be lost or too small "
                       "(ratio {}), will use closing filter instead"
                       .format(size_ratio))

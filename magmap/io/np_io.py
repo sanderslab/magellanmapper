@@ -378,8 +378,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
                     # parse dict from ABA JSON file
                     config.labels_ref_lookup = (
                         ontology.create_aba_reverse_lookup(labels_ref))
-        except FileNotFoundError as e:
+        except (FileNotFoundError, KeyError) as e:
             _logger.error(e)
+            _logger.error("Skipping labels reference file loading from '%s'",
+                          config.load_labels)
     
     borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
     if borders_suffix is not None:

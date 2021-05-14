@@ -180,30 +180,54 @@ def create_lookup_pd(df):
     """Create a lookup dictionary from a Pandas data frame.
     
     Args:
-        df: Pandas data frame, assumed to have at least columns 
-            corresponding to :const:``config.ABAKeys.ABA_ID`` and 
-            :const:``config.ABAKeys.ABA_NAME``.
+        df (:class:`pandas.DataFrame`): Pandas data frame, assumed to have at
+            least columns corresponding to :const:``config.ABAKeys.ABA_ID``
+            or :const:``config.AtlasMetrics.REGION`` and 
+            :const:``config.ABAKeys.ABA_NAME`` or
+            :const:``config.AtlasMetrics.REGION_NAME``.
     
     Returns:
-        Dictionary similar to that generated from 
+        dict: Dictionary similar to that generated from 
         :meth:``create_reverse_lookup``, with IDs as keys and values 
         corresponding of another dictionary with :const:``NODE`` and 
         :const:``PARENT_IDS`` as keys. :const:``NODE`` in turn 
         contains a dictionary with entries for each Enum in 
         :const:``config.ABAKeys``.
+    
+    Raises:
+        KeyError: if the ID/region and name keys cannot be found.
+    
     """
+    def rename_col(key_check, key_alt):
+        # rename a column to an alternate name if not found in the data frame
+        if key_check not in df:
+            if key_alt in df:
+                cols[key_alt] = key_check
+    
+    # check for alternate essential column names
+    cols = {}
+    rename_col(config.ABAKeys.ABA_ID.value, config.AtlasMetrics.REGION.value)
+    rename_col(config.ABAKeys.NAME.value, config.AtlasMetrics.REGION_NAME.value)
+    if cols:
+        _logger.debug("Renamed labels reference file columns: %s", cols)
+        df = df.rename(cols, axis=1)
+    
     id_dict = OrderedDict()
-    ids = df[config.ABAKeys.ABA_ID.value]
-    for region_id in ids:
-        region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
-        region_dict = region.to_dict("records")[0]
-        if config.ABAKeys.NAME.value not in region_dict:
-            region_dict[config.ABAKeys.NAME.value] = str(region_id)
-        region_dict[config.ABAKeys.LEVEL.value] = 1
-        region_dict[config.ABAKeys.CHILDREN.value] = []
-        region_dict[config.ABAKeys.ACRONYM.value] = ""
-        sub_dict = {NODE: region_dict, PARENT_IDS: []}
-        id_dict[region_id] = sub_dict
+    try:
+        ids = df[config.ABAKeys.ABA_ID.value]
+        for region_id in ids:
+            region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
+            region_dict = region.to_dict("records")[0]
+            if config.ABAKeys.NAME.value not in region_dict:
+                region_dict[config.ABAKeys.NAME.value] = str(region_id)
+            region_dict[config.ABAKeys.LEVEL.value] = 1
+            region_dict[config.ABAKeys.CHILDREN.value] = []
+            region_dict[config.ABAKeys.ACRONYM.value] = ""
+            sub_dict = {NODE: region_dict, PARENT_IDS: []}
+            id_dict[region_id] = sub_dict
+    except KeyError as e:
+        raise KeyError(f"Could not find this column in the labels reference "
+                       f"file: {e}")
     return id_dict
 
 

@@ -188,6 +188,11 @@ class AtlasProfile(profiles.SettingsDict):
             # - 0: no minimum, instead using size of 1 even if below vol ratio
             # - n: min size of n if above vol ratio, otherwise reverts to orig
             RegKeys.MARKER_EROSION_MIN: 1,
+            # erosion filter size before skeletonization:
+            # - False: no skeletonization
+            # - None: half of MARKER_EROSION
+            # - n: filter kernel size
+            RegKeys.SKELETON_EROSION: None,
             RegKeys.WATERSHED_MASK_FILTER: (config.SmoothingModes.opening, 2),
         }
         # target eroded size as frac of orig, used when generating interiors

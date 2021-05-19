@@ -221,7 +221,8 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True,
     #eroded = segmenter.labels_to_markers_blob(labels_img_np)
     eroded, df = segmenter.labels_to_markers_erosion(
         labels_to_erode, erosion[profiles.RegKeys.MARKER_EROSION],
-        erosion_frac, erosion[profiles.RegKeys.MARKER_EROSION_MIN])
+        erosion_frac, erosion[profiles.RegKeys.MARKER_EROSION_MIN],
+        skel_eros_filt_size=erosion[profiles.RegKeys.SKELETON_EROSION])
     if is_mirrored:
         # mirror changes onto opposite symmetric half
         eroded = _mirror_imported_labels(

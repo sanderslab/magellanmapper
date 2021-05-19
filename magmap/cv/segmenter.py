@@ -248,7 +248,7 @@ class LabelToMarkerErosion(object):
     @classmethod
     def erode_label(cls, label_id, filter_size, target_frac=None,
                     min_filter_size=1, use_min_filter=False,
-                    skel_eros_filt_size=0):
+                    skel_eros_filt_size=False):
         """Convert a label to a marker as an eroded version of the label.
         
         By default, labels will be eroded with the given ``filter_size`` 
@@ -281,10 +281,10 @@ class LabelToMarkerErosion(object):
                 a smaller filter size would otherwise be required; defaults
                 to False to revert to original, uneroded size if a filter
                 smaller than ``min_filter_size`` would be needed.
-            skel_eros_filt_size (int): Erosion filter size before
+            skel_eros_filt_size (Union[int, bool]): Erosion filter size before
                 skeletonization to balance how much of the labels' extent will
                 be preserved during skeletonization. Increase to reduce the
-                skeletonization. Defaults to 0, which will cause
+                skeletonization. Defaults to False, which will cause
                 skeletonization to be skipped.
         
         Returns:
@@ -317,8 +317,7 @@ class LabelToMarkerErosion(object):
             min_filter_size, use_min_filter, target_frac,
             f"Label ID: {label_id}")
         region_size_filtered = np.sum(filtered)
-
-        if skel_eros_filt_size and np.sum(filtered) > 0:
+        if skel_eros_filt_size is not False and np.sum(filtered) > 0:
             # skeletonize the labels to recover details from erosion;
             # need another labels erosion before skeletonization to avoid
             # preserving too much of the original labels' extent

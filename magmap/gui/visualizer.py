@@ -2918,7 +2918,8 @@ class Visualization(HasTraits):
                     "and edit if necessary.")
             else:
                 self._update_import_feedback(
-                    "Please enter at least image output and data type "
+                    "No image files were auto-detected but may be in a RAW "
+                    "format. Please enter at least image output and data type "
                     "before importing.")
         
         for suffix in (config.SUFFIX_IMAGE5D, config.SUFFIX_META,

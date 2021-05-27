@@ -1096,22 +1096,24 @@ def setup_import_dir(path):
     md = dict.fromkeys(config.MetaKeys)
     
     # set shape and data type based on first loadable image in first channel
-    # TODO: consider filtering all files for images
     chl_files = tuple(chl_paths.values())[0]
     img = None
     for chl_file in chl_files:
         try:
+            # load standard image types; does not read RAW files
             img = io.imread(chl_file)
             break
         except ValueError:
-            _logger.debug(
+            _logger.info(
                 "Could not read %s as an image, reading next", chl_file)
     if img is None:
-        raise FileNotFoundError(
-            f"Could not find image files in the directory: {path}")
-    md[config.MetaKeys.SHAPE] = [
-        1, len(chl_files), *img.shape[:2], len(chl_paths.keys())]
-    md[config.MetaKeys.DTYPE] = img.dtype.str
+        _logger.warn(
+            "Could not find image files in the directory: %s", path)
+    else:
+        # store shape and data type
+        md[config.MetaKeys.SHAPE] = [
+            1, len(chl_files), *img.shape[:2], len(chl_paths.keys())]
+        md[config.MetaKeys.DTYPE] = img.dtype.str
     return chl_paths, md
 
 
@@ -1149,9 +1151,18 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
         img5d = image5d
         for filei, file in enumerate(chl_files):
             libmag.printcb("importing {}".format(file), fn_feedback)
-            img = io.imread(file)
+            try:
+                # load standard image types
+                img = io.imread(file)
+            except ValueError:
+                # load as a RAW image file
+                img = np.memmap(
+                    file, dtype=import_md[config.MetaKeys.DTYPE],
+                    shape=tuple(import_md[config.MetaKeys.SHAPE][2:4]),
+                    mode="r")
+                
             if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
-                # assume that 3-value 3rd channel images are RGB
+                # assume that 3-channel images are RGB
                 # TODO: remove rgb_to_grayscale since must give single channel?
                 print("converted from 3-channel (assuming RGB) to grayscale")
                 img = color.rgb2gray(img)

@@ -12,11 +12,11 @@
 ::   path-to-SimpleElastix: Path to existing SimpleElastix directory or
 ::     where it will be stored; defaults to "..\SimpleElastix".
 ::
-:: MSVC requirements:
-:: - MSVC C++ x64/x86 build tools (tested on MSVC v142 VS 2019 C++ with the
-::   "Latest" version checked)
-:: - C++ CMake Tools for Windows
-:: - Git (eg "Git for Windows")
+:: Build requirements:
+:: - MSVC C++ x64/x86 build tools (eg MSVC v142 VS 2019 C++)
+:: - Git (eg "Git for Windows" in VS2019)
+:: - CMake from https://cmake.org (tested with CMake 3.15, 3.20; has *not*
+::   worked with MSVS CMake 3.14 on our testing
 :: - Run this script in an "x64 Native Tools Command Prompt to VS 2019"
 ::
 :: Assumes:
@@ -24,7 +24,6 @@
 ::   folder of this script's folder
 :: - The Python path from an activated Conda environment will be used through
 ::   the CONDA_PREFIX environment variable
-:: Tested with CMake 3.15; has *not* worked with MSVS CMake 3.14 on our testing.
 
 @ECHO off
 

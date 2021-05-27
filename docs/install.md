@@ -116,9 +116,10 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 C compilers by platform:
 
 - Mac and Linux: `gcc`/`clang`
-- Windows: Microsoft Visual Studio Build Tools (tested on 2017, 2019) along with these additional components
+- Windows: Microsoft Visual Studio (tested on 2017, 2019, Community edition) along with these additional components
   - MSVC C++ x64/x86 build tools
   - Windows 10 SDK
+  - See [below](#simpleelastix-dependency) for additional requirements when building SimpleElastix
 
 Java versions:
 
@@ -141,7 +142,7 @@ SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.ni
 If you would prefer to build SimpleElastix yourself, we have provided a couple build scripts to ease the build process for the SimpleElastix Python wrapper:
 
 - Mac or Linux: Run the environment setup with `bin/setup_conda.sh -s` to build and install SimpleElastix during setup using the `bin/build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
-- Windows: Run `bin\build_se.bat` within your environment. See above for required Windows compiler components. Note that CMake 3.14 in the MSVC 2019 build tools package has not worked for us, but CMake 3.15 from the official download site has worked.
+- Windows: Run `bin\build_se.bat` within your environment. See the [build_se.bat](https://github.com/sanderslab/magellanmapper/blob/master/bin/build_se.bat) script for required build components.
 
 As an alternative, the SimpleITK package can provide much of the same functionality except for our image registration pipeline.
 

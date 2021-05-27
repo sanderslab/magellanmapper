@@ -1001,10 +1001,11 @@ def get_enum(s, enum_class):
     """
     enum = None
     if s:
-        s_upper = s.upper()
         try:
+            s_upper = s.upper()
             enum = enum_class[s_upper]
-        except KeyError:
+        except (AttributeError, KeyError):
+            # AttributeError if s is not a str; KeyError if not in enum
             pass
     return enum
 

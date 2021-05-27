@@ -189,13 +189,14 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
             # 1 to num of members
             n = i + 1
             if n > num_enums:
-                print("no further parameters in {} to assign \"{}\" by "
-                      "position, skipping".format(keys_enum, arg))
+                _logger.warn(
+                    "No further parameters in {} to assign \"{}\" by "
+                    "position, skipping".format(keys_enum, arg))
                 continue
             key = keys_enum(n)
         elif len_arg_split < 2:
-            print("parameter {} does not contain a keyword, skipping"
-                  .format(arg))
+            _logger.warn("parameter {} does not contain a keyword, skipping"
+                         .format(arg))
         else:
             # assign based on keyword if its equivalent enum exists
             vals = arg_split[1]
@@ -203,7 +204,8 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
             try:
                 key = keys_enum[key_str]
             except KeyError:
-                print("unable to find {} in {}".format(key_str, keys_enum))
+                _logger.warn("Unable to find '{}' in {}, skipping".format(
+                    key_str, keys_enum))
                 continue
         if key:
             if isinstance(vals, str):

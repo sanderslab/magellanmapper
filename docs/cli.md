@@ -20,6 +20,13 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--load` | `blobs=<path> blob_matches=<path>` | Paths to load data. `blobs` are objects detected as blobs. `blob_matches` are co-localized blobs among channels. | v1.4.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 TODO: finish arguments
 
+## Changes in MagellanMapper v1.5
+
+Old | New | Version | Purpose of Change |
+--- | --- | --- | ---
+`--proc <task>` | `--proc <task1>=[sub-task1,...] <task2>` | v1.5.0 | Multiple processing tasks can be given as well as sub-tasks
+Specified in ROI profiles | `--proc preprocess=[rotate,saturate,...]` | v1.5.0 | Pre-processing tasks are integrated as sub-processing tasks; see `config.PreProcessKeys` for task names
+
 ## Changes in MagellanMapper v1.4
 
 Old | New | Version | Purpose of Change |
@@ -56,6 +63,7 @@ None | `--cpus <n>` | v1.3.6 | Specify the maximum number of CPUs to use for mul
 `--no_show` | `--show 0` | v1.3.0 | Show with `1`
 `--padding_2d` | `--plot_labels margin=x,y,z` | v1.3.0 | Grouped with other plot labels controls, adding `margin` as space outside the ROI
 None | `--proc export_raw` | v1.3.2 | Export images to RAW format
+None | `--proc preprocess` | v1.3.0 | Pre-processing tasks using `profiles.PreProcessKeys` specified in ROI profiles
 None | `--plot_labels dpi=<n>` | v1.3.7 | Configure DPI of saved images
 None | `--plot_labels drop_dups=<0|1>` | v1.3.3 | Option to drop duplicates when joining data frames
 `--atlas_labels binary=<color>` | `--plot_labels nan_color=<color>` | v1.3.7 | Group with `--plot_labels` to specify colors for NaN values

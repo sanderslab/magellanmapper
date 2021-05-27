@@ -200,6 +200,14 @@ magnification = 1.0  #: float: objective magnification
 zoom = 1.0  #: float: objective zoom
 
 
+class PreProcessKeys(Enum):
+    """Pre-processing task enumerations."""
+    SATURATE = auto()
+    DENOISE = auto()
+    REMAP = auto()
+    ROTATE = auto()
+
+
 class ProcessTypes(Enum):
     """Whole image processing task enumerations."""
     IMPORT_ONLY = auto()  # imports image stack

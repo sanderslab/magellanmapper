@@ -1157,12 +1157,11 @@ def process_file(path, proc_type, proc_val=None, series=None, subimg_offset=None
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file
         # TODO: consider chunking option for larger images
-        profile = config.get_roi_profile(0)
         out_path = config.prefix
         if not out_path:
             out_path = libmag.insert_before_ext(config.filename, "_preproc")
         transformer.preprocess_img(
-            config.image5d, profile["preprocess"], config.channel, out_path)
+            config.image5d, proc_val, config.channel, out_path)
 
     return stats, fdbk
 

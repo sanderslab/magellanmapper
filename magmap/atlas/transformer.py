@@ -11,10 +11,11 @@ from skimage import transform
 
 from magmap.cv import chunking, cv_nd
 from magmap.settings import config
-from magmap.settings import profiles
 from magmap.io import importer
 from magmap.io import libmag
 from magmap.plot import plot_3d
+
+_logger = config.logger.getChild(__name__)
 
 
 class Downsampler(object):
@@ -348,8 +349,9 @@ def preprocess_img(image5d, preprocs, channel, out_path):
 
     Args:
         image5d (:obj:`np.ndarray`): 5D array in t,z,y,x[,c].
-        preprocs (List[:obj:`profiles.PreProcessKeys`): Sequence of
-            pre-processing tasks to perform in the order given.
+        preprocs (Union[str, list[str]]): Pre-processing tasks that will be
+            converted to enums in :class:`config.PreProcessKeys` to perform
+            in the order given.
         channel (int): Channel to preprocess, or None for all channels.
         out_path (str): Output base path.
 
@@ -360,19 +362,24 @@ def preprocess_img(image5d, preprocs, channel, out_path):
     if preprocs is None:
         print("No preprocessing tasks to perform, skipping")
         return
+    if not libmag.is_seq(preprocs):
+        preprocs = [preprocs]
 
     roi = image5d[0]
     for preproc in preprocs:
         # perform global pre-processing task
-        print("Pre-processing task:", preproc)
-        if preproc is profiles.PreProcessKeys.SATURATE:
+        task = libmag.get_enum(preproc, config.PreProcessKeys)
+        _logger.info("Pre-processing task: %s", task)
+        if task is config.PreProcessKeys.SATURATE:
             roi = plot_3d.saturate_roi(roi, channel=channel)
-        elif preproc is profiles.PreProcessKeys.DENOISE:
+        elif task is config.PreProcessKeys.DENOISE:
             roi = plot_3d.denoise_roi(roi, channel)
-        elif preproc is profiles.PreProcessKeys.REMAP:
+        elif task is config.PreProcessKeys.REMAP:
             roi = plot_3d.remap_intensity(roi, channel)
-        elif preproc is profiles.PreProcessKeys.ROTATE:
+        elif task is config.PreProcessKeys.ROTATE:
             roi = rotate_img(roi)
+        else:
+            _logger.warn("No preprocessing task found for: %s", preproc)
 
     # save to new file
     image5d = importer.roi_to_image5d(roi)

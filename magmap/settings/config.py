@@ -199,36 +199,23 @@ resolutions = None
 magnification = 1.0  #: float: objective magnification
 zoom = 1.0  #: float: objective zoom
 
-#: :class:`Enum`: Whole image processing task enumerations.
-# ``importonly`` imports an image stack and
-# exits non-interactively. ``load`` loads already
-# processed images and segments. ``extract`` extracts a single plane 
-# using the z-value from the offset and exits. ``export_rois`` 
-# exports ROIs from the current database to serial 2D plots. 
-# ``transpose`` transposes the Numpy image file associated with 
-# ``filename`` with the ``--rescale`` option. ``animated`` generates 
-# an animated GIF with the ``--interval`` and ``--rescale`` options. 
-# ``export_blobs`` exports blob coordinates/radii to compressed CSV file.
-ProcessTypes = Enum(
-    "ProcessTypes", (
-        "IMPORT_ONLY",
-        "DETECT",  # whole image blob detection
-        "DETECT_COLOC",  # detection with colocalization by intensity
-        "COLOC_MATCH",  # colocalization by blob matching
-        "LOAD",
-        "EXTRACT",
-        "EXPORT_ROIS",
-        "TRANSFORM",
-        "ANIMATED",
-        "EXPORT_BLOBS",
-        "EXPORT_PLANES",  # export a 3D+ image to individual planes
-        "EXPORT_PLANES_CHANNELS",  # also export channels to separate files
-        "EXPORT_RAW",  # export an array as a raw data file
-        "PREPROCESS",  # pre-process whole image
-    )
-)
-proc_type = None
 
+class ProcessTypes(Enum):
+    """Whole image processing task enumerations."""
+    IMPORT_ONLY = auto()  # imports image stack
+    DETECT = auto()  # whole image blob detection
+    DETECT_COLOC = auto()  # detection with colocalization by intensity
+    COLOC_MATCH = auto()  # colocalization by blob matching
+    LOAD = auto()  # DEPRECATED: load previously processed images and blobs
+    EXTRACT = auto()  # extract single plane using the z-val from offset
+    EXPORT_ROIS = auto()  # export ROIs from current database to serial 2D plots
+    TRANSFORM = auto()  # transform image (see transformer.transpose_img)
+    ANIMATED = auto()  # generate an animated GIF
+    EXPORT_BLOBS = auto()  # export blob coordinates/radii to compressed CSV
+    EXPORT_PLANES = auto()  # export a 3D+ image to individual planes
+    EXPORT_PLANES_CHANNELS = auto()  # also export channels to separate files
+    EXPORT_RAW = auto()  # export an array as a raw data file
+    PREPROCESS = auto()  # pre-process whole image
 # 2D PLOTTING
 
 

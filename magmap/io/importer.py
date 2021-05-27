@@ -30,9 +30,9 @@ import numpy as np
 try:
     import javabridge as jb
     import bioformats as bf
-except (ImportError, ValueError) as e:
-    # Javabridge gives a JVMNotFoundException that extends ValueError if
-    # Java cannot be initialized
+except (ImportError, ValueError, RuntimeError) as e:
+    # Javabridge gives a JVMNotFoundError that extends ValueError if
+    # Java cannot be initialized, or a RuntimeError if Java home dir not found 
     jb = None
     bf = None
     warnings.warn(

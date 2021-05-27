@@ -286,9 +286,11 @@ def process_cli_args():
 
     # task arguments
     parser.add_argument(
-        "--proc", type=str.lower,
-        choices=libmag.enum_names_aslist(config.ProcessTypes),
-        help="Image processing mode")
+        "--proc", nargs="*",
+        help=_get_args_dict_help(
+            "Image processing mode; see config.ProcessTypes for keys "
+            "and config.PreProcessKeys for PREPROCESS values",
+            config.ProcessTypes))
     parser.add_argument(
         "--register", type=str.lower,
         choices=libmag.enum_names_aslist(config.RegisterTypes),
@@ -515,12 +517,9 @@ def process_cli_args():
 
     # set up main processing mode
     if args.proc is not None:
-        config.proc_type = args.proc
-        print("processing type set to {}".format(config.proc_type))
-    proc_type = libmag.get_enum(config.proc_type, config.ProcessTypes)
-    if config.proc_type and proc_type not in config.ProcessTypes:
-        libmag.warn(
-            "\"{}\" processing type not found".format(config.proc_type))
+        config.proc_type = args_to_dict(
+            args.proc, config.ProcessTypes, config.proc_type, default=True)
+        print("Set main processing tasks to:", config.proc_type)
 
     if args.set_meta is not None:
         # set individual metadata values, currently used for image import
@@ -756,6 +755,10 @@ def process_tasks():
         from magmap.cloud import aws
         aws.main()
     else:
+        # processing tasks
+        
+        # filter out unset tasks
+        proc_tasks = {k: v for k, v in config.proc_type.items() if v}
         if config.filename:
             for series in config.series_list:
                 # process files for each series, typically a tile within a
@@ -771,16 +774,21 @@ def process_tasks():
                               else None)
                     size = (config.subimg_sizes[0] if config.subimg_sizes
                             else None)
-                np_io.setup_images(
-                    filename, series, offset, size, config.proc_type)
-                process_file(
-                    filename, config.proc_type, series, offset, size,
-                    config.roi_offsets[0] if config.roi_offsets else None,
-                    config.roi_sizes[0] if config.roi_sizes else None)
+                if proc_tasks:
+                    for proc_task, proc_val in proc_tasks.items():
+                        # set up image for the given task
+                        np_io.setup_images(
+                            filename, series, offset, size, proc_task)
+                        process_file(
+                            filename, proc_task, proc_val, series, offset, size,
+                            config.roi_offsets[0] if config.roi_offsets else None,
+                            config.roi_sizes[0] if config.roi_sizes else None)
+                else:
+                    # set up image without a task specified, eg for display
+                    np_io.setup_images(filename, series, offset, size)
         else:
             print("No image filename set for processing files, skipping")
-        proc_type = libmag.get_enum(config.proc_type, config.ProcessTypes)
-        if proc_type is None or proc_type is config.ProcessTypes.LOAD:
+        if not proc_tasks or config.ProcessTypes.LOAD in proc_tasks:
             # do not shut down since not a command-line task or if loading files
             return
     shutdown()
@@ -1013,8 +1021,7 @@ def _detect_subimgs(path, series, subimg_offsets, subimg_sizes):
     for i in range(len(subimg_offsets)):
         size = (subimg_sizes[i] if roi_sizes_len > 1
                 else subimg_sizes[0])
-        np_io.setup_images(
-            path, series, subimg_offsets[i], size, config.proc_type)
+        np_io.setup_images(path, series, subimg_offsets[i], size)
         stat_roi, fdbk, _ = stack_detect.detect_blobs_stack(
             importer.filename_to_base(path, series), subimg_offsets[i], size)
         if stat_roi is not None:
@@ -1042,7 +1049,7 @@ def _grid_search(series_list):
             plot_2d.plot_roc(stats_df, config.show)
 
 
-def process_file(path, proc_mode, series=None, subimg_offset=None,
+def process_file(path, proc_type, proc_val=None, series=None, subimg_offset=None,
                  subimg_size=None, roi_offset=None, roi_size=None):
     """Processes a single image file non-interactively.
 
@@ -1051,8 +1058,10 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
     Args:
         path (str): Path to image from which MagellanMapper-style paths will 
             be generated.
-        proc_mode (str): Processing mode, which should be a key in
-            :class:`config.ProcessTypes`, case-insensitive.
+        proc_type (Enum): Processing type, which should be a one of
+            :class:`config.ProcessTypes`.
+        proc_val (Any): Processing value associated with ``proc_type``;
+            defaults to None.
         series (int): Image series number; defaults to None.
         subimg_offset (List[int]): Sub-image offset as (z,y,x) to load;
             defaults to None.
@@ -1071,7 +1080,6 @@ def process_file(path, proc_mode, series=None, subimg_offset=None,
     stats = None
     fdbk = None
     filename_base = importer.filename_to_base(path, series)
-    proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
     
     print("{}\n".format("-" * 80))
     if proc_type is config.ProcessTypes.LOAD:

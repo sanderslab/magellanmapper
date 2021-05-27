@@ -216,6 +216,11 @@ class ProcessTypes(Enum):
     EXPORT_PLANES_CHANNELS = auto()  # also export channels to separate files
     EXPORT_RAW = auto()  # export an array as a raw data file
     PREPROCESS = auto()  # pre-process whole image
+
+
+#: dict[Enum, Any]: Processing tasks.
+proc_type = dict.fromkeys(ProcessTypes, None)
+
 # 2D PLOTTING
 
 

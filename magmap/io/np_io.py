@@ -150,7 +150,7 @@ def _check_np_none(val):
 
 
 def setup_images(path=None, series=None, offset=None, size=None,
-                 proc_mode=None, allow_import=True):
+                 proc_type=None, allow_import=True):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -163,8 +163,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
         series (int): Image series number; defaults to None.
         offset (List[int]): Sub-image offset given in z,y,x; defaults to None.
         size (List[int]): Sub-image shape given in z,y,x; defaults to None.
-        proc_mode (str): Processing mode, which should be a key in 
-            :class:`config.ProcessTypes`, case-insensitive; defaults to None.
+        proc_type (Enum): Processing type, which should be a one of
+            :class:`config.ProcessTypes`.
         allow_import (bool): True to allow importing the image if it
             cannot be loaded; defaults to True.
     
@@ -248,7 +248,6 @@ def setup_images(path=None, series=None, offset=None, size=None,
             print("Ignored sub-image file from {} as unable to load"
                   .format(filename_subimg))
 
-    proc_type = libmag.get_enum(proc_mode, config.ProcessTypes)
     if config.load_data[config.LoadData.BLOBS] or proc_type in (
             config.ProcessTypes.LOAD,
             config.ProcessTypes.COLOC_MATCH,

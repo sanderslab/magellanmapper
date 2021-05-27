@@ -235,8 +235,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             config.ProcessTypes.LOAD,
             config.ProcessTypes.COLOC_MATCH,
             config.ProcessTypes.EXPORT_ROIS,
-            config.ProcessTypes.EXPORT_BLOBS,
-            config.ProcessTypes.DETECT):
+            config.ProcessTypes.EXPORT_BLOBS):
         # load a blobs archive
         blobs = detector.Blobs()
         try:

@@ -18,7 +18,34 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | [v1.3.6](#changes-in-magellanmapper-v13)
 `--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | v1.3.6
 `--load` | `blobs=<path> blob_matches=<path>` | Paths to load data. `blobs` are objects detected as blobs. `blob_matches` are co-localized blobs among channels. | v1.4.0 | [v1.4.0](#changes-in-magellanmapper-v14)
-TODO: finish arguments
+`--proc` | `<task>` | Image processing tasks; see `config.ProcessTypes` | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
+`--register` | `<task>` | Registration and other atlas-related tasks; see `config.RegisterTypes` | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
+`--df` | `<task>` | Pandas data frame tasks; see `config.DFTasks` | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--plot_2d` | `<task>` | 2D plot tasks; see `config.Plot2DTypes` | v1.0.0 | v1.0.0
+`--ec2_start` | `<tag_name> <ami_id> <instance_type> <subnet_id> <sec_group> <key_name> <ebs> <max_count> <snapshot_ids>` | Start an EC2 instance. | v1.0.0 | v1.0.0
+`--ec2_list` | `<state> <image_id>` | List EC2 instances. | v1.0.0 | v1.0.0
+`--ec2_terminate` | `<instance1> [instance2] ...` | Terminate EC2 instances by instance ID. | v1.0.0 | v1.0.0
+`--notify` | `<URL> <message> <attachment>` | Post a message to a URL. ``attachment`` can be a longer message string. | v1.0.0 | v1.0.0
+`--grid_search` | `<profile>` | Perform a Grid Search hyperparameter tuning task for blob detection with the given profile name or file. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--theme` | `<theme1> [theme2] ...` | User interface themes; see `config.Themes`. | v1.1.4 | v1.1.4
+`--truth_db` | `[mode=<mode>] [path=<path>]` | Truth database; see `config.TruthDBModes` for available modes. | v1.0.0 | v1.0.0
+`--labels` | `[path_ref="""] [level=0] [ID=0] [orig_colors=1] [symmetric_colors=1] [binary=<backround>,<foreground>] [translate_labels=<path>"] [translate_children=0]` | Atlas label settings; see `config.AtlasLabels`. | v1.0.0 | v1.0.0
+`--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0]` | Image transformations; see `config.Transforms`. | v1.0.0 | v1.0.0
+`--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Registered image suffixes, eg `/opt/myvolume_atlasVolume.mhd`; see `config.RegSuffixes`. | v1.0.0 | v1.0.0
+`--plot_labels` | `[title=<title>] ...` | Plot labels; see `config.PlotLabels` for available parameters. | v1.0.0 | v1.0.0
+`--set_meta` | `[resolutions=<x,y,z>] [magnification=<n>] [zoom=<n>] [shape=<c,x,y,z,...>] [dtype=<data-type>]` | Metadata to set when importing an image; see `config.MetaKeys`. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--plane` | `<xy|xz|yz>` | Transpose to the given planar orientation | v1.0.0 | v1.0.0
+`--show` | `<0|1>` | Show images after generating them in atlas pipelines. `0` to not show, `1` to show. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--alphas` | `<n,...>` | Alpha (opacity) levels for the main image; can give as a comma-delimited for multiple channels (eg `0.5,0.3`) | v1.0.0 | v1.0.0
+`--vmin` | `<n,...>` | Minimum intensity levels; can give as a comma-delimited for multiple channels (eg `0.1,0.2`) | v1.0.0 | v1.0.0
+`--vmax` | `<n,...>` | Maximum intensity levels; can give as a comma-delimited for multiple channels (eg `0.1,0.2`) | v1.0.0 | v1.0.0
+`--seed` | `<n>` | Random number generator seed. | v1.0.0 | v1.0.0
+`--save_subimg` | None | Save a sub-image (given by `--subimg_offset` and `--subimg_size`) as a separate `<base>_subimg.npy` file | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--slice` | `<start[,stop,step]>` | Slice range similar to the Python `slice` function. | v1.0.0 | v1.0.0
+`--delay` | `<n>` | Time delay in ms, used for animations. | v1.0.0 | v1.0.0
+`--savefig` | `<ext>` | Extension to use when saving figures, without period. When unset, defaults to PNG when exporting images. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--groups` | `[group1] [group2] ...` | Group ID corresponding to each image in `--img`. | v1.0.0 | v1.0.0
+`--verbose`, `-v` | `[level=<n>] [path=<path>]` | Verbose output. `level` can range from `1` (`DEBUG`) to 5 (`CRITICAL`); defaults to debug if `level` is not set, or info if `-v` is not given. `path` is the output log path. | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 
 ## Changes in MagellanMapper v1.4
 
@@ -30,7 +57,7 @@ None | `--df replace_vals` | v1.4.0 | Replace values
 `--img <orig-name>.` | Can be given as `--img <orig-name>_image5d.npy`, or `python run.py <path1> [path2] ...` | v1.4.0 | The full imported filename can be given, and the `--img` can be omitted when the paths are given as first arguments
 None | `--plot_labels text_pos=<x,y>` | v1.4.0 | Add plane number annotation at the `x,y` position in stack animations
 None | `--plot_labels x_scale`, `y_scale` | v1.4.0 | Set plot axis scaling, such as `log` for log-scaling
-`--proc detec --roi_prof <profile0> <profile1> <profile2> --channel 1 2` | `--proc detec --roi_prof "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
+`--proc detect --roi_profile <profile0> <profile1> <profile2> --channel 1 2` | `--proc detect --roi_profile "" <profile1> <profile2> --channel 1 2` | v1.4.0 | Block processing is performed based on each profile, rather than only on `profile0`; in this case, `profile0` is ignored since channel 0 is skipped and can be given as empty quotes
 None | `--proc detec_coloc` | v1.4.0 | Intensity-based co-localizations during blob detection
 None | `--proc coloc_match` | v1.4.0 | Match-based co-localizations after blob detection
 None | `--proc export_planes` | v1.4.0 | Export all channels together into each plane

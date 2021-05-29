@@ -306,8 +306,6 @@ def process_cli_args():
     parser.add_argument(
         "--notify", nargs="*",
         help="Notification message URL, message, and attachment strings")
-    parser.add_argument(
-        "--grid_search", help="Grid search hyperparameter tuning profile(s)")
 
     # profile arguments
     parser.add_argument(
@@ -322,6 +320,12 @@ def process_cli_args():
         help="Atlas profile, which can be separated by underscores "
              "for multiple profiles and given as paths to custom profiles "
              "in YAML format. See docs/settings.md for more details.")
+    parser.add_argument(
+        "--grid_search",
+        help="Grid search hyperparameter tuning profile(s), which can be "
+             "separated by underscores for multiple profiles and given as "
+             "paths to custom profiles in YAML format. See docs/settings.md "
+             "for more details.")
     parser.add_argument(
         "--theme", nargs="*", type=str.lower,
         choices=libmag.enum_names_aslist(config.Themes),

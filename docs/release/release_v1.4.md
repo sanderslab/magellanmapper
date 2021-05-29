@@ -2,6 +2,8 @@
 
 ## MagellanMapper v1.4.0
 
+### Highlights
+
 This release brings many usability enhancements, foremost of which is our new standalone installers. Install and run MagellanMapper through point-and-click (no terminal required!) and open new files through your file browser.
 
 We also added new options to the editors such as ROI centering/zooming and labels toggle, and we reorganized the tool panel for a cleaner, clearer look. Several tools are more responsive, such as Maximum Intensity Projections and Atlas Editor positioning.
@@ -17,7 +19,8 @@ For debugging, logs are now saved to `out.log` located in:
 
 ### Changes
 
-Installation
+#### Installation
+
 - Windows, macOS, and Linux standalone packages are now provided!
     - MagellanMapper can now be installed without the command-line
     - The Windows installer allows launching the application from the Start Menu
@@ -28,7 +31,8 @@ Installation
     - `bin/venv.sh` can now also be re-run to update Venv environments
 - Python version support has been expanded to 3.6-3.8 now that we have [built](#python-dependency-changes) custom dependencies for these Python versions
 
-GUI
+#### GUI
+
 - Reorganized options to group by viewer
 - More tooltips (hover mouse over labels)
 - Option to treat the ROI offset as the center of the ROI
@@ -56,12 +60,14 @@ GUI
 - Fixed error when looking up atlas label without a loaded reference file
 - Fixed the size of the ROI outline after detecting blobs
 
-CLI
+#### CLI
+
 - Unrecognized arguments are simply ignored rather than giving an error
 - The new `--load` parameter replaces `--proc load` as a more flexible way to specify data to load, including `--load blobs` and `--load blobs blob_matches`
 - Output of profiles settings is now pretty printed for readability
 
-Atlas refinement
+#### Atlas refinement
+
 - Option to increase tapering during labels lateral extension by weighting label erosion with lateral distance, set by the `wt_lat` atlas profile setting
 - Set an alternative intensity image for edge detection using the registration suffixes atlas flag (`--reg_suffixes [atlas]`)
 - Added a `watershed_mask_filter` setting in the `edge_aware_reannotation` atlas profile group to set the filter type and size for the watershed mask
@@ -69,14 +75,16 @@ Atlas refinement
 - Fixed to exclude labels that were not eroded from undergoing watershed-based reannotation
 - Fixed saving edited images loaded through the GUI (#11)
 
-Atlas registration
+#### Atlas registration
+
 - Customize the atlas images used during image registration by using the `--reg_suffixes` CLI parameter
 - Measure the distance from labels to specified landmarks before and after registration through the `--register labels_dist` task
 - The `carve_threshold` and `holes_area` atlas profile settings are also applied to regular (non-groupwise) registration
 - The similarity metric used for registration is included in the summary CSV file
 - Fixed smoothing metrics for non-existent labels
 
-Cell detection
+#### Cell detection
+
 - Blob co-localization
     - Detected blobs can now be co-localized two ways:
         1. Intensity-based: intensities above threshold at each blob's location in the remaining channels are considered co-localized signal
@@ -89,7 +97,8 @@ Cell detection
 - Accuracy metrics for each ROI are saved to CSV file
 - Compare atlases translated to labels from different references and children
 
-Volumetric image processing
+#### Volumetric image processing
+
 - Volume comparisons: include raw pixel and volume counts
 - Compare volumes registered to different atlases
     - Translate atlas labels IDs in one image to the IDs used in another image
@@ -101,7 +110,8 @@ Volumetric image processing
 - Option to specify channel(s) to include in heatmaps
 - Blobs positions are scaled to the main image
 
-I/O
+#### I/O
+
 - Open image files through file browsers (eg macOS Finder, Windows Explorer) (#18)
     - Open files in key supported file formats (eg `.npy`, `.mhd`, `.nii.gz`) by double-clicking or using "Open with...", or drag-n-drop onto the application icon in macOS
     - If MagellanMapper already has a loaded image, another application instance will be opened with the new image
@@ -125,7 +135,8 @@ I/O
 - The `--series` flag is now supported for import in the GUI
 - Fixed to reset blobs when loading a new image
 
-Python stats and plots
+#### Python stats and plots
+
 - Perform arithmetic operations on data frame columns using `--df sum_cols`, `subtract_cols`, `multiply_cols`, `divide_cols`
 - Data frame task to replace values (`--df replace_vals`)
 - Added `--plot_labels x_scale` and `y_scale` parameters to set axis scaling, such as `log` for log-scaling
@@ -137,7 +148,8 @@ Python stats and plots
 - Fixed unnecessary decimal numbers for integers in scatter plot annotations
 - Fixed error when saving a figure to an unsupported file format
 
-R stats and plots
+#### R stats and plots
+
 - A basic command-line interface has been integrated through `run.R`, including path, profile, and measurement configuration
 - Use the `tryCatchLog` package to assist with stacktraces for debugging
 - Update usage of `addTextLabels` to its successor package, `basicPlotterR`
@@ -148,7 +160,8 @@ R stats and plots
 - Log-scaled volcano plots use a log-modulus transform, which fixes transforms when the minimum absolute value is 0
 - Fixed to generate plots in both interactive and non-interactive environments
 
-Code base and docs
+#### Code base and docs
+
 - Python APIs
     - Previously Python APIs compatible with both Python 2 and 3 have been used when possible, but much of the package requires Python 3, and testing has been on Python >= 3.6
     - For a more consistent and modern codebase, we are initiating use of Python 3 APIs such as `pathlib` and specifically 3.6+ features such as f-strings
@@ -157,7 +170,7 @@ Code base and docs
 - Instructions on building the API docs (#3)
 - Readme cleanup (#2) and tabular format for Atlas Editor shortcuts (#5)
 - `Blobs` and `Image5d` are being migrated to class structures for better encapsulation and additional metadata
-- Initial additions of unit testing, starting with `libmag` (#7)
+- Initial unit testing, starting with `libmag` (#7)
 
 ### Dependency Updates
 

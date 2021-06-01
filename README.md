@@ -14,32 +14,45 @@ Related publications:
 
 ## Installation
 
-### Standalone packages
+### Install a standalone package
 
-**UPDATE**: the forthcoming [v1.4 release](docs/release/release_v1.4.md) contains many new features and changes. Standlone [installers](https://github.com/sanderslab/magellanmapper/releases) are available for Windows, macOS, and Linux!
+Starting with v1.4, standlone [installers](https://github.com/sanderslab/magellanmapper/releases) are now available for Windows, macOS, and Linux!
 
-These packages do not require use of the terminal, and you can skip the installation steps below. As they are likely rough around the edges, please file any [issues](https://github.com/sanderslab/magellanmapper/issues) you may enounter.
+These packages do not require use of the terminal, and you can skip the installation steps below. As the packages are rough around the edges, please file any [issues](https://github.com/sanderslab/magellanmapper/issues) you may enounter.
+
+Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
 
 ### Install from source
 
-1. Download MagellanMapper
-    - Download and extract the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest), which is the stable version
-    - Or clone the git repo, which contains all the latest (potentially unstable) updates: `git clone https://github.com/sanderslab/magellanmapper.git`
+1. Download MagellanMapper by cloning the git repo (or download the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest)):
+```
+git clone https://github.com/sanderslab/magellanmapper.git
+```
 1. Install MagellanMapper using the following script in the `magellanmapper` folder
     - On Mac or Linux: `bin/setup_conda`
     - On Windows: `bin\setup_conda.bat`
 
-The script will also install the Conda package manager if it is not already installed. This process may take up to 5 minutes, depending on internet connection speed.
-
-### Install Notes
-- To update the environment, rerun the `setup_conda` script above
+- Installation may take up to 5 minutes, depending on internet connection speed.
+- The script will also install the Conda package manager if not already installed.
+- To update the environment, rerun the appropriate `setup_conda` script above.
 - On Mac, it may be necessary to right-click and "Open with" the Terminal app.
 - On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
-- See [Installation](docs/install.md) for more details, including installation without Conda, using Pip or Venv+Pip instead.
+- [v1.3.x releases](https://github.com/sanderslab/magellanmapper/releases/tag/v1.3.8) match the [Current Protocols guide](https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104), while v1.4.x introduces small changes to the interface and workflows (see [v1.4 release notes](https://github.com/sanderslab/magellanmapper/blob/master/docs/release/release_v1.4.md) for more details).
+- See [Installation](docs/install.md) for more details and install options, including installation Venv+Pip instead of Conda.
   
 ## Run MagellanMapper
 
-### From a file browser
+### Using the standalone package
+
+- **Mac**: launch MagellanMapper from LaunchPad, or double-click on the MagellanMapper app
+- **Windows**: in the Start Menu, go to "MagallanMapper v.x.y.z" and run "MagellanMapper"
+- **Linux**: in a file browser, double-click on `MagellanMapper/MagellanMapper`
+
+On Windows and Mac, you can also use "Open with" on supported file types (eg `.npy`, `.mhd`, `.nii.gz`) to open them in MagellanMapper.
+
+### After installing from source
+
+#### From a file browser
 
 **On Mac or Linux**: Double-click the `MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
 
@@ -49,7 +62,7 @@ The script will also install the Conda package manager if it is not already inst
 
 Note that during the first run, there may be a delay of up to several minutes from antivirus scanning for the new Python interpreter location in the new environment. Subsequent launches are typically much faster.
 
-### From a terminal
+#### From a terminal
 
 ```
 conda activate mag

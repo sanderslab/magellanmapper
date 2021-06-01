@@ -26,7 +26,7 @@ config = {
     "author": "David Young",
     "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "packages": setuptools.find_packages(),
     "scripts": [], 
     "python_requires": ">=3.6",

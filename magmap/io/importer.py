@@ -1097,11 +1097,14 @@ def setup_import_dir(path):
     
     # set shape and data type based on first loadable image in first channel
     chl_files = tuple(chl_paths.values())[0]
+    shape = [1, len(chl_files), 0, 0, len(chl_paths.keys())]
     img = None
     for chl_file in chl_files:
         try:
             # load standard image types; does not read RAW files
             img = io.imread(chl_file)
+            shape[2:4] = img.shape[:2]
+            md[config.MetaKeys.DTYPE] = img.dtype.str
             break
         except ValueError:
             _logger.info(
@@ -1109,11 +1112,7 @@ def setup_import_dir(path):
     if img is None:
         _logger.warn(
             "Could not find image files in the directory: %s", path)
-    else:
-        # store shape and data type
-        md[config.MetaKeys.SHAPE] = [
-            1, len(chl_files), *img.shape[:2], len(chl_paths.keys())]
-        md[config.MetaKeys.DTYPE] = img.dtype.str
+    md[config.MetaKeys.SHAPE] = shape
     return chl_paths, md
 
 

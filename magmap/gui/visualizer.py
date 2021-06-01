@@ -2949,7 +2949,6 @@ class Visualization(HasTraits):
                 base_path = os.path.join(
                     os.path.dirname(self._import_browser),
                     importer.DEFAULT_IMG_STACK_NAME)
-                self._import_btn_enabled = True
             
             elif self._import_browser:
                 # gather files matching the pattern of the selected file to import

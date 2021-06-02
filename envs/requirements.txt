@@ -61,6 +61,6 @@ toml==0.10.2
 traits==6.2.0
 traitsui==7.1.1
 typing-extensions==3.7.4.3
-urllib3==1.26.4
+urllib3==1.26.5
 vtk==8.1.2
 zipp==3.4.1

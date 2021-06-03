@@ -541,16 +541,23 @@ def load_metadata(path, check_ver=False, assign=True):
         if output:
             # metadata is in first document
             output = output[0]
-    except FileNotFoundError:
+    except FileNotFoundError as err:
         # fall back to pre-v1.4 NPZ file format
-        libmag.warn("Could not find metadata file '{}', will check NPZ format"
-                    .format(path))
+        _logger.warn("Could not load metadata file '%s', will check NPZ format",
+                     path)
+        _logger.debug(err)
         path_npz = f"{os.path.splitext(path)[0]}.npz"
         try:
+            # load NPZ and resave as YML format
             output = np_io.read_np_archive(np.load(path_npz))
-        except FileNotFoundError:
-            libmag.warn("Could not find metadata file '{}', skipping"
-                        .format(path_npz))
+            path_yml = f"{os.path.splitext(path)[0]}.yml"
+            yaml_io.save_yaml(path_yml, output, True)
+            _logger.info(
+                "Metadata file from '%s' updated to '%s'", path_npz, path_yml)
+        except FileNotFoundError as err2:
+            _logger.warn(
+                "Could not load metadata file '%s', skipping", path_npz)
+            _logger.debug(err2)
             return None, image5d_ver_num
     
     try:

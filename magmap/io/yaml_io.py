@@ -2,7 +2,6 @@
 # Author: David Young, 2020
 """YAML file format input/output."""
 
-import numpy as np
 import yaml
 
 from magmap.io import libmag
@@ -49,6 +48,9 @@ def load_yaml(path, enums=None):
     Returns:
         List[dict]: Sequence of parsed dictionaries for each document within
         a YAML file.
+    
+    Raises:
+        FileNotFoundError: if ``path`` could not be found or loaded.
 
     """
     def parse_enum_val(val):
@@ -63,18 +65,21 @@ def load_yaml(path, enums=None):
                 # replace with the corresponding Enum class
                 val = enums[val_split[0]][val_split[1]]
         return val
-
-    with open(path) as yaml_file:
-        # load all documents into a generator
-        docs = yaml.load_all(yaml_file, Loader=yaml.FullLoader)
-        data = []
-        for doc in docs:
-            if not doc:
-                # skip empty document
-                continue
-            if enums:
-                doc = _filter_dict(doc, parse_enum_val)
-            data.append(doc)
+    
+    try:
+        with open(path) as yaml_file:
+            # load all documents into a generator
+            docs = yaml.load_all(yaml_file, Loader=yaml.FullLoader)
+            data = []
+            for doc in docs:
+                if not doc:
+                    # skip empty document
+                    continue
+                if enums:
+                    doc = _filter_dict(doc, parse_enum_val)
+                data.append(doc)
+    except (FileNotFoundError, UnicodeDecodeError) as e:
+        raise FileNotFoundError(e)
     return data
 
 

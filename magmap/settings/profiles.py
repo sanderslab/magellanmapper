@@ -14,6 +14,8 @@ import pprint
 from magmap.io import yaml_io
 from magmap.settings import config
 
+_logger = config.logger.getChild(__name__)
+
 
 class RegKeys(Enum):
     """Register setting enumerations."""
@@ -142,11 +144,14 @@ class SettingsDict(dict):
                     print(mod_path, "profile file not found, skipped")
                     return
             self.timestamps[mod_path] = os.path.getmtime(mod_path)
-            yamls = yaml_io.load_yaml(mod_path, _PROFILE_ENUMS)
-            mods = {}
-            for yaml in yamls:
-                mods.update(yaml)
-            print("loaded {}:\n{}".format(mod_path, mods))
+            try:
+                yamls = yaml_io.load_yaml(mod_path, _PROFILE_ENUMS)
+                mods = {}
+                for yaml in yamls:
+                    mods.update(yaml)
+                _logger.info("Loaded profile from '%s':\n%s", mod_path, mods)
+            except FileNotFoundError:
+                _logger.warn("Unable to load profile from: %s", mod_path)
         else:
             if mod_name == self.DEFAULT_NAME:
                 # update entries from a new instance for default values;
@@ -194,8 +199,8 @@ class SettingsDict(dict):
             self.add_modifier(profile, self.profiles, self.delimiter)
 
         if config.verbose:
-            print("settings for {}:", self[self.NAME_KEY])
-            pprint.pprint(self)
+            _logger.debug("settings for '%s':", self[self.NAME_KEY])
+            _logger.debug(pprint.pprint(self))
 
     def check_file_changed(self):
         """Check whether any profile files have changed since last loaded.

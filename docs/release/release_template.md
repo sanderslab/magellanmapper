@@ -2,31 +2,33 @@
 
 ## MagellanMapper vx.y.z
 
+### Highlights
+
 ### Changes
 
-Installation
+#### Installation
 
-GUI
+#### GUI
 
-CLI
+#### CLI
 
-Atlas refinement
+#### Atlas refinement
 
-Atlas registration
+#### Atlas registration
 
-Cell detection
+#### Cell detection
 
-Volumetric image processing
+#### Volumetric image processing
 
-I/O
+#### I/O
 
-Server pipelines
+#### Server pipelines
 
-Python stats and plots
+#### Python stats and plots
 
-R stats and plots
+#### R stats and plots
 
-Code base and docs
+#### Code base and docs
 
 ### Dependency Updates
 

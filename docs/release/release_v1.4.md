@@ -127,7 +127,7 @@ For debugging, logs are now saved to `out.log` located in:
 - Matplotlib style is set more consistently to "default"
 - Intensity-based co-localizations are stored in the blobs archive
 - Database
-    - New table for blob matche
+    - New table for blob matches
     - Support foreign keys
 - Atlas labels export to CSV can output the immediate parent of each label to reconstruct label hierarchy by using `--register export_regions --labels level=None orig_colors=1`, where `level=None` gets the parent rather than labels only up to that level, and `orig_colors=1` gets only labels present in the image itself
 - `--proc export_planes` now exports multi-channel images combined into single planes (eg RGB images), while the new `--proc export_planes_channels` exports each image to a separate channel

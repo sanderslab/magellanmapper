@@ -18,7 +18,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | [v1.3.6](#changes-in-magellanmapper-v13)
 `--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | v1.3.6
 `--load` | `blobs=<path> blob_matches=<path>` | Paths to load data. `blobs` are objects detected as blobs. `blob_matches` are co-localized blobs among channels. | v1.4.0 | [v1.4.0](#changes-in-magellanmapper-v14)
-`--proc` | `<task>` | Image processing tasks; see `config.ProcessTypes` | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
+`--proc` | `<task1>=[sub-task1,...] <task2>` | Image processing tasks; see `config.ProcessTypes` | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--register` | `<task>` | Registration and other atlas-related tasks; see `config.RegisterTypes` | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 `--df` | `<task>` | Pandas data frame tasks; see `config.DFTasks` | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
 `--plot_2d` | `<task>` | 2D plot tasks; see `config.Plot2DTypes` | v1.0.0 | v1.0.0

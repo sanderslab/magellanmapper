@@ -199,6 +199,11 @@ def setup_images(path=None, series=None, offset=None, size=None,
     filename_base = importer.filename_to_base(path, series)
     subimg_base = None
     blobs = None
+    
+    # registered images set to load
+    atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
+    annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+    borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
 
     if load_subimage and not config.save_subimg:
         # load a saved sub-image file if available and not set to save one
@@ -265,7 +270,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                 # blobs expected but not found
                 raise e2
     
-    if path and config.image5d is None:
+    if path and config.image5d is None and not atlas_suffix:
         # load or import the main image stack
         print("Loading main image")
         try:
@@ -325,7 +330,6 @@ def setup_images(path=None, series=None, offset=None, size=None,
         importer.assign_metadata(config.metadatas[0])
     
     # main image is currently required since many parameters depend on it
-    atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
     if atlas_suffix is None and config.image5d is None:
         # fallback to atlas if main image not already loaded
         atlas_suffix = config.RegNames.IMG_ATLAS.value
@@ -344,7 +348,6 @@ def setup_images(path=None, series=None, offset=None, size=None,
         except FileNotFoundError as e:
             print(e)
     
-    annotation_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
     if annotation_suffix is not None:
         try:
             # load labels image
@@ -381,7 +384,6 @@ def setup_images(path=None, series=None, offset=None, size=None,
             _logger.error("Skipping labels reference file loading from '%s'",
                           config.load_labels)
     
-    borders_suffix = config.reg_suffixes[config.RegSuffixes.BORDERS]
     if borders_suffix is not None:
         # load borders image, which can also be another labels image
         try:

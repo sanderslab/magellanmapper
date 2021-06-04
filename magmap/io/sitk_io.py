@@ -85,7 +85,7 @@ def match_world_info(source, target):
           "direction from {} to {}"
           .format(target.GetSpacing(), spacing, target.GetOrigin(), origin,
                   target.GetDirection(), direction))
-    target.SetSpacing(spacing)
+    # target.SetSpacing(spacing)
     target.SetOrigin(origin)
     target.SetDirection(direction)
 
@@ -154,9 +154,10 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
 
 
 def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
-    """Read an image file through SimpleITK and export to Numpy array format,
-    with support for combining multiple registered image files into a single
-    image.
+    """Read image files through SimpleITK.
+    
+    Supports identifying files based on registered suffixes and combining
+    multiple registered image files into a single image.
     
     Also sets up spacing from the first loaded image in
     :attr:`magmap.settings.config.resolutions` if not already set.
@@ -228,26 +229,30 @@ def load_registered_img(img_path, reg_name, get_sitk=False, return_path=False):
     """Load atlas-based image that has been registered to another image.
     
     Args:
-        img_path: Path as had been given to generate the registered images, 
-            with the parent path of the registered images and base name of 
-            the original image.
-        reg_name: Atlas image suffix to open.
-        get_sitk: True if the image should be returned as a SimpleITK image; 
-            defaults to False, in which case the corresponding Numpy array will 
-            be extracted instead.
+        img_path (str): Path as had been given to generate the registered
+            images, with the parent path of the registered images and base name 
+            of the original image.
+        reg_name (str): Atlas image suffix to open. Can be an absolute path,
+            which will be used directly, ignoring ``img_path``.
+        get_sitk (bool): True if the image should be returned as a SimpleITK
+            image; defaults to False, in which case the corresponding Numpy
+            array will be extracted instead.
         return_path (bool): True to return the path from which the image
             was loaded; defaults to False.
     
     Returns:
-        :obj:`np.ndarray`: The atlas-based image as a Numpy array, or a
-        :obj:`sitk.Image` object if ``get_sitk`` is True. Also returns the
+        :class:`numpy.ndarray`: The atlas-based image as a Numpy array, or a
+        :class:`sitk.Image` object if ``get_sitk`` is True. Also returns the
         loaded path if ``return_path`` is True.
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
     """
-    # prioritize registered image extension matched to that of main image
-    reg_img_path = reg_out_path(img_path, reg_name, True)
+    reg_img_path = reg_name
+    if not os.path.isabs(reg_name):
+        # use suffix given as an absolute path directly; otherwise, get
+        # registered image extension matched to that of main image
+        reg_img_path = reg_out_path(img_path, reg_name, True)
     reg_img, reg_img_path = read_sitk(reg_img_path)
     if reg_img is None:
         # fallback to loading barren reg_name from img_path's dir

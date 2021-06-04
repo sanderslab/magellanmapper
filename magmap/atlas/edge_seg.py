@@ -50,7 +50,10 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     The atlas is assumed to be a sample (eg microscopy) image on which 
     an edge-detection filter will be applied. The labels image is 
     assumed to be an annotated image whose edges will be found by 
-    obtaining the borders of all separate labels.
+    obtaining the borders of all separate labels. Atlas and labels images
+    can be set in :attr:`config.reg_suffixes`. If the labels image suffix is
+    an empty string (:attr:`config.reg_suffixes[annotation=""]`) and
+    ``path_atlas_dir`` is not used, no labels image will be used.
     
     Args:
         path_img: Path to the image atlas. The labels image will be 
@@ -70,7 +73,9 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
             ``path_img``, such as when the sample image is registered 
             to an atlas rather than the other way around. Typically 
             coupled with ``suffix`` to compare same sample against 
-            different labels. Defaults to None.
+            different labels. Defaults to None, in which case the labels
+            image is loaded from the registered labels image to ``path_img``.
+    
     """
     
     # load intensity image from which to detect edges
@@ -90,22 +95,25 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     if suffix is not None:
         mod_path = libmag.insert_before_ext(mod_path, suffix)
     
+    # load labels image
     labels_from_atlas_dir = path_atlas_dir and os.path.isdir(path_atlas_dir)
+    labels_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
+    if labels_suffix is None:
+        labels_suffix = config.RegNames.IMG_LABELS.value
+    labels_sitk = None
+    path_atlas = mod_path
     if labels_from_atlas_dir:
         # load labels from atlas directory
-        # TODO: consider applying suffix to labels dir
         path_atlas = path_img
-        path_labels = os.path.join(
-            path_atlas_dir, config.RegNames.IMG_LABELS.value)
+        path_labels = os.path.join(path_atlas_dir, labels_suffix)
         print("loading labels from", path_labels)
         labels_sitk = sitk.ReadImage(path_labels)
-    else:
+    elif labels_suffix:
         # load labels registered to sample image
-        path_atlas = mod_path
         labels_sitk = sitk_io.load_registered_img(
-            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
-    
+            mod_path, labels_suffix, get_sitk=True)
+    labels_img_np = None if labels_sitk is None else sitk.GetArrayFromImage(
+        labels_sitk)
     # load atlas image, set resolution from it
     atlas_sitk = sitk_io.load_registered_img(
         path_atlas, atlas_suffix, get_sitk=True)

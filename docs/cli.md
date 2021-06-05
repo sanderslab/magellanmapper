@@ -31,7 +31,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--truth_db` | `[mode=<mode>] [path=<path>]` | Truth database; see `config.TruthDBModes` for available modes. | v1.0.0 | v1.0.0
 `--labels` | `[path_ref="""] [level=0] [ID=0] [orig_colors=1] [symmetric_colors=1] [binary=<backround>,<foreground>] [translate_labels=<path>"] [translate_children=0]` | Atlas label settings; see `config.AtlasLabels`. | v1.0.0 | v1.0.0
 `--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0]` | Image transformations; see `config.Transforms`. | v1.0.0 | v1.0.0
-`--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Registered image suffixes, eg `/opt/myvolume_atlasVolume.mhd`; see `config.RegSuffixes`. | v1.0.0 | v1.0.0
+`--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Registered image suffixes, eg `/opt/myvolume_atlasVolume.mhd`; see `config.RegSuffixes`. Suffixes can be given as an absolute path to load directly from the path, eg a labels image not registered to the main image. | v1.0.0 | v1.0.0
 `--plot_labels` | `[title=<title>] ...` | Plot labels; see `config.PlotLabels` for available parameters. | v1.0.0 | v1.0.0
 `--set_meta` | `[resolutions=<x,y,z>] [magnification=<n>] [zoom=<n>] [shape=<c,x,y,z,...>] [dtype=<data-type>]` | Metadata to set when importing an image; see `config.MetaKeys`. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
 `--plane` | `<xy|xz|yz>` | Transpose to the given planar orientation | v1.0.0 | v1.0.0
@@ -53,6 +53,7 @@ Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
 `--proc <task>` | `--proc <task1>=[sub-task1,...] <task2>` | v1.5.0 | Multiple processing tasks can be given as well as sub-tasks
 Specified in ROI profiles | `--proc preprocess=[rotate,saturate,...]` | v1.5.0 | Pre-processing tasks are integrated as sub-processing tasks; see `config.PreProcessKeys` for task names
+`--reg_suffixes [atlas=<suffix1>] ...` | Unchanged | v1.5.0 | Suffixes can now be given as an absolute path to load directly from the path, eg a labels image not registered to the main image.
 
 ## Changes in MagellanMapper v1.4
 

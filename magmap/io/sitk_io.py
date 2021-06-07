@@ -457,3 +457,40 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
         reg_name, config.RegNames.COMBINED.value)
     write_reg_images({output_reg: combined_sitk}, output_base)
     return combined_sitk
+
+
+def load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
+    """Load Numpy image array to SimpleITK Image object.
+
+    Use ``channel`` to extract a single channel before generating a
+    :obj:`sitk.Image` object for many SimpleITK filters that require
+    single-channel ("scalar" rather than "vector") images.
+    
+    Args:
+        numpy_file (str): Path to Numpy archive file.
+        rotate (bool): True if the image should be rotated 180 deg; defaults to
+            False.
+        channel (int, Tuple[int]): Integer or sequence of integers specifying
+            channels to keep.
+    
+    Returns:
+        :obj:`sitk.Image`: The image in SimpleITK format.
+    
+    """
+    img5d = importer.read_file(numpy_file, config.series)
+    image5d = img5d.img
+    roi = image5d[0, ...]  # not using time dimension
+    if channel is not None and len(roi.shape) >= 4:
+        roi = roi[..., channel]
+        print("extracted channel(s) for SimpleITK image:", channel)
+    if rotate:
+        roi = np.rot90(roi, 2, (1, 2))
+    sitk_img = sitk.GetImageFromArray(roi)
+    spacing = config.resolutions[0]
+    sitk_img.SetSpacing(spacing[::-1])
+    # TODO: consider setting z-origin to 0 since image generally as 
+    # tightly bound to subject as possible
+    #sitk_img.SetOrigin([0, 0, 0])
+    sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
+    #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
+    return sitk_img

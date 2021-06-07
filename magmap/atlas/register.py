@@ -307,7 +307,7 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 
 def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
-                 moving_mask=None):
+                 moving_mask=None, regs=None):
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
@@ -321,12 +321,19 @@ def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
             to None.
         moving_mask (:obj:`sitk.Image`): Mask for ``moving_img``; defaults
             to None.
+        regs (list[str]): Sequence of atlas profile registration keys to use;
+            the default of None gives all three major registration types,
+            "reg_translation", "reg_affine", "reg_bspline".
     
     Returns:
         :obj:`SimpleITK.Image`, :obj:`sitk.TransformixImageFilter`: Tuple of
         the registered image and a Transformix filter with the registration's
         parameters to reapply them on other images.
     """
+    if regs is None:
+        # default to perform all the major registration types
+        regs = ("reg_translation", "reg_affine", "reg_bspline")
+    
     # basic info from images just prior to SimpleElastix filtering for 
     # registration; to view raw images, show these images rather than merely 
     # turning all iterations to 0 since simply running through the filter 
@@ -347,10 +354,10 @@ def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
     if moving_mask is not None:
         elastix_img_filter.SetMovingMask(moving_mask)
     
-    # set up parameter maps for translation, affine, and deformable regs
+    # set up parameter maps for the included registration types
     settings = config.atlas_profile
     param_map_vector = sitk.VectorOfParameterMap()
-    for key in ("reg_translation", "reg_affine", "reg_bspline"):
+    for key in regs:
         params = settings[key]
         if not params: continue
         max_iter = params["max_iter"]

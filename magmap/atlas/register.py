@@ -152,41 +152,6 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 
-def _load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
-    """Load Numpy image array to SimpleITK Image object.
-
-    Use ``channel`` to extract a single channel before generating a
-    :obj:`sitk.Image` object for many SimpleITK filters that require
-    single-channel ("scalar" rather than "vector") images.
-    
-    Args:
-        numpy_file: Path to Numpy archive file.
-        rotate: True if the image should be rotated 180 deg; defaults to False.
-        channel (int, Tuple[int]): Integer or sequence of integers specifying
-            channels to keep.
-    
-    Returns:
-        The image in SimpleITK format.
-    """
-    img5d = importer.read_file(numpy_file, config.series)
-    image5d = img5d.img
-    roi = image5d[0, ...]  # not using time dimension
-    if channel is not None and len(roi.shape) >= 4:
-        roi = roi[..., channel]
-        print("extracted channel(s) for SimpleITK image:", channel)
-    if rotate:
-        roi = np.rot90(roi, 2, (1, 2))
-    sitk_img = sitk.GetImageFromArray(roi)
-    spacing = config.resolutions[0]
-    sitk_img.SetSpacing(spacing[::-1])
-    # TODO: consider setting z-origin to 0 since image generally as 
-    # tightly bound to subject as possible
-    #sitk_img.SetOrigin([0, 0, 0])
-    sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
-    #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
-    return sitk_img
-
-
 def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True, 
                 thresh=None, holes_area=None):
     """Curate images by in-painting where corresponding pixels are present in 
@@ -465,7 +430,7 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
     
     # load fixed image, assumed to be experimental image
     chl = config.channel[0] if config.channel else 0
-    fixed_img = _load_numpy_to_sitk(fixed_file, channel=chl)
+    fixed_img = sitk_io.load_numpy_to_sitk(fixed_file, channel=chl)
     
     # preprocess fixed image; store original fixed image for overlap measure
     # TODO: assume fixed image is preprocessed before starting this reg?
@@ -903,7 +868,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
             img_file, scale, target_size)
         rot = rotate and libmag.get_if_within(rotate, i, 0) >= 2
         chl = config.channel[0] if config.channel else 0
-        img = _load_numpy_to_sitk(img_file, rot, chl)
+        img = sitk_io.load_numpy_to_sitk(img_file, rot, chl)
         size = img.GetSize()
         img_np = sitk.GetArrayFromImage(img)
         if img_np_template is None:
@@ -1161,7 +1126,7 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     
     # calculate the Dice similarity coefficient
     atlas_refiner.measure_overlap(
-        _load_numpy_to_sitk(fixed_file), transformed_sitk)
+        sitk_io.load_numpy_to_sitk(fixed_file), transformed_sitk)
     
     # overlay the images
     imgs = [roi, moving_img, transformed_img, labels_img]
@@ -1740,7 +1705,7 @@ def _test_region_from_id():
 
 
 def _test_curate_img(path, prefix):
-    fixed_img = _load_numpy_to_sitk(path)
+    fixed_img = sitk_io.load_numpy_to_sitk(path)
     labels_img = sitk_io.load_registered_img(
         prefix, config.RegNames.IMG_LABELS.value, get_sitk=True)
     atlas_img = sitk_io.load_registered_img(

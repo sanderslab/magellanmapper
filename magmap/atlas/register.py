@@ -389,8 +389,17 @@ def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
 
 def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
              name_prefix=None, new_atlas=False):
-    """Register an atlas and associated labels to a sample image 
-    using the SimpleElastix library.
+    """Register an atlas to a sample image using the SimpleElastix library.
+    
+    Loads the images, applies any transformations to the moving image, and
+    registers the moving to the sample images. Applies the identical
+    registration to the associated atlas labels image as well. The specific
+    moving images can be adjusted through
+    :attr:`magmap.settings.config.reg_suffixes`, where the "atlas" image is
+    the intensity image used for registration, "annotation" is the atlas
+    labels, "fixed_mask" is the mask for ``fixed_file`` (optional), and
+    "moving_mask" is the mask for the "atlas" image (optional). If either
+    mask is given, both should be given as required by Elastix.
     
     Uses the first channel in :attr:`config.channel` or the first image channel.
     
@@ -454,9 +463,18 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
     labels_img = sitk_io.load_registered_img(
         moving_img_path, moving_labels_suffix, get_sitk=True)
 
-    # TODO: implement mask option
+    # get image masks given as registered image suffixes relative to the
+    # fixed image path or prefix
     fixed_mask = None
     moving_mask = None
+    fixed_mask_suffix = config.reg_suffixes[config.RegSuffixes.FIXED_MASK]
+    if fixed_mask_suffix:
+        fixed_mask = sitk_io.load_registered_img(
+            name_prefix, fixed_mask_suffix, get_sitk=True)
+    moving_mask_suffix = config.reg_suffixes[config.RegSuffixes.MOVING_MASK]
+    if moving_mask_suffix:
+        moving_mask = sitk_io.load_registered_img(
+            name_prefix, moving_mask_suffix, get_sitk=True)
 
     # transform and preprocess moving images
 

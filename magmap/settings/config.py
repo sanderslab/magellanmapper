@@ -460,12 +460,14 @@ class RegNames(Enum):
     IMG_ATLAS_PRECUR = "atlasVolumePrecur.mhd"
     IMG_LABELS = "annotation.mhd"
     IMG_EXP = "exp.mhd"
+    IMG_EXP_MASK = "expMask.mhd"
     IMG_GROUPED = "grouped.mhd"
     IMG_BORDERS = "borders.mhd"  # TODO: consider removing
     IMG_HEAT_MAP = "heat.mhd"
     IMG_HEAT_COLOC = "heatColoc.mhd"
     IMG_ATLAS_EDGE = "atlasEdge.mhd"
     IMG_ATLAS_LOG = "atlasLoG.mhd"
+    IMG_ATLAS_MASK = "atlasMask.mhd"
     IMG_LABELS_PRECUR = "annotationPrecur.mhd"
     IMG_LABELS_TRUNC = "annotationTrunc.mhd"
     IMG_LABELS_EDGE = "annotationEdge.mhd"
@@ -501,7 +503,11 @@ REGION_ALL = "all"
 # registered image suffix keys for command-line parsing
 RegSuffixes = Enum(
     "RegSuffixes", [
-        "ATLAS", "ANNOTATION", "BORDERS", 
+        "ATLAS",  # intensity image
+        "ANNOTATION",  # labels image
+        "BORDERS",  # label borders image
+        "FIXED_MASK",  # registration fixed image mask
+        "MOVING_MASK",  # registration moving image mask
     ]
 )
 reg_suffixes = dict.fromkeys(RegSuffixes, None)

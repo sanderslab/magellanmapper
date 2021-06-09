@@ -997,6 +997,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                         # open output file as memmap to directly write to disk,
                         # much faster than outputting to RAM first; supports
                         # NPY directly, unlike np.memmap
+                        os.makedirs(
+                            os.path.dirname(filename_image5d), exist_ok=True)
                         image5d = np.lib.format.open_memmap(
                             filename_image5d, mode="w+", dtype=img.dtype,
                             shape=shape)
@@ -1179,6 +1181,8 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
                 shape = [1, len(chl_files), *img.shape]
                 if num_chls > 1:
                     shape.append(num_chls)
+                os.makedirs(
+                    os.path.dirname(filename_image5d_npz), exist_ok=True)
                 img5d = np.lib.format.open_memmap(
                     filename_image5d_npz, mode="w+", dtype=img.dtype,
                     shape=tuple(shape))

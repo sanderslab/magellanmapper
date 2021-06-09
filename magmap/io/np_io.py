@@ -178,6 +178,13 @@ def setup_images(path=None, series=None, offset=None, size=None,
             if val is not None:
                 # explicitly set metadata takes precedence over extracted vals
                 import_md[key] = val
+        
+        res = import_md[config.MetaKeys.RESOLUTIONS]
+        if res is None:
+            # default to 1 for x,y,z since image resolutions are required
+            res = [1] * 3
+            import_md[config.MetaKeys.RESOLUTIONS] = res
+            _logger.warn("No image resolutions found. Defaulting to: %s", res)
     
     # LOAD MAIN IMAGE
     

@@ -24,9 +24,11 @@ https://github.com/sanderslab/magellanmapper/blob/master/docs/cli.md
 """
 
 import argparse
+from enum import Enum 
 import logging
 import os
 import sys
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import numpy as np
 
@@ -41,7 +43,7 @@ from magmap.stats import mlearn
 _logger = config.logger.getChild(__name__)
 
 
-def _parse_coords(arg, rev=False):
+def _parse_coords(arg: str, rev: bool = False) -> List[Tuple[int, ...]]:
     # parse a list of strings into 3D coordinates
     coords = []  # copy list to avoid altering the arg itself
     for coord in arg:
@@ -58,16 +60,17 @@ def _parse_coords(arg, rev=False):
     return coords
 
 
-def _parse_none(arg, fn=None):
+def _parse_none(
+        arg: Any, fn: Optional[Callable] = None) -> Any:
     """Parse arguments with support for conversion to None.
     
     Args:
-        arg (str): Argument to potentially convert.
-        fn (func): Function to apply to the argument if not converted to None.
+        arg: Argument to potentially convert.
+        fn: Function to apply to ``arg`` if not converted; defaults to None.
 
     Returns:
-        Any: Arguments that are "none" or "0" are converted to None;
-        otherwise, returns the original value.
+        None if ``arg`` is "none" or "0"; otherwise, returns ``fn(arg)`` if
+        ``fn`` is given, or ``arg`` unchanged.
 
     """
     if arg.lower() in ("none", "0"):
@@ -75,11 +78,11 @@ def _parse_none(arg, fn=None):
     return arg if fn is None else fn(arg)
 
 
-def _is_arg_true(arg):
+def _is_arg_true(arg: str) -> bool:
     return arg.lower() == "true" or arg == "1"
 
 
-def args_with_dict(args):
+def args_with_dict(args: List[str]) -> List[Union[Dict[str, Any], str, int]]:
     """Parse arguments list with optional arguments given as dictionary-like 
     elements.
     
@@ -113,32 +116,33 @@ def args_with_dict(args):
     return parsed
 
 
-def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
-                 default=None):
-    """Parse arguments list with positional and keyword-based arguments 
-    into an enum-keyed dictionary.
+def args_to_dict(args: List[str], keys_enum: Type[Enum],
+                 args_dict: Optional[Dict[Enum, Any]] = None,
+                 sep_args: str = "=", sep_vals: str = ",",
+                 default: Optional[Any] = None) -> Dict[Enum, Any]:
+    """Parse positional and keyword-based arguments to an enum-keyed dictionary.
     
     Args:
-        args (List[str]): List of arguments with positional values followed by
+        args: List of arguments with positional values followed by
             ``sep_args``-delimited values. Positional values will be entered
             in the existing order of ``keys_enum`` based on member values, 
             while keyword-based values will be entered if an enum 
             member corresponding to the keyword exists.
             Entries can also be ``sep_vals``-delimited to specify lists.
-        keys_enum (Enum): Enum to use as keys for dictionary. Values are
+        keys_enum: Enum class to use as keys for dictionary. Values are
             assumed to range from 1 to number of members as output 
             by the default Enum functional API.
-        args_dict (dict): Dictionary to be filled or updated with keys from
+        args_dict: Dictionary to be filled or updated with keys from
             ``keys_enum``; defaults to None, which will assign an empty dict.
-        sep_args (str): Separator between arguments and values; defaults to "=".
-        sep_vals (str): Separator within values; defaults to ",".
-        default (Any): Default value for each argument. Effectively turns off
+        sep_args: Separator between arguments and values; defaults to "=".
+        sep_vals: Separator within values; defaults to ",".
+        default: Default value for each argument. Effectively turns off
             positional argument assignments since all args become
             ``<keyword>=<default>``. Defaults to None. If a str, will
             undergo splitting by ``sep_vals``.
     
     Returns:
-        dict: Dictionary filled with arguments. Values that contain commas
+        Dictionary filled with arguments. Values that contain commas
         will be split into comma-delimited lists. All values will be 
         converted to ints if possible.
     
@@ -193,16 +197,16 @@ def args_to_dict(args, keys_enum, args_dict=None, sep_args="=", sep_vals=",",
     return args_dict
 
 
-def _get_args_dict_help(msg, keys):
+def _get_args_dict_help(msg: str, keys: Type[Enum]) -> str:
     """Get the help message for command-line arguments that are converted
     to a dictionary.
     
     Args:
-        msg (str): Message to prepend to the help message.
-        keys (Enum): Keys as an Enumeration.
+        msg: Message to prepend to the help message.
+        keys: Keys as an Enumeration.
 
     Returns:
-        str: Help message with available keys.
+        Help message with available keys.
 
     """
     return ("{} Available keys follow this order until the first "
@@ -842,15 +846,15 @@ def setup_dbs():
         config.db.load_db(None, False)
 
 
-def main(process_args_only=False, skip_dbs=False):
+def main(process_args_only: bool = False, skip_dbs: bool = False):
     """Starts the visualization GUI.
     
     Processes command-line arguments.
     
     Args:
-        process_args_only (bool): Processes command-line arguments and
+        process_args_only: Processes command-line arguments and
             returns; defaults to False.
-        skip_dbs (bool): True to skip loading databases; defaults to False.
+        skip_dbs: True to skip loading databases; defaults to False.
     """
     # parse command-line arguments
     process_cli_args()
@@ -868,7 +872,7 @@ def main(process_args_only=False, skip_dbs=False):
     process_tasks()
 
 
-def setup_roi_profiles(roi_profiles_names):
+def setup_roi_profiles(roi_profiles_names: List[str]):
     """Setup ROI profiles.
 
     If a profile is None, only a default set of profile settings
@@ -876,7 +880,7 @@ def setup_roi_profiles(roi_profiles_names):
     previously set up profile will be replaced.
 
     Args:
-        roi_profiles_names (list[str]): Sequence of ROI and atlas profiles
+        roi_profiles_names: Sequence of ROI and atlas profiles
             names to use for the corresponding channel.
 
     """
@@ -902,14 +906,14 @@ def setup_roi_profiles(roi_profiles_names):
     colormaps.setup_colormaps(np_io.get_num_channels(config.image5d))
 
 
-def setup_atlas_profiles(atlas_profiles_names, reset=True):
+def setup_atlas_profiles(atlas_profiles_names: str, reset: bool = True):
     """Setup atlas profiles.
 
     If a profile is None, only a default set of profile settings
     will be generated. Any previously set up profile will be replaced.
 
     Args:
-        atlas_profiles_names (str): Atlas profiles names.
+        atlas_profiles_names: Atlas profiles names.
 
     """
     # initialize atlas profile and update with modifiers
@@ -921,14 +925,14 @@ def setup_atlas_profiles(atlas_profiles_names, reset=True):
           .format(config.atlas_profile[config.atlas_profile.NAME_KEY]))
 
 
-def setup_grid_search_profiles(grid_search_profiles_names):
+def setup_grid_search_profiles(grid_search_profiles_names: str):
     """Setup grid search profiles.
 
     If a profile is None, only a default set of profile settings
     will be generated. Any previously set up profile will be replaced.
 
     Args:
-        grid_search_profiles_names (str): Grid search profiles names.
+        grid_search_profiles_names: Grid search profiles names.
 
     """
     if grid_search_profiles_names:
@@ -953,11 +957,11 @@ def update_profiles():
     config.atlas_profile.refresh_profile(True)
 
 
-def setup_labels(labels_arg):
+def setup_labels(labels_arg: List[str]):
     """Set up atlas labels.
     
     Args:
-        labels_arg (str): Path to labels reference file, such as a labels
+        labels_arg: Path to labels reference file, such as a labels
             ontology file.
 
     """
@@ -969,21 +973,24 @@ def setup_labels(labels_arg):
     print("Set labels to {}".format(config.atlas_labels))
 
 
-def _detect_subimgs(path, series, subimg_offsets, subimg_sizes):
+def _detect_subimgs(
+        path: str, series: int, subimg_offsets: List[List[int]],
+        subimg_sizes: List[List[int]]
+) -> Tuple[Union[np.ndarray, Any], List[str]]:
     """Detect blobs in an image across sub-image offsets.
     
     Args:
-        path (str): Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will 
             be generated.
-        series (int): Image series number.
-        subimg_offsets (List[List[int]]): Nested list of sub-image offset sets
+        series: Image series number.
+        subimg_offsets: Nested list of sub-image offset sets
             given as ``[[offset_z1, offset_y1, offset_x1], ...]``.
-        subimg_sizes (List[List[int]]): Nested list of sub-image size sets
+        subimg_sizes: Nested list of sub-image size sets
             given as ``[[offset_z1, offset_y1, offset_x1], ...]`` and
             corresponding to ``subimg_offsets``.
     
     Returns:
-        :obj:`np.ndarray`, str: Summed stats array and concatenated summaries.
+        Summed stats array and concatenated summaries.
     """
     stat = np.zeros(3)
 
@@ -1008,7 +1015,7 @@ def _detect_subimgs(path, series, subimg_offsets, subimg_sizes):
     return stat, summaries
 
 
-def _grid_search(series_list):
+def _grid_search(series_list: List[int]):
     # grid search(es) for the specified hyperparameter groups
     if not config.filename:
         print("No image filename set for grid search, skipping")
@@ -1026,28 +1033,32 @@ def _grid_search(series_list):
             plot_2d.plot_roc(stats_df, config.show)
 
 
-def process_file(path, proc_type, proc_val=None, series=None, subimg_offset=None,
-                 subimg_size=None, roi_offset=None, roi_size=None):
+def process_file(
+        path: str, proc_type: Enum, proc_val: Optional[Any] = None,
+        series: Optional[int] = None,
+        subimg_offset: Optional[List[int]] = None,
+        subimg_size: Optional[List[int]] = None,
+        roi_offset: Optional[List[int]] = None,
+        roi_size: Optional[List[int]] = None
+) -> Tuple[Optional[Any], Optional[str]]:
     """Processes a single image file non-interactively.
 
     Assumes that the image has already been set up.
     
     Args:
-        path (str): Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will 
             be generated.
-        proc_type (Enum): Processing type, which should be a one of
+        proc_type: Processing type, which should be a one of
             :class:`config.ProcessTypes`.
-        proc_val (Any): Processing value associated with ``proc_type``;
+        proc_val: Processing value associated with ``proc_type``; defaults to
+            None.
+        series: Image series number; defaults to None.
+        subimg_offset: Sub-image offset as (z,y,x) to load; defaults to None.
+        subimg_size: Sub-image size as (z,y,x) to load; defaults to None.
+        roi_offset: Region of interest offset as (x, y, z) to process;
             defaults to None.
-        series (int): Image series number; defaults to None.
-        subimg_offset (List[int]): Sub-image offset as (z,y,x) to load;
-            defaults to None.
-        subimg_size (List[int]): Sub-image size as (z,y,x) to load;
-            defaults to None.
-        roi_offset (List[int]): Region of interest offset as (x, y, z) to
-            process; defaults to None.
-        roi_size (List[int]): Region of interest size of region to process,
-            given as (x, y, z); defaults to None.
+        roi_size: Region of interest size of region to process, given as
+            ``(x, y, z)``; defaults to None.
     
     Returns:
         Tuple of stats from processing, or None if no stats, and 

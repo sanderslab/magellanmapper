@@ -18,35 +18,8 @@ Examples:
         $ python -m magmap.cli --img /path/to/file.czi --offset 30,50,205 \\
             --size 150,150,10
 
-Command-line arguments in addition to those from attributes listed below:
-    * load_labels: Path to labels reference file, which also serves as a flag 
-        to load the labels image as well 
-        (see :attr:`config.load_labels`).
-    * plane: Plane type (see :const:``config.PLANE``).
-    * save_subimg: Save sub-image during stack processing.
-    * register: Registration type. See :attr:``config.REGISTER_TYPES`` for 
-        types of registration and :mod:``register`` for how to use these 
-        types.
-    * labels: Load annotation JSON file. The first argument is the path 
-        to the JSON file. If a 2nd arguments is given, it is taken as an int of 
-        the ontology level for grouping volumes.
-    * slice: ``stop`` or ``start,stop[,step]`` values to create a slice
-        object, such as for animated GIF stack planes.
-    * ec2_start: EC2 start instances parameters, used in 
-        :function:``aws.start_instances``.
-    * notify: Notification with up to three parameters for URL, message, and 
-        attachment file path, stored respectively as 
-        :attr:``config.notify_url``, :attr:``config.notify_msg``, and 
-        :attr:``config.notify_attach``.
-    * proc: The chosen processing mode; defaults to None.
-    * truth_db: Specify truth database parameters. First arg specifies the mode.
-        Second arg (opt) specifies a path to the truth database for 
-       ``view`` and ``verify``, the main and verified databases for 
-       ``verified``, and the main database for ``edit``.
-    * roi_size: The size in pixels of the region of interest. Set with
-        "size=x,y,z" argument, where x, y, and z are integers.
-    * offset: The bottom corner in pixels of the region of interest. Set 
-        with "offset=x,y,z" argument, where x, y, and z are integers.
+For a table of command-line arguments and their usage, see:
+https://github.com/sanderslab/magellanmapper/blob/master/docs/cli.md
 
 """
 

@@ -7,25 +7,11 @@ such as grouped settings for particular microscopes. Additional parameters
 such as command-line flag settings and databases can also be stored here 
 for program access.
 
-Attributes:
-    filename: The filename of the source images. A corresponding file with
-        the subset as a 5 digit number (eg 00003) with .npz appended to 
-        the end will be checked first based on this filename. Set with
-        "img=path/to/file" argument.
-    series: The series for multi-stack files, using 0-based indexing. Set
-        with "series=n" argument.
-    load_labels: Path to the labels reference file, which also serves as a 
-        flag to references label/annotation images.
-    labels_img: Numpy array of a registered labels image, which should 
-        correspond to the main ``image5d`` image.
-    labels_scaling: Array of ``labels_img`` compared to ``image5d`` 
-        for each corresponding dimension.
-    labels_ref_lookup: Reference dictionary with keys corresponding to the IDs 
-        in the labels image.
 """
 
 from enum import Enum, auto
 import pathlib
+from typing import Any, Dict, Optional, Sequence
 
 try:
     from appdirs import AppDirs
@@ -90,8 +76,9 @@ SUFFIX_BLOBS = "blobs.npz"
 #: str: Suffix for blob clusters archive.
 SUFFIX_BLOB_CLUSTERS = "blobclusters.npy"
 
-#: str: Current image file path.
-filename = None
+#: Current image file base path; eg for the image path,
+# ``/opt/myvolume_image5d.npy``, the base path is ``/opt/myvolume``.
+filename: Optional[str] = None
 #: List[str]: List of multiple image paths.
 filenames = None
 #: List[str]: Metadata file paths.
@@ -191,7 +178,8 @@ MetaKeys = Enum(
         "DTYPE",  # data type as a string
     )
 )
-meta_dict = dict.fromkeys(MetaKeys, None)
+#: Dictionary of metadata for image import.
+meta_dict: Dict[MetaKeys, Any] = dict.fromkeys(MetaKeys, None)
 
 #: List[float]: Image resolutions as an array of dimensions (n, r),
 # where each resolution r is a tuple in (z, y, x) order
@@ -482,13 +470,18 @@ class RegNames(Enum):
     COMBINED = "combined.mhd"  # spliced into other registered names
 
 
-# reference atlas labels
-load_labels = None
-labels_img = None  # in Numpy format
-labels_img_sitk = None  # in SimpleITK format
-labels_img_orig = None  # in Numpy format
-labels_scaling = None
-labels_ref_lookup = None
+#: Path to the labels reference file.
+load_labels: Optional[str] = None
+#: Numpy array of a labels image file, typically corresponding to ``img5d``.
+labels_img: Optional = None
+#: Labels image as a SimpleITK Image instance.
+labels_img_sitk: Optional[np.ndarray] = None
+#: Original labels image, before any processing.
+labels_img_orig: Optional[np.ndarray] = None
+#: Scaling factors from ``labels_img`` to ``img5d``. 
+labels_scaling: Optional[Sequence[float]] = None
+#: Reference dictionary with keys corresponding to the IDs in the labels image.
+labels_ref_lookup: Optional[Dict[str, Any]] = None
 labels_level = None
 labels_mirror = True
 borders_img = None

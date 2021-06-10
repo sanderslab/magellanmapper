@@ -13,9 +13,9 @@ consistency with microscopy order and ease of processing stacks by z.
 
 Examples:
     Launch in headless mode with the given file at a particular size and 
-    offset:
+    offset::
         
-        $ python -m magmap.cli --img /path/to/file.czi --offset 30,50,205 \
+        $ python -m magmap.cli --img /path/to/file.czi --offset 30,50,205 \\
             --size 150,150,10
 
 Command-line arguments in addition to those from attributes listed below:

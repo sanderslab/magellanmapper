@@ -19,6 +19,9 @@ _EXTRAS_PANDAS = [
 # optional dependencies for AWS interaction
 _EXTRAS_AWS = ["boto3", "awscli"]
 
+# optional dependencies to build API documentation
+_EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints"]
+
 # installation configuration
 config = {
     "name": "magellanmapper", 
@@ -49,6 +52,7 @@ config = {
         "import": _EXTRAS_IMPORT, 
         "aws": _EXTRAS_AWS,
         "pandas_plus": _EXTRAS_PANDAS,
+        "docs": _EXTRAS_DOCS,
         "all": [
             "matplotlib_scalebar", 
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode

@@ -13,6 +13,7 @@ from matplotlib import gridspec
 from matplotlib import pyplot as plt
 from skimage import transform
 
+from magmap.cv import cv_nd
 from magmap.plot import colormaps
 from magmap.settings import config
 from magmap.io import libmag
@@ -190,13 +191,7 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
 
     # transform image based on config parameters
     rotate = config.transform[config.Transforms.ROTATE]
-    if rotate is not None:
-        last_axis = img2d.ndim - 1
-        if multichannel:
-            last_axis -= 1
-        # use first rotation value
-        img2d = np.rot90(
-            img2d, libmag.get_if_within(rotate, 0), (last_axis - 1, last_axis))
+    img2d = cv_nd.rotate90(img2d, rotate, multichannel=multichannel)
 
     for chl in channels:
         img2d_show = img2d[..., chl] if multichannel else img2d

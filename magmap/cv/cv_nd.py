@@ -3,6 +3,8 @@
 """Computer vision library functions for n-dimensions.
 """
 
+from typing import Optional, Sequence
+
 import numpy as np
 from scipy import interpolate
 from scipy import ndimage
@@ -125,6 +127,44 @@ def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
             slices[axis] = i
             rotated[tuple(slices)] = img
     return rotated
+
+
+def rotate90(roi: np.ndarray, rotate: int,
+             axes: Optional[Sequence[int]] = None,
+             multichannel: bool = False) -> np.ndarray:
+    """Rotate an image by increments of 90 degrees.
+    
+    Serves as a wrapper for :meth:`numpy.rot90` with default rotation in
+    the xy plane.
+    
+    Args:
+        roi: Image as a 3D+/-channel array. Can be None to return as-is.
+        rotate: Number of times to rotate 90 degrees.
+        axes: Sequence of two axes defining the plane to rotate; defaults to
+            None to use ``[-2, -1]``, the 2nd to last and last axes.
+        multichannel: True if the image is multichannel; defaults to False.
+            Only used if ``axes`` contains negative axis indices.
+
+    Returns:
+        Rotated image.
+
+    """
+    if rotate is None:
+        return roi
+    if axes is None:
+        # default to using the last 2 axes (xy plane)
+        ax = [-2, -1]
+    else:
+        ax = list(axes)
+    for i, a in enumerate(ax):
+        if a < 0:
+            # wrap neg axes to the end of the axes
+            ax[i] += roi.ndim
+            if multichannel:
+                # skip the channel axis
+                ax[i] -= 1
+    roi = np.rot90(roi, libmag.get_if_within(rotate, 0), ax)
+    return roi
 
 
 def affine_nd(img_np, axis_along, axis_shift, shift, bounds, axis_attach=None, 

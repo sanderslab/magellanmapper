@@ -643,10 +643,10 @@ def process_cli_args():
             config.notify_attach = args.notify[2]
             print("Set notification attachment path to {}"
                   .format(config.notify_attach))
-    if args.prefix:
+    if args.prefix is not None:
         config.prefix = args.prefix
         print("Set path prefix to {}".format(config.prefix))
-    if args.suffix:
+    if args.suffix is not None:
         config.suffix = args.suffix
         print("Set path suffix to {}".format(config.suffix))
     

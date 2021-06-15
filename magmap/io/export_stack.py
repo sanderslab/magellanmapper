@@ -12,7 +12,7 @@ from skimage import io
 from matplotlib import animation
 from scipy import ndimage
 
-from magmap.cv import chunking
+from magmap.cv import chunking, cv_nd
 from magmap.plot import colormaps
 from magmap.settings import config
 from magmap.io import importer
@@ -534,6 +534,8 @@ def reg_planes_to_img(imgs, path=None, ax=None):
 
 def export_planes(image5d, ext, channel=None, separate_chls=False):
     """Export each plane and channel combination into separate 2D image files
+    
+    Supports image rotation set in :attr:`magmap.settings.config.transform`.
 
     Args:
         image5d (:obj:`np.ndarray`): Image in ``t,z,y,x[,c]`` format.
@@ -543,15 +545,21 @@ def export_planes(image5d, ext, channel=None, separate_chls=False):
             a separate image; defaults to False. 
 
     """
+    # set up output path
     suffix = "_export" if config.suffix is None else config.suffix 
     out_path = libmag.make_out_path(suffix=suffix)
     output_dir = os.path.dirname(out_path)
     basename = os.path.splitext(os.path.basename(out_path))[0]
     if not os.path.isdir(output_dir):
         os.makedirs(output_dir)
+    
+    # set up image and apply any rotation
     roi = image5d[0]
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     num_digits = len(str(len(roi)))
+    rotate = config.transform[config.Transforms.ROTATE]
+    roi = cv_nd.rotate90(roi, rotate, multichannel=multichannel)
+    
     for i, plane in enumerate(roi):
         path = os.path.join(output_dir, "{}_{:0{}d}".format(
             basename, i, num_digits))

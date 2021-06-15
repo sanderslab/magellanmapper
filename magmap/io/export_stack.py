@@ -556,13 +556,16 @@ def export_planes(image5d, ext, channel=None, separate_chls=False):
     # set up image and apply any rotation
     roi = image5d[0]
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
-    num_digits = len(str(len(roi)))
     rotate = config.transform[config.Transforms.ROTATE]
     roi = cv_nd.rotate90(roi, rotate, multichannel=multichannel)
     
+    num_planes = len(roi)
+    num_digits = len(str(num_planes))
     for i, plane in enumerate(roi):
-        path = os.path.join(output_dir, "{}_{:0{}d}".format(
-            basename, i, num_digits))
+        # add plane to output path if more than one output file
+        out_name = basename if num_planes <= 1 else "{}_{:0{}d}".format(
+            basename, i, num_digits)
+        path = os.path.join(output_dir, out_name)
         if separate_chls and multichannel:
             for chl in channels:
                 # save each channel as separate file

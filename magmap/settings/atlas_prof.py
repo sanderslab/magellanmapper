@@ -761,6 +761,12 @@ class AtlasProfile(profiles.SettingsDict):
                 # "extra_metric_groups": (config.MetricGroups.SHAPES,),
                 "extra_metric_groups": (config.MetricGroups.POINT_CLOUD,),
             },
+            
+            # skip metrics
+            "fewerstats": {
+                "meas_smoothing": False,
+                "meas_edge_dists": False,
+            },
 
             # measure interior-border stats
             "interiorlabels": {

@@ -2,8 +2,9 @@
 # Author: David Young, 2019
 """Refine atlases in 3D.
 """
-import os
 from collections import OrderedDict
+import os
+from typing import List, Optional, Sequence, Tuple
 
 import SimpleITK as sitk
 import numpy as np
@@ -674,11 +675,9 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
         Tuple of ``filter_size`` and a data frame of smoothing metrices.
     """
     smoothing_mode = config.atlas_profile["smoothing_mode"]
-    smooth_labels(img_np, filter_size, smoothing_mode)
-    df_metrics, df_raw = label_smoothing_metric(
-        img_np_orig, img_np, filter_size, spacing)
-    print("\nAggregated smoothing metrics, weighted by original volume")
-    df_io.print_data_frame(df_metrics)
+    meas_smoothing = config.atlas_profile["meas_smoothing"]
+    df_metrics, df_raw = smooth_labels(
+        img_np, filter_size, smoothing_mode, meas_smoothing, spacing)
     
     # curate back to lightly smoothed foreground of original labels
     crop = config.atlas_profile["crop_to_orig"]
@@ -749,7 +748,10 @@ def find_labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
     return labels_lost
 
 
-def smooth_labels(labels_img_np, filter_size=3, mode=None):
+def smooth_labels(
+        labels_img_np: np.ndarray, filter_size: int = 3, mode: bool = None,
+        metrics: bool = False, spacing: Optional[Sequence[float]] = None
+) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """Smooth each label within labels annotation image.
     
     Labels images created in one orthogonal direction may have ragged, 
@@ -764,13 +766,21 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
             reduced, in which case a closing filter is applied instead;  
             ``gaussian`` applies a Gaussian blur; and ``closing`` applies 
             a closing filter only.
+        metrics: True to measure smoothing metrics by label; defaults to False.
+        spacing: Sequence of ``labels_img_np`` spacing in ``z, y, x`` for
+            metrics, only used when ``metrics`` is True; defaults to False.
+    
+    Returns:
+        Data frams of the aggregated smoothing metrics weighted by volume and
+        individual label metrics, or None for each if ``metrics`` is False.
+    
     """
     if mode is None: mode = config.SmoothingModes.opening
     print("Smoothing labels with filter size of {}, mode {}"
           .format(filter_size, mode))
     if filter_size == 0:
         print("filter size of 0, skipping")
-        return
+        return None, None
     
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
@@ -851,6 +861,15 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
         labels_img_np[tuple(slices)] = region
         print("changed num of pixels from {} to {}"
               .format(region_size, region_size_smoothed))
+
+    df_aggr = None
+    df_raw = None
+    if metrics:
+        # measure degree of smoothing for each label
+        df_aggr, df_raw = label_smoothing_metric(
+            labels_img_np_orig, labels_img_np, filter_size, spacing)
+        print("\nAggregated smoothing metrics, weighted by original volume")
+        df_io.print_data_frame(df_aggr)
     
     # show label loss metric
     print("\nLabels lost from smoothing:")
@@ -877,6 +896,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
     weighted_size_ratio /= tot_pxs
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
+    return df_aggr, df_raw
 
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,

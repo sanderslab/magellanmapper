@@ -320,8 +320,19 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     smoothing = config.atlas_profile["smooth"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
-        atlas_refiner.smooth_labels(
-            labels_seg, smoothing, config.SmoothingModes.opening)
+        meas_smoothing = config.atlas_profile["meas_smoothing"]
+        df_aggr, df_raw = atlas_refiner.smooth_labels(
+            labels_seg, smoothing, config.SmoothingModes.opening,
+            meas_smoothing, labels_sitk.GetSpacing()[::-1])
+        df_base_path = os.path.splitext(mod_path)[0]
+        if df_raw is not None:
+            # write raw smoothing metrics
+            df_io.data_frames_to_csv(
+                df_raw, f"{df_base_path}_{config.PATH_SMOOTHING_RAW_METRICS}")
+        if df_aggr is not None:
+            # write aggregated smoothing metrics
+            df_io.data_frames_to_csv(
+                df_aggr, f"{df_base_path}_{config.PATH_SMOOTHING_METRICS}")
     
     if mirrorred:
         # mirror back to other half

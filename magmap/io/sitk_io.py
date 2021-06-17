@@ -6,6 +6,7 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
+from typing import Optional, Tuple, Union
 
 import numpy as np
 import SimpleITK as sitk
@@ -225,25 +226,29 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
     return img_np
 
 
-def load_registered_img(img_path, reg_name, get_sitk=False, return_path=False):
+def load_registered_img(
+        img_path: str, reg_name: str, get_sitk: bool = False,
+        return_path: bool = False
+) -> Union[Union[np.ndarray, sitk.Image],
+           Tuple[Union[np.ndarray, sitk.Image], str]]:
     """Load atlas-based image that has been registered to another image.
     
     Args:
-        img_path (str): Path as had been given to generate the registered
+        img_path: Path as had been given to generate the registered
             images, with the parent path of the registered images and base name 
             of the original image.
-        reg_name (str): Atlas image suffix to open. Can be an absolute path,
+        reg_name: Atlas image suffix to open. Can be an absolute path,
             which will be used directly, ignoring ``img_path``.
-        get_sitk (bool): True if the image should be returned as a SimpleITK
+        get_sitk: True if the image should be returned as a SimpleITK
             image; defaults to False, in which case the corresponding Numpy
             array will be extracted instead.
-        return_path (bool): True to return the path from which the image
+        return_path: True to return the path from which the image
             was loaded; defaults to False.
     
     Returns:
-        :class:`numpy.ndarray`: The atlas-based image as a Numpy array, or a
-        :class:`sitk.Image` object if ``get_sitk`` is True. Also returns the
-        loaded path if ``return_path`` is True.
+        The atlas-based image as a Numpy array, or a :class:`sitk.Image`
+        object if ``get_sitk`` is True. Also returns the loaded path if
+        ``return_path`` is True.
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.

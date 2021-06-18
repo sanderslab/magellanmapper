@@ -19,7 +19,8 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Atlas refinement
 
-- The atlas profile `meas_edge_dists` entry can be used to turn off edge distance measuring
+- Smoothing metrics are output during the `--register merge_atlas_segs` task
+- The atlas profile settings `meas_edge_dists` and `meas_smoothing` turn off these metrics to save time during atlas generation, and the profile `fewerstats` turns off both these settings
 
 #### Atlas registration
 

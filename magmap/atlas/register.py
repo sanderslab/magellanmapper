@@ -475,6 +475,7 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
     if moving_mask_suffix:
         moving_mask = sitk_io.load_registered_img(
             name_prefix, moving_mask_suffix, get_sitk=True)
+        moving_mask = atlas_refiner.transpose_img(moving_mask)
 
     # transform and preprocess moving images
 

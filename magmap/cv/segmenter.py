@@ -142,6 +142,7 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
         of labels given as an image of the same shape as ``roi``.
     """
     labels = []
+    labels_ws = None
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     for i in channels:
         roi_segment = roi[..., i] if multichannel else roi
@@ -157,6 +158,7 @@ def segment_ws(roi, channel, thresholded=None, blobs=None):
         if blobs is None:
             # default to finding peaks of distance transform if no blobs 
             # given, using an anisotropic footprint
+            distance = ndimage.distance_transform_edt(thresholded)
             try:
                 local_max = feature.peak_local_max(
                     distance, indices=False, footprint=np.ones((1, 3, 3)), 

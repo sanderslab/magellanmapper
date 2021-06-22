@@ -1204,11 +1204,11 @@ class ROIEditor(plot_support.ImageSyncMixin):
             if labels is not None:
                 for i in range(len(labels)):
                     label = labels[i]
-                    if z_relative >= 0 and z_relative < label.shape[0]:
-                        ax.imshow(
-                            label[z_relative], cmap=cmap_labels,
-                            norm=cmap_labels.norm)
-                        #ax.imshow(label[z_relative]) # showing only threshold
+                    if 0 <= z_relative < label.shape[0]:
+                        img = label[z_relative]
+                        if img.ndim > 1:
+                            ax.imshow(
+                                img, cmap=cmap_labels, norm=cmap_labels.norm)
 
             if ((segs_in is not None or segs_out is not None)
                     and not circles == self.CircleStyles.NO_CIRCLES):

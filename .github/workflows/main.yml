@@ -24,7 +24,12 @@ jobs:
         python-version: [3.6, 3.7, 3.8]
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Check out repo
+        uses: actions/checkout@v2
+      - name: Install VTK dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install libsm6 libgl1-mesa-glx
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v2
         with:

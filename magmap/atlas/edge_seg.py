@@ -221,7 +221,8 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True,
     #eroded = segmenter.labels_to_markers_blob(labels_img_np)
     eroded, df = segmenter.labels_to_markers_erosion(
         labels_to_erode, erosion[profiles.RegKeys.MARKER_EROSION],
-        erosion_frac, erosion[profiles.RegKeys.MARKER_EROSION_MIN])
+        erosion_frac, erosion[profiles.RegKeys.MARKER_EROSION_MIN],
+        skel_eros_filt_size=erosion[profiles.RegKeys.SKELETON_EROSION])
     if is_mirrored:
         # mirror changes onto opposite symmetric half
         eroded = _mirror_imported_labels(
@@ -318,13 +319,14 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
             atlas_edge, markers, labels_img_np, **seg_args)
     
     smoothing = config.atlas_profile["smooth"]
+    smoothing_mode = config.atlas_profile["smoothing_mode"]
     cond = ["edge-aware_seg"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
         meas_smoothing = config.atlas_profile["meas_smoothing"]
         cond.append("smoothing")
         df_aggr, df_raw = atlas_refiner.smooth_labels(
-            labels_seg, smoothing, config.SmoothingModes.opening,
+            labels_seg, smoothing, smoothing_mode,
             meas_smoothing, labels_sitk.GetSpacing()[::-1])
         df_base_path = os.path.splitext(mod_path)[0]
         if df_raw is not None:

@@ -16,7 +16,7 @@ imageio==2.9.0
 importlib-metadata==3.10.0
 importlib-resources==5.1.2
 iniconfig==1.1.1
-javabridge==1.0.18.post21+g4526f53
+javabridge==1.0.19.post4+gbebed64
 Jinja2==2.11.3
 jmespath==0.10.0
 joblib==1.0.1
@@ -53,7 +53,7 @@ s3transfer==0.3.6
 scikit-image==0.17.2
 scikit-learn==0.24.1
 scipy==1.5.4
-SimpleITK==1.2.0rc2.dev1162+g2a79d
+SimpleITK==2.0.2rc2.dev785+g8ac4f
 six==1.15.0
 threadpoolctl==2.1.0
 tifffile==2020.9.3

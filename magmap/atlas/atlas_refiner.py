@@ -3,8 +3,9 @@
 """Refine atlases in 3D.
 """
 from collections import OrderedDict
+from enum import Enum
 import os
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import SimpleITK as sitk
 import numpy as np
@@ -1434,23 +1435,6 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    # DSC and total volumes of atlas and labels
-    print("\nDSC after import:")
-    dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
-        img_atlas, img_labels, overlap_meas_add, return_masks=True)
-    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
-    metrics[config.AtlasMetrics.VOL_ATLAS] = [np.sum(atlas_mask)]
-    metrics[config.AtlasMetrics.VOL_LABELS] = [np.sum(labels_mask)]
-    
-    # compactness of whole atlas (non-label) image; use lower threshold for 
-    # compactness measurement to minimize noisy surface artifacts
-    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
-    thresh = config.atlas_profile["atlas_threshold_all"]
-    thresh_atlas = img_atlas_np > thresh
-    compactness, _, _ = cv_nd.compactness_3d(
-        thresh_atlas, img_atlas.GetSpacing()[::-1])
-    metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
-    
     # write images with atlas saved as MagellanMapper/Numpy format to 
     # allow opening as an image within MagellanMapper alongside the labels image
     imgs_write = {
@@ -1483,12 +1467,51 @@ def import_atlas(atlas_dir, show=True, prefix=None):
             df_sm, df_smoothing_path, 
             sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
-    print("\nImported {} whole atlas stats:".format(basename))
-    df_io.dict_to_data_frame(metrics, df_metrics_path, show=" ")
+    # measure and save whole atlas metrics
+    measure_atlas_refinement(metrics, img_atlas, img_labels, df_metrics_path)
     
     if show:
         sitk.Show(img_atlas)
         sitk.Show(img_labels)
+
+
+def measure_atlas_refinement(
+        metrics: Dict[Enum, List], img_atlas: sitk.Image,
+        img_labels: sitk.Image, path: str = None) -> pd.DataFrame:
+    """
+    
+    Args:
+        metrics: Dictionary of metric names to values, which will be modified
+            in-place.
+        img_atlas: Atlas intensity image.
+        img_labels: Atlas annotation image.
+        path: Output path; defaults to None to not save.
+
+    Returns:
+        Pandas data frame of metrics.
+
+    """
+    # DSC and total volumes of atlas and labels
+    print("\nDSC after import:")
+    overlap_meas_add = config.atlas_profile["overlap_meas_add_lbls"]
+    dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
+        img_atlas, img_labels, overlap_meas_add, return_masks=True)
+    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    metrics[config.AtlasMetrics.VOL_ATLAS] = [np.sum(atlas_mask)]
+    metrics[config.AtlasMetrics.VOL_LABELS] = [np.sum(labels_mask)]
+    
+    # compactness of whole atlas (non-label) image; use lower threshold for 
+    # compactness measurement to minimize noisy surface artifacts
+    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+    thresh = config.atlas_profile["atlas_threshold_all"]
+    thresh_atlas = img_atlas_np > thresh
+    compactness, _, _ = cv_nd.compactness_3d(
+        thresh_atlas, img_atlas.GetSpacing()[::-1])
+    metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
+
+    print("\nWhole atlas stats:")
+    df = df_io.dict_to_data_frame(metrics, path, show=" ")
+    return df  
 
 
 def measure_overlap(img1, img2, thresh_img1=None, thresh_img2=None,

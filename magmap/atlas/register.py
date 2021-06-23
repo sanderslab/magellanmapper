@@ -1752,6 +1752,11 @@ def main():
     """Handle registration processing tasks as specified in 
     :attr:`magmap.config.register_type`.
     """
+    if hasattr(sitk.ProcessObject, "SetGlobalDefaultThreader"):
+        # manually set threader for SimpleITK >= 2 to avoid potential hangs
+        # during Python multiprocessing; set by default in SimpleITK 2.1
+        sitk.ProcessObject.SetGlobalDefaultThreader("Platform")
+    
     # name prefix to use a different name from the input files, such as when 
     # registering transposed/scaled images but outputting paths corresponding 
     # to the original image

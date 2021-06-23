@@ -261,6 +261,15 @@ qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it 
   - `libXrender.so.1`: Install `libxrender1`
   - `libxcb-xinerama.so.0`: Install `libxcb-xinerama0`
 
+```
+Could not load the Qt platform plugin "xcb" in "" even though it was found.
+WARNING: This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: eglfs, linuxfb, minimal, minimalegl, offscreen, vnc, wayland-egl, wayland, wayland-xcomposite-egl, wayland-xcomposite-glx, webgl, xcb.
+```
+- For non-graphical environments with this additional error info, may need to set an offscreen plugin: `export QT_QPA_PLATFORM=offscreen`
+
+
 Additional errors:
 
 - PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04

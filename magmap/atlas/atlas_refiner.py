@@ -2,8 +2,10 @@
 # Author: David Young, 2019
 """Refine atlases in 3D.
 """
-import os
 from collections import OrderedDict
+from enum import Enum
+import os
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import SimpleITK as sitk
 import numpy as np
@@ -674,11 +676,9 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
         Tuple of ``filter_size`` and a data frame of smoothing metrices.
     """
     smoothing_mode = config.atlas_profile["smoothing_mode"]
-    smooth_labels(img_np, filter_size, smoothing_mode)
-    df_metrics, df_raw = label_smoothing_metric(
-        img_np_orig, img_np, filter_size, spacing)
-    print("\nAggregated smoothing metrics, weighted by original volume")
-    df_io.print_data_frame(df_metrics)
+    meas_smoothing = config.atlas_profile["meas_smoothing"]
+    df_metrics, df_raw = smooth_labels(
+        img_np, filter_size, smoothing_mode, meas_smoothing, spacing)
     
     # curate back to lightly smoothed foreground of original labels
     crop = config.atlas_profile["crop_to_orig"]
@@ -749,7 +749,10 @@ def find_labels_lost(label_ids_orig, label_ids, label_img_np_orig=None):
     return labels_lost
 
 
-def smooth_labels(labels_img_np, filter_size=3, mode=None):
+def smooth_labels(
+        labels_img_np: np.ndarray, filter_size: int = 3, mode: bool = None,
+        metrics: bool = False, spacing: Optional[Sequence[float]] = None
+) -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """Smooth each label within labels annotation image.
     
     Labels images created in one orthogonal direction may have ragged, 
@@ -764,13 +767,21 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
             reduced, in which case a closing filter is applied instead;  
             ``gaussian`` applies a Gaussian blur; and ``closing`` applies 
             a closing filter only.
+        metrics: True to measure smoothing metrics by label; defaults to False.
+        spacing: Sequence of ``labels_img_np`` spacing in ``z, y, x`` for
+            metrics, only used when ``metrics`` is True; defaults to False.
+    
+    Returns:
+        Data frams of the aggregated smoothing metrics weighted by volume and
+        individual label metrics, or None for each if ``metrics`` is False.
+    
     """
     if mode is None: mode = config.SmoothingModes.opening
     print("Smoothing labels with filter size of {}, mode {}"
           .format(filter_size, mode))
     if filter_size == 0:
         print("filter size of 0, skipping")
-        return
+        return None, None
     
     # copy original for comparison
     labels_img_np_orig = np.copy(labels_img_np)
@@ -872,6 +883,15 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
         labels_img_np[tuple(slices)] = region
         print("changed num of pixels from {} to {}"
               .format(region_size, region_size_smoothed))
+
+    df_aggr = None
+    df_raw = None
+    if metrics:
+        # measure degree of smoothing for each label
+        df_aggr, df_raw = label_smoothing_metric(
+            labels_img_np_orig, labels_img_np, filter_size, spacing)
+        print("\nAggregated smoothing metrics, weighted by original volume")
+        df_io.print_data_frame(df_aggr)
     
     # show label loss metric
     print("\nLabels lost from smoothing:")
@@ -898,6 +918,7 @@ def smooth_labels(labels_img_np, filter_size=3, mode=None):
     weighted_size_ratio /= tot_pxs
     print("\nVolume ratio (smoothed:orig) weighted by orig size: {}\n"
           .format(weighted_size_ratio))
+    return df_aggr, df_raw
 
 
 def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
@@ -1435,23 +1456,6 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    # DSC and total volumes of atlas and labels
-    print("\nDSC after import:")
-    dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
-        img_atlas, img_labels, overlap_meas_add, return_masks=True)
-    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
-    metrics[config.AtlasMetrics.VOL_ATLAS] = [np.sum(atlas_mask)]
-    metrics[config.AtlasMetrics.VOL_LABELS] = [np.sum(labels_mask)]
-    
-    # compactness of whole atlas (non-label) image; use lower threshold for 
-    # compactness measurement to minimize noisy surface artifacts
-    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
-    thresh = config.atlas_profile["atlas_threshold_all"]
-    thresh_atlas = img_atlas_np > thresh
-    compactness, _, _ = cv_nd.compactness_3d(
-        thresh_atlas, img_atlas.GetSpacing()[::-1])
-    metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
-    
     # write images with atlas saved as MagellanMapper/Numpy format to 
     # allow opening as an image within MagellanMapper alongside the labels image
     imgs_write = {
@@ -1484,12 +1488,51 @@ def import_atlas(atlas_dir, show=True, prefix=None):
             df_sm, df_smoothing_path, 
             sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
-    print("\nImported {} whole atlas stats:".format(basename))
-    df_io.dict_to_data_frame(metrics, df_metrics_path, show=" ")
+    # measure and save whole atlas metrics
+    measure_atlas_refinement(metrics, img_atlas, img_labels, df_metrics_path)
     
     if show:
         sitk.Show(img_atlas)
         sitk.Show(img_labels)
+
+
+def measure_atlas_refinement(
+        metrics: Dict[Enum, List], img_atlas: sitk.Image,
+        img_labels: sitk.Image, path: str = None) -> pd.DataFrame:
+    """
+    
+    Args:
+        metrics: Dictionary of metric names to values, which will be modified
+            in-place.
+        img_atlas: Atlas intensity image.
+        img_labels: Atlas annotation image.
+        path: Output path; defaults to None to not save.
+
+    Returns:
+        Pandas data frame of metrics.
+
+    """
+    # DSC and total volumes of atlas and labels
+    print("\nDSC after import:")
+    overlap_meas_add = config.atlas_profile["overlap_meas_add_lbls"]
+    dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
+        img_atlas, img_labels, overlap_meas_add, return_masks=True)
+    metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
+    metrics[config.AtlasMetrics.VOL_ATLAS] = [np.sum(atlas_mask)]
+    metrics[config.AtlasMetrics.VOL_LABELS] = [np.sum(labels_mask)]
+    
+    # compactness of whole atlas (non-label) image; use lower threshold for 
+    # compactness measurement to minimize noisy surface artifacts
+    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+    thresh = config.atlas_profile["atlas_threshold_all"]
+    thresh_atlas = img_atlas_np > thresh
+    compactness, _, _ = cv_nd.compactness_3d(
+        thresh_atlas, img_atlas.GetSpacing()[::-1])
+    metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
+
+    print("\nWhole atlas stats:")
+    df = df_io.dict_to_data_frame(metrics, path, show=" ")
+    return df  
 
 
 def measure_overlap(img1, img2, thresh_img1=None, thresh_img2=None,

@@ -235,6 +235,9 @@ class AtlasProfile(profiles.SettingsDict):
 
         # METRICS
         
+        # measure smoothing quality metrics during label smoothing
+        self["meas_smoothing"] = True
+        
         # generate labels border/surface image and measure distances to
         # anatomical border/surface map
         self["meas_edge_dists"] = True
@@ -764,6 +767,12 @@ class AtlasProfile(profiles.SettingsDict):
             "morestats": {
                 # "extra_metric_groups": (config.MetricGroups.SHAPES,),
                 "extra_metric_groups": (config.MetricGroups.POINT_CLOUD,),
+            },
+            
+            # skip metrics
+            "fewerstats": {
+                "meas_smoothing": False,
+                "meas_edge_dists": False,
             },
 
             # measure interior-border stats

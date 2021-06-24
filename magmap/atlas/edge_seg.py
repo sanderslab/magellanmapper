@@ -320,9 +320,23 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     
     smoothing = config.atlas_profile["smooth"]
     smoothing_mode = config.atlas_profile["smoothing_mode"]
+    cond = ["edge-aware_seg"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
-        atlas_refiner.smooth_labels(labels_seg, smoothing, smoothing_mode)
+        meas_smoothing = config.atlas_profile["meas_smoothing"]
+        cond.append("smoothing")
+        df_aggr, df_raw = atlas_refiner.smooth_labels(
+            labels_seg, smoothing, smoothing_mode,
+            meas_smoothing, labels_sitk.GetSpacing()[::-1])
+        df_base_path = os.path.splitext(mod_path)[0]
+        if df_raw is not None:
+            # write raw smoothing metrics
+            df_io.data_frames_to_csv(
+                df_raw, f"{df_base_path}_{config.PATH_SMOOTHING_RAW_METRICS}")
+        if df_aggr is not None:
+            # write aggregated smoothing metrics
+            df_io.data_frames_to_csv(
+                df_aggr, f"{df_base_path}_{config.PATH_SMOOTHING_METRICS}")
     
     if mirrorred:
         # mirror back to other half
@@ -351,6 +365,17 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
         atlas_refiner.make_labels_fg(labels_sitk_seg))
     print()
     
+    # measure and save whole atlas metrics
+    metrics = {
+        config.AtlasMetrics.SAMPLE: [os.path.basename(mod_path)],
+        config.AtlasMetrics.REGION: config.REGION_ALL,
+        config.AtlasMetrics.CONDITION: "|".join(cond),
+    }
+    df_metrics_path = libmag.combine_paths(
+        mod_path, config.PATH_ATLAS_IMPORT_METRICS)
+    atlas_refiner.measure_atlas_refinement(
+        metrics, atlas_sitk, labels_sitk, df_metrics_path)
+
     # show and write image to same directory as atlas with appropriate suffix
     sitk_io.write_reg_images(
         {config.RegNames.IMG_LABELS.value: labels_sitk_seg}, mod_path)

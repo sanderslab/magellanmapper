@@ -39,7 +39,7 @@ jobs:
         with:
           # python environment path from setup-python
           path: ${{ env.pythonLocation }}
-          # Look to see if there is a cache hit for the corresponding requirements file
+          # check for cache from the corresponding requirements file
           key: ${{ env.pythonLocation }}-pip-${{ hashFiles('envs/requirements.txt') }}
       - name: Install dependencies
         run: |

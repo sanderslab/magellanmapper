@@ -649,6 +649,8 @@ class AtlasMetrics(Enum):
     DSC_ATLAS_SAMPLE = "DSC_atlas_sample"
     DSC_ATLAS_SAMPLE_CUR = "DSC_atlas_sample_curated"
     DSC_SAMPLE_LABELS = "DSC_sample_labels"
+    DSC_LABELS_ORIG_NEW_COMBINED = "DSC_labels_orig_new_combined"
+    DSC_LABELS_ORIG_NEW_INDIV = "DSC_labels_orig_new_individual"
     SIMILARITY_METRIC = "Similarity_metric"
     LAT_UNLBL_VOL = "Lateral_unlabeled_volume"
     LAT_UNLBL_PLANES = "Lateral_unlabeled_planes"

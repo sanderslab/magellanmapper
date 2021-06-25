@@ -26,6 +26,8 @@ from magmap.plot import plot_3d, plot_support
 from magmap.settings import config
 from magmap.settings import profiles
 
+_logger = config.logger.getChild(__name__)
+
 
 def _get_bbox(img_np, threshold=10):
     """Get the bounding box for the largest object within an image.
@@ -1513,8 +1515,9 @@ def measure_atlas_refinement(
 
     """
     # DSC and total volumes of atlas and labels
-    print("\nDSC after import:")
     overlap_meas_add = config.atlas_profile["overlap_meas_add_lbls"]
+    lbls_msg = f" (plus {overlap_meas_add})" if overlap_meas_add else ""
+    _logger.info(f"\nMeasuring overlap of atlas and combined labels{lbls_msg}:")
     dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
         img_atlas, img_labels, overlap_meas_add, return_masks=True)
     metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
@@ -1530,7 +1533,7 @@ def measure_atlas_refinement(
         thresh_atlas, img_atlas.GetSpacing()[::-1])
     metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
 
-    print("\nWhole atlas stats:")
+    _logger.info("\nWhole atlas stats:")
     df = df_io.dict_to_data_frame(metrics, path, show=" ")
     return df  
 
@@ -1612,7 +1615,7 @@ def measure_overlap_labels(labels_img1, labels_img2):
     overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
     overlap_filter.Execute(labels_img1, labels_img2)
     mean_region_dsc = overlap_filter.GetDiceCoefficient()
-    print("Mean label-by-label DSC: {}".format(mean_region_dsc))
+    _logger.info("Mean label overlap DSC: {}".format(mean_region_dsc))
     return mean_region_dsc
 
 

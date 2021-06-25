@@ -355,8 +355,6 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     labels_sitk_seg = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # show DSCs for labels
-    print("\nMeasuring overlap of atlas and combined watershed labels:")
-    atlas_refiner.measure_overlap_combined_labels(atlas_sitk, labels_sitk_seg)
     print("Measuring overlap of individual original and watershed labels:")
     atlas_refiner.measure_overlap_labels(labels_sitk, labels_sitk_seg)
     print("\nMeasuring overlap of combined original and watershed labels:")
@@ -374,7 +372,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     df_metrics_path = libmag.combine_paths(
         mod_path, config.PATH_ATLAS_IMPORT_METRICS)
     atlas_refiner.measure_atlas_refinement(
-        metrics, atlas_sitk, labels_sitk, df_metrics_path)
+        metrics, atlas_sitk, labels_sitk_seg, df_metrics_path)
 
     # show and write image to same directory as atlas with appropriate suffix
     sitk_io.write_reg_images(

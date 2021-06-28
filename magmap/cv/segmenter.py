@@ -4,6 +4,7 @@
 """
 
 from time import time
+from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 from scipy import ndimage
@@ -222,35 +223,62 @@ def labels_to_markers_blob(labels_img):
 
 
 class LabelToMarkerErosion(object):
-    """Convert a label to an eroded marker with class methods as an 
-    encapsulated way to use in multiprocessing without requirement for 
-    global variables.
+    """Convert a label to an eroded marker for multiprocessing
+    
+    Uses class methods as an encapsulated way to use in forked multiprocessing
+    without requirement for global variables. In non-forked multiprocessing
+    (eg "spawn" on Windows), regions and weights should be pickled directly.
     
     Attributes:
-        labels_img (:obj:`np.ndarray`): Integer labels images as a Numpy array.
-        wt_dists (:obj:`np.ndarray`): Array of distances by which to weight
-            the filter size; defaults to None.
+        labels_img: Integer labels images as a Numpy array.
+        wt_dists: Array of distances by which to weight the filter size.
     """
-    labels_img = None
-    wt_dists = None
+    labels_img: np.ndarray = None
+    wt_dists: np.ndarray = None
     
     @classmethod
-    def set_labels_img(cls, labels_img, wt_dists):
+    def set_labels_img(cls, labels_img: np.ndarray, wt_dists: np.ndarray):
         """Set the labels image.
         
         Args:
-            labels_img (:obj:`np.ndarray`): Labels image to set as class
-                attribute.
-            wt_dists (:obj:`np.ndarray`): Distance weights image to set as
-                class attribute.
+            labels_img: Labels image to set as class attribute.
+            wt_dists: Distance weights image to set as class attribute.
         """
         cls.labels_img = labels_img
         cls.wt_dists = wt_dists
     
     @classmethod
-    def erode_label(cls, label_id, filter_size, target_frac=None,
-                    min_filter_size=1, use_min_filter=False,
-                    skel_eros_filt_size=0):
+    def meas_wt(
+            cls, labels_img: np.ndarray, label_id: int, wt_dists: np.ndarray
+    ) -> float:
+        """Measure the weight for a label based on weighted distances.
+        
+        Args:
+            labels_img: Labels image.
+            label_id: Label ID.
+            wt_dists: Array of distances by which to weight the filter size.
+
+        Returns:
+            Normalized weight for ``label_id``.
+
+        """
+        return np.median(wt_dists[labels_img == label_id]) / np.amax(wt_dists)
+    
+    @classmethod
+    def extract_region(cls, labels_img, label_id):
+        bbox = cv_nd.get_label_bbox(labels_img, label_id)
+        _, slices = cv_nd.get_bbox_region(bbox)
+        return labels_img[tuple(slices)], slices
+    
+    @classmethod
+    def erode_label(
+            cls, label_id: int, filter_size: int, target_frac: float = None,
+            min_filter_size: int = 1, use_min_filter: bool = False,
+            skel_eros_filt_size: Union[int, bool] = False,
+            region: np.ndarray = None, slices: List[slice] = None,
+            wt: float = None) -> Tuple[
+                Tuple[int, np.ndarray, np.ndarray, Any],
+                Union[Optional[List[slice]], Any], Any]:
         """Convert a label to a marker as an eroded version of the label.
         
         By default, labels will be eroded with the given ``filter_size`` 
@@ -268,38 +296,52 @@ class LabelToMarkerErosion(object):
         to weight the starting filter size.
         
         Args:
-            label_id (int): ID of label to erode.
-            filter_size (int): Size of structing element to start erosion.
-            target_frac (float): Target fraction of original label to erode. 
+            label_id: ID of label to erode.
+            filter_size: Size of structing element to start erosion.
+            target_frac: Target fraction of original label to erode. 
                 Erosion will start with ``filter_size`` and use progressively
                 smaller filters until remaining above this target. Defaults
                 to None to use a fraction of 0.2. Titrates the relative
                 amount of erosion allowed.
-            min_filter_size (int): Minimum filter size, below which the
+            min_filter_size: Minimum filter size, below which the
                 original, uneroded label will be used instead. Defaults to 1.
                 Use 0 to erode at size 1 even if below ``target_frac``.
                 Titrates the absolute amount of erosion allowed.
-            use_min_filter (bool): True to erode at ``min_filter_size`` if
+            use_min_filter: True to erode at ``min_filter_size`` if
                 a smaller filter size would otherwise be required; defaults
                 to False to revert to original, uneroded size if a filter
                 smaller than ``min_filter_size`` would be needed.
-            skel_eros_filt_size (int): Erosion filter size before
+            skel_eros_filt_size: Erosion filter size before
                 skeletonization to balance how much of the labels' extent will
                 be preserved during skeletonization. Increase to reduce the
                 skeletonization. Defaults to 0, which will cause
                 skeletonization to be skipped.
+            region: Labels image region containing ``label_id`` to erode.
+                Defaults to None, in which case the region will be determined
+                if :attr:`labels_img` is available.
+            slices: List of slices in the labels image from which ``regions``
+                was extracted. Defaults to None, in which case it will be
+                determined if :attr:`labels_img` is available.
+            wt: Multiplier weight for ``filter_size``. Defaults to None, in
+                which case the weighte will be calculated from
+                :attr:``wt_dists`` if available, or ignored if not.
         
         Returns:
-            :obj:`pd.DataFrame`, List[slice], :obj:`np.ndarray`: stats,
-            including ``label_id`` for reference and 
+            Tuple of stats,including ``label_id`` for reference and 
             sizes of labels; list of slices denoting where to insert 
             the eroded label; and the eroded label itself.
+        
+        Raises:
+            ValueError: if ``region`` is None and :attr:`labels_img` is not
+                available.
+        
         """
-        if cls.wt_dists is not None:
+        if (wt is None and cls.wt_dists is not None and
+                cls.labels_img is not None):
             # weight the filter size by the fractional distance from median
             # of label distance and max dist
-            wt = (np.median(cls.wt_dists[cls.labels_img == label_id]) 
-                  / np.amax(cls.wt_dists))
+            wt = cls.meas_wt(cls.labels_img, label_id, cls.wt_dists)
+        if wt is not None:
             filter_size = int(filter_size * wt)
             print("label {}: distance weight {}, adjusted filter size to {}"
                   .format(label_id, wt, filter_size))
@@ -309,9 +351,12 @@ class LabelToMarkerErosion(object):
         # get region as mask; assume that label exists and will yield a 
         # bounding box since labels here are generally derived from the 
         # labels image itself
-        bbox = cv_nd.get_label_bbox(cls.labels_img, label_id)
-        _, slices = cv_nd.get_bbox_region(bbox)
-        region = cls.labels_img[tuple(slices)]
+        if region is None:
+            if cls.labels_img is None:
+                raise ValueError(
+                    "Need either 'region' and 'slices' or 'cls.labels_img' to "
+                    "erode label")
+            region, slices = cls.extract_region(cls.labels_img, label_id)
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         region_size_filtered = region_size
@@ -417,18 +462,26 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
     print("Eroding labels to markers with filter size {}, min filter size {}, "
           "and target fraction {}"
           .format(filter_size, min_filter_size, target_frac))
-    LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
+    is_fork = chunking.is_fork()
+    if is_fork:
+        # share large images as class attributes in forked mode
+        LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
     pool = chunking.get_mp_pool()
     pool_results = []
     for label_id in labels_unique:
         if label_id == 0: continue
         # erode labels to generate markers, excluding labels small enough
         # that they would require a filter smaller than half of original size
+        args = [label_id, filter_size, target_frac, min_filter_size,
+                use_min_filter, skel_eros_filt_size]
+        if not is_fork:
+            # pickle labels and distance weights directly in spawned mode
+            args.extend(
+                LabelToMarkerErosion.extract_region(labels_img, label_id))
+            args.append(LabelToMarkerErosion.meas_wt(
+                labels_img, label_id, wt_dists))
         pool_results.append(
-            pool.apply_async(
-                LabelToMarkerErosion.erode_label, 
-                args=(label_id, filter_size, target_frac, min_filter_size,
-                      use_min_filter, skel_eros_filt_size)))
+            pool.apply_async(LabelToMarkerErosion.erode_label, args=args))
     for result in pool_results:
         stats_eros, slices, filtered = result.get()
         # can only mutate markers outside of mp for changes to persist

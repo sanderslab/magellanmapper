@@ -305,6 +305,11 @@ class ROIProfile(profiles.SettingsDict):
             "norm": {
                 "norm": (0.0, 1.0),
             },
+            
+            # multiprocessing with spawn mode
+            "spawn": {
+                "mp_start": "spawn",
+            }
 
         }
 

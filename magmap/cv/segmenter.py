@@ -445,8 +445,9 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
             # pickle labels and distance weights directly in spawned mode
             args.extend(
                 LabelToMarkerErosion.extract_region(labels_img, label_id))
-            args.append(LabelToMarkerErosion.meas_wt(
-                labels_img, label_id, wt_dists))
+            if wt_dists is not None:
+                args.append(LabelToMarkerErosion.meas_wt(
+                    labels_img, label_id, wt_dists))
         pool_results.append(
             pool.apply_async(LabelToMarkerErosion.erode_label, args=args))
     for result in pool_results:

@@ -946,7 +946,6 @@ def filter_adaptive_size(mask, fn_filter, filter_size, min_filter_size=1,
         min_size_ratio = 0.2
     region_size = np.sum(mask)
     fn_selem = get_selem(mask.ndim)
-    print("selem", fn_selem, mask.ndim)
     
     # filter the label, starting with the given filter size and decreasing
     # if the resulting label size falls below a given min size ratio

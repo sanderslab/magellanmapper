@@ -23,8 +23,7 @@ from magmap.io import libmag
 from magmap.io import np_io
 from magmap.io import sitk_io
 from magmap.plot import plot_3d, plot_support
-from magmap.settings import config
-from magmap.settings import profiles
+from magmap.settings import atlas_prof, config, profiles
 
 
 def _get_bbox(img_np, threshold=10):
@@ -1489,7 +1488,8 @@ def import_atlas(atlas_dir, show=True, prefix=None):
             sort_cols=config.SmoothingMetrics.FILTER_SIZE.value)
 
     # measure and save whole atlas metrics
-    measure_atlas_refinement(metrics, img_atlas, img_labels, df_metrics_path)
+    measure_atlas_refinement(
+        metrics, img_atlas, img_labels, config.atlas_profile, df_metrics_path)
     
     if show:
         sitk.Show(img_atlas)
@@ -1498,7 +1498,8 @@ def import_atlas(atlas_dir, show=True, prefix=None):
 
 def measure_atlas_refinement(
         metrics: Dict[Enum, List], img_atlas: sitk.Image,
-        img_labels: sitk.Image, path: str = None) -> pd.DataFrame:
+        img_labels: sitk.Image, atlas_profile: atlas_prof.AtlasProfile,
+        path: str = None) -> pd.DataFrame:
     """
     
     Args:
@@ -1506,6 +1507,7 @@ def measure_atlas_refinement(
             in-place.
         img_atlas: Atlas intensity image.
         img_labels: Atlas annotation image.
+        atlas_profile: Atlas profile.
         path: Output path; defaults to None to not save.
 
     Returns:
@@ -1514,7 +1516,7 @@ def measure_atlas_refinement(
     """
     # DSC and total volumes of atlas and labels
     print("\nDSC after import:")
-    overlap_meas_add = config.atlas_profile["overlap_meas_add_lbls"]
+    overlap_meas_add = atlas_profile["overlap_meas_add_lbls"]
     dsc, atlas_mask, labels_mask = measure_overlap_combined_labels(
         img_atlas, img_labels, overlap_meas_add, return_masks=True)
     metrics[config.AtlasMetrics.DSC_ATLAS_LABELS] = [dsc]
@@ -1524,7 +1526,7 @@ def measure_atlas_refinement(
     # compactness of whole atlas (non-label) image; use lower threshold for 
     # compactness measurement to minimize noisy surface artifacts
     img_atlas_np = sitk.GetArrayFromImage(img_atlas)
-    thresh = config.atlas_profile["atlas_threshold_all"]
+    thresh = atlas_profile["atlas_threshold_all"]
     thresh_atlas = img_atlas_np > thresh
     compactness, _, _ = cv_nd.compactness_3d(
         thresh_atlas, img_atlas.GetSpacing()[::-1])

@@ -4,14 +4,15 @@
 """
 import os
 from time import time
+from typing import List, Optional
 
 import SimpleITK as sitk
 import numpy as np
+import pandas as pd
 
 from magmap.atlas import atlas_refiner
-from magmap.settings import config
 from magmap.cv import chunking, cv_nd, segmenter
-from magmap.settings import profiles
+from magmap.settings import atlas_prof, config, profiles
 from magmap.io import df_io, libmag, sitk_io
 from magmap.stats import vols
 
@@ -231,8 +232,10 @@ def erode_labels(labels_img_np, erosion, erosion_frac=None, mirrored=True,
     return eroded, df
 
 
-def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
-                            exclude_labels=None, mirror_mult=-1):
+def edge_aware_segmentation(
+        path_atlas: str, atlas_profile: atlas_prof.AtlasProfile,
+        show: bool = True, atlas: bool = True, suffix: Optional[str] = None,
+        exclude_labels: Optional[pd.DataFrame] = None, mirror_mult: int = -1):
     """Segment an atlas using its previously generated edge map.
     
     Labels may not match their own underlying atlas image well, 
@@ -248,23 +251,24 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     :func:``make_edge_images``.
     
     Args:
-        path_atlas (str): Path to the fixed file, typically the atlas file 
+        path_atlas: Path to the fixed file, typically the atlas file 
             with stained sections. The corresponding edge and labels 
             files will be loaded based on this path.
-        show (bool): True if the output images should be displayed; defaults 
+        atlas_profile: Atlas profile.
+        show: True if the output images should be displayed; defaults 
             to True.
-        atlas (bool): True if the primary image is an atlas, which is assumed 
+        atlas: True if the primary image is an atlas, which is assumed 
             to be symmetrical. False if the image is an experimental/sample 
             image, in which case segmentation will be performed on the full 
             images, and stats will not be performed.
-        suffix (str): Modifier to append to end of ``path_atlas`` basename for 
+        suffix: Modifier to append to end of ``path_atlas`` basename for 
             registered image files that were output to a modified name; 
             defaults to None. If ``atlas`` is True, ``suffix`` will only 
             be applied to saved files, with files still loaded based on the 
             original path.
-        exclude_labels (List[int]): Sequence of labels to exclude from the
+        exclude_labels: Sequence of labels to exclude from the
             segmentation; defaults to None.
-        mirror_mult (int): Multiplier for mirrored labels; defaults to -1
+        mirror_mult: Multiplier for mirrored labels; defaults to -1
             to make mirrored labels the inverse of their source labels.
     """
     # adjust image path with suffix
@@ -295,7 +299,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     mirrorred = atlas and sym_axis >= 0
     len_half = None
     seg_args = {"exclude_labels": exclude_labels}
-    edge_prof = config.atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTATION]
+    edge_prof = atlas_profile[profiles.RegKeys.EDGE_AWARE_REANNOTATION]
     if edge_prof:
         edge_filt = edge_prof[profiles.RegKeys.WATERSHED_MASK_FILTER]
         if edge_filt and len(edge_filt) > 1:
@@ -318,12 +322,12 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
         labels_seg = segmenter.segment_from_labels(
             atlas_edge, markers, labels_img_np, **seg_args)
     
-    smoothing = config.atlas_profile["smooth"]
-    smoothing_mode = config.atlas_profile["smoothing_mode"]
+    smoothing = atlas_profile["smooth"]
+    smoothing_mode = atlas_profile["smoothing_mode"]
     cond = ["edge-aware_seg"]
     if smoothing is not None:
         # smoothing by opening operation based on profile setting
-        meas_smoothing = config.atlas_profile["meas_smoothing"]
+        meas_smoothing = atlas_profile["meas_smoothing"]
         cond.append("smoothing")
         df_aggr, df_raw = atlas_refiner.smooth_labels(
             labels_seg, smoothing, smoothing_mode,
@@ -345,7 +349,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     
     # expand background to smoothed background of original labels to 
     # roughly match background while still allowing holes to be filled
-    crop = config.atlas_profile["crop_to_orig"]
+    crop = atlas_profile["crop_to_orig"]
     atlas_refiner.crop_to_orig(
         labels_img_np, labels_seg, crop)
     
@@ -374,7 +378,7 @@ def edge_aware_segmentation(path_atlas, show=True, atlas=True, suffix=None,
     df_metrics_path = libmag.combine_paths(
         mod_path, config.PATH_ATLAS_IMPORT_METRICS)
     atlas_refiner.measure_atlas_refinement(
-        metrics, atlas_sitk, labels_sitk, df_metrics_path)
+        metrics, atlas_sitk, labels_sitk, atlas_profile, df_metrics_path)
 
     # show and write image to same directory as atlas with appropriate suffix
     sitk_io.write_reg_images(
@@ -441,7 +445,8 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         print("excluding these labels from re-segmentation:\n", exclude)
         pool_results.append(pool.apply_async(
             edge_aware_segmentation,
-            args=(img_path, show, atlas, suffix, exclude, mirror_mult)))
+            args=(img_path, config.atlas_profile, show, atlas, suffix, exclude,
+                  mirror_mult)))
     for result in pool_results:
         # edge distance calculation and labels interior image generation 
         # are multiprocessed, so run them as post-processing tasks to 

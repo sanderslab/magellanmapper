@@ -265,12 +265,6 @@ class LabelToMarkerErosion(object):
         return np.median(wt_dists[labels_img == label_id]) / np.amax(wt_dists)
     
     @classmethod
-    def extract_region(cls, labels_img, label_id):
-        bbox = cv_nd.get_label_bbox(labels_img, label_id)
-        _, slices = cv_nd.get_bbox_region(bbox)
-        return labels_img[tuple(slices)], slices
-    
-    @classmethod
     def erode_label(
             cls, label_id: int, filter_size: int, target_frac: float = None,
             min_filter_size: int = 1, use_min_filter: bool = False,
@@ -356,7 +350,7 @@ class LabelToMarkerErosion(object):
                 raise ValueError(
                     "Need either 'region' and 'slices' or 'cls.labels_img' to "
                     "erode label")
-            region, slices = cls.extract_region(cls.labels_img, label_id)
+            region, slices = cv_nd.extract_region(cls.labels_img, label_id)
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         region_size_filtered = region_size
@@ -477,9 +471,10 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         if not is_fork:
             # pickle labels and distance weights directly in spawned mode
             args.extend(
-                LabelToMarkerErosion.extract_region(labels_img, label_id))
-            args.append(LabelToMarkerErosion.meas_wt(
-                labels_img, label_id, wt_dists))
+                cv_nd.extract_region(labels_img, label_id))
+            if wt_dists is not None:
+                args.append(LabelToMarkerErosion.meas_wt(
+                    labels_img, label_id, wt_dists))
         pool_results.append(
             pool.apply_async(LabelToMarkerErosion.erode_label, args=args))
     for result in pool_results:

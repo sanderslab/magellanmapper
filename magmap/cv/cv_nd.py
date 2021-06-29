@@ -3,7 +3,7 @@
 """Computer vision library functions for n-dimensions.
 """
 
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 from scipy import interpolate
@@ -611,9 +611,30 @@ def get_label_bbox(labels_img_np, label_id):
         property will be returned.
     """
     props = get_label_props(labels_img_np, label_id)
-    bbox = None
-    if len(props) >= 1: bbox = props[0].bbox
-    return bbox
+    return props[0].bbox if len(props) >= 1 else None
+
+
+def extract_region(
+        labels_img: np.ndarray, label_id: int
+) -> Tuple[Optional[np.ndarray], Optional[List[slice]]]:
+    """Wrapper for extracting a labeled region.
+    
+    Args:
+        labels_img: Labels image as an integer array.
+        label_id: ID of label to extract.
+
+    Returns:
+        Tuple of the bounding box of the region containing ``label_id`` and
+        the list of slices in ``labels_img`` defining the extracted indices.
+        If no bounding box was found, each value is returned as None. If
+        multiple separate regions are found, only the first is returned.
+
+    """
+    bbox = get_label_bbox(labels_img, label_id)
+    if bbox is None:
+        return None, None
+    _, slices = get_bbox_region(bbox)
+    return labels_img[tuple(slices)], slices
 
 
 def meas_region(mask, res):

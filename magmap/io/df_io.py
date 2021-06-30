@@ -770,7 +770,11 @@ def main():
 
     if df_task is config.DFTasks.MERGE_CSVS:
         # merge multiple CSV files into single CSV file
-        merge_csvs(config.filenames, config.prefix)
+        prefix = config.prefix
+        if not prefix:
+            # fallback to default filename based on first path
+            prefix = f"{os.path.splitext(config.filename)[0]}_merged"
+        merge_csvs(config.filenames, prefix)
 
     elif df_task is config.DFTasks.MERGE_CSVS_COLS:
         # join multiple CSV files based on a given index column into single

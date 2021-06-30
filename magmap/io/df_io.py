@@ -8,6 +8,7 @@ Attributes:
 
 from enum import Enum
 import os
+from typing import Dict, List, Optional, Union
 import warnings
 
 import numpy as np
@@ -555,8 +556,11 @@ def print_data_frame(df, sep=" ", index=False, header=True, show=True):
     return df_str
 
 
-def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
-                       records_cols=None):
+def dict_to_data_frame(
+        to_import: Union[Dict, List[List]], path: str = None,
+        sort_cols: Union[str, List[str]] = None,
+        show: Optional[Union[bool, str]] = None,
+        records_cols: Optional[Union[list, tuple]] = None) -> pd.DataFrame:
     """Import dictionary to data frame with additional options.
     
     Supports conversion of Enum column names to their values. Also, allows
@@ -565,25 +569,25 @@ def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
     :meth:`data_frames_to_csv`.
     
     Args:
-        to_import (Union[dict, list[list]]): Dictionary to import. May
+        to_import: Dictionary to import. May
             also be list of lists to import as records if ``records_cols``
             is given. If column name are enums, they will be converted to
             their values.
-        path (str): Output path to export data frame to CSV file; defaults to
+        path: Output path to export data frame to CSV file; defaults to
             None for no export.
-        sort_cols (Union[str, list[str]]): Column as a string or list of
+        sort_cols: Column as a string or list of
             columns by which to sort; defaults to None for no sorting.
-        show (Union[bool, str]): True or " " to print the data frame with a
+        show: True or " " to print the data frame with a
             space-separated table, or can provide an alternate separator.
             Defaults to None to not print the data frame.
-        records_cols (Union[list, tuple]): Import from records, where
+        records_cols: Import from records, where
             ``to_import`` is a list of rows rather than a dictionary, using
             this sequence of record column names instead of dictionary keys;
             defaults to None.
             
     
     Returns:
-        :class:`pandas.DataFrame`: The imported data frame.
+        The imported data frame.
     
     """
     if records_cols:
@@ -606,7 +610,10 @@ def dict_to_data_frame(to_import, path=None, sort_cols=None, show=None,
     return df
 
 
-def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
+def data_frames_to_csv(
+        data_frames: List[pd.DataFrame], path: str = None,
+        sort_cols: Optional[str] = None,
+        show: Optional[Union[str, bool]] = None, index: bool = False):
     """Combine and export multiple data frames to CSV file.
     
     Args:
@@ -619,6 +626,7 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
         show: True or " " to print the data frame with a space-separated 
             table, or can provide an alternate separator. Defaults to None 
             to not print the data frame.
+        index: True to include the index; defaults to False.
     
     Returns:
         The combined data frame.
@@ -636,7 +644,7 @@ def data_frames_to_csv(data_frames, path=None, sort_cols=None, show=None):
         combined = pd.concat(combined)
     if sort_cols is not None:
         combined = combined.sort_values(sort_cols)
-    combined.to_csv(path, index=False, na_rep="NaN")
+    combined.to_csv(path, index=index, na_rep="NaN")
     if show is not None:
         print_data_frame(combined, show)
     if path:

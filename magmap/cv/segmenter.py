@@ -3,6 +3,7 @@
 """Segment regions based on blobs, labels, and underlying features.
 """
 
+from multiprocessing import sharedctypes
 from time import time
 from typing import Any, List, Optional, Tuple, Union
 
@@ -232,9 +233,30 @@ class LabelToMarkerErosion(object):
     Attributes:
         labels_img: Integer labels images as a Numpy array.
         wt_dists: Array of distances by which to weight the filter size.
+        labels_img_shared: ``labels_img`` as a shared array.
+        labels_img_shape: Shape of ``labels_img_shared``.
+        labels_img_dtype: Data type of ``labels_img_shared``.
     """
     labels_img: np.ndarray = None
     wt_dists: np.ndarray = None
+    
+    labels_img_shared: sharedctypes.RawArray = None
+    labels_img_shape: Tuple = None
+    labels_img_dtype: np.dtype = None
+    
+    @classmethod
+    def setup_labels_img_shared(cls, img, shape, dtype):
+        """Set up shared labels image for reconstructing as ndarray.
+        
+        Args:
+            img: Labels image as a shared array.
+            shape: Shape of the image.
+            dtype: Data type of the image.
+
+        """
+        cls.labels_img_shared = img
+        cls.labels_img_shape = shape
+        cls.labels_img_dtype = dtype
     
     @classmethod
     def set_labels_img(cls, labels_img: np.ndarray, wt_dists: np.ndarray):
@@ -269,7 +291,6 @@ class LabelToMarkerErosion(object):
             cls, label_id: int, filter_size: int, target_frac: float = None,
             min_filter_size: int = 1, use_min_filter: bool = False,
             skel_eros_filt_size: Union[int, bool] = False,
-            region: np.ndarray = None, slices: List[slice] = None,
             wt: float = None) -> Tuple[
                 Tuple[int, np.ndarray, np.ndarray, Any],
                 Union[Optional[List[slice]], Any], Any]:
@@ -310,12 +331,6 @@ class LabelToMarkerErosion(object):
                 be preserved during skeletonization. Increase to reduce the
                 skeletonization. Defaults to False, which will cause
                 skeletonization to be skipped.
-            region: Labels image region containing ``label_id`` to erode.
-                Defaults to None, in which case the region will be determined
-                if :attr:`labels_img` is available.
-            slices: List of slices in the labels image from which ``regions``
-                was extracted. Defaults to None, in which case it will be
-                determined if :attr:`labels_img` is available.
             wt: Multiplier weight for ``filter_size``. Defaults to None, in
                 which case the weighte will be calculated from
                 :attr:``wt_dists`` if available, or ignored if not.
@@ -330,6 +345,12 @@ class LabelToMarkerErosion(object):
                 available.
         
         """
+        if cls.labels_img is None:
+            # convert shared raw array to Numpy array for labels image
+            cls.labels_img = np.frombuffer(
+                cls.labels_img_shared, cls.labels_img_dtype).reshape(
+                cls.labels_img_shape)
+
         if (wt is None and cls.wt_dists is not None and
                 cls.labels_img is not None):
             # weight the filter size by the fractional distance from median
@@ -345,12 +366,7 @@ class LabelToMarkerErosion(object):
         # get region as mask; assume that label exists and will yield a 
         # bounding box since labels here are generally derived from the 
         # labels image itself
-        if region is None:
-            if cls.labels_img is None:
-                raise ValueError(
-                    "Need either 'region' and 'slices' or 'cls.labels_img' to "
-                    "erode label")
-            region, slices = cv_nd.extract_region(cls.labels_img, label_id)
+        region, slices = cv_nd.extract_region(cls.labels_img, label_id)
         label_mask_region = region == label_id
         region_size = np.sum(label_mask_region)
         filtered, chosen_selem_size = cv_nd.filter_adaptive_size(
@@ -372,6 +388,12 @@ class LabelToMarkerErosion(object):
         stats_eros = (label_id, region_size, region_size_filtered,
                       chosen_selem_size)
         return stats_eros, slices, filtered
+
+
+def _init_labels_to_markers(*args):
+    """Initialize labels to markers class attributes in spawned multiprocessing.
+    """
+    LabelToMarkerErosion.setup_labels_img_shared(*args)
 
 
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
@@ -424,10 +446,22 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
           "and target fraction {}"
           .format(filter_size, min_filter_size, target_frac))
     is_fork = chunking.is_fork()
+    initializer = None
+    initargs = None
     if is_fork:
         # share large images as class attributes in forked mode
         LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
-    pool = chunking.get_mp_pool()
+    else:
+        # set up labels image as a shared array for spawned mode
+        initializer = _init_labels_to_markers
+        initargs = (
+            sharedctypes.RawArray(np.ctypeslib.as_ctypes_type(
+                labels_img.dtype), labels_img.flatten()),
+            labels_img.shape,
+            labels_img.dtype,
+        )
+    
+    pool = chunking.get_mp_pool(initializer, initargs)
     pool_results = []
     for label_id in labels_unique:
         if label_id == 0: continue
@@ -436,14 +470,13 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         args = [label_id, filter_size, target_frac, min_filter_size,
                 use_min_filter, skel_eros_filt_size]
         if not is_fork:
-            # pickle labels and distance weights directly in spawned mode
-            args.extend(
-                cv_nd.extract_region(labels_img, label_id))
+            # pickle distance weight directly in spawned mode
             if wt_dists is not None:
                 args.append(LabelToMarkerErosion.meas_wt(
                     labels_img, label_id, wt_dists))
         pool_results.append(
             pool.apply_async(LabelToMarkerErosion.erode_label, args=args))
+    
     for result in pool_results:
         stats_eros, slices, filtered = result.get()
         # can only mutate markers outside of mp for changes to persist

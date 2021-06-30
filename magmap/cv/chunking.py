@@ -3,6 +3,7 @@
 """Divides a region into smaller chunks and reassembles it."""
 
 import multiprocessing as mp
+from typing import Callable, Optional, Tuple
 
 import numpy as np
 
@@ -53,14 +54,21 @@ def is_fork():
     return mp.get_start_method(False) == "fork"
 
 
-def get_mp_pool():
+def get_mp_pool(
+        initializer: Optional[Callable] = None,
+        initargs: Optional[Tuple] = None) -> mp.Pool:
     """Get a multiprocessing ``Pool`` object, configured based on ``config``
     settings.
     
+    Args:
+        initializer: Function to be called on initialization for each process;
+            defaults to None.
+        initargs: Arguments to ``initializer``; defaults to None.
+        
+    
     Returns:
-        :obj:`multiprocessing.Pool`: Pool object with number of processes
-        and max tasks per process determined by command-line and the main
-        (first) ROI profile settings.
+        Pool object with number of processes and max tasks per process
+        determined by command-line and the main (first) ROI profile settings.
 
     """
     prof = config.get_roi_profile(0)
@@ -68,7 +76,9 @@ def get_mp_pool():
     print("Setting up multiprocessing pool with {} processes (None uses all "
           "available)\nand max tasks of {} before replacing processes (None "
           "does not replace processes)".format(config.cpus, max_tasks))
-    return mp.Pool(processes=config.cpus, maxtasksperchild=max_tasks)
+    return mp.Pool(
+        processes=config.cpus, maxtasksperchild=max_tasks,
+        initializer=initializer, initargs=initargs)
 
 
 def calc_overlap():

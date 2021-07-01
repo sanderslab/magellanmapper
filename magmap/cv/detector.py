@@ -3,12 +3,18 @@
 """Detects features within a 3D image stack.
 
 Prunes duplicates and verifies detections against truth sets.
+
+Attributes:
+    CONFIRMATION: Dictionary of blob confirmation flags.
+    OVERLAP_FACTOR: Pixel number multiplier for overlaps between adjacent ROIs.
+
 """
 
 from enum import Enum
 import math
 import pprint
 from time import time
+from typing import Dict, Optional
 
 import numpy as np
 from skimage.feature import blob_log
@@ -19,12 +25,15 @@ from magmap.plot import plot_3d
 from magmap.settings import config
 
 # blob confirmation flags
-CONFIRMATION = {
+CONFIRMATION: Dict[int, str] = {
     -1: "unverified",
     0: "no",
     1: "yes",
     2: "maybe"
 }
+
+# pixel number multiplier by scaling for max overlapping pixels per ROI
+OVERLAP_FACTOR: int = 5
 
 
 class Blobs:
@@ -201,6 +210,22 @@ def calc_scaling_factor():
             "Must load resolutions from file or set a resolution")
     factor = np.divide(1.0, config.resolutions[0])
     return factor
+
+
+def calc_overlap(factor: Optional[int] = None):
+    """Calculate overlap based on scaling factor and a factor.
+    
+    Args:
+        factor: Overlap factor; defaults to None to use :const:``OVERLAP_FACTOR``
+
+    Returns:
+        Overlap as an array in the same shape and order as in 
+        :attr:``resolutions``.
+    
+    """
+    if factor is None:
+        factor = OVERLAP_FACTOR
+    return np.ceil(np.multiply(calc_scaling_factor(), factor)).astype(int)
 
 
 def _blob_surroundings(blob, roi, padding, plane=False):

@@ -142,23 +142,11 @@ class MetricCombos(Enum):
         _coef_var)
 
 
-class LabelToEdge(object):
+class LabelToEdge(chunking.SharedLabelsImg):
     """Convert a label to an edge with class methods as an encapsulated 
     way to use in multiprocessing without requirement for global variables.
     
-    Attributes:
-        labels_img_np: Integer labels images as a Numpy array.
     """
-    labels_img_np = None
-    
-    @classmethod
-    def set_labels_img_np(cls, val):
-        """Set the labels image.
-        
-        Args:
-            val: Labels image to set as class attribute.
-        """
-        cls.labels_img_np = val
     
     @classmethod
     def find_label_edge(cls, label_id):
@@ -178,14 +166,15 @@ class LabelToEdge(object):
         borders = None
         
         # get mask of label to get bounding box
-        label_mask = cls.labels_img_np == label_id
+        cls.convert_shared_labels_img()
+        label_mask = cls.labels_img == label_id
         props = measure.regionprops(label_mask.astype(np.int))
         if len(props) > 0 and props[0].bbox is not None:
             _, slices = cv_nd.get_bbox_region(props[0].bbox)
             
             # work on a view of the region for efficiency, obtaining borders 
             # as eroded region and writing into new array
-            region = cls.labels_img_np[tuple(slices)]
+            region = cls.labels_img[tuple(slices)]
             label_mask_region = region == label_id
             borders = cv_nd.perimeter_nd(label_mask_region)
         return label_id, slices, borders
@@ -210,11 +199,18 @@ def make_labels_edge(labels_img_np):
     labels_edge = np.zeros_like(labels_img_np)
     label_ids = np.unique(labels_img_np)
     
-    # use a class to set and process the label without having to 
-    # reference the labels image as a global variable
-    LabelToEdge.set_labels_img_np(labels_img_np)
+    is_fork = chunking.is_fork()
+    initializer = None
+    initargs = None
+    if is_fork:
+        # use a class to set and process the label without having to 
+        # reference the labels image as a global variable
+        LabelToEdge.labels_img = labels_img_np
+    else:
+        # set up labels image as a shared array for spawned mode
+        initializer, initargs = LabelToEdge.build_pool_init(labels_img_np)
     
-    pool = chunking.get_mp_pool()
+    pool = chunking.get_mp_pool(initializer, initargs)
     pool_results = []
     for label_id in label_ids:
         pool_results.append(

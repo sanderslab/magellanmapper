@@ -223,7 +223,7 @@ def labels_to_markers_blob(labels_img):
     return markers
 
 
-class LabelToMarkerErosion(chunking.SharedLabelsImg):
+class LabelToMarkerErosion(chunking.SharedArrsContainer):
     """Convert a label to an eroded marker for multiprocessing
     
     Uses class methods as an encapsulated way to use in forked multiprocessing
@@ -234,6 +234,7 @@ class LabelToMarkerErosion(chunking.SharedLabelsImg):
         labels_img: Integer labels images as a Numpy array.
         wt_dists: Array of distances by which to weight the filter size.
     """
+    labels_img: np.ndarray = None
     wt_dists: np.ndarray = None
     
     @classmethod
@@ -323,7 +324,8 @@ class LabelToMarkerErosion(chunking.SharedLabelsImg):
                 available.
         
         """
-        cls.convert_shared_labels_img()
+        if cls.labels_img is None:
+            cls.labels_img = cls.convert_shared_arr(config.RegNames.IMG_LABELS)
 
         if (wt is None and cls.wt_dists is not None and
                 cls.labels_img is not None):
@@ -454,7 +456,8 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
     else:
         # set up labels image as a shared array for spawned mode
-        initializer, initargs = LabelToMarkerErosion.build_pool_init(labels_img)
+        initializer, initargs = LabelToMarkerErosion.build_pool_init({
+            config.RegNames.IMG_LABELS: labels_img})
     
     pool = chunking.get_mp_pool(initializer, initargs)
     pool_results = []

@@ -223,7 +223,7 @@ def labels_to_markers_blob(labels_img):
     return markers
 
 
-class LabelToMarkerErosion(object):
+class LabelToMarkerErosion(chunking.SharedLabelsImg):
     """Convert a label to an eroded marker for multiprocessing
     
     Uses class methods as an encapsulated way to use in forked multiprocessing
@@ -233,30 +233,8 @@ class LabelToMarkerErosion(object):
     Attributes:
         labels_img: Integer labels images as a Numpy array.
         wt_dists: Array of distances by which to weight the filter size.
-        labels_img_shared: ``labels_img`` as a shared array.
-        labels_img_shape: Shape of ``labels_img_shared``.
-        labels_img_dtype: Data type of ``labels_img_shared``.
     """
-    labels_img: np.ndarray = None
     wt_dists: np.ndarray = None
-    
-    labels_img_shared: sharedctypes.RawArray = None
-    labels_img_shape: Tuple = None
-    labels_img_dtype: np.dtype = None
-    
-    @classmethod
-    def setup_labels_img_shared(cls, img, shape, dtype):
-        """Set up shared labels image for reconstructing as ndarray.
-        
-        Args:
-            img: Labels image as a shared array.
-            shape: Shape of the image.
-            dtype: Data type of the image.
-
-        """
-        cls.labels_img_shared = img
-        cls.labels_img_shape = shape
-        cls.labels_img_dtype = dtype
     
     @classmethod
     def set_labels_img(cls, labels_img: np.ndarray, wt_dists: np.ndarray):
@@ -345,11 +323,7 @@ class LabelToMarkerErosion(object):
                 available.
         
         """
-        if cls.labels_img is None:
-            # convert shared raw array to Numpy array for labels image
-            cls.labels_img = np.frombuffer(
-                cls.labels_img_shared, cls.labels_img_dtype).reshape(
-                cls.labels_img_shape)
+        cls.convert_shared_labels_img()
 
         if (wt is None and cls.wt_dists is not None and
                 cls.labels_img is not None):
@@ -423,12 +397,6 @@ class LabelToMarkerErosion(object):
         return stats_eros, slices, filtered
 
 
-def _init_labels_to_markers(*args):
-    """Initialize labels to markers class attributes in spawned multiprocessing.
-    """
-    LabelToMarkerErosion.setup_labels_img_shared(*args)
-
-
 def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
                               min_filter_size=None, use_min_filter=False, 
                               skel_eros_filt_size=None, wt_dists=None):
@@ -486,13 +454,7 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
     else:
         # set up labels image as a shared array for spawned mode
-        initializer = _init_labels_to_markers
-        initargs = (
-            sharedctypes.RawArray(np.ctypeslib.as_ctypes_type(
-                labels_img.dtype), labels_img.flatten()),
-            labels_img.shape,
-            labels_img.dtype,
-        )
+        initializer, initargs = LabelToMarkerErosion.build_pool_init(labels_img)
     
     pool = chunking.get_mp_pool(initializer, initargs)
     pool_results = []

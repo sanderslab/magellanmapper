@@ -276,7 +276,7 @@ def setup_blocks(settings, shape):
             np.multiply(scaling_factor, denoise_size)).astype(int)
 
     # overlap sub-ROIs to minimize edge effects
-    overlap_base = chunking.calc_overlap()
+    overlap_base = detector.calc_overlap()
     tol = np.multiply(overlap_base, settings["prune_tol_factor"]).astype(int)
     overlap_padding = np.copy(tol)
     overlap = np.copy(overlap_base)

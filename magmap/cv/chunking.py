@@ -8,12 +8,8 @@ from typing import Callable, Optional, Sequence, Tuple
 import numpy as np
 
 from magmap.settings import config
-from magmap.cv import detector
 from magmap.io import libmag
 
-#: int: Factor to multiply by scaling for maximum number of pixels per
-# sub ROI for overlap.
-OVERLAP_FACTOR = 5
 
 
 def set_mp_start_method(val=None):
@@ -79,17 +75,6 @@ def get_mp_pool(
     return mp.Pool(
         processes=config.cpus, maxtasksperchild=max_tasks,
         initializer=initializer, initargs=initargs)
-
-
-def calc_overlap():
-    """Calculate overlap based on scaling factor and :const:``OVERLAP_FACTOR``.
-    
-    Returns:
-        Overlap as an array in the same shape and order as in 
-        :attr:``detector.resolutions``.
-    """
-    return np.ceil(np.multiply(detector.calc_scaling_factor(),
-                               OVERLAP_FACTOR)).astype(int)
 
 
 def _num_units(size, max_pixels):

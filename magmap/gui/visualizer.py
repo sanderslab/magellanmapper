@@ -55,8 +55,7 @@ import vtk
 
 import run
 from magmap.atlas import ontology
-from magmap.cv import chunking, colocalizer, cv_nd, detector, segmenter,\
-    verifier
+from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
     vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
@@ -1913,7 +1912,7 @@ class Visualization(HasTraits):
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # match blobs between two channels
                 verify_tol = np.multiply(
-                    chunking.calc_overlap(),
+                    detector.calc_overlap(),
                     config.roi_profile["verify_tol_factor"])
                 matches = colocalizer.colocalize_blobs_match(
                     segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
@@ -2637,7 +2636,7 @@ class Visualization(HasTraits):
         """
         if border is not None and np.array_equal(border, self._DEFAULT_BORDER):
             return border
-        return chunking.calc_overlap()[::-1]
+        return detector.calc_overlap()[::-1]
     
     def _set_border(self, reset=False):
         """Sets the border as an (x, y, z) Numpy array, changing the final

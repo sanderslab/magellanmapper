@@ -5,7 +5,7 @@ from typing import Sequence
 
 import numpy as np
 
-from magmap.cv import chunking
+from magmap.cv import chunking, detector
 from magmap.settings import config
 
 
@@ -62,7 +62,7 @@ class TestChunking(unittest.TestCase):
         # test overlap generated based on resolutions
         config.resolutions = [[6.6, 1.1, 1.1]]
         merged = self.stack_split_remerge(
-            roi, max_pixels, chunking.calc_overlap(2))
+            roi, max_pixels, detector.calc_overlap(2))
         np.testing.assert_array_equal(roi, merged)
 
 

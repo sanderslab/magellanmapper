@@ -21,6 +21,9 @@ from magmap.atlas import ontology
 from magmap.cv import cv_nd
 from magmap.io import df_io
 
+_logger = config.logger.getChild(__name__)
+
+
 # metric keys and column names
 LabelMetrics = Enum(
     "LabelMetrics", [
@@ -161,22 +164,18 @@ class LabelToEdge(chunking.SharedLabelsImg):
             location of the ROI where the edges can be found; and the 
             ROI as a volume mask defining where the edges exist.
         """
-        print("getting edge for {}".format(label_id))
-        slices = None
+        _logger.info("Getting edge for %s", label_id)
         borders = None
-        
-        # get mask of label to get bounding box
+        # extract region from full labels image
         cls.convert_shared_labels_img()
-        label_mask = cls.labels_img == label_id
-        props = measure.regionprops(label_mask.astype(np.int))
-        if len(props) > 0 and props[0].bbox is not None:
-            _, slices = cv_nd.get_bbox_region(props[0].bbox)
-            
-            # work on a view of the region for efficiency, obtaining borders 
-            # as eroded region and writing into new array
-            region = cls.labels_img[tuple(slices)]
+        region, slices = cv_nd.extract_region(cls.labels_img, label_id)
+        if region is not None:
+            # get border of label
             label_mask_region = region == label_id
             borders = cv_nd.perimeter_nd(label_mask_region)
+        else:
+            _logger.warn(
+                "Could not find region '%s' to generate edge", label_id)
         return label_id, slices, borders
 
 

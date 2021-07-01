@@ -145,11 +145,12 @@ class MetricCombos(Enum):
         _coef_var)
 
 
-class LabelToEdge(chunking.SharedLabelsImg):
+class LabelToEdge(chunking.SharedArrsContainer):
     """Convert a label to an edge with class methods as an encapsulated 
     way to use in multiprocessing without requirement for global variables.
     
     """
+    labels_img = None
     
     @classmethod
     def find_label_edge(cls, label_id):
@@ -167,7 +168,8 @@ class LabelToEdge(chunking.SharedLabelsImg):
         _logger.info("Getting edge for %s", label_id)
         borders = None
         # extract region from full labels image
-        cls.convert_shared_labels_img()
+        if cls.labels_img is None:
+            cls.labels_img = cls.convert_shared_arr(config.RegNames.IMG_LABELS)
         region, slices = cv_nd.extract_region(cls.labels_img, label_id)
         if region is not None:
             # get border of label
@@ -207,7 +209,8 @@ def make_labels_edge(labels_img_np):
         LabelToEdge.labels_img = labels_img_np
     else:
         # set up labels image as a shared array for spawned mode
-        initializer, initargs = LabelToEdge.build_pool_init(labels_img_np)
+        initializer, initargs = LabelToEdge.build_pool_init({
+            config.RegNames.IMG_LABELS: labels_img_np})
     
     pool = chunking.get_mp_pool(initializer, initargs)
     pool_results = []

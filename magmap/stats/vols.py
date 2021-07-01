@@ -7,6 +7,7 @@ Intended to be higher-level, relatively atlas-agnostic measurements.
 
 from enum import Enum
 from time import time
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -231,7 +232,7 @@ def make_labels_edge(labels_img_np):
     return labels_edge
 
 
-class MeasureLabel(object):
+class MeasureLabel(chunking.SharedArrsContainer):
     """Measure metrics within image labels in a way that allows 
     multiprocessing without global variables.
     
@@ -297,7 +298,11 @@ class MeasureLabel(object):
         cls.spacing = spacing
     
     @classmethod
-    def label_metrics(cls, label_id, extra_metrics=None):
+    def label_metrics(
+            cls, label_id: Union[int, Sequence[int]],
+            extra_metrics: List[config.MetricGroups] = None,
+            df: Optional[pd.DataFrame] = None, spacing: Sequence[float] = None
+    ) -> Tuple[int, Dict]:
         """Calculate metrics for a given label or set of labels.
         
         Wrapper to call :func:``measure_variation``, 
@@ -306,8 +311,12 @@ class MeasureLabel(object):
         Args:
             label_id: Integer of the label or sequence of multiple labels 
                 in :attr:``labels_img_np`` for which to measure variation.
-            extra_metrics (List[:obj:`config.MetricGroups`]): Sequence of 
-                additional metric groups to measure; defaults to None. 
+            extra_metrics: Sequence of additional metric groups to measure;
+                defaults to None.
+             df: Pandas data frame with a row for each sub-region; defaults
+                to None.
+             spacing: Sequence of image spacing for each pixel in the images;
+                defaults to None.
         
         Returns:
             Tuple of the given label ID, intensity variation, number of 
@@ -315,6 +324,38 @@ class MeasureLabel(object):
             sum edge distances, mean of edge distances, and number of 
             pixels in the label edge.
         """
+        # convert shared arrays to ndarrays if not present
+        if cls.atlas_img_np is None:
+            cls.atlas_img_np = cls.convert_shared_arr(
+                config.RegNames.IMG_ATLAS)
+        if cls.labels_img_np is None:
+            cls.labels_img_np = cls.convert_shared_arr(
+                config.RegNames.IMG_LABELS)
+        if cls.labels_edge is None:
+            cls.labels_edge = cls.convert_shared_arr(
+                config.RegNames.IMG_LABELS_EDGE)
+        if cls.dist_to_orig is None:
+            cls.dist_to_orig = cls.convert_shared_arr(
+                config.RegNames.IMG_LABELS_DIST)
+        if cls.labels_interior is None:
+            cls.labels_interior = cls.convert_shared_arr(
+                config.RegNames.IMG_LABELS_INTERIOR)
+        if cls.heat_map is None:
+            cls.heat_map = cls.convert_shared_arr(
+                config.RegNames.IMG_HEAT_MAP)
+        if cls.blobs is None:
+            cls.blobs = cls.convert_shared_arr(config.SUFFIX_BLOBS)
+        if cls.subseg is None:
+            cls.subseg = cls.convert_shared_arr(
+                config.RegNames.IMG_LABELS_SUBSEG)
+         
+        if df is not None:
+            # set data frame of stats at finest level
+            cls.df = df
+        if spacing is not None:
+            # set image spacing
+            cls.spacing = spacing
+        
         # process basic metrics
         #print("getting label metrics for {}".format(label_id))
         _, count_metrics = cls.measure_counts(label_id)
@@ -812,16 +853,34 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
         # units already converted, but need to convert sides
         _update_df_side(df)
         vol_args = {}
-    
-    # use a class to set and process the label without having to 
-    # reference the labels image as a global variable
-    MeasureLabel.set_data(
-        atlas_img_np, labels_img_np, labels_edge, dist_to_orig, 
-        labels_interior, heat_map, blobs, subseg, df, spacing)
+
+    is_fork = chunking.is_fork()
+    initializer = None
+    initargs = None
+    if is_fork:
+        # use a class to set and process the label without having to 
+        # reference the labels image as a global variable in forked mode
+        MeasureLabel.set_data(
+            atlas_img_np, labels_img_np, labels_edge, dist_to_orig, 
+            labels_interior, heat_map, blobs, subseg, df, spacing)
+    else:
+        # set up shared arrays for spawned mode
+        _logger.info("Initializing multiprocessing pool with images, which "
+                     "may take awhile to complete")
+        initializer, initargs = MeasureLabel.build_pool_init({
+            config.RegNames.IMG_ATLAS: atlas_img_np,
+            config.RegNames.IMG_LABELS: labels_img_np,
+            config.RegNames.IMG_LABELS_EDGE: labels_edge,
+            config.RegNames.IMG_LABELS_DIST: dist_to_orig,
+            config.RegNames.IMG_LABELS_INTERIOR: labels_interior,
+            config.RegNames.IMG_HEAT_MAP: heat_map,
+            config.SUFFIX_BLOBS: blobs,
+            config.RegNames.IMG_LABELS_SUBSEG: subseg,
+        })
     
     metrics = {}
     grouping[config.AtlasMetrics.SIDE.value] = None
-    pool = chunking.get_mp_pool()
+    pool = chunking.get_mp_pool(initializer, initargs)
     pool_results = []
     if label_ids is None:
         label_ids = np.unique(labels_img_np)
@@ -832,9 +891,12 @@ def measure_labels_metrics(atlas_img_np, labels_img_np,
         # background
         if label_id == 0: continue
         if combine_sides: label_id = [label_id, -1 * label_id]
+        args = [label_id, extra_metrics]
+        if not is_fork:
+            args.append(df)
+            args.append(spacing)
         pool_results.append(
-            pool.apply_async(
-                MeasureLabel.label_metrics, args=(label_id, extra_metrics)))
+            pool.apply_async(MeasureLabel.label_metrics, args=args))
     
     totals = {}
     for result in pool_results:

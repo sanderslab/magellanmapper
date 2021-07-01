@@ -16,6 +16,8 @@ from magmap.settings import atlas_prof, config, profiles
 from magmap.io import df_io, libmag, sitk_io
 from magmap.stats import vols
 
+_logger = config.logger.getChild(__name__)
+
 
 def _mirror_imported_labels(labels_img_np, start, mirror_mult, axis):
     # mirror labels that have been imported and transformed may have had
@@ -359,26 +361,29 @@ def edge_aware_segmentation(
     labels_sitk_seg = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_seg)
     
     # show DSCs for labels
-    print("\nMeasuring overlap of atlas and combined watershed labels:")
-    atlas_refiner.measure_overlap_combined_labels(atlas_sitk, labels_sitk_seg)
-    print("Measuring overlap of individual original and watershed labels:")
-    atlas_refiner.measure_overlap_labels(labels_sitk, labels_sitk_seg)
-    print("\nMeasuring overlap of combined original and watershed labels:")
-    atlas_refiner.measure_overlap_labels(
+    _logger.info(
+        "\nMeasuring overlap of individual original and watershed labels:")
+    dsc_lbls_comb = atlas_refiner.measure_overlap_labels(
+        labels_sitk, labels_sitk_seg)
+    _logger.info(
+        "\nMeasuring overlap of combined original and watershed labels:")
+    dsc_lbls_indiv = atlas_refiner.measure_overlap_labels(
         atlas_refiner.make_labels_fg(labels_sitk), 
         atlas_refiner.make_labels_fg(labels_sitk_seg))
-    print()
+    _logger.info("")
     
     # measure and save whole atlas metrics
     metrics = {
         config.AtlasMetrics.SAMPLE: [os.path.basename(mod_path)],
         config.AtlasMetrics.REGION: config.REGION_ALL,
         config.AtlasMetrics.CONDITION: "|".join(cond),
+        config.AtlasMetrics.DSC_LABELS_ORIG_NEW_COMBINED: dsc_lbls_comb,
+        config.AtlasMetrics.DSC_LABELS_ORIG_NEW_INDIV: dsc_lbls_indiv,
     }
     df_metrics_path = libmag.combine_paths(
         mod_path, config.PATH_ATLAS_IMPORT_METRICS)
     atlas_refiner.measure_atlas_refinement(
-        metrics, atlas_sitk, labels_sitk, atlas_profile, df_metrics_path)
+        metrics, atlas_sitk, labels_sitk_seg, atlas_profile, df_metrics_path)
 
     # show and write image to same directory as atlas with appropriate suffix
     sitk_io.write_reg_images(

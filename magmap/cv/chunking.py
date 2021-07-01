@@ -362,31 +362,3 @@ def merge_blobs(blob_rois):
     else:
         blobs_all = None
     return blobs_all
-
-
-def main():
-    """Test splitting and remerging."""
-    config.resolutions = [[6.6, 1.1, 1.1]]
-    roi = np.arange(5 * 4 * 4)
-    roi = roi.reshape((5, 4, 4))
-    print("roi:\n{}".format(roi))
-    overlap = calc_overlap()
-    sub_roi_slices, sub_rois_offsets = stack_splitter(roi.shape, [1, 2, 2])
-    print("sub_rois shape: {}".format(sub_roi_slices.shape))
-    print("sub_rois:\n{}".format(sub_roi_slices))
-    print("overlap: {}".format(overlap))
-    print("sub_rois_offsets:\n{}".format(sub_rois_offsets))
-    for z in range(sub_roi_slices.shape[0]):
-        for y in range(sub_roi_slices.shape[1]):
-            for x in range(sub_roi_slices.shape[2]):
-                coord = (z, y, x)
-                sub_roi_slices[coord] = roi[sub_roi_slices[coord]]
-    merged = merge_split_stack(sub_roi_slices, overlap)
-    print("merged:\n{}".format(merged))
-    print("merged shape: {}".format(merged.shape))
-    print("test roi == merged: {}".format(np.all(roi == merged)))
-
-
-if __name__ == "__main__":
-    print("Starting chunking...")
-    main()

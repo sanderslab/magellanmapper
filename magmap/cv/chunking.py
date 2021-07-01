@@ -3,7 +3,7 @@
 """Divides a region into smaller chunks and reassembles it."""
 
 import multiprocessing as mp
-from typing import Callable, Optional, Tuple
+from typing import Callable, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -174,14 +174,18 @@ def stack_splitter(shape, max_pixels, overlap=None):
     return sub_rois_slices, sub_rois_offsets
 
 
-def merge_split_stack(sub_rois, overlap):
+def merge_split_stack(
+        sub_rois: np.ndarray, max_pixels: Sequence[int],
+        overlap: np.ndarray) -> np.ndarray:
     """Merges sub regions back into a single stack.
     
     See :func:``merge_split_stack2`` for a much faster implementation 
     if the final output array size is known beforehand.
     
     Args:
-        sub_rois: Array of sub regions, in (z, y, x, ...) dimensions.
+        sub_rois: Array of sub regions, in ``z, y, x, ...`` dimensions.
+        max_pixels: Max pixels for each side in ``z, y, x`` order. Assumes
+            that the full stack was at least this large.
         overlap: Overlap size between sub-ROIs.
     
     Return:
@@ -200,10 +204,15 @@ def merge_split_stack(sub_rois, overlap):
                 sub_roi = sub_rois[coord]
                 edges = list(sub_roi.shape[0:3])
                 
-                # remove overlap if not at last sub_roi or row or column
                 for n in range(len(edges)):
                     if coord[n] != size[n] - 1:
-                        edges[n] -= overlap[n]
+                        # not last sub_roi or row or column
+                        if edges[n] < max_pixels[n] + overlap[n]:
+                            # assume sub-ROI was truncated to max pixels
+                            edges[n] = max_pixels[n]
+                        else:
+                            # remove overlap
+                            edges[n] -= overlap[n]
                 sub_roi = sub_roi[:edges[0], :edges[1], :edges[2]]
                 
                 # add back the non-overlapping region to build an x-direction

@@ -4,7 +4,7 @@
 
 import multiprocessing as mp
 from multiprocessing import sharedctypes
-from typing import Callable, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -12,7 +12,7 @@ from magmap.settings import config
 from magmap.io import libmag
 
 
-def init_shared_labels(fn: Callable, *args):
+def init_shared_container(fn: Callable, *args):
     """Provide generic initialization for spawned multiprocessing.
     
     Args:
@@ -23,74 +23,83 @@ def init_shared_labels(fn: Callable, *args):
     fn(*args)
 
 
-class SharedLabelsImg:
-    """Convert a label to an eroded marker for multiprocessing
+class SharedArr:
+    """Shared array storage class.
+    
+    Attrbibutes:
+        arr: Shared ctypes raw array.
+        shape: Shape of the original ndarray array.
+        dtype: Data type of the ndarray.
+    
+    """
+    def __init__(self, arr: np.ndarray):
+        """Initialize the array storage.
+        
+        Args:
+            arr: NumPy array to be converted to a shared ctypes raw array.
+        
+        """
+        self.arr = sharedctypes.RawArray(np.ctypeslib.as_ctypes_type(
+            arr.dtype), arr.flatten())
+        self.shape = arr.shape
+        self.dtype = arr.dtype
 
-    Uses class methods as an encapsulated way to use in forked multiprocessing
-    without requirement for global variables. In non-forked multiprocessing
-    (eg "spawn" on Windows), regions and weights should be pickled directly.
+
+class SharedArrsContainer:
+    """Container class for storing shared arrays for multiprocessing.
+
+    Arrays are taken as ndarrays, stored as raw arrays, and accessed back
+    as ndarrays.
 
     Attributes:
-        labels_img_shared: ``labels_img`` as a shared array.
-        labels_img_shape: Shape of ``labels_img_shared``.
-        labels_img_dtype: Data type of ``labels_img_shared``.
+        shared_arrs: Dictionary of registered names to shared image instances.
+    
     """
-    labels_img: np.ndarray = None
-    labels_img_shared: sharedctypes.RawArray = None
-    labels_img_shape: Tuple = None
-    labels_img_dtype: np.dtype = None
+    shared_arrs: Dict[Any, SharedArr] = None
     
     @classmethod
-    def setup_labels_img_shared(cls, img, shape, dtype):
-        """Set up shared labels image for reconstructing as ndarray.
-
-        Args:
-            img: Labels image as a shared array.
-            shape: Shape of the image.
-            dtype: Data type of the image.
-
-        """
-        cls.labels_img_shared = img
-        cls.labels_img_shape = shape
-        cls.labels_img_dtype = dtype
+    def setup_shared_arrs(cls, shared_arrs: Dict[Any, SharedArr]):
+        """Set up shared arrays for reconstructing as ndarray."""
+        cls.shared_arrs = shared_arrs
 
     @classmethod
-    def build_pool_init(cls, labels_img: np.ndarray) -> Tuple[Callable, Tuple]:
+    def build_pool_init(
+            cls, arrs: Dict[Any, np.ndarray]
+    ) -> Tuple[Callable, Tuple[Callable, Dict[Any, SharedArr]]]:
         """Build the initializer and its arguments for multiprocessing Pool.
 
         Args:
-            labels_img: Labels image array.
+            arrs: Dictionary of ndarrays to convert to shared arrays.
 
         Returns:
             Tuple of :meth:`init_shared_labels` as the Pool initializer
             function and a tuple of the arguments to this initializer,
-            consisting of :meth:`SharedLabelsImg.setup_labels_img_shared`` and
-            ``labels_img`` as a shared raw array, its shape, and its data type.
+            consisting of :meth:`SharedArrsContainer.setup_shared_arrs`` and
+            a dictionary of the shared arrays.
 
         """
         initargs = (
-            cls.setup_labels_img_shared,
-            sharedctypes.RawArray(np.ctypeslib.as_ctypes_type(
-                labels_img.dtype), labels_img.flatten()),
-            labels_img.shape,
-            labels_img.dtype,
+            cls.setup_shared_arrs,
+            {k: SharedArr(v) for k, v in arrs.items() if v is not None},
         )
-        return init_shared_labels, initargs
+        return init_shared_container, initargs
 
     @classmethod
-    def convert_shared_labels_img(cls) -> np.ndarray:
+    def convert_shared_arr(cls, arr_key) -> Optional[np.ndarray]:
         """Convert labels image as a shared array to a NumPy array.
         
         Returns:
-            The shared labels array as a NumPy array.
+            The shared array as an ndarray, or None if not found.
 
         """
-        if cls.labels_img is None:
-            # convert shared raw array to Numpy array for labels image
-            cls.labels_img = np.frombuffer(
-                cls.labels_img_shared, cls.labels_img_dtype).reshape(
-                cls.labels_img_shape)
-        return cls.labels_img
+        # get shared image
+        if cls.shared_arrs is None: return None
+        shared_img = cls.shared_arrs.get(arr_key)
+        if shared_img is None: return None
+        
+        # convert shared raw array to Numpy array for labels image
+        return np.frombuffer(
+            shared_img.arr, shared_img.dtype).reshape(shared_img.shape)
 
 
 def set_mp_start_method(val=None):

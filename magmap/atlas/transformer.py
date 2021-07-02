@@ -5,6 +5,7 @@ and image transposition.
 """
 
 from time import time
+from typing import Sequence
 
 import numpy as np
 from skimage import transform
@@ -116,15 +117,17 @@ def make_modifier_resized(target_size):
     return "resized({},{},{})".format(*target_size)
 
 
-def get_transposed_image_path(img_path, scale=None, target_size=None):
-    """Get path, modified for any transposition by :func:``transpose_npy`` 
-    naming conventions.
+def get_transposed_image_path(
+        img_path: str, scale: float = None, target_size: Sequence[int] = None
+) -> str:
+    """Get path modified for any transposition.
     
     Args:
         img_path: Unmodified image path.
-        scale: Scaling factor; defaults to None, which ignores scaling.
-        target_size: Target size, typically given by a register profile; 
-            defaults to None, which ignores target size.
+        scale: Scaling factor, which takes precedence over ``target_size``;
+            defaults to None.
+        target_size: Target size in ``x, y, z``, typically given by an atlas
+            profile; defaults to None.
     
     Returns:
         Modified path for the given transposition, or ``img_path`` unmodified 
@@ -134,7 +137,6 @@ def get_transposed_image_path(img_path, scale=None, target_size=None):
     if scale is not None or target_size is not None:
         # use scaled image for pixel comparison, retrieving 
         # saved scaling as of v.0.6.0
-        modifier = None
         if scale is not None:
             # scale takes priority as command-line argument
             modifier = make_modifier_scale(scale)

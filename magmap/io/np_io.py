@@ -3,6 +3,7 @@
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import os
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 import pandas as pd
@@ -62,30 +63,35 @@ def img_to_blobs_path(path):
     return libmag.combine_paths(path, config.SUFFIX_BLOBS)
 
 
-def find_scaling(img_path, scaled_shape=None, scale=None):
+def find_scaling(
+        img_path: str, scaled_shape: Optional[Sequence[int]] = None,
+        scale: float = None, load_size: Optional[Sequence[int]] = None
+) -> Tuple[Sequence[float], Sequence[float]]:
     """Find scaling between two images.
     
     Scaling can be computed to translate blob coordinates into another
     space, such as a heat map for a downsampled image.
     
     Args:
-        img_path (str): Base path to image.
-        scaled_shape (List): Shape of image to calculate scaling factor if
+        img_path: Base path to image.
+        scaled_shape: Shape of image to calculate scaling factor if
             this factor cannot be found from a transposed file's metadata;
             defaults to None.
-        scale (int, float): Scalar scaling factor, used to find a
+        scale: Scalar scaling factor, used to find a
             rescaled file; defaults to None. To find a resized file instead,
             set an atlas profile with the resizing factor.
+        load_size: Size of image to load in ``x, y, z``, typically given by an
+            atlas profile and used to identify the path of the scaled
+            image to load; defaults to None.
 
     Returns:
-        list[float], list[float]: Sequence of scaling factors to a scaled
+        Tuple of sequence of scaling factors to a scaled
         or resized image, or None if not loaded or given, and the resolutions
         of the full-sized image found based on ``img_path``.
 
     """
     # get scaling and resolutions from blob space to that of a down/upsampled
     # image space
-    load_size = config.atlas_profile["target_size"]
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None

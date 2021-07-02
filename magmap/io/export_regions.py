@@ -9,18 +9,19 @@ import os
 import csv
 from collections import OrderedDict
 from time import time
+from typing import Dict, Optional, Sequence, Tuple
 
 import SimpleITK as sitk
 import numpy as np
 import pandas as pd
 
-from magmap.settings import config
 from magmap.io import libmag
 from magmap.io import np_io
 from magmap.atlas import ontology
 from magmap.cv import chunking, colocalizer, cv_nd, detector
 from magmap.io import df_io, sitk_io, sqlite
 from magmap.plot import colormaps
+from magmap.settings import config, atlas_prof
 from magmap.stats import vols
 
 
@@ -171,8 +172,14 @@ def export_common_labels(img_paths, output_path):
     return df
 
 
-def make_density_image(img_path, scale=None, shape=None, suffix=None, 
-                       labels_img_sitk=None, channel=None, matches=None):
+def make_density_image(
+        img_path: str, scale: Optional[float] = None,
+        shape: Optional[Sequence[int]] = None, suffix: Optional[str] = None, 
+        labels_img_sitk: Optional[sitk.Image] = None,
+        channel: Optional[Sequence[int]] = None,
+        matches: Dict[Tuple[int, int], colocalizer.BlobMatch] = None,
+        atlas_profile: Optional[atlas_prof.AtlasProfile] = None
+) -> Tuple[np.ndarray, str]:
     """Make a density image based on associated blobs.
     
     Uses the shape of the registered labels image by default to set 
@@ -185,29 +192,26 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     
     Args:
         img_path: Path to image, which will be used to indentify the blobs file.
-        scale: Rescaling factor as a scalar value to find the corresponding 
-            full-sized image. Defaults to None to use the register 
-            setting ``target_size`` instead if available, falling back 
-            to load the full size image to find its shape if necessary.
-        shape: Final shape size; defaults to None to use the shape of 
-            the labels image.
+        scale: Scaling factor between the blobs' space and the output space;
+            defaults to None to use the register. Scaling is found by
+            :meth:`magmap.np_io.find_scaling`.
+        shape: Output shape, used for scaling; defaults to None.
         suffix: Modifier to append to end of ``img_path`` basename for 
             registered image files that were output to a modified name; 
             defaults to None.
-        labels_img_sitk: Labels image as a SimpleITK ``Image`` object; 
-            defaults to None, in which case the registered labels image file 
-            corresponding to ``img_path`` with any ``suffix`` modifier 
-            will be opened.
-        channel (List[int]): Sequence of channels to include in density image;
+        labels_img_sitk: Labels image; defaults to None to load from a
+            registered labels image.
+        channel: Sequence of channels to include in density image;
             defaults to None to combine blobs from all channels.
-        matches (dict[tuple[int, int], :class:`magmap.cv.colocalizer`):
-            Dictionary of channel combinations to blob matches; defaults to
-            None.
+        matches: Dictionary of channel combinations to blob matches; defaults
+            to None.
+        atlas_profile: Atlas profile, used for scaling; defaults to None.
     
     Returns:
-        :obj:`np.ndarray`, str: The density image as a Numpy array in the
+        Tuple of the density image as a Numpy array in the
         same shape as the opened image and the original and ``img_path``
         to track such as for multiprocessing.
+    
     """
     def make_heat_map():
         # build heat map to store densities per label px and save to file
@@ -227,7 +231,10 @@ def make_density_image(img_path, scale=None, shape=None, suffix=None,
     
     # load blobs
     blobs = detector.Blobs().load_blobs(np_io.img_to_blobs_path(img_path))
-    scaling = np_io.find_scaling(img_path, labels_img.shape, scale)[0]
+    target_size = (
+        None if atlas_profile is None else atlas_profile["target_size"])
+    scaling = np_io.find_scaling(
+        img_path, labels_img.shape, scale, target_size)[0]
     if shape is not None:
         # scale blob coordinates and heat map to an alternative final shape
         scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
@@ -328,7 +335,8 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None,
             matches = None
         pool_results.append(pool.apply_async(
             make_density_image,
-            args=(img_path, scale, shape, suffix, None, channel, matches)))
+            args=(img_path, scale, shape, suffix, None, channel, matches,
+                  config.atlas_profile)))
     for result in pool_results:
         _, path = result.get()
         print("finished {}".format(path))

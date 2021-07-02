@@ -613,7 +613,8 @@ def extend_edge(region, region_ref, threshold, plane_region, planei,
                           "wt_lat", wt_lat_frac)
                 markers, _ = segmenter.labels_to_markers_erosion(
                     plane_add, filt_size, -1, filt_size_min,
-                    marker_erosion_use_min, wt_dists=wt_dists)
+                    marker_erosion_use_min, wt_dists=wt_dists,
+                    multiprocess=False)
                 plane_add = segmenter.segment_from_labels(
                     edges_region[planei], markers, plane_add)
                 # make resulting plane the new template for smoother

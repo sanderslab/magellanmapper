@@ -313,9 +313,9 @@ class MeasureLabel(chunking.SharedArrsContainer):
                 in :attr:``labels_img_np`` for which to measure variation.
             extra_metrics: Sequence of additional metric groups to measure;
                 defaults to None.
-             df: Pandas data frame with a row for each sub-region; defaults
+            df: Pandas data frame with a row for each sub-region; defaults
                 to None.
-             spacing: Sequence of image spacing for each pixel in the images;
+            spacing: Sequence of image spacing for each pixel in the images;
                 defaults to None.
         
         Returns:

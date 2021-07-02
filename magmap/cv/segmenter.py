@@ -8,6 +8,7 @@ from time import time
 from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
+import pandas as pd
 from scipy import ndimage
 from skimage import feature
 from skimage import filters
@@ -20,6 +21,8 @@ from magmap.cv import chunking, cv_nd, detector
 from magmap.io import libmag
 from magmap.plot import plot_3d
 from magmap.io import df_io
+
+_logger = config.logger.getChild(__name__)
 
 
 def _markers_from_blobs(roi, blobs):
@@ -366,68 +369,86 @@ class LabelToMarkerErosion(chunking.SharedArrsContainer):
         return stats_eros, slices, filtered
 
 
-def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
-                              min_filter_size=None, use_min_filter=False, 
-                              skel_eros_filt_size=None, wt_dists=None):
+def labels_to_markers_erosion(
+        labels_img: np.ndarray, filter_size: int = 8,
+        target_frac: Optional[float] = None,
+        min_filter_size: Optional[int] = None, use_min_filter: bool = False, 
+        skel_eros_filt_size: Optional[int] = None,
+        wt_dists: Optional[np.ndarray] = None, multiprocess: bool = True
+) -> Tuple[np.ndarray, pd.DataFrame]:
     """Convert a labels image to markers as eroded labels via multiprocessing.
     
     These markers can be used in segmentation algorithms such as 
     watershed.
     
     Args:
-        labels_img (:obj:`np.ndarray`): Labels image as an integer Numpy array,
+        labels_img: Labels image as an integer Numpy array,
             where each unique int is a separate label.
-        filter_size (int): Size of structing element for erosion, which should
+        filter_size: Size of structing element for erosion, which should
             be > 0; defaults to 8.
-        target_frac (float): Target fraction of original label to erode,
+        target_frac: Target fraction of original label to erode,
             passed to :func:`LabelToMarkerErosion.erode_label`. Defaults
             to None.
-        min_filter_size (int): Minimum erosion filter size; defaults to None
+        min_filter_size: Minimum erosion filter size; defaults to None
             to use half of ``filter_size``, rounded down.
-        use_min_filter (bool): True to erode even if ``min_filter_size``
+        use_min_filter: True to erode even if ``min_filter_size``
             is reached; defaults to False to avoid any erosion if this size
             is reached.
-        skel_eros_filt_size (int): Erosion filter size before skeletonization
+        skel_eros_filt_size: Erosion filter size before skeletonization
             in :func:`LabelToMarkerErosion.erode_labels`. Defaults to None to
             use the minimum filter size, which is half of ``filter_size``.
-        wt_dists (:obj:`np.ndarray`): Array of distances by which to weight
+        wt_dists: Array of distances by which to weight
             the filter size, such as a distance transform to the outer
             perimeter of ``labels_img`` to weight central labels more
             heavily. Defaults to None.
+        multiprocess: True to use multiprocessing; defaults to True.
     
     Returns:
-        :obj:`np.ndarray`: Image array of the same shape as ``img`` and the
-        same number of labels as in ``labels_img``, with eroded labels.
+        Tuple of an image array of the same shape as ``img`` and the
+        same number of labels as in ``labels_img``, with eroded labels, and
+        a data frame of erosion metrics.
+    
     """
+    def handle_eroded_label():
+        # mutate markers outside of mp for changes to persist and collect stats
+        markers[tuple(slices)][filtered] = stats_eros[0]
+        for col, stat in zip(cols, stats_eros):
+            sizes_dict.setdefault(col, []).append(stat)
+    
+    # set up labels erosion
     start_time = time()
+    _logger.info(
+        "Eroding labels to markers with filter size %s, min filter size %s, "
+        "and target fraction %s", filter_size, min_filter_size, target_frac)
     markers = np.zeros_like(labels_img)
     labels_unique = np.unique(labels_img)
     if min_filter_size is None:
         min_filter_size = filter_size // 2
     if skel_eros_filt_size is None:
         skel_eros_filt_size = filter_size // 2
-    #labels_unique = np.concatenate((labels_unique[:5], labels_unique[-5:]))
     sizes_dict = {}
     cols = (config.AtlasMetrics.REGION.value, "SizeOrig", "SizeMarker",
             config.SmoothingMetrics.FILTER_SIZE.value)
     
-    # erode labels via multiprocessing
-    print("Eroding labels to markers with filter size {}, min filter size {}, "
-          "and target fraction {}"
-          .format(filter_size, min_filter_size, target_frac))
-    is_fork = chunking.is_fork()
-    initializer = None
-    initargs = None
-    if is_fork:
-        # share large images as class attributes in forked mode
-        LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
-    else:
-        # set up labels image as a shared array for spawned mode
-        initializer, initargs = LabelToMarkerErosion.build_pool_init({
-            config.RegNames.IMG_LABELS: labels_img})
+    # share large images as class attributes for forked or non-multiprocessing
+    LabelToMarkerErosion.set_labels_img(labels_img, wt_dists)
+
+    is_fork = False
+    pool_results = None
+    pool = None
+    if multiprocess:
+        # set up multiprocessing
+        is_fork = chunking.is_fork()
+        initializer = None
+        initargs = None
+        if not is_fork:
+            # set up labels image as a shared array for spawned mode
+            initializer, initargs = LabelToMarkerErosion.build_pool_init({
+                config.RegNames.IMG_LABELS: labels_img})
+        
+        pool = chunking.get_mp_pool(initializer, initargs)
+        pool_results = []
     
-    pool = chunking.get_mp_pool(initializer, initargs)
-    pool_results = []
     for label_id in labels_unique:
         if label_id == 0: continue
         # erode labels to generate markers, excluding labels small enough
@@ -435,26 +456,34 @@ def labels_to_markers_erosion(labels_img, filter_size=8, target_frac=None,
         args = [label_id, filter_size, target_frac, min_filter_size,
                 use_min_filter, skel_eros_filt_size]
         if not is_fork:
-            # pickle distance weight directly in spawned mode
+            # pickle distance weight directly in spawned mode (not necessary
+            # for non-multiprocessed but equivalent)
             if wt_dists is not None:
                 args.append(LabelToMarkerErosion.meas_wt(
                     labels_img, label_id, wt_dists))
-        pool_results.append(
-            pool.apply_async(LabelToMarkerErosion.erode_label, args=args))
+        if pool is None:
+            # process labels without multiprocessing
+            stats_eros, slices, filtered = LabelToMarkerErosion.erode_label(
+                *args)
+            handle_eroded_label()
+        else:
+            # process in multiprocessing
+            pool_results.append(
+                pool.apply_async(LabelToMarkerErosion.erode_label, args=args))
     
-    for result in pool_results:
-        stats_eros, slices, filtered = result.get()
-        # can only mutate markers outside of mp for changes to persist
-        markers[tuple(slices)][filtered] = stats_eros[0]
-        for col, stat in zip(cols, stats_eros):
-            sizes_dict.setdefault(col, []).append(stat)
-    pool.close()
-    pool.join()
+    if multiprocess:
+        # handle multiprocessing output
+        for result in pool_results:
+            stats_eros, slices, filtered = result.get()
+            handle_eroded_label()
+        pool.close()
+        pool.join()
     
     # show erosion stats
     df = df_io.dict_to_data_frame(sizes_dict, show=True)
     
-    print("time elapsed to erode labels into markers:", time() - start_time)
+    _logger.info(
+        "Time elapsed to erode labels into markers: %s", time() - start_time)
     return markers, df
 
 

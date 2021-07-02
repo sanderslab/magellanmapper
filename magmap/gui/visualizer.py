@@ -566,7 +566,9 @@ class Visualization(HasTraits):
                      values=[e.value for e in RegionOptions], cols=2,
                      format_func=lambda x: x)),
         ),
-        Item("_roi_feedback", style="custom", show_label=False),
+        # give initial focus to text editor that does not trigger any events to
+        # avoid inadvertent actions by the user when the window first displays
+        Item("_roi_feedback", style="custom", show_label=False, has_focus=True),
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),

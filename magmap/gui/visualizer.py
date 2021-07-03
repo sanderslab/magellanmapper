@@ -567,8 +567,10 @@ class Visualization(HasTraits):
                      format_func=lambda x: x)),
         ),
         # give initial focus to text editor that does not trigger any events to
-        # avoid inadvertent actions by the user when the window first displays
-        Item("_roi_feedback", style="custom", show_label=False, has_focus=True),
+        # avoid inadvertent actions by the user when the window first displays;
+        # set width to any small val to get smallest size for the whole panel
+        Item("_roi_feedback", style="custom", show_label=False, has_focus=True,
+             width=100),
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
@@ -723,8 +725,9 @@ class Visualization(HasTraits):
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
     panel_figs = Tabbed(
+        # set a small width to allow window to be resized down to this size
         Item("_roi_ed_fig", label="ROI Editor", show_label=False,
-             editor=MPLFigureEditor(), width=1000, height=600),
+             editor=MPLFigureEditor(), width=100, height=600),
         Item("_atlas_ed_fig", label="Atlas Editor", show_label=False,
              editor=MPLFigureEditor()),
         Item("scene", label="3D Viewer", show_label=False,
@@ -735,13 +738,17 @@ class Visualization(HasTraits):
     icon_img = (ImageResource(str(config.ICON_PATH))
                 if config.ICON_PATH.exists() else None)
     
-    # set up the GUI layout; control the HSplit width ratio using a width
-    # for this whole view and a width for an item in panel_figs
+    # set up the GUI layout; 
     view = View(
+        # control the HSplit width ratio by setting min widths for an item in
+        # each Tabbed view and initial window total width; panel_figs expands
+        # to fill the remaining space
         HSplit(
             panel_options,
             panel_figs,
         ),
+        # initial window width, which can be resized down to the minimum
+        # widths of each panel in the HSplit
         width=1500,
         handler=vis_handler.VisHandler(),
         title="MagellanMapper",

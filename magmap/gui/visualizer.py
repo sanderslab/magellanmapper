@@ -754,6 +754,8 @@ class Visualization(HasTraits):
         statusbar="_status_bar_msg",
         resizable=True,
         icon=icon_img,
+        # set ID to trigger saving TraitsUI preferences for window size/position
+        id=f"{__name__}.{__qualname__}",
     )
 
     def __init__(self):

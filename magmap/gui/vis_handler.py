@@ -2,14 +2,18 @@
 """TraitsUI handler for Visualization class."""
 
 from enum import Enum, auto
+import pathlib
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from PyQt5 import QtWidgets, QtGui
+from traits.trait_base import traits_home
 from traitsui.api import Handler
 
 from magmap.gui import event_handlers
 from magmap.io import cli
 from magmap.settings import config
+
+_logger = config.logger.getChild(__name__)
 
 
 class VisHandler(Handler):
@@ -65,6 +69,17 @@ class VisHandler(Handler):
         self._file_open_handler = event_handlers.FileOpenHandler(
             info.object.open_image)
         app.installEventFilter(self._file_open_handler)
+        
+        # create TraitsUI preferences database if it does not exist
+        pathlib.Path(traits_home()).mkdir(parents=True, exist_ok=True)
+        db = info.ui.get_ui_db("c")
+        if db is not None:
+            if config.verbose:
+                # show MagellanMapper related db entries
+                for k, v in db.items():
+                    if k.startswith("magmap"):
+                        _logger.debug("TraitsUI preferences for %s: %s", k, v)
+            db.close()
         
         # WORKAROUND: TraitsUI icon does not work in Mac; use PyQt directly to
         # display application window icon using abs path; ignored in Windows

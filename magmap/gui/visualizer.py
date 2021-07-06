@@ -749,7 +749,7 @@ class Visualization(HasTraits):
         ),
         # initial window width, which can be resized down to the minimum
         # widths of each panel in the HSplit
-        width=1500,
+        width=1200,
         handler=vis_handler.VisHandler(),
         title="MagellanMapper",
         statusbar="_status_bar_msg",

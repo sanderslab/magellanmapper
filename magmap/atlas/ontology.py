@@ -7,6 +7,7 @@ import os
 from collections import OrderedDict
 from enum import Enum
 import json
+from typing import Dict, Union
 
 import numpy as np
 import pandas as pd
@@ -30,15 +31,15 @@ class LabelColumns(Enum):
     TO_LABEL = "ToLabel"
 
 
-def load_labels_ref(path):
+def load_labels_ref(path: str) -> Union[Dict, pd.DataFrame]:
     """Load labels from a reference JSON or CSV file.
     
     Args:
-        path (str): Path to labels reference.
+        path: Path to labels reference.
     
     Returns:
-        Union[dict, :class:`pandas.DataFrame`]: A JSON decoded object
-        (eg dictionary) if the path has a JSON extension, or a data frame.
+        A JSON decoded object (eg dictionary) if the path has a JSON extension,
+        or a data frame.
     
     Raises:
         FileNotFoundError: if ``path`` could not be loaded or parsed.
@@ -176,18 +177,18 @@ def create_reverse_lookup(nested_dict, key, key_children, id_dict=None,
     return id_dict
 
 
-def create_lookup_pd(df):
+def create_lookup_pd(df: pd.DataFrame) -> OrderedDict:
     """Create a lookup dictionary from a Pandas data frame.
     
     Args:
-        df (:class:`pandas.DataFrame`): Pandas data frame, assumed to have at
+        df: Pandas data frame, assumed to have at
             least columns corresponding to :const:``config.ABAKeys.ABA_ID``
             or :const:``config.AtlasMetrics.REGION`` and 
             :const:``config.ABAKeys.ABA_NAME`` or
             :const:``config.AtlasMetrics.REGION_NAME``.
     
     Returns:
-        dict: Dictionary similar to that generated from 
+        Dictionary similar to that generated from 
         :meth:``create_reverse_lookup``, with IDs as keys and values 
         corresponding of another dictionary with :const:``NODE`` and 
         :const:``PARENT_IDS`` as keys. :const:``NODE`` in turn 
@@ -229,6 +230,27 @@ def create_lookup_pd(df):
         raise KeyError(f"Could not find this column in the labels reference "
                        f"file: {e}")
     return id_dict
+
+
+def create_ref_lookup(labels_ref: Union[pd.DataFrame, Dict]) -> OrderedDict:
+    """Wrapper to create a reference lookup from different sources.
+    
+    Reference data frames and dictionaries are converted to a dictionary
+    that can be looked up by ID.
+    
+    Args:
+        labels_ref: Reference dictionary or data frame, typically loaded
+            from :meth:`load_labels`.
+
+    Returns:
+        Ordered dictionary for looking up by ID.
+
+    """
+    if isinstance(labels_ref, pd.DataFrame):
+        # parse CSV files loaded into data frame
+        return create_lookup_pd(labels_ref)
+    # parse dict from ABA JSON file
+    return create_aba_reverse_lookup(labels_ref)
 
 
 def _get_children(labels_ref_lookup, label_id, children_all=[]):

@@ -383,15 +383,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
         try:
             if config.load_labels is not None:
                 # load labels reference file
-                labels_ref = ontology.load_labels_ref(config.load_labels)
-                if isinstance(labels_ref, pd.DataFrame):
-                    # parse CSV files loaded into data frame
-                    config.labels_ref_lookup = ontology.create_lookup_pd(
-                        labels_ref)
-                else:
-                    # parse dict from ABA JSON file
-                    config.labels_ref_lookup = (
-                        ontology.create_aba_reverse_lookup(labels_ref))
+                config.labels_ref_lookup = ontology.create_ref_lookup(
+                    ontology.load_labels_ref(config.load_labels))
         except (FileNotFoundError, KeyError) as e:
             _logger.error(e)
             _logger.error("Skipping labels reference file loading from '%s'",

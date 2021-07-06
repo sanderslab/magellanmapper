@@ -418,7 +418,7 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
         img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     ref = ontology.load_labels_ref(config.load_labels)
-    labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
+    labels_ref_lookup = ontology.create_ref_lookup(ref)
     
     ids = list(labels_ref_lookup.keys())
     for key in ids:

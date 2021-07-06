@@ -1318,7 +1318,7 @@ def volumes_by_id(img_paths, labels_ref_path, suffix=None, unit_factor=None,
     grouping[config.AtlasMetrics.CONDITION.value] = condition
     
     # set up labels reference and labels
-    labels_ref_lookup = ontology.create_aba_reverse_lookup(
+    labels_ref_lookup = ontology.create_ref_lookup(
         ontology.load_labels_ref(labels_ref_path))
     label_ids = make_label_ids_set(
         labels_ref_path, labels_ref_lookup, max_level, combine_sides)
@@ -1513,7 +1513,7 @@ def volumes_by_id_compare(img_paths, labels_ref_paths, unit_factor=None,
     
     # load labels references and label IDs based on the last reference
     labels_ref_paths = libmag.to_seq(labels_ref_paths)
-    labels_ref_lookups = [ontology.create_aba_reverse_lookup(
+    labels_ref_lookups = [ontology.create_ref_lookup(
         ontology.load_labels_ref(p)) for p in labels_ref_paths]
     label_ids = make_label_ids_set(
         labels_ref_paths[-1], labels_ref_lookups[-1], max_level, combine_sides)
@@ -1653,7 +1653,7 @@ def _test_labels_lookup():
     lookup_id = 15565 # short search path
     #lookup_id = 126652058 # last item
     time_dict_start = time()
-    id_dict = ontology.create_aba_reverse_lookup(ref)
+    id_dict = ontology.create_ref_lookup(ref)
     labels_img = sitk_io.load_registered_img(
         config.filename, config.RegNames.IMG_LABELS.value)
     max_labels = np.max(labels_img)
@@ -1713,7 +1713,7 @@ def _test_region_from_id():
         scaling = importer.calc_scaling(img5d.img, labels_img)
         print("loaded experiment image from {}".format(config.filename))
     ref = ontology.load_labels_ref(config.load_labels)
-    id_dict = ontology.create_aba_reverse_lookup(ref)
+    id_dict = ontology.create_ref_lookup(ref)
     middle, img_region, region_ids = ontology.get_region_middle(
         id_dict, 16652, labels_img, scaling)
     atlas_label = ontology.get_label(
@@ -1817,7 +1817,7 @@ def main():
         # export regions IDs to CSV files
         
         ref = ontology.load_labels_ref(config.load_labels)
-        labels_ref_lookup = ontology.create_aba_reverse_lookup(ref)
+        labels_ref_lookup = ontology.create_ref_lookup(ref)
         
         # export region IDs and parents at given level to CSV, using only
         # the atlas' labels if orig colors is true

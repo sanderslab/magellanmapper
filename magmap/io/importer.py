@@ -349,7 +349,7 @@ def deconstruct_img_name(np_filename, sep="_", keep_subimg=False):
             suffix = suffix.value
             suffix_noext = libmag.get_filename_without_ext(suffix)
             suffixi = np_filename.rfind(suffix_noext)
-            if suffixi != -1 and os.path.splitext(np_filename)[0].endswith(
+            if suffixi != -1 and libmag.splitext(np_filename)[0].endswith(
                     suffix_noext):
                 # strip suffix and any ending separator to get base path
                 filename = np_filename[:suffixi]

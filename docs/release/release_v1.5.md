@@ -10,6 +10,10 @@
 
 #### GUI
 
+- Window size and position are saved as user prferences
+- The default window size is smaller to fit into 720p displays
+- The default focus is no longer the main image file path to avoid accidental file loading
+
 #### CLI
 
 See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a summary of all changes in v1.5

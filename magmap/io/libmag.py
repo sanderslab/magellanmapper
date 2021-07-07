@@ -240,9 +240,8 @@ def match_ext(path, path_to_match):
     return path_to_match
 
 
-def get_filename_without_ext(path):
-    """Get filename without extension with support for extensions with
-    multiple periods through :meth:`splitext`.
+def get_filename_without_ext(path: str) -> str:
+    """Wrapper to :meth:`splitext` for getting only the filename.
     
     Args:
         path: Full path.
@@ -252,7 +251,7 @@ def get_filename_without_ext(path):
         no extension exists.
     """
     name = os.path.basename(path)
-    name_split = os.path.splitext(name)
+    name_split = splitext(name)
     if len(name_split) > 1: return name_split[0]
     return name
 

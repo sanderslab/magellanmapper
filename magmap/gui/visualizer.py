@@ -261,7 +261,6 @@ class Visualization(HasTraits):
     # File selection
 
     _filename = File  # file browser
-    _ignore_filename = False  # ignore file update trigger
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
     
@@ -792,10 +791,11 @@ class Visualization(HasTraits):
         self._drawn_offset = self._curr_offset()
 
         # setup interface for image
+        self._ignore_filename = False  # ignore file update trigger
+        self._reset_filename = True  # reset when updating loaded image
         if config.filename:
             # show image filename in file selector without triggering update
-            self._ignore_filename = True
-            self._filename = config.filename
+            self.update_filename(config.filename, True, False)
 
         # create figs after applying Matplotlib style and theme
         rc_params = None
@@ -1618,15 +1618,26 @@ class Visualization(HasTraits):
         self._rois_selections.selections = list(self._rois_dict.keys())
         self.rois_check_list = _ROI_DEFAULT
 
-    def update_filename(self, filename):
+    def update_filename(
+            self, filename: str, ignore: bool = False, reset: bool = True):
         """Update main image filename, triggering image load.
         
         Args:
-            filename (str): Path to image file to load.
+            filename: Path to image file to load.
+            ignore: Set to :attr:`_ignore_filename` flag; deafults to False.
+                True to av
+            reset: Set the :attr:`_reset_filename` flag; defaults to False.
+                True to reset additional image parameters such as registered
+                image suffixes.
 
         """
-        # reset path so that new path triggers an image load
+        # if old and new filename are the same, no update will be triggered,
+        # so need to set to non-image first
         self._filename = ""
+        
+        # update filename, triggering Trait change
+        self._reset_filename = reset
+        self._ignore_filename = ignore
         self._filename = filename
     
     def open_image(self, filename, new_window=True):
@@ -1661,10 +1672,17 @@ class Visualization(HasTraits):
         will not be loaded for now.
         """
         if self._ignore_filename or not self._filename:
-            # ignore if only updating widget value, without triggering load
+            # avoid triggering file load, eg if only updating widget value;
+            # reset flags
             self._ignore_filename = False
+            self._reset_filename = True
             return
-        
+
+        if self._reset_filename:
+            # reset registered suffixes
+            config.reg_suffixes = dict.fromkeys(config.RegSuffixes, None)
+        self._reset_filename = True
+
         # load image if possible without allowing import, deconstructing
         # filename from the selected imported image
         filename, offset, size, reg_suffixes = importer.deconstruct_img_name(
@@ -1717,9 +1735,7 @@ class Visualization(HasTraits):
             cli.setup_labels([self._labels_ref_path])
         
         # re-setup image
-        filename = self._filename
-        self._filename = ""
-        self._filename = filename
+        self.update_filename(self._filename, reset=False)
     
     @on_trait_change("_channel")
     def update_channel(self):

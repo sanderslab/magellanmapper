@@ -829,6 +829,10 @@ class Visualization(HasTraits):
         self._imgadj_max_ignore_update = False
         
         # set up rest of registered images during image setup
+        
+        # dictionary of registered image suffix without ext to suffix with
+        # ext of a matching existing file
+        self._reg_img_names: OrderedDict[str, str] = OrderedDict()
         self._main_img_names_avail = TraitsList()
         self._main_img_names = TraitsList()
         self._labels_img_names = TraitsList()
@@ -1541,23 +1545,25 @@ class Visualization(HasTraits):
                               else [config.roi_size])
             
             # find matching registered images to populate dropdowns
-            main_img_names_avail = []
+            self._reg_img_names = OrderedDict()
             for reg_name in config.RegNames:
                 # check for potential registered image files
                 reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
                     config.filename, reg_name.value), dryrun=True)[1]
                 if reg_path:
-                    # add to list of available suffixes
-                    main_img_names_avail.append(
-                        f"{os.path.splitext(reg_name.value)[0]}"
-                        f"{os.path.splitext(reg_path)[1]}")
-            self._labels_img_names.selections = list(main_img_names_avail)
+                    # add to list of available suffixes, storing the found
+                    # extension to load directly and save to same ext
+                    name = libmag.get_filename_without_ext(reg_name.value)
+                    self._reg_img_names[name] = (
+                        f"{name}{libmag.splitext(reg_path)[1]}")
+            self._labels_img_names.selections = list(self._reg_img_names.keys())
             self._labels_img_names.selections.insert(0, "")
             
             # set any registered names based on loaded images, defaulting to
             # image5d and no labels
             main_suffixes = [self._MAIN_IMG_NAME_DEFAULT]
             labels_suffix = self._labels_img_names.selections[0]
+            main_img_names_avail = list(self._reg_img_names.keys())
             if config.reg_suffixes:
                 # use registered suffixes without ext, using first suffix
                 # of each type
@@ -1566,15 +1572,17 @@ class Visualization(HasTraits):
                     if not libmag.is_seq(suffixes):
                         suffixes = [suffixes]
                     for suffix in suffixes:
-                        if suffix in main_img_names_avail:
+                        suffix_stem = libmag.get_filename_without_ext(suffix)
+                        if suffix_stem in main_img_names_avail:
                             # move from available to selected suffixes lists
-                            main_suffixes.append(suffix)
-                            main_img_names_avail.remove(suffix)
+                            main_suffixes.append(suffix_stem)
+                            main_img_names_avail.remove(suffix_stem)
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
-                    suffix = libmag.get_if_within(suffix, 0, "")
-                    if suffix in self._labels_img_names.selections:
-                        labels_suffix = suffix
+                    suffix_stem = libmag.get_filename_without_ext(
+                        libmag.get_if_within(suffix, 0, ""))
+                    if suffix_stem in self._labels_img_names.selections:
+                        labels_suffix = suffix_stem
             
             # show main image lists in two dropdowns, where selecting a suffix
             # from one list immediately moves it to the other 
@@ -1694,11 +1702,14 @@ class Visualization(HasTraits):
             if len(atlas_suffixes) == 1:
                 # reduce to str if only one element
                 atlas_suffixes = atlas_suffixes[0]
-            reg_suffixes[config.RegSuffixes.ATLAS] = atlas_suffixes
+            reg_suffixes[config.RegSuffixes.ATLAS] = self._reg_img_names.get(
+                atlas_suffixes)
         
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
             # add if not the empty first selection
-            reg_suffixes[config.RegSuffixes.ANNOTATION] = self._labels_img_name
+            reg_suffixes[
+                config.RegSuffixes.ANNOTATION] = self._reg_img_names.get(
+                    self._labels_img_name)
         config.reg_suffixes.update(reg_suffixes)
         
         if self._labels_ref_path:

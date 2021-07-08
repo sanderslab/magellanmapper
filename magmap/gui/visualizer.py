@@ -726,7 +726,7 @@ class Visualization(HasTraits):
     panel_figs = Tabbed(
         # set a small width to allow window to be resized down to this size
         Item("_roi_ed_fig", label="ROI Editor", show_label=False,
-             editor=MPLFigureEditor(), width=100, height=600),
+             editor=MPLFigureEditor(), width=100),
         Item("_atlas_ed_fig", label="Atlas Editor", show_label=False,
              editor=MPLFigureEditor()),
         Item("scene", label="3D Viewer", show_label=False,
@@ -749,6 +749,8 @@ class Visualization(HasTraits):
         # initial window width, which can be resized down to the minimum
         # widths of each panel in the HSplit
         width=1200,
+        # keeps window top bar within screen in small displays on Windows
+        height=600,
         handler=vis_handler.VisHandler(),
         title="MagellanMapper",
         statusbar="_status_bar_msg",

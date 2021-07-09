@@ -12,6 +12,14 @@ Related publications:
 - The 3D reconstructed versions of the Allen Developing Mouse Brain Atlas: https://search.kg.ebrains.eu/instances/Project/b8a8e2d3-4787-45f2-b010-589948c33f20
 
 
+## Quick Reference
+
+- [Installation](#installation) (more [details](docs/install.md))
+- [Intro to running MagellanMapper](#run-magellanmapper) (the GUI)
+- [Command-line interface](docs/cli.md)
+- [Configuration and settings](docs/settings.md)
+
+
 ## Installation
 
 ### Install a standalone package
@@ -42,6 +50,8 @@ git clone https://github.com/sanderslab/magellanmapper.git
   
 ## Run MagellanMapper
 
+MagellanMapper consists of a graphical user interface (GUI), command-line interface (CLI), and application programming interface (API) for Python programmatic access. Here we introduce using the GUI, and the [CLI docs](docs/cli.md) can be referenced for scripting.
+
 ### Using the standalone package
 
 - **Mac**: launch MagellanMapper from LaunchPad, or double-click on the MagellanMapper app
@@ -54,7 +64,7 @@ On Windows and Mac, you can also use "Open with" on supported file types (eg `.n
 
 #### From a file browser
 
-**On Mac or Linux**: Double-click the `MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
+**On Mac or Linux**: Double-click the MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
 
 **On Windows**: Run `run.py` through Python.
 - It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`

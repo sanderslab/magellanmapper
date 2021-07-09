@@ -873,7 +873,7 @@ def main(process_args_only: bool = False, skip_dbs: bool = False):
 
 
 def setup_roi_profiles(roi_profiles_names: List[str]):
-    """Setup ROI profiles.
+    """Set up ROI profiles.
 
     If a profile is None, only a default set of profile settings
     will be generated. Also sets up colormaps based on ROI profiles. Any
@@ -889,40 +889,43 @@ def setup_roi_profiles(roi_profiles_names: List[str]):
     config.roi_profiles = [config.roi_profile]
     if roi_profiles_names is not None:
         for i, roi_prof_name in enumerate(roi_profiles_names):
-            print("Updating ROI profile for channel", i)
+            _logger.debug("Updating ROI profile for channel %s", i)
             if i == 0:
                 settings = config.roi_profile
             else:
                 settings = roi_prof.ROIProfile()
                 config.roi_profiles.append(settings)
-            settings.update_settings(roi_prof_name)
+            settings.add_profiles(roi_prof_name)
     for i, prof in enumerate(config.roi_profiles):
         if i == 0:
-            print("Set default (channel 0) ROI profile: {}"
-                  .format(prof[prof.NAME_KEY]))
+            _logger.info(
+                "Set default (channel 0) ROI profile: %s", prof[prof.NAME_KEY])
         else:
-            print("Added channel {} ROI profile: {}".format(
-                  i, prof[prof.NAME_KEY]))
+            _logger.info(
+                "Added channel %s ROI profile: %s", i, prof[prof.NAME_KEY])
     colormaps.setup_colormaps(np_io.get_num_channels(config.image5d))
 
 
 def setup_atlas_profiles(atlas_profiles_names: str, reset: bool = True):
-    """Setup atlas profiles.
+    """Set up atlas profiles.
 
     If a profile is None, only a default set of profile settings
     will be generated. Any previously set up profile will be replaced.
 
     Args:
         atlas_profiles_names: Atlas profiles names.
+        reset: True to reset profiles before setting profiles from
+            ``atlas_profile_names``; defaults to True.
 
     """
     # initialize atlas profile and update with modifiers
     if reset:
         config.atlas_profile = atlas_prof.AtlasProfile()
     if atlas_profiles_names is not None:
-        config.atlas_profile.update_settings(atlas_profiles_names)
-    print("Set atlas profile to {}"
-          .format(config.atlas_profile[config.atlas_profile.NAME_KEY]))
+        config.atlas_profile.add_profiles(atlas_profiles_names)
+    _logger.info(
+        "Set atlas profile to %s",
+        config.atlas_profile[config.atlas_profile.NAME_KEY])
 
 
 def setup_grid_search_profiles(grid_search_profiles_names: str):
@@ -938,10 +941,11 @@ def setup_grid_search_profiles(grid_search_profiles_names: str):
     if grid_search_profiles_names:
         # parse grid search profiles
         config.grid_search_profile = grid_search_prof.GridSearchProfile()
-        config.grid_search_profile.update_settings(grid_search_profiles_names)
-        print("Set grid search profile to {}".format(
-            config.grid_search_profile[config.grid_search_profile.NAME_KEY]))
-        print(config.grid_search_profile)
+        config.grid_search_profile.add_profiles(grid_search_profiles_names)
+        _logger.info(
+            "Set grid search profile to %s",
+            config.grid_search_profile[config.grid_search_profile.NAME_KEY])
+        _logger.debug(config.grid_search_profile)
 
 
 def update_profiles():

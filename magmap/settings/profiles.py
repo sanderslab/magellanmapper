@@ -106,7 +106,26 @@ class SettingsDict(dict):
             profiles_dir, "{}*".format(filename_prefix)))
         return [p for p in paths
                 if os.path.splitext(p)[1].lower() in SettingsDict._EXT_YAML]
+    
+    def modify_settings(self, mods: Dict[Union[str, Enum], Any]):
+        """Modify dictionary items from another dictionary.
+        
+        If corresponding values are sub-dictionaries, the existing sub-dict
+        will be updated rather than replaced with the new sub-dict.
+        
+        Args:
+            mods: Dictionary to update this class' dictionary.
 
+        """
+        for key in mods.keys():
+            if isinstance(self[key], dict) and isinstance(mods[key], dict):
+                # if both current and new setting values are dicts,
+                # update rather than replacing the current dict
+                self[key].update(mods[key])
+            else:
+                # replace the value at the setting with the modified val
+                self[key] = mods[key]
+    
     def add_profile(
             self, profile_name: str, profiles: Dict[str, Dict], sep: str):
         """Add a profile dictionary into this dictionary.
@@ -173,15 +192,6 @@ class SettingsDict(dict):
             # add/replace the value at mod_name with the found value
             self[profile_name] = mods
         else:
-            for key in mods.keys():
-                if isinstance(self[key], dict) and isinstance(mods[key], dict):
-                    # if both current and new setting values are dicts,
-                    # update rather than replacing the current dict
-                    self[key].update(mods[key])
-                else:
-                    # replace the value at the setting with the modified val
-                    self[key] = mods[key]
-
             self.modify_settings(mods)
 
     def add_profiles(self, names_str):

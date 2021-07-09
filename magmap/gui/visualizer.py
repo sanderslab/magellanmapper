@@ -1560,9 +1560,11 @@ class Visualization(HasTraits):
             # find matching registered images to populate dropdowns
             self._reg_img_names = OrderedDict()
             for reg_name in config.RegNames:
-                # check for potential registered image files
+                # check for potential registered image files, using the
+                # prefix path if available
                 reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
-                    config.filename, reg_name.value), dryrun=True)[1]
+                    config.prefix if config.prefix else config.filename,
+                    reg_name.value), dryrun=True)[1]
                 if reg_path:
                     # add to list of available suffixes, storing the found
                     # extension to load directly and save to same ext

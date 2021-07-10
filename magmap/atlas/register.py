@@ -50,7 +50,8 @@ from skimage import filters, measure, morphology, transform
 
 from magmap.atlas import atlas_refiner, edge_seg, ontology, transformer
 from magmap.cv import cv_nd
-from magmap.io import cli, df_io, export_regions, importer, libmag, sitk_io
+from magmap.io import cli, df_io, export_regions, importer, libmag, np_io, \
+    sitk_io
 from magmap.plot import plot_2d, plot_3d
 from magmap.settings import config
 from magmap.stats import atlas_stats, clustering, vols
@@ -636,6 +637,19 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
             write_prefix = os.path.dirname(name_prefix)
         sitk_io.write_reg_images(
             imgs_write, write_prefix, prefix_is_dir=new_atlas)
+
+        moving_img_dir = os.path.dirname(moving_img_path)
+        labels_meta = np_io.load_labels_meta(moving_img_dir)
+        if labels_meta:
+            labels_meta = labels_meta[0]
+            labels_ref_path = os.path.join(
+                moving_img_dir, labels_meta[config.LabelsMeta.PATH_REF])
+            write_prefix_dir = os.path.dirname(write_prefix)
+            if os.path.exists(labels_ref_path):
+                # copy labels reference file to output directory
+                libmag.copy_backup(labels_ref_path, write_prefix_dir)
+            libmag.copy_backup(os.path.join(
+                moving_img_dir, config.PATH_LABELS_META), write_prefix_dir)
 
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed

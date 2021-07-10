@@ -12,6 +12,9 @@ from skimage import exposure
 
 from magmap.settings import config
 
+_logger = config.logger.getChild(__name__)
+
+
 # file types that are associated with other types
 _FILE_TYPE_GROUPS = {
     "obj": "mtl", 
@@ -783,6 +786,31 @@ def backup_file(path, modifier="", i=None):
                         modifier, i)
             break
         i += 1
+
+
+def copy_backup(src: str, target: str):
+    """Wrapper to copy a file with backup for the target location.
+    
+    Uses :meth:`shutil.copy2` for the copying. Backs up ``target`` beforehand
+    using :meth:`backup_file` unless ``target`` is a directory.
+    
+    Args:
+        src: Source path. If None or non-existant, no copy or backup will occur.
+        target: Target path.
+
+    """
+    try:
+        if not src or not os.path.exists(src):
+            # stop if source does not exist
+            raise IOError(f"Cannot copy '{src}', does not exist")
+        if os.path.isdir(target):
+            # get full target path for backup
+            target = os.path.join(target, os.path.basename(src))
+        backup_file(target)
+        shutil.copy2(src, target)
+        _logger.debug("Copied '%s' to '%s'", src, target)
+    except IOError as e:
+        _logger.error(e)
 
 
 def is_binary(img):

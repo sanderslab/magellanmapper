@@ -2,6 +2,9 @@
 # Author: David Young, 2020
 """YAML file format input/output."""
 
+from enum import Enum
+from typing import Dict
+
 import yaml
 
 from magmap.io import libmag
@@ -83,19 +86,21 @@ def load_yaml(path, enums=None):
     return data
 
 
-def save_yaml(path, data, use_primitives=False):
+def save_yaml(
+        path: str, data: Dict, use_primitives: bool = False,
+        convert_enums: bool = False) -> Dict:
     """Save a dictionary to YAML file format.
     
     Args:
-        path (str): Output path.
-        data (dict): Dictionary to output.
-        use_primitives (bool): True to replace Numpy data types to primitives;
+        path: Output path.
+        data: Dictionary to output.
+        use_primitives: True to replace Numpy data types with Python primitives;
+            defaults to False.
+        convert_enums: True to convert keys and vals that are Enums to strings;
             defaults to False.
 
     Returns:
-        dict: ``data`` with Numpy arrays and data types converted to Python
-        primitives if ``use_primitives`` is true, otherwise ``data``
-        unchanged.
+        ``data`` with any conversions.
 
     """
     def convert_numpy_val(val):
@@ -113,9 +118,18 @@ def save_yaml(path, data, use_primitives=False):
                 pass
         return val
     
+    def convert_enum(val):
+        # convert Enums to class.name strings
+        if isinstance(val, Enum):
+            return f"{val.__class__.__name__}.{val.name}"
+        return val
+    
     if use_primitives:
         # replace Numpy arrays and types with Python primitives
         data = _filter_dict(data, convert_numpy_val)
+    
+    if convert_enums:
+        data = _filter_dict(data, convert_enum)
     
     with open(path, "w") as yaml_file:
         # save to YAML format

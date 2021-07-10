@@ -6,11 +6,10 @@ import os
 from typing import Optional, Sequence, Tuple
 
 import numpy as np
-import pandas as pd
 
 from magmap.atlas import ontology, transformer
 from magmap.cv import detector
-from magmap.io import importer, libmag, naming, sitk_io
+from magmap.io import importer, libmag, naming, sitk_io, yaml_io
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
 
@@ -149,6 +148,18 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
+def load_labels_meta(base_path):
+    labels_meta_path = os.path.join(base_path, config.PATH_LABELS_META)
+    labels_meta = None
+    print("labels_meta_path", labels_meta_path)
+    if os.path.exists(labels_meta_path):
+        labels_meta = yaml_io.load_yaml(labels_meta_path, {
+            config.LabelsMeta.__name__: config.LabelsMeta})
+        _logger.debug("Loaded labels metadata from: %s", labels_meta_path)
+        print(labels_meta)
+    return labels_meta
+
+
 def setup_images(path=None, series=None, offset=None, size=None,
                  proc_type=None, allow_import=True):
     """Sets up an image and all associated images and metadata.
@@ -204,7 +215,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
     # reset label images
     config.labels_img = None
     config.labels_img_sitk = None
+    config.labels_img_orig = None
     config.borders_img = None
+    config.labels_meta = None
     
     # reset blobs
     config.blobs = None
@@ -361,6 +374,11 @@ def setup_images(path=None, series=None, offset=None, size=None,
         except FileNotFoundError as e:
             print(e)
     
+    labels_meta = load_labels_meta(os.path.dirname(path))
+    if labels_meta:
+        labels_meta = labels_meta[0]
+        config.labels_meta = labels_meta
+    
     if annotation_suffix is not None:
         try:
             # load labels image
@@ -380,15 +398,28 @@ def setup_images(path=None, series=None, offset=None, size=None,
             # labels images
             config.labels_scaling = importer.calc_scaling(
                 config.image5d, config.labels_img)
-        try:
-            if config.load_labels is not None:
+        
+        # load labels reference file, prioritizing path given by user
+        # and falling back to any extension matching PATH_LABELS_REF
+        path_labels_refs = [config.load_labels]
+        if labels_meta:
+            path_labels_refs.append(os.path.join(
+                os.path.dirname(path), labels_meta[config.LabelsMeta.PATH_REF]))
+        for ref in path_labels_refs:
+            if not ref: continue
+            try:
                 # load labels reference file
                 config.labels_ref_lookup = ontology.create_ref_lookup(
-                    ontology.load_labels_ref(config.load_labels))
-        except (FileNotFoundError, KeyError) as e:
-            _logger.error(e)
-            _logger.error("Skipping labels reference file loading from '%s'",
-                          config.load_labels)
+                    ontology.load_labels_ref(ref))
+                _logger.debug("Loaded labels reference file from %s", ref)
+                break
+            except (FileNotFoundError, KeyError):
+                pass
+        if path_labels_refs and config.labels_ref_lookup is None:
+            # warn if labels path given but none found
+            _logger.warn(
+                "Unable to load labels reference file from '%s', skipping",
+                path_labels_refs)
     
     if borders_suffix is not None:
         # load borders image, which can also be another labels image
@@ -398,18 +429,23 @@ def setup_images(path=None, series=None, offset=None, size=None,
         except FileNotFoundError as e:
             print(e)
     
-    if (config.atlas_labels[config.AtlasLabels.ORIG_COLORS]
-            and config.load_labels is not None):
-        # load original labels image from same directory as ontology
-        # file for consistent ID-color mapping, even if labels are missing
-        try:
-            config.labels_img_orig = sitk_io.load_registered_img(
-                config.load_labels, config.RegNames.IMG_LABELS.value)
-        except FileNotFoundError as e:
-            print(e)
-            libmag.warn(
-                "could not load original labels image; colors may differ"
-                "differ from it")
+    if config.atlas_labels[config.AtlasLabels.ORIG_COLORS]:
+        labels_orig_ids = None
+        if labels_meta:
+            labels_orig_ids = labels_meta[config.LabelsMeta.REGION_IDS_ORIG]
+        if labels_orig_ids is None:
+            if config.load_labels is not None:
+                # load original labels image from same directory as ontology
+                # file for consistent ID-color mapping, even if labels are missing
+                try:
+                    config.labels_img_orig = sitk_io.load_registered_img(
+                        config.load_labels, config.RegNames.IMG_LABELS.value)
+                except FileNotFoundError as e:
+                    print(e)
+            if config.labels_img_orig is None:
+                _logger.warn(
+                    "Could not load original labels image IDs; colors may "
+                    "differ from the original image")
     
     load_rot90 = config.roi_profile["load_rot90"]
     if load_rot90 and config.image5d is not None:

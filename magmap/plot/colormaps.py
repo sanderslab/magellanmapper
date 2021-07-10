@@ -353,9 +353,15 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         each unique value in ``labels_img``.
     """
     lbls = labels_img
-    if use_orig_labels and config.labels_img_orig is not None:
-        # use original labels if available for mapping consistency
-        lbls = config.labels_img_orig
+    if use_orig_labels:
+        # use original labels image IDs if available for mapping consistency
+        if config.labels_meta is not None:
+            # use saved label IDs
+            lbls = config.labels_meta[config.LabelsMeta.REGION_IDS_ORIG]
+            print("got orig", lbls)
+        if config.labels_img_orig is not None:
+            # use labels from original image
+            lbls = config.labels_img_orig
     return DiscreteColormap(
         lbls, config.seed, 255, min_any=160, min_val=10,
         background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg,

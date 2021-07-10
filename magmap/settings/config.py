@@ -437,7 +437,7 @@ AtlasLabels = Enum(
     )
 )
 # default to load original labels image if available for ID-color mapping
-atlas_labels = dict.fromkeys(AtlasLabels, None)
+atlas_labels: Dict[AtlasLabels, Any] = dict.fromkeys(AtlasLabels, None)
 atlas_labels[AtlasLabels.ORIG_COLORS] = 1
 atlas_labels[AtlasLabels.SYMMETRIC_COLORS] = True
 
@@ -469,6 +469,18 @@ class RegNames(Enum):
     IMG_LABELS_TRANS = "annotationTrans.mhd"
     COMBINED = "combined.mhd"  # spliced into other registered names
 
+
+class LabelsMeta(Enum):
+    """Labels image metadata enumerations."""
+    PATH_REF = auto()
+    REGION_IDS_ORIG = auto()
+
+
+#: Path to labels image metadata file. 
+PATH_LABELS_META: str = "meta_labels.yml"
+
+#: Loaded labels metadata.
+labels_meta: Dict[LabelsMeta, Any] = dict.fromkeys(LabelsMeta, None)
 
 #: Path to the labels reference file.
 load_labels: Optional[str] = None

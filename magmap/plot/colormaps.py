@@ -9,6 +9,7 @@ import numpy as np
 from matplotlib import cm
 from matplotlib import colors
 
+from magmap.atlas import labels_meta
 from magmap.settings import config
 from magmap.io import libmag
 
@@ -355,9 +356,10 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
     lbls = labels_img
     if use_orig_labels:
         # use original labels image IDs if available for mapping consistency
-        if config.labels_meta is not None:
+        orig_lbls = config.labels_meta.get(labels_meta.LabelsMetaNames.REGION_IDS_ORIG)
+        if orig_lbls is not None:
             # use saved label IDs
-            lbls = config.labels_meta[config.LabelsMeta.REGION_IDS_ORIG]
+            lbls = orig_lbls
             print("got orig", lbls)
         if config.labels_img_orig is not None:
             # use labels from original image

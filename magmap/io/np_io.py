@@ -7,9 +7,9 @@ from typing import Optional, Sequence, Tuple
 
 import numpy as np
 
-from magmap.atlas import ontology, transformer
+from magmap.atlas import labels_meta, ontology, transformer
 from magmap.cv import detector
-from magmap.io import importer, libmag, naming, sitk_io, yaml_io
+from magmap.io import importer, libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
 
@@ -146,18 +146,6 @@ def _check_np_none(val):
         The value if not a type of None, or a NoneType.
     """
     return None if val is None or np.all(np.equal(val, None)) else val
-
-
-def load_labels_meta(base_path):
-    labels_meta_path = os.path.join(base_path, config.PATH_LABELS_META)
-    labels_meta = None
-    print("labels_meta_path", labels_meta_path)
-    if os.path.exists(labels_meta_path):
-        labels_meta = yaml_io.load_yaml(labels_meta_path, {
-            config.LabelsMeta.__name__: config.LabelsMeta})
-        _logger.debug("Loaded labels metadata from: %s", labels_meta_path)
-        print(labels_meta)
-    return labels_meta
 
 
 def setup_images(path=None, series=None, offset=None, size=None,
@@ -374,10 +362,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
         except FileNotFoundError as e:
             print(e)
     
-    labels_meta = load_labels_meta(os.path.dirname(path))
-    if labels_meta:
-        labels_meta = labels_meta[0]
-        config.labels_meta = labels_meta
+    config.labels_meta = labels_meta.LabelsMeta(os.path.dirname(path)).load()
     
     if annotation_suffix is not None:
         try:
@@ -402,9 +387,10 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # load labels reference file, prioritizing path given by user
         # and falling back to any extension matching PATH_LABELS_REF
         path_labels_refs = [config.load_labels]
-        if labels_meta:
+        labels_path_ref = config.labels_meta[labels_meta.LabelsMetaNames.PATH_REF]
+        if labels_path_ref:
             path_labels_refs.append(os.path.join(
-                os.path.dirname(path), labels_meta[config.LabelsMeta.PATH_REF]))
+                os.path.dirname(path), labels_path_ref))
         for ref in path_labels_refs:
             if not ref: continue
             try:
@@ -430,9 +416,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             print(e)
     
     if config.atlas_labels[config.AtlasLabels.ORIG_COLORS]:
-        labels_orig_ids = None
-        if labels_meta:
-            labels_orig_ids = labels_meta[config.LabelsMeta.REGION_IDS_ORIG]
+        labels_orig_ids = config.labels_meta[labels_meta.LabelsMetaNames.REGION_IDS_ORIG]
         if labels_orig_ids is None:
             if config.load_labels is not None:
                 # load original labels image from same directory as ontology

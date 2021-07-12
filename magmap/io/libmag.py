@@ -4,8 +4,10 @@
 """
 
 import os
+import pathlib
 import shutil
 import warnings
+from typing import Union
 
 import numpy as np
 from skimage import exposure
@@ -816,6 +818,26 @@ def copy_backup(src: str, target: str):
         _logger.debug("Copied '%s' to '%s'", src, target)
     except IOError as e:
         _logger.error(e)
+
+
+def create_symlink(
+        src: Union[str, pathlib.Path], target: Union[str, pathlib.Path],
+        **kwargs):
+    """Wrapper to create symbolic link with error handling.
+    
+    Creates a symlink through :meth:`os.symlink`.
+    
+    Args:
+        src: Source path.
+        target: Target path.
+        **kwargs: Extra arguments to :meth:`os.symlink`.
+
+    """
+    try:
+        os.symlink(src, target, **kwargs)
+    except (FileExistsError, OSError) as e:
+        _logger.debug(e)
+        _logger.debug("Skipping link from '%s' to '%s'", src, target)
 
 
 def is_binary(img):

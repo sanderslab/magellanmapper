@@ -1496,6 +1496,11 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     lbls_meta.region_ids_orig = np.unique(
         sitk.GetArrayFromImage(img_labels)).tolist()
     lbls_meta.save()
+    # create relative symlink to only PATH_LABELS_META in the atlas dir for
+    # registering by giving the dir alone
+    libmag.create_symlink(
+        os.path.relpath(lbls_meta.save_path, target_dir),
+        os.path.join(target_dir, labels_meta.LabelsMeta.PATH_LABELS_META))
     
     if show:
         sitk.Show(img_atlas)

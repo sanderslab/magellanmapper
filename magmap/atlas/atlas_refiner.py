@@ -15,9 +15,9 @@ from skimage import measure
 from skimage import morphology
 from skimage import transform
 
+from magmap.atlas import labels_meta
 from magmap.cv import chunking, cv_nd, segmenter
-from magmap.io import df_io, export_stack, importer, libmag, np_io, sitk_io, \
-    yaml_io
+from magmap.io import df_io, export_stack, importer, libmag, np_io, sitk_io
 from magmap.plot import plot_3d, plot_support
 from magmap.settings import atlas_prof, config, profiles
 
@@ -1490,21 +1490,13 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     measure_atlas_refinement(
         metrics, img_atlas, img_labels, config.atlas_profile, df_metrics_path)
     
-    labels_ref_path = config.atlas_labels[config.AtlasLabels.PATH_REF]
-    labels_ref_out = None
-    if labels_ref_path:
-        # if provided, copy labels file to import directory
-        labels_ref_out = os.path.basename(labels_ref_path)
-        libmag.copy_backup(labels_ref_path, os.path.join(target_dir, labels_ref_out))
-    
-    labels_meta = {
-        config.LabelsMeta.PATH_REF: labels_ref_out,
-        config.LabelsMeta.REGION_IDS_ORIG: np.unique(
-            sitk.GetArrayFromImage(img_labels)).tolist(),
-    }
-    yaml_io.save_yaml(
-        os.path.join(target_dir, config.PATH_LABELS_META), labels_meta,
-        True, True)
+    # save labels metadata
+    lbls_meta = labels_meta.LabelsMeta(target_dir)
+    lbls_meta[labels_meta.LabelsMetaNames.PATH_REF] = config.atlas_labels[
+        config.AtlasLabels.PATH_REF]
+    lbls_meta[labels_meta.LabelsMetaNames.REGION_IDS_ORIG] = np.unique(
+        sitk.GetArrayFromImage(img_labels)).tolist()
+    lbls_meta.save()
     
     if show:
         sitk.Show(img_atlas)

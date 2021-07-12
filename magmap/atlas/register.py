@@ -637,16 +637,12 @@ def register(fixed_file, moving_img_path, show_imgs=True, write_imgs=True,
             write_prefix = os.path.dirname(name_prefix)
         sitk_io.write_reg_images(
             imgs_write, write_prefix, prefix_is_dir=new_atlas)
-
-        moving_img_dir = moving_img_path
-        if not os.path.isdir(moving_img_dir):
-            moving_img_dir = os.path.dirname(moving_img_path)
-        write_prefix_dir = os.path.dirname(write_prefix)
-        lbls_meta = labels_meta.LabelsMeta(moving_img_dir).load()
+        
+        lbls_meta = labels_meta.LabelsMeta(moving_img_path).load()
         if os.path.exists(lbls_meta.save_path):
-            # copy labels reference file to output directory
-            libmag.copy_backup(lbls_meta.path_ref, write_prefix_dir)
-            libmag.copy_backup(lbls_meta.save_path, write_prefix_dir)
+            # save labels metadata file to output directory
+            lbls_meta.prefix = name_prefix
+            lbls_meta.save()
 
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed

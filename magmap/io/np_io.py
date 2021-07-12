@@ -362,7 +362,8 @@ def setup_images(path=None, series=None, offset=None, size=None,
         except FileNotFoundError as e:
             print(e)
     
-    config.labels_metadata = labels_meta.LabelsMeta(os.path.dirname(path)).load()
+    # load metadata related to the labels image
+    config.labels_metadata = labels_meta.LabelsMeta(path).load()
     
     if annotation_suffix is not None:
         try:

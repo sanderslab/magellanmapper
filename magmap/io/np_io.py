@@ -362,7 +362,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
         except FileNotFoundError as e:
             print(e)
     
-    config.labels_meta = labels_meta.LabelsMeta(os.path.dirname(path)).load()
+    config.labels_metadata = labels_meta.LabelsMeta(os.path.dirname(path)).load()
     
     if annotation_suffix is not None:
         try:
@@ -387,10 +387,9 @@ def setup_images(path=None, series=None, offset=None, size=None,
         # load labels reference file, prioritizing path given by user
         # and falling back to any extension matching PATH_LABELS_REF
         path_labels_refs = [config.load_labels]
-        labels_path_ref = config.labels_meta[labels_meta.LabelsMetaNames.PATH_REF]
+        labels_path_ref = config.labels_metadata.path_ref
         if labels_path_ref:
-            path_labels_refs.append(os.path.join(
-                os.path.dirname(path), labels_path_ref))
+            path_labels_refs.append(labels_path_ref)
         for ref in path_labels_refs:
             if not ref: continue
             try:
@@ -416,7 +415,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
             print(e)
     
     if config.atlas_labels[config.AtlasLabels.ORIG_COLORS]:
-        labels_orig_ids = config.labels_meta[labels_meta.LabelsMetaNames.REGION_IDS_ORIG]
+        labels_orig_ids = config.labels_metadata.region_ids_orig
         if labels_orig_ids is None:
             if config.load_labels is not None:
                 # load original labels image from same directory as ontology

@@ -1492,9 +1492,8 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     
     # save labels metadata
     lbls_meta = labels_meta.LabelsMeta(target_dir)
-    lbls_meta[labels_meta.LabelsMetaNames.PATH_REF] = config.atlas_labels[
-        config.AtlasLabels.PATH_REF]
-    lbls_meta[labels_meta.LabelsMetaNames.REGION_IDS_ORIG] = np.unique(
+    lbls_meta.path_ref = config.atlas_labels[config.AtlasLabels.PATH_REF]
+    lbls_meta.region_ids_orig = np.unique(
         sitk.GetArrayFromImage(img_labels)).tolist()
     lbls_meta.save()
     

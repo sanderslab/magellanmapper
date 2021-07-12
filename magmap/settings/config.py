@@ -11,7 +11,7 @@ for program access.
 
 from enum import Enum, auto
 import pathlib
-from typing import Any, Dict, Optional, Sequence
+from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING
 
 try:
     from appdirs import AppDirs
@@ -26,6 +26,9 @@ except ImportError as e:
 import numpy as np
 
 from magmap.settings import logs
+
+if TYPE_CHECKING:
+    from magmap.atlas import labels_meta
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -473,7 +476,7 @@ class RegNames(Enum):
 #: Path to labels image metadata file. 
 
 #: Loaded labels metadata.
-labels_meta: Dict = {}
+labels_metadata: Optional["labels_meta.LabelsMeta"] = None
 
 #: Path to the labels reference file.
 load_labels: Optional[str] = None

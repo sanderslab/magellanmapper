@@ -356,11 +356,10 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
     lbls = labels_img
     if use_orig_labels:
         # use original labels image IDs if available for mapping consistency
-        orig_lbls = config.labels_meta.get(labels_meta.LabelsMetaNames.REGION_IDS_ORIG)
+        orig_lbls = config.labels_metadata.region_ids_orig
         if orig_lbls is not None:
             # use saved label IDs
             lbls = orig_lbls
-            print("got orig", lbls)
         if config.labels_img_orig is not None:
             # use labels from original image
             lbls = config.labels_img_orig

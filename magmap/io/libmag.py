@@ -259,19 +259,23 @@ def get_filename_without_ext(path: str) -> str:
     return name
 
 
-def combine_paths(base_path, suffix, sep="_", ext=None):
+def combine_paths(
+        base_path: str, suffix: str, sep: str = "_", ext: str = None,
+        check_dir: bool = False):
     """Merge two paths by appending ``suffix``, replacing the extention 
     in ``base_path``.
     
     Args:
-        base_path (str): Path whose dot-extension will be replaced by
+        base_path: Path whose dot-extension will be replaced by
             ``suffix``. If None, ``suffix`` will be returned. If a directory
-            as indicated by a trailing file separator, ``suffix`` will
-            simply be appended.
+            as indicated by a trailing file separator, will simply be joined
+            to ``suffix``.
         suffix: Replacement including new extension.
         sep: Separator between ``base_path`` and ``suffix``.
         ext: Extension to add or substitute; defaults to None to use 
             the extension in ``suffix``.
+        check_dir: True to check if ``base_path`` is an existing directory,
+            in which case it is simply joined to ``suffix``; defaults to False.
     
     Returns:
         Merged path.
@@ -280,13 +284,14 @@ def combine_paths(base_path, suffix, sep="_", ext=None):
         :func:`insert_before_ext` to splice in ``suffix`` instead.
     """
     if not base_path: return suffix
-    if not os.path.basename(base_path):
-        # empty basename from trailing file separator indicates base_path
-        # is a directory, where splitting out ext and adding sep are unnecessary
-        path = "{}{}".format(base_path, suffix)
+    if not os.path.basename(base_path) or check_dir and os.path.isdir(
+            base_path):
+        # dir if trailing file separator or flagged to check for existing dir;
+        # unnecessary to split out ext and adding sep
+        path = os.path.join(base_path, suffix)
     else:
-        path = os.path.splitext(base_path)[0] + sep + suffix
-    if ext: path = "{}.{}".format(os.path.splitext(path)[0], ext)
+        path = splitext(base_path)[0] + sep + suffix
+    if ext: path = "{}.{}".format(splitext(path)[0], ext)
     return path
 
 

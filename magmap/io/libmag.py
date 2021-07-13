@@ -7,7 +7,7 @@ import os
 import pathlib
 import shutil
 import warnings
-from typing import Union
+from typing import Optional, Union
 
 import numpy as np
 from skimage import exposure
@@ -1134,6 +1134,32 @@ def scale_slice(sl, scale, size):
     start = 0 if scaled[0] is None else scaled[0]
     end = size if scaled[1] is None else scaled[1]
     return np.linspace(start, end, sl.stop - sl.start, dtype=int)
+
+
+def get_git_commit(repo_dir: str) -> Optional[str]:
+    """Get git commit hash.
+    
+    Args:
+        repo_dir: Path to repository root directory.
+
+    Returns:
+        Commit hash, or None if not found.
+
+    """
+    # get HEAD file from .git folder
+    git_dir = pathlib.Path(repo_dir) / ".git"
+    head_path = git_dir / "HEAD"
+    if not head_path.is_file(): return None
+    
+    # get ref path from HEAD file
+    with head_path.open("r") as head_file:
+        ref = head_file.readline().split(" ")[-1].strip()
+    ref_path = git_dir / ref
+    if not ref_path.is_file(): return None
+    
+    # get hash from ref file
+    with ref_path.open("r") as ref_file:
+        return ref_file.readline().strip()
 
 
 if __name__ == "__main__":

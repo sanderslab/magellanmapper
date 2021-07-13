@@ -23,6 +23,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Atlas refinement
 
+- Metadata for labels images are saved when importing an atlas and registering the atlas to another image so that the original atlas no longer needs to be available (and `--labels` argument does not to be given) when loading the atlas or registered image
 - Smoothing metrics are output during the `--register merge_atlas_segs` task
 - The atlas profile settings `meas_edge_dists` and `meas_smoothing` turn off these metrics to save time during atlas generation, and the profile `fewerstats` turns off both these settings
 

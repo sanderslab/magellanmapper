@@ -2909,7 +2909,7 @@ class Visualization(HasTraits):
 
         # set up all profiles
         cli.setup_roi_profiles(roi_profs)
-        cli.setup_atlas_profiles(grid_profs)
+        cli.setup_atlas_profiles(atlas_profs)
         cli.setup_grid_search_profiles(grid_profs)
 
     def _init_profiles(self):

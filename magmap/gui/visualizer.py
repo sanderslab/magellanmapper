@@ -54,6 +54,7 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
 import run
+import setup as mag_setup
 from magmap.atlas import ontology
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
@@ -341,6 +342,9 @@ class Visualization(HasTraits):
     _profiles = List  # profiles table list
     _profiles_add_btn = Button("Add profile")
     _profiles_load_btn = Button("Load profiles")
+    _profiles_ver = Str
+    _profiles_reset_prefs_btn = Button("Reset preferences")
+    _profiles_reset_prefs = Bool  # trigger resetting prefs in handler
 
     # Image adjustment panel
 
@@ -612,24 +616,35 @@ class Visualization(HasTraits):
 
     # profiles panel
     panel_profiles = VGroup(
-        HGroup(
-            Item("_profiles_cats", style="simple", label="Profile",
+        VGroup(
+            HGroup(
+                Item("_profiles_cats", style="simple", label="Profile",
+                     editor=CheckListEditor(
+                         values=[e.value for e in ProfileCats], cols=1,
+                         format_func=lambda x: x)),
+                Item("_profiles_name", label="Name",
+                     editor=CheckListEditor(
+                         name="object._profiles_names.selections",
+                         format_func=lambda x: x)),
+            ),
+            Item("_profiles_chls", label="Channels", style="custom",
                  editor=CheckListEditor(
-                     values=[e.value for e in ProfileCats], cols=1,
-                     format_func=lambda x: x)),
-            Item("_profiles_name", label="Name",
-                 editor=CheckListEditor(
-                     name="object._profiles_names.selections",
-                     format_func=lambda x: x)),
+                     name="object._channel_names.selections", cols=8)),
+            HGroup(
+                Item("_profiles_add_btn", show_label=False),
+                Item("_profiles_load_btn", show_label=False),
+            ),
+            Item("_profiles", editor=_profiles_table, show_label=False),
+            label="Profiles",
         ),
-        Item("_profiles_chls", label="Channels", style="custom",
-             editor=CheckListEditor(
-                 name="object._channel_names.selections", cols=8)),
-        HGroup(
-            Item("_profiles_add_btn", show_label=False),
-            Item("_profiles_load_btn", show_label=False),
+        VGroup(
+            HGroup(
+                Item("_profiles_ver", style="readonly",
+                     label="MagellanMapper version:"),
+            ),
+            Item("_profiles_reset_prefs_btn", show_label=False),
+            label="Settings",
         ),
-        Item("_profiles", editor=_profiles_table, show_label=False),
         label="Profiles",
     )
 
@@ -789,6 +804,15 @@ class Visualization(HasTraits):
         self._profiles_cats = [ProfileCats.ROI.value]
         self._update_profiles_names()
         self._init_profiles()
+        
+        # set up settings controls
+        ver = mag_setup.config["version"]
+        git_commit = libmag.get_git_commit(os.path.dirname(run.__file__))
+        if git_commit:
+            # add git short hash if available
+            ver = f"{ver}-{git_commit[:8]}"
+        self._profiles_ver = ver
+        self._profiles_reset_prefs = False
 
         # set up image import
         self._clear_import_files(False)
@@ -2908,7 +2932,13 @@ class Visualization(HasTraits):
         add_profs(ProfileCats.ATLAS.value, config.atlas_profile)
         add_profs(ProfileCats.GRID.value, config.grid_search_profile)
         self._profiles = profs
-
+    
+    @on_trait_change("_profiles_reset_prefs_btn")
+    def _reset_prefs(self):
+        """Handle button to reset preferences."""
+        # trigger reset in handler
+        self._profiles_reset_prefs = True
+    
     @on_trait_change("_import_browser")
     def _add_import_file(self):
         """Add a file or directory to import and populate the import table

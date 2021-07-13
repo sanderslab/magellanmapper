@@ -79,6 +79,7 @@ class VisHandler(Handler):
                 for k, v in db.items():
                     if k.startswith("magmap"):
                         _logger.debug("TraitsUI preferences for %s: %s", k, v)
+                        break
             db.close()
         
         # WORKAROUND: TraitsUI icon does not work in Mac; use PyQt directly to
@@ -162,6 +163,24 @@ class VisHandler(Handler):
         # Enums auto-increment from 1
         tab_widgets = info.ui.control.findChildren(QtWidgets.QTabWidget)
         tab_widgets[1].setCurrentIndex(info.object.select_controls_tab - 1)
+
+    def object__profiles_reset_prefs_changed(self, info):
+        """Reset preferences."""
+        if not info.object._profiles_reset_prefs: return
+        
+        # reset window prefs stored in TraitsUI; these prefs only appear to be
+        # stored on window close, so this reset has no impact except for
+        # opening new windows during this session
+        db = info.ui.get_ui_db("w")
+        if db is not None:
+            for k, v in db.items():
+                if k.startswith("magmap"):
+                    del db[k]
+                    _logger.debug("Reset TraitsUI preferences")
+                    info.object.update_status_bar_msg("Preferences were reset")
+                    break
+            db.close()
+        info.object._profiles_reset_prefs = False
 
 
 class ViewerTabs(Enum):

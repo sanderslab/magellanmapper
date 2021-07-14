@@ -2859,8 +2859,7 @@ class Visualization(HasTraits):
 
         if prof:
             # add profiles and matching configuration files
-            prof_names = list(prof.profiles.keys())
-            prof_names.extend(prof.get_files())
+            prof_names = [*prof.profiles.keys(), *prof.get_files()]
         else:
             # clear profile names
             prof_names = []
@@ -2868,7 +2867,8 @@ class Visualization(HasTraits):
         # even though the item will appear to be selected by default
         self._profiles_names = TraitsList()
         self._profiles_names.selections = prof_names
-        self._profiles_name = prof_names[0]
+        if prof_names:
+            self._profiles_name = prof_names[0]
 
     @on_trait_change("_profiles_add_btn")
     def _add_profile(self):

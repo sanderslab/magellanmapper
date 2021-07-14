@@ -56,7 +56,6 @@ from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
 import run
-import setup as mag_setup
 from magmap.atlas import ontology
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
@@ -829,12 +828,7 @@ class Visualization(HasTraits):
         self._init_profiles()
         
         # set up settings controls
-        ver = mag_setup.config["version"]
-        git_commit = libmag.get_git_commit(os.path.dirname(run.__file__))
-        if git_commit:
-            # add git short hash if available
-            ver = f"{ver}-{git_commit[:8]}"
-        self._profiles_ver = ver
+        self._profiles_ver = libmag.get_version(True)
         self._profiles_reset_prefs = False
 
         # set up image import

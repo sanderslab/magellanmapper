@@ -47,6 +47,8 @@ config = {
         "simpleitk==2.0.2rc2.dev785+g8ac4f",  # pre-built SimpleElastix
         "PyYAML",
         "appdirs",
+        # part of stdlib in Python >= 3.8
+        "importlib-metadata >= 1.0 ; python_version < '3.8'",
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 

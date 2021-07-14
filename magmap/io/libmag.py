@@ -6,8 +6,15 @@
 import os
 import pathlib
 import shutil
-import warnings
+import sys
 from typing import Optional, Union
+import warnings
+
+if sys.version_info >= (3, 8):
+    # included with Python >= 3.8
+    from importlib import metadata
+else:
+    import importlib_metadata as metadata
 
 import numpy as np
 from skimage import exposure
@@ -1160,6 +1167,30 @@ def get_git_commit(repo_dir: str) -> Optional[str]:
     # get hash from ref file
     with ref_path.open("r") as ref_file:
         return ref_file.readline().strip()
+
+
+def get_version(git: bool = False) -> str:
+    """Get package version from installed metadata.
+    
+    Args:
+        git: True to add a short hash of the current Git commit.
+
+    Returns:
+        The version string. If ``git`` is True, the current Git commit
+        is appended as ``<ver>-<short-hash>``.
+
+    """
+    # get version from installed metadata; note that this version may differ
+    # from the imported version:
+    # https://packaging.python.org/guides/single-sourcing-package-version/
+    ver = metadata.version(config.APP_NAME.lower())
+    if git:
+        git_commit = get_git_commit(
+            str(pathlib.Path(__file__).parent.parent.parent))
+        if git_commit:
+            # add git short hash if available
+            ver = f"{ver}-{git_commit[:8]}"
+    return ver
 
 
 if __name__ == "__main__":

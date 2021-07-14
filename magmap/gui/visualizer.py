@@ -2879,12 +2879,6 @@ class Visualization(HasTraits):
             print("profile to add", prof)
             self._profiles.append(prof)
 
-    @on_trait_change("_profiles_load_btn")
-    def _load_profiles(self):
-        """Load profiles based on profiles added to the table."""
-        # update profile names list
-        self._update_profiles_names()
-        
         print("profiles from table:\n", self._profiles)
         if not self._profiles:
             # no profiles in the table to load
@@ -2911,6 +2905,11 @@ class Visualization(HasTraits):
         cli.setup_roi_profiles(roi_profs)
         cli.setup_atlas_profiles(atlas_profs)
         cli.setup_grid_search_profiles(grid_profs)
+
+    @on_trait_change("_profiles_load_btn")
+    def _load_profiles(self):
+        """Reload available profiles."""
+        self._update_profiles_names()
 
     def _init_profiles(self):
         """Initialize the profiles table based on the currently loaded profiles.

@@ -12,11 +12,13 @@ Examples:
         
         ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
+import pprint
 from collections import OrderedDict
 from enum import auto, Enum 
 import os
 import subprocess
 import sys
+from typing import Optional
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -61,7 +63,7 @@ from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
     vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
-from magmap.settings import config
+from magmap.settings import config, profiles
 
 
 #: str: default ROI name.
@@ -344,6 +346,8 @@ class Visualization(HasTraits):
     _profiles = List  # profiles table list
     _profiles_add_btn = Button("Add")
     _profiles_load_btn = Button("Rescan")
+    _profiles_preview = Str  # preview the selected profile
+    _profiles_combined = Str  # combined profiles for selected category
     _profiles_ver = Str
     _profiles_reset_prefs_btn = Button("Reset preferences")
     _profiles_reset_prefs = Bool  # trigger resetting prefs in handler
@@ -618,6 +622,7 @@ class Visualization(HasTraits):
 
     # profiles panel
     panel_profiles = VGroup(
+        # profile selectors
         VGroup(
             HGroup(
                 Item("_profiles_cats", style="simple", show_label=False,
@@ -636,9 +641,25 @@ class Visualization(HasTraits):
                 Item("_profiles_add_btn", show_label=False),
                 Item("_profiles_load_btn", show_label=False),
             ),
-            Item("_profiles", editor=_profiles_table, show_label=False),
-            label="Profiles",
+            label="Profile Selection",
         ),
+        
+        # selected profile preview and table of profiles
+        VGroup(
+            # neg height to ignore optimal height
+            Item("_profiles_preview", style="custom", show_label=False,
+                 height=-100),
+            Item("_profiles", editor=_profiles_table, show_label=False),
+            label="Profile Preview",
+        ),
+        
+        # combined profiles dict
+        VGroup(
+            Item("_profiles_combined", style="custom", show_label=False),
+            label="Combined profiles",
+        ),
+        
+        # settings/preferences
         VGroup(
             HGroup(
                 Item("_profiles_ver", style="readonly",
@@ -2844,13 +2865,14 @@ class Visualization(HasTraits):
             self._segments = []
         else:
             self._segments = val
+    
+    def _get_profile_category(self) -> Optional[profiles.SettingsDict]:
+        """Get the profile instance eassociated with the selected category.
+        
+        Returns:
+            Profile instance, which can be None.
 
-    @on_trait_change("_profiles_cats")
-    def _update_profiles_names(self):
-        """Update the profile names dropdown box based on the selected
-        profiles category.
         """
-        # get base profile matching category
         cat = self._profiles_cats[0]
         if cat == ProfileCats.ROI.value:
             prof = config.roi_profile
@@ -2858,6 +2880,14 @@ class Visualization(HasTraits):
             prof = config.atlas_profile
         else:
             prof = config.grid_search_profile
+        return prof
+    
+    @on_trait_change("_profiles_cats")
+    def _update_profiles_names(self):
+        """Update the profile names dropdown box based on the selected category.
+        """
+        # get base profile matching category
+        prof = self._get_profile_category()
 
         if prof:
             # add profiles and matching configuration files
@@ -2871,6 +2901,23 @@ class Visualization(HasTraits):
         self._profiles_names.selections = prof_names
         if prof_names:
             self._profiles_name = prof_names[0]
+        self._show_combined_profile()
+    
+    @on_trait_change("_profiles_name")
+    def _select_profile(self):
+        """Handle profile selections."""
+        prof_cat = self._get_profile_category()
+        if prof_cat:
+            # show preview of selected profile
+            self._profiles_preview = pprint.pformat(
+                prof_cat.get_profile(self._profiles_name))
+        else:
+            self._profiles_preview = ""
+
+    def _show_combined_profile(self):
+        """Show the combined profile dictionary."""
+        prof_cat = self._get_profile_category()
+        self._profiles_combined = pprint.pformat(prof_cat) if prof_cat else ""
 
     @on_trait_change("_profiles_add_btn")
     def _add_profile(self):
@@ -2903,10 +2950,11 @@ class Visualization(HasTraits):
         grid_profs = ",".join(
             profs[profs[:, 0] == ProfileCats.GRID.value, 1])
 
-        # set up all profiles
+        # set up all profiles and showed the profile for the selected category
         cli.setup_roi_profiles(roi_profs)
         cli.setup_atlas_profiles(atlas_profs)
         cli.setup_grid_search_profiles(grid_profs)
+        self._show_combined_profile()
 
     @on_trait_change("_profiles_load_btn")
     def _load_profiles(self):

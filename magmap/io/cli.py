@@ -222,6 +222,9 @@ def process_cli_args():
     """
     parser = argparse.ArgumentParser(
         description="Setup environment for MagellanMapper")
+    parser.add_argument(
+        "--version", action="store_true",
+        help="Show version information and exit")
 
     # image specification arguments
     
@@ -408,6 +411,11 @@ def process_cli_args():
     sys.stdout = logs.LogWriter(config.logger.info)
     sys.stderr = logs.LogWriter(config.logger.error)
     
+    if args.version:
+        # print version info and exit
+        _logger.info(f"{config.APP_NAME}-{libmag.get_version(True)}")
+        shutdown()
+
     # log the app launch path
     path_launch = (sys._MEIPASS if getattr(sys, "frozen", False)
                    and hasattr(sys, "_MEIPASS") else sys.argv[0])

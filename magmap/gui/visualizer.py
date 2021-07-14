@@ -125,8 +125,8 @@ class SegmentsArrayAdapter(TabularAdapter):
 
 class ProfileCats(Enum):
     """Profile categories enumeration."""
-    ROI = "ROI"
-    ATLAS = "Atlas"
+    ROI = "ROI profiles"
+    ATLAS = "Atlas profiles"
     GRID = "Grid Search"
 
 
@@ -137,8 +137,8 @@ class TraitsList(HasTraits):
 
 class ProfilesArrayAdapter(TabularAdapter):
     """Profiles TraitsUI table adapter."""
-    columns = [("Type", 0), ("Name", 1), ("Channel", 2)]
-    widths = {0: 0.2, 1: 0.7, 2: 0.1}
+    columns = [("Category", 0), ("Profile", 1), ("Channel", 2)]
+    widths = {0: 0.3, 1: 0.6, 2: 0.1}
 
     def get_width(self, object, trait, column):
         """Specify column widths."""
@@ -335,13 +335,15 @@ class Visualization(HasTraits):
     _profiles_cats = List
     _profiles_names = Instance(TraitsList)
     _profiles_name = Str
-    _profiles_chls = List
+    _profiles_chls = List(
+        tooltip="Channels to apply the selected profile"
+    )
     _profiles_table = TabularEditor(
         adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
         stretch_last_section=False)
     _profiles = List  # profiles table list
-    _profiles_add_btn = Button("Add profile")
-    _profiles_load_btn = Button("Load profiles")
+    _profiles_add_btn = Button("Add")
+    _profiles_load_btn = Button("Rescan")
     _profiles_ver = Str
     _profiles_reset_prefs_btn = Button("Reset preferences")
     _profiles_reset_prefs = Bool  # trigger resetting prefs in handler
@@ -618,19 +620,19 @@ class Visualization(HasTraits):
     panel_profiles = VGroup(
         VGroup(
             HGroup(
-                Item("_profiles_cats", style="simple", label="Profile",
+                Item("_profiles_cats", style="simple", show_label=False,
                      editor=CheckListEditor(
                          values=[e.value for e in ProfileCats], cols=1,
                          format_func=lambda x: x)),
-                Item("_profiles_name", label="Name",
+                Item("_profiles_chls", label="Chls", style="custom",
+                     editor=CheckListEditor(
+                         name="object._channel_names.selections", cols=8)),
+            ),
+            HGroup(
+                Item("_profiles_name", show_label=False,
                      editor=CheckListEditor(
                          name="object._profiles_names.selections",
                          format_func=lambda x: x)),
-            ),
-            Item("_profiles_chls", label="Channels", style="custom",
-                 editor=CheckListEditor(
-                     name="object._channel_names.selections", cols=8)),
-            HGroup(
                 Item("_profiles_add_btn", show_label=False),
                 Item("_profiles_load_btn", show_label=False),
             ),

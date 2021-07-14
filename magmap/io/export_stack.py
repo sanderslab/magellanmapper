@@ -473,6 +473,16 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                 labels_imgs=(config.labels_img, config.borders_img), 
                 multiplane=animated, 
                 fit=(size is None or ncols * nrows == 1))
+            
+            # add sub-plot title unless groups given as empty string
+            title = None
+            if config.groups:
+                title = libmag.get_if_within(config.groups, n)
+            elif num_paths > 1:
+                title = os.path.basename(path_sub)
+            if title:
+                ax.title.set_text(title)
+    
     path_base = paths[0]
     if animated:
         # generate animated image (eg animated GIF or movie file)
@@ -492,10 +502,11 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
             if not os.path.isdir(path_base):
                 path_base = os.path.dirname(path_base)
             path_base = os.path.join(path_base, "collage")
+        # TODO: config.prefix likely conflicts with intended image setup
+        out_path = libmag.make_out_path(path_base, suffix=suffix)
         mod = "_plane_{}{}".format(
             plot_support.get_plane_axis(config.plane), planei)
-        if suffix: path_base = libmag.insert_before_ext(path_base, suffix)
-        plot_support.save_fig(path_base, config.savefig, mod)
+        plot_support.save_fig(out_path, config.savefig, mod)
 
 
 def reg_planes_to_img(imgs, path=None, ax=None):

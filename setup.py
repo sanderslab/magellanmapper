@@ -37,7 +37,7 @@ config = {
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
-        "vtk",
+        "vtk <= 9.0.1",  # Mayavi 4.7.3 install hangs with VTK > 9.0.1
         "mayavi", 
         "pandas", 
         "PyQt5",

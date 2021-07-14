@@ -10,7 +10,7 @@ from enum import Enum, auto
 import glob
 import os
 import pprint
-from typing import Any, Dict, Union
+from typing import Any, Dict, Optional, Union
 
 from magmap.io import yaml_io
 from magmap.settings import config
@@ -76,7 +76,7 @@ class SettingsDict(dict):
         """
         super().__init__(self)
         self[self.NAME_KEY] = "default"
-        self.profiles = {}
+        self.profiles: Dict[str, Dict] = {}
         self.timestamps = {}
         self.delimiter = ","
 
@@ -107,7 +107,7 @@ class SettingsDict(dict):
         return [p for p in paths
                 if os.path.splitext(p)[1].lower() in SettingsDict._EXT_YAML]
     
-    def modify_settings(self, mods: Dict[Union[str, Enum], Any]):
+    def modify_settings(self, mods: Dict[Union[str, Enum], Union[Dict, str]]):
         """Modify dictionary items from another dictionary.
         
         If corresponding values are sub-dictionaries, the existing sub-dict
@@ -126,34 +126,30 @@ class SettingsDict(dict):
                 # replace the value at the setting with the modified val
                 self[key] = mods[key]
     
-    def add_profile(
-            self, profile_name: str, profiles: Dict[str, Dict], sep: str):
-        """Add a profile dictionary into this dictionary.
+    def get_profile(
+            self, profile_name: str
+    ) -> Optional[Dict[Union[str, Enum], Union[Dict, str]]]:
+        """Get the dictionary for a given profile.
         
-        The profile can consist of a subset of keys in this dictionary that
-        will override the current values of the corresponding keys.
-        If both the original and new value are dictionaries for any given key,
-        the original dictionary will be updated with rather than overwritten
-        by the new value.
-
-        The modifier may either match an existing profile in ``profiles``
+        Profiles may either match an existing profile in :attr:`profiles`
         or specify a path to a YAML configuration file. YAML filenames will
-        first be checked in :const:`config.PATH_PROFILES`, followed by
-        ``mod_name`` as the full path. If :attr:`_add_mod_directly` is True,
-        the value at ``mod_name`` will be added or replaced with the found
+        first be checked in :const:`PATH_PROFILES`, followed by
+        ``profile_name`` as the full path. If :attr:`_add_mod_directly` is True,
+        the value at ``profile_name`` will be added or replaced with the found
         modifier value.
         
+        The profile in :attr:`profiles` whose name matches ``profile_name``
+        will be applied over the current settings. If both the current and new
+        values are dictionaries, the current dictionary will be updated
+        with the new values. Otherwise, the corresponding current value will be
+        replaced by the new value.
+        
         Args:
-            profile_name: Name of the modifier, which will be appended to
-                the name of the current settings.
-            profiles: Profiles dictionary, where each key is a profile
-                name and value is a profile as a nested dictionary. The
-                profile whose name matches ``mod_name`` will be applied
-                over the current settings. If both the current and new values
-                are dictionaries, the current dictionary will be updated
-                with the new values. Otherwise, the corresponding current
-                value will be replaced by the new value.
-            sep: Separator between modifier elements.
+            profile_name: Profile name.
+
+        Returns:
+            The loaded dictionary, or None if not found.
+
         """
         if os.path.splitext(profile_name)[1].lower() in self._EXT_YAML:
             # load YAML files from profiles directory
@@ -165,7 +161,7 @@ class SettingsDict(dict):
                 prof_path = profile_name
                 if not os.path.exists(prof_path):
                     print(prof_path, "profile file not found, skipped")
-                    return
+                    return None
             self.timestamps[prof_path] = os.path.getmtime(prof_path)
             mods = {}
             try:
@@ -182,12 +178,30 @@ class SettingsDict(dict):
                 mods = self.__class__()
             else:
                 # must match an available modifier name
-                if profile_name not in profiles:
+                if profile_name not in self.profiles:
                     print(profile_name, "profile not found, skipped")
-                    return
-                mods = profiles[profile_name]
+                    return None
+                mods = self.profiles[profile_name]
+        return mods
+    
+    def add_profile(
+            self, profile_name: str,
+            mods: Optional[Dict[Union[str, Enum], Union[Dict, str]]]):
+        """Add a profile dictionary into this dictionary.
+        
+        The profile can consist of a subset of keys in this dictionary that
+        will override the current values of the corresponding keys.
+        If both the original and new value are dictionaries for any given key,
+        the original dictionary will be updated with rather than overwritten
+        by the new value.
 
-        self[self.NAME_KEY] += sep + profile_name
+        Args:
+            profile_name: Name of the modifier, which will be appended to
+                the name of the current settings.
+            mods: Dictionary with which to update this instance.
+        
+        """
+        self[self.NAME_KEY] += self.delimiter + profile_name
         if self._add_mod_directly:
             # add/replace the value at mod_name with the found value
             self[profile_name] = mods
@@ -211,9 +225,11 @@ class SettingsDict(dict):
         profiles = names_str.split(self.delimiter)
 
         for profile in profiles:
-            # update default profile with any combo of modifiers, where the
-            # order of the profile listing determines the precedence of settings
-            self.add_profile(profile, self.profiles, self.delimiter)
+            # update self with any combo of profiles, where the order of
+            # profiles determines the precedence of settings
+            mods = self.get_profile(profile)
+            if mods:
+                self.add_profile(profile, mods)
 
         if config.verbose:
             _logger.debug("settings for '%s':", self[self.NAME_KEY])

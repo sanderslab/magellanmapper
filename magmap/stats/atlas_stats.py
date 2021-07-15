@@ -488,10 +488,11 @@ def plot_clusters_by_label(path, z, suffix=None, show=True, scaling=None):
     else:
         # default to black background
         img = np.zeros_like(config.labels_img)[None]
-    export_stack.stack_to_ax_imgs(
-        ax, img, mod_path, slice_vals=(z, ), 
-        labels_imgs=(config.labels_img, config.borders_img), 
-        fit=False)
+    stacker = export_stack.setup_stack(
+        img, mod_path, slice_vals=(z, z + 1), 
+        labels_imgs=(config.labels_img, config.borders_img))
+    stacker.build_stack(
+        ax, config.plot_labels[config.PlotLabels.SCALE_BAR])
     # export_stack.reg_planes_to_img(
     #     (np.zeros(config.labels_img.shape[1:], dtype=int),
     #      config.labels_img[z]), ax=ax)

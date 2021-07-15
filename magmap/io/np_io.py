@@ -148,7 +148,7 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
-def setup_images(path=None, series=None, offset=None, size=None,
+def setup_images(path, series=None, offset=None, size=None,
                  proc_type=None, allow_import=True):
     """Sets up an image and all associated images and metadata.
 

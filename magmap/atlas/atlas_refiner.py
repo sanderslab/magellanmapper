@@ -18,7 +18,7 @@ from skimage import transform
 from magmap.atlas import labels_meta
 from magmap.cv import chunking, cv_nd, segmenter
 from magmap.io import df_io, export_stack, importer, libmag, np_io, sitk_io
-from magmap.plot import plot_3d, plot_support
+from magmap.plot import colormaps, plot_3d, plot_support
 from magmap.settings import atlas_prof, config, profiles
 
 _logger = config.logger.getChild(__name__)
@@ -323,8 +323,9 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # of lower planes with signal in the reference image
         save_steps = edge[profiles.RegKeys.SAVE_STEPS]
         if save_steps:
-            # load original labels and setup colormaps
-            np_io.setup_images()
+            # set up colormaps for intensity image and original labels
+            colormaps.setup_cmaps()
+            config.cmap_labels = colormaps.setup_labels_cmap(label_ids_orig)
         extend_edge(
             img_np, img_ref_np, config.atlas_profile["atlas_threshold"],
             None, edgei, edge["surr_size"], edge["smoothing_size"],

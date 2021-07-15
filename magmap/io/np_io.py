@@ -426,7 +426,7 @@ def setup_images(path=None, series=None, offset=None, size=None,
                         config.load_labels, config.RegNames.IMG_LABELS.value)
                 except FileNotFoundError as e:
                     print(e)
-            if config.labels_img_orig is None:
+            if config.labels_img is not None and config.labels_img_orig is None:
                 _logger.warn(
                     "Could not load original labels image IDs; colors may "
                     "differ from the original image")

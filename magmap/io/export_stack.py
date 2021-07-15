@@ -5,6 +5,7 @@
 
 import os
 import glob
+from typing import List, Optional, Sequence
 
 import numpy as np
 from skimage import transform
@@ -22,15 +23,42 @@ from magmap.plot import plot_3d
 from magmap.plot import plot_support
 
 
-class StackPlaneIO(object):
+class StackPlaneIO:
     """Worker class to export planes from a stack with support for 
     multiprocessing.
     
     Attributes:
         imgs: A list of images, with exact specification determined by 
             the calling function.
+        images: Sequence of images. For import, each "image" is a path to 
+            and image file. For export, each "image" is a sequence of 
+            planes, with the first sequence assumed to an atlas, 
+            followed by labels-based images, each consisting of 
+            corresponding planes.
+        fn_process: Function to process each image through multiprocessing, 
+            where the function should take an index and image and return the 
+            index and processed plane.
+        rescale (float): Rescale factor; defaults to 1.
+        cmaps_labels: Sequence of colormaps for labels-based images; 
+            defaults to None. Length should be equal to that of 
+            ``images`` - 1.
+        start_planei (int): Index of start plane, used for labeling the
+            plane; defaults to 0. The plane is only annotated when
+            :attr:`config.plot_labels[config.PlotLabels.TEXT_POS]` is given
+            to specify the position of the text in ``x,y`` relative to the
+            axes.
     """
     imgs = None
+    
+    def __init__(self):
+        self.images = None
+        self.fn_process = None
+        self.rescale = 1
+        self.start_planei = 0
+        self.origin = None
+        self.aspect = None
+        self.cmaps_labels = None
+        self.img_slice = None
     
     @classmethod
     def set_data(cls, imgs):
@@ -105,104 +133,100 @@ class StackPlaneIO(object):
                 imgs_proc[j] = img
         return i, imgs_proc
 
+    def build_stack(
+            self, axs: List, scale_bar: bool = True, fit: bool = False
+    ) -> Optional[List]:
+        """Builds a stack of Matploblit 2D images.
+        
+        Uses multiprocessing to load or resize each image.
+        
+        Args:
+            axs: Sub-plot axes.
+            scale_bar: True to include scale bar; defaults to True.
+            fit: True to fit the figure frame to the resulting image.
+        
+        Returns:
+            :List[List[:obj:`matplotlib.image.AxesImage`]]: Nested list of 
+            axes image objects. The first list level contains planes, and
+            the second level are channels within each plane.
+        
+        """
+        # number of image types (eg atlas, labels) and corresponding planes
+        num_image_types = len(self.images)
+        if num_image_types < 1: return None
+        num_images = len(self.images[0])
+        if num_images < 1: return None
+        
+        # import the images as Matplotlib artists via multiprocessing
+        plotted_imgs: List = [None] * num_images
+        img_shape = self.images[0][0].shape
+        target_size = np.multiply(img_shape, self.rescale).astype(int)
+        multichannel = self.images[0][0].ndim >= 3
+        if multichannel:
+            print("building stack for channel: {}".format(config.channel))
+            target_size = target_size[:-1]
+        StackPlaneIO.set_data(self.images)
+        pool = chunking.get_mp_pool()
+        pool_results = []
+        for i in range(num_images):
+            # add rotation argument if necessary
+            pool_results.append(
+                pool.apply_async(self.fn_process, args=(i, target_size)))
+        
+        # setup imshow parameters
+        colorbar = config.roi_profile["colorbar"]
+        cmaps_all = [config.cmaps, *self.cmaps_labels]
+    
+        img_size = None
+        text_pos = config.plot_labels[config.PlotLabels.TEXT_POS]
+        for result in pool_results:
+            i, imgs = result.get()
+            if img_size is None: img_size = imgs[0].shape
+            
+            # get sub-plot and hide x/y axes
+            ax = axs
+            if libmag.is_seq(ax):
+                ax = axs[i]
+            plot_support.hide_axes(ax)
+    
+            # multiple artists can be shown at each frame by collecting 
+            # each group of artists in a list; overlay_images returns 
+            # a nested list containing a list for each image, which in turn 
+            # contains a list of artists for each channel
+            ax_imgs = plot_support.overlay_images(
+                ax, self.aspect, self.origin, imgs, None, cmaps_all,
+                ignore_invis=True, check_single=True)
+            if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
+                # add colorbar with scientific notation if outside limits
+                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
+                plot_support.set_scinot(cbar.ax, lbls=None, units=None)
+            plotted_imgs[i] = np.array(ax_imgs).flatten()
+            
+            if libmag.is_seq(text_pos) and len(text_pos) > 1:
+                # write plane index in axes rather than data coordinates
+                text = ax.text(
+                    *text_pos[:2], "{}-plane: {}".format(
+                        plot_support.get_plane_axis(config.plane),
+                        self.start_planei + i),
+                    transform=ax.transAxes, color="w")
+                plotted_imgs[i] = [*plotted_imgs[i], text]
 
-def _build_stack(ax, images, process_fnc, rescale=1, aspect=None, 
-                 origin=None, cmaps_labels=None, scale_bar=True,
-                 start_planei=0):
-    """Builds a stack of Matploblit 2D images.
-    
-    Uses multiprocessing to load or resize each image.
-    
-    Args:
-        images: Sequence of images. For import, each "image" is a path to 
-            and image file. For export, each "image" is a sequence of 
-            planes, with the first sequence assumed to an atlas, 
-            followed by labels-based images, each consisting of 
-            corresponding planes.
-        process_fnc: Function to process each image through multiprocessing, 
-            where the function should take an index and image and return the 
-            index and processed plane.
-        rescale (float): Rescale factor; defaults to 1.
-        cmaps_labels: Sequence of colormaps for labels-based images; 
-            defaults to None. Length should be equal to that of 
-            ``images`` - 1.
-        scale_bar: True to include scale bar; defaults to True.
-        start_planei (int): Index of start plane, used for labeling the
-            plane; defaults to 0. The plane is only annotated when
-            :attr:`config.plot_labels[config.PlotLabels.TEXT_POS]` is given
-            to specify the position of the text in ``x,y`` relative to the
-            axes.
-    
-    Returns:
-        :List[List[:obj:`matplotlib.image.AxesImage`]]: Nested list of 
-        axes image objects. The first list level contains planes, and
-        the second level are channels within each plane.
-    
-    """
-    # number of image types (eg atlas, labels) and corresponding planes
-    num_image_types = len(images)
-    if num_image_types < 1: return None
-    num_images = len(images[0])
-    if num_images < 1: return None
-    
-    # Matplotlib figure for building the animation
-    plot_support.hide_axes(ax)
-    
-    # import the images as Matplotlib artists via multiprocessing
-    plotted_imgs = [None] * num_images
-    img_shape = images[0][0].shape
-    target_size = np.multiply(img_shape, rescale).astype(int)
-    multichannel = images[0][0].ndim >= 3
-    if multichannel:
-        print("building stack for channel: {}".format(config.channel))
-        target_size = target_size[:-1]
-    StackPlaneIO.set_data(images)
-    pool = chunking.get_mp_pool()
-    pool_results = []
-    for i in range(num_images):
-        # add rotation argument if necessary
-        pool_results.append(
-            pool.apply_async(process_fnc, args=(i, target_size)))
-    
-    # setup imshow parameters
-    colorbar = config.roi_profile["colorbar"]
-    cmaps_all = [config.cmaps, *cmaps_labels]
-
-    img_size = None
-    text_pos = config.plot_labels[config.PlotLabels.TEXT_POS]
-    for result in pool_results:
-        i, imgs = result.get()
-        if img_size is None: img_size = imgs[0].shape
+            if scale_bar:
+                plot_support.add_scale_bar(ax, 1 / self.rescale, config.plane)
+        pool.close()
+        pool.join()
         
-        # multiple artists can be shown at each frame by collecting 
-        # each group of artists in a list; overlay_images returns 
-        # a nested list containing a list for each image, which in turn 
-        # contains a list of artists for each channel
-        ax_imgs = plot_support.overlay_images(
-            ax, aspect, origin, imgs, None, cmaps_all, ignore_invis=True,
-            check_single=True)
-        if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
-            # add colorbar with scientific notation if outside limits
-            cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
-            plot_support.set_scinot(cbar.ax, lbls=None, units=None)
-        plotted_imgs[i] = np.array(ax_imgs).flatten()
+        if fit and plotted_imgs:
+            # fit frame to first plane's first available image
+            ax_img = None
+            for ax_img in plotted_imgs[0]:
+                # images may be None if alpha set to 0
+                if ax_img is not None: break
+            if ax_img is not None:
+                plot_support.fit_frame_to_image(
+                    ax_img.figure, ax_img.get_array().shape, self.aspect)
         
-        if libmag.is_seq(text_pos) and len(text_pos) > 1:
-            # write plane index in axes rather than data coordinates
-            text = ax.text(
-                *text_pos[:2], "{}-plane: {}".format(
-                    plot_support.get_plane_axis(config.plane),
-                    start_planei + i),
-                transform=ax.transAxes, color="w")
-            plotted_imgs[i] = [*plotted_imgs[i], text]
-        
-    pool.close()
-    pool.join()
-    
-    if scale_bar:
-        plot_support.add_scale_bar(ax, 1 / rescale, config.plane)
-    
-    return plotted_imgs
+        return plotted_imgs
 
 
 def animate_imgs(base_path, plotted_imgs, delay, ext=None, suffix=None):
@@ -290,15 +314,20 @@ def _setup_labels_cmaps(imgs, cmaps_labels=None):
     return cmaps_labels
 
 
-def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
-                     slice_vals=None, rescale=None, labels_imgs=None,
-                     multiplane=False, fit=False):
-    """Export a stack of images in a directory or a single volumetric image
-    and associated labels images to :obj:`matplotlib.image.AxesImage`
-    objects for export.
+def setup_stack(
+        image5d: np.ndarray, path: Optional[str] = None,
+        offset: Optional[Sequence[int]] = None,
+        roi_size: Optional[Sequence[int]] = None,
+        slice_vals: Optional[Sequence[int]] = None,
+        rescale: Optional[float] = None,
+        labels_imgs: Optional[Sequence[np.ndarray]] = None
+) -> StackPlaneIO:
+    """Set up a stack of images for export to file.
+     
+    Supports a stack of image files in a directory or a single volumetric image
+    and associated labels images.
     
     Args:
-        ax (:obj:`plt.Axes`): Matplotlib axes on which to plot images.
         image5d: Images as a 4/5D Numpy array (t,z,y,x[c]). Can be None if 
             ``path`` is set.
         path: Path to an image directory from which all files will be imported 
@@ -316,15 +345,12 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
             basis; defaults to None, in which case 1.0 will be used.
         labels_imgs: Sequence of labels-based images as a Numpy z,y,x arrays, 
             typically including labels and borders images; defaults to None.
-        multiplane: True to extract the images as an animated GIF or movie 
-            file; False to extract a single plane only. Defaults to False.
-        fit (bool): True to fit the figure frame to the resulting image.
     
     Returns:
-        List[:obj:`matplotlib.image.AxesImage`]: List of image objects.
+        Stack builder instance.
     
     """
-    print("Starting image stack export")
+    print("Starting image stack setup")
     
     # build "z" slice, which will be applied to the transposed image; 
     # reduce image to 1 plane if in single mode
@@ -341,23 +367,28 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
         interval = None
         if slice_vals is not None and len(slice_vals) > 2:
             interval = slice_vals[2]
-        size = roi_size[2] if multiplane else 1
+        size = roi_size[2]
         img_sl = slice(offset[2], offset[2] + size, interval)
         if interval is not None and interval < 0:
             # reverse start/stop order to iterate backward
             img_sl = slice(img_sl.stop, img_sl.start, interval)
         print("using ROI offset {}, size {}, {}"
               .format(offset, size, img_sl))
-    elif slice_vals is not None:
-        # build directly from slice vals unless not an animation
-        if multiplane:
-            img_sl = slice(*slice_vals)
-        else:
-            # single plane only for non-animation
-            img_sl = slice(slice_vals[0], slice_vals[0] + 1)
+    elif slice_vals:
+        # build directly from slice vals, replacing start and step if None
+        sl = slice(*slice_vals)
+        sl = [sl.start, sl.stop, sl.step]
+        if sl[0] is None:
+            # default to start at beginning of stack
+            sl[0] = 0
+        if sl[2] is None:
+            # default to interval/step of 1
+            sl[2] = 1
+        img_sl = slice(*sl)
     else:
         # default to take the whole image stack
-        img_sl = slice(None, None)
+        img_sl = slice(0, None, 1)
+    
     if rescale is None:
         rescale = 1.0
     aspect = None
@@ -405,24 +436,18 @@ def stack_to_ax_imgs(ax, image5d, path=None, offset=None, roi_size=None,
         if img_sl.start:
             start_planei = img_sl.start
     
-    # export planes
-    plotted_imgs = _build_stack(
-        ax, extracted_planes, fnc, rescale, aspect=aspect, 
-        origin=origin, cmaps_labels=cmaps_labels,
-        scale_bar=config.plot_labels[config.PlotLabels.SCALE_BAR],
-        start_planei=start_planei)
+    # store in stack worker
+    stacker = StackPlaneIO()
+    stacker.images = extracted_planes
+    stacker.fn_process = fnc
+    stacker.rescale = rescale
+    stacker.start_planei = start_planei
+    stacker.origin = origin
+    stacker.aspect = aspect
+    stacker.cmaps_labels = cmaps_labels
+    stacker.img_slice = img_sl
     
-    if fit and plotted_imgs:
-        # fit frame to first plane's first available image
-        ax_img = None
-        for ax_img in plotted_imgs[0]:
-            # images may be None if alpha set to 0
-            if ax_img is not None: break
-        if ax_img is not None:
-            plot_support.fit_frame_to_image(
-                ax_img.figure, ax_img.get_array().shape, aspect)
-    
-    return plotted_imgs
+    return stacker
 
 
 def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
@@ -451,62 +476,88 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
             defaults to None to ignore.
 
     """
+    # set up figure layout for collages
     size = config.plot_labels[config.PlotLabels.LAYOUT]
     ncols, nrows = size if size else (1, 1)
-    fig, gs = plot_support.setup_fig(
-        nrows, ncols, config.plot_labels[config.PlotLabels.SIZE])
-    plotted_imgs = None
     num_paths = len(paths)
+    collage = num_paths > 1
+    figs = {}
+    
     for i in range(nrows):
         for j in range(ncols):
             n = i * ncols + j
             if n >= num_paths: break
-            ax = fig.add_subplot(gs[i, j])
+            
+            # load an image and set up its image stacker
             path_sub = paths[n]
+            axs = []
             # TODO: test directory of images
-            # TODO: avoid reloading first image
+            # TODO: consider not reloading first image
             np_io.setup_images(path_sub, series, subimg_offset, subimg_size)
-            plotted_imgs = stack_to_ax_imgs(
-                ax, config.image5d, path_sub, offset=roi_offset,
+            stacker = setup_stack(
+                config.image5d, path_sub, offset=roi_offset,
                 roi_size=roi_size, slice_vals=config.slice_vals, 
                 rescale=config.transform[config.Transforms.RESCALE],
-                labels_imgs=(config.labels_img, config.borders_img), 
-                multiplane=animated, 
-                fit=(size is None or ncols * nrows == 1))
-            
+                labels_imgs=(config.labels_img, config.borders_img))
+
             # add sub-plot title unless groups given as empty string
             title = None
             if config.groups:
                 title = libmag.get_if_within(config.groups, n)
             elif num_paths > 1:
                 title = os.path.basename(path_sub)
-            if title:
-                ax.title.set_text(title)
+            
+            if not stacker.images: continue
+            for k in range(len(stacker.images[0])):
+                # create or retrieve fig; animation has only 1 fig
+                planei = 0 if animated else (
+                        stacker.img_slice.start + k * stacker.img_slice.step)
+                fig_dict = figs.get(planei)
+                if not fig_dict:
+                    # set up new fig
+                    fig, gs = plot_support.setup_fig(
+                        nrows, ncols, config.plot_labels[config.PlotLabels.SIZE])
+                    fig_dict = {"fig": fig, "gs": gs, "imgs": []}
+                    figs[planei] = fig_dict
+                ax = fig_dict["fig"].add_subplot(fig_dict["gs"][i, j])
+                if title:
+                    ax.title.set_text(title)
+                axs.append(ax)
+
+            # export planes
+            plotted_imgs = stacker.build_stack(
+                axs, config.plot_labels[config.PlotLabels.SCALE_BAR],
+                size is None or ncols * nrows == 1)
+
+            if animated:
+                # store all plotted images in single fig
+                fig_dict = figs.get(0)
+                if fig_dict:
+                    fig_dict["imgs"] = plotted_imgs
+            else:
+                # store one plotted image per fig; not used currently
+                for fig_dict, img in zip(figs.values(), plotted_imgs):
+                    fig_dict["imgs"].append(img)
     
     path_base = paths[0]
-    if animated:
-        # generate animated image (eg animated GIF or movie file)
-        animate_imgs(
-            path_base, plotted_imgs, config.delay, config.savefig, suffix)
-    else:
-        # save image as single file
-        if roi_offset:
-            # get plane index from coordinate at the given axis in ROI offset
-            planei = roi_offset[::-1][plot_support.get_plane_axis(
-                config.plane, get_index=True)]
+    for planei, fig_dict in figs.items():
+        if animated:
+            # generate animated image (eg animated GIF or movie file)
+            animate_imgs(
+                path_base, fig_dict["imgs"], config.delay, config.savefig,
+                suffix)
         else:
-            # get plane index from slice start
-            planei = config.slice_vals[0]
-        if num_paths > 1:
-            # output filename as a collage of images
-            if not os.path.isdir(path_base):
-                path_base = os.path.dirname(path_base)
-            path_base = os.path.join(path_base, "collage")
-        # TODO: config.prefix likely conflicts with intended image setup
-        out_path = libmag.make_out_path(path_base, suffix=suffix)
-        mod = "_plane_{}{}".format(
-            plot_support.get_plane_axis(config.plane), planei)
-        plot_support.save_fig(out_path, config.savefig, mod)
+            if collage:
+                # output filename as a collage of images
+                if not os.path.isdir(path_base):
+                    path_base = os.path.dirname(path_base)
+                path_base = os.path.join(path_base, "collage")
+            # TODO: config.prefix likely conflicts with intended image setup
+            out_path = libmag.make_out_path(path_base, suffix=suffix)
+            mod = "_plane_{}{}".format(
+                plot_support.get_plane_axis(config.plane), planei)
+            plot_support.save_fig(
+                out_path, config.savefig, mod, fig_dict["fig"])
 
 
 def reg_planes_to_img(imgs, path=None, ax=None):
@@ -530,11 +581,11 @@ def reg_planes_to_img(imgs, path=None, ax=None):
         fig, gs = plot_support.setup_fig(
             1, 1, config.plot_labels[config.PlotLabels.SIZE])
         ax = fig.add_subplot(gs[0, 0])
-    imgs = [img[None] for img in imgs]
-    cmaps_labels = _setup_labels_cmaps(imgs)
-    plotted_imgs = _build_stack(
-        ax, imgs, StackPlaneIO.process_plane,
-        cmaps_labels=cmaps_labels, scale_bar=False)
+    stacker = StackPlaneIO()
+    stacker.images = [img[None] for img in imgs]
+    stacker.fn_process = StackPlaneIO.process_plane
+    stacker.cmaps_labels = _setup_labels_cmaps(imgs)
+    plotted_imgs = stacker.build_stack(ax, scale_bar=False)
     ax_img = plotted_imgs[0][0]
     aspect, origin = plot_support.get_aspect_ratio(config.plane)
     plot_support.fit_frame_to_image(

@@ -417,22 +417,21 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
     labels_sitk = sitk_io.load_registered_img(
         img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
     labels_np = sitk.GetArrayFromImage(labels_sitk)
-    ref = ontology.load_labels_ref(config.load_labels)
-    labels_ref_lookup = ontology.create_ref_lookup(ref)
+    ref = ontology.LabelsRef(config.load_labels).load()
     
-    ids = list(labels_ref_lookup.keys())
+    ids = list(ref.ref_lookup.keys())
     for key in ids:
         keys = [key, -1 * key]
         for region in keys:
             if region == 0: continue
             # get ontological label
-            label = labels_ref_lookup[abs(region)]
+            label = ref.ref_lookup[abs(region)]
             label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
             if label_level == level:
                 # get children (including parent first) at given level 
                 # and replace them with parent
                 label_ids = ontology.get_children_from_id(
-                    labels_ref_lookup, region)
+                    ref.ref_lookup, region)
                 labels_region = np.isin(labels_np, label_ids)
                 print("replacing labels within", region)
                 labels_np[labels_region] = region

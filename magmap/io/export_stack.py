@@ -3,6 +3,7 @@
 """Import and export image stacks in various formats.
 """
 
+from collections import OrderedDict
 import os
 import glob
 from typing import List, Optional, Sequence
@@ -23,7 +24,7 @@ from magmap.plot import plot_3d
 from magmap.plot import plot_support
 
 
-class StackPlaneIO:
+class StackPlaneIO(chunking.SharedArrsContainer):
     """Worker class to export planes from a stack with support for 
     multiprocessing.
     
@@ -51,6 +52,7 @@ class StackPlaneIO:
     imgs = None
     
     def __init__(self):
+        super().__init__()
         self.images = None
         self.fn_process = None
         self.rescale = 1
@@ -64,6 +66,14 @@ class StackPlaneIO:
     def set_data(cls, imgs):
         """Set data to be accessed by worker functions."""
         cls.imgs = imgs
+    
+    @classmethod
+    def convert_imgs(cls):
+        """Restore all shared arrays to a list of arrays."""
+        if cls.imgs is None:
+            cls.imgs = []
+            for key in cls.shared_arrs.keys():
+                cls.imgs.append(cls.convert_shared_arr(key))
     
     @classmethod
     def import_img(cls, i, rescale, multichannel):
@@ -81,6 +91,10 @@ class StackPlaneIO:
             processed image list has the same length as :attr:``imgs``, 
             or the number of image paths.
         """
+        # TODO: consider removing since imported image is not saved;
+        # should import first before exporting
+        
+        cls.convert_imgs()
         path = cls.imgs[i]
         print("importing {}".format(path))
         img = io.imread(path)
@@ -109,6 +123,7 @@ class StackPlaneIO:
             or the number of nested lists.
         """
         print("processing plane {}".format(i))
+        cls.convert_imgs()
         imgs_proc = []
         for j, img_stack in enumerate(cls.imgs):
             if j == 0:
@@ -123,6 +138,9 @@ class StackPlaneIO:
                     preserve_range=True, anti_aliasing=False, order=0)
             imgs_proc.append(img)
         if rotate:
+            # TODO: consider removing since not saved; should instead rotate
+            # image using transform task
+            
             # rotate, filling background with edge color
             for j, img in enumerate(imgs_proc):
                 #img = img[10:-100, 10:-80] # manually crop out any border
@@ -151,6 +169,38 @@ class StackPlaneIO:
             the second level are channels within each plane.
         
         """
+        def handle_extracted_plane():
+            # get sub-plot and hide x/y axes
+            ax = axs
+            if libmag.is_seq(ax):
+                ax = axs[imgi]
+            plot_support.hide_axes(ax)
+    
+            # multiple artists can be shown at each frame by collecting 
+            # each group of artists in a list; overlay_images returns 
+            # a nested list containing a list for each image, which in turn 
+            # contains a list of artists for each channel
+            ax_imgs = plot_support.overlay_images(
+                ax, self.aspect, self.origin, imgs, None, cmaps_all,
+                ignore_invis=True, check_single=True)
+            if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
+                # add colorbar with scientific notation if outside limits
+                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
+                plot_support.set_scinot(cbar.ax, lbls=None, units=None)
+            plotted_imgs[imgi] = np.array(ax_imgs).flatten()
+            
+            if libmag.is_seq(text_pos) and len(text_pos) > 1:
+                # write plane index in axes rather than data coordinates
+                text = ax.text(
+                    *text_pos[:2], "{}-plane: {}".format(
+                        plot_support.get_plane_axis(config.plane),
+                        self.start_planei + imgi),
+                    transform=ax.transAxes, color="w")
+                plotted_imgs[imgi] = [*plotted_imgs[imgi], text]
+
+            if scale_bar:
+                plot_support.add_scale_bar(ax, 1 / self.rescale, config.plane)
+        
         # number of image types (eg atlas, labels) and corresponding planes
         num_image_types = len(self.images)
         if num_image_types < 1: return None
@@ -165,57 +215,49 @@ class StackPlaneIO:
         if multichannel:
             print("building stack for channel: {}".format(config.channel))
             target_size = target_size[:-1]
-        StackPlaneIO.set_data(self.images)
-        pool = chunking.get_mp_pool()
-        pool_results = []
-        for i in range(num_images):
-            # add rotation argument if necessary
-            pool_results.append(
-                pool.apply_async(self.fn_process, args=(i, target_size)))
-        
+
         # setup imshow parameters
         colorbar = config.roi_profile["colorbar"]
         cmaps_all = [config.cmaps, *self.cmaps_labels]
-    
-        img_size = None
         text_pos = config.plot_labels[config.PlotLabels.TEXT_POS]
-        for result in pool_results:
-            i, imgs = result.get()
-            if img_size is None: img_size = imgs[0].shape
-            
-            # get sub-plot and hide x/y axes
-            ax = axs
-            if libmag.is_seq(ax):
-                ax = axs[i]
-            plot_support.hide_axes(ax)
-    
-            # multiple artists can be shown at each frame by collecting 
-            # each group of artists in a list; overlay_images returns 
-            # a nested list containing a list for each image, which in turn 
-            # contains a list of artists for each channel
-            ax_imgs = plot_support.overlay_images(
-                ax, self.aspect, self.origin, imgs, None, cmaps_all,
-                ignore_invis=True, check_single=True)
-            if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
-                # add colorbar with scientific notation if outside limits
-                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
-                plot_support.set_scinot(cbar.ax, lbls=None, units=None)
-            plotted_imgs[i] = np.array(ax_imgs).flatten()
-            
-            if libmag.is_seq(text_pos) and len(text_pos) > 1:
-                # write plane index in axes rather than data coordinates
-                text = ax.text(
-                    *text_pos[:2], "{}-plane: {}".format(
-                        plot_support.get_plane_axis(config.plane),
-                        self.start_planei + i),
-                    transform=ax.transAxes, color="w")
-                plotted_imgs[i] = [*plotted_imgs[i], text]
-
-            if scale_bar:
-                plot_support.add_scale_bar(ax, 1 / self.rescale, config.plane)
-        pool.close()
-        pool.join()
         
+        StackPlaneIO.set_data(self.images)
+        pool_results = None
+        pool = None
+        multiprocess = self.rescale != 1
+        if multiprocess:
+            # set up multiprocessing
+            initializer = None
+            initargs = None
+            if not chunking.is_fork():
+                # set up labels image as a shared array for spawned mode
+                initializer, initargs = StackPlaneIO.build_pool_init(
+                    OrderedDict([
+                        (i, img) for i, img in enumerate(self.images)]))
+    
+            pool = chunking.get_mp_pool(initializer, initargs)
+            pool_results = []
+
+        for i in range(num_images):
+            # add rotation argument if necessary
+            args = (i, target_size)
+            if pool is None:
+                # extract and handle without multiprocessing
+                imgi, imgs = self.fn_process(*args)
+                handle_extracted_plane()
+            else:
+                # extract plane in multiprocessing
+                pool_results.append(
+                    pool.apply_async(self.fn_process, args=args))
+        
+        if multiprocess:
+            # handle multiprocessing output
+            for result in pool_results:
+                imgi, imgs = result.get()
+                handle_extracted_plane()
+            pool.close()
+            pool.join()
+
         if fit and plotted_imgs:
             # fit frame to first plane's first available image
             ax_img = None

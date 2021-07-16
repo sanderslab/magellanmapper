@@ -612,7 +612,7 @@ def dict_to_data_frame(
 
 def data_frames_to_csv(
         data_frames: List[pd.DataFrame], path: str = None,
-        sort_cols: Optional[str] = None,
+        sort_cols: Optional[Union[str, List[str]]] = None,
         show: Optional[Union[str, bool]] = None, index: bool = False):
     """Combine and export multiple data frames to CSV file.
     
@@ -621,8 +621,7 @@ def data_frames_to_csv(
             ``DataFrame``.
         path: Output path; defaults to None, in which case the data frame 
             will not be saved.
-        sort_cols: Column as a string of list of columns by which to sort; 
-            defaults to None for no sorting.
+        sort_cols: Column(s) by which to sort; defaults to None for no sorting.
         show: True or " " to print the data frame with a space-separated 
             table, or can provide an alternate separator. Defaults to None 
             to not print the data frame.

@@ -32,6 +32,21 @@ class LabelColumns(Enum):
 
 
 class LabelsRef:
+    """Labels reference container and worker class.
+    
+    Attributes:
+        path_ref: Path to labels reference file.
+        loaded_ref: Loaded reference object.
+        ref_lookup: Reference in a dict format.
+    
+    """
+    
+    # mapping of alternate column names to ABA-style names
+    _COLS_TO_ABA: Dict[str, str] = {
+        config.AtlasMetrics.REGION.value: config.ABAKeys.ABA_ID.value,
+        config.AtlasMetrics.REGION_NAME.value: config.ABAKeys.NAME.value,
+    }
+    
     def __init__(self, path_ref=None):
         self.path_ref: Optional[str] = path_ref
         self.loaded_ref: Optional[Union[Dict, pd.DataFrame]] = None
@@ -59,10 +74,13 @@ class LabelsRef:
                 raise FileNotFoundError
             path_split = os.path.splitext(path)
             if path_split[1] == ".json":
+                # load JSON file
                 with open(path, "r") as f:
                     self.loaded_ref = json.load(f)
             else:
-                self.loaded_ref = pd.read_csv(path)
+                # load CSV file and rename columns to ABA-style names
+                df = pd.read_csv(path)
+                self.loaded_ref = df.rename(self._COLS_TO_ABA, axis=1)
         except (ParserError, FileNotFoundError):
             raise FileNotFoundError(
                 f"Could not load labels reference file from '{path}', skipping")
@@ -193,22 +211,6 @@ class LabelsRef:
             df = self.loaded_ref
         if not isinstance(df, pd.DataFrame):
             raise KeyError("Loaded reference is not a data frame")
-        
-        def rename_col(key_check, key_alt):
-            # rename a column to an alternate name if not found in the df
-            if key_check not in df:
-                if key_alt in df:
-                    cols[key_alt] = key_check
-        
-        # check for alternate essential column names
-        cols = {}
-        rename_col(
-            config.ABAKeys.ABA_ID.value, config.AtlasMetrics.REGION.value)
-        rename_col(
-            config.ABAKeys.NAME.value, config.AtlasMetrics.REGION_NAME.value)
-        if cols:
-            _logger.debug("Renamed labels reference file columns: %s", cols)
-            df = df.rename(cols, axis=1)
         
         id_dict = OrderedDict()
         try:

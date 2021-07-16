@@ -1250,7 +1250,8 @@ def make_label_ids_set(
         # setup ontological labels
         ids_with_children = []
         for label_id in label_ids:
-            label = labels_ref_lookup[abs(label_id)]
+            label = labels_ref_lookup.get(abs(label_id))
+            if label is None: continue
             label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
             if label_level <= max_level:
                 # get children (including parent first) up through level, 

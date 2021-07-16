@@ -229,6 +229,37 @@ class LabelsRef:
             raise KeyError(f"Could not find this column in the labels reference "
                            f"file: {e}")
         return id_dict
+
+    def get_ref_lookup_as_df(self):
+        """Get the reference lookup dict as a data frame.
+        
+        Returns:
+            :attr:`ref_lookup` converted to a data frame. Returns the object
+            as-is if it is already a data frame.
+
+        """
+        if isinstance(self.ref_lookup, pd.DataFrame):
+            # return existing data frame
+            return self.ref_lookup
+        
+        # convert dict reference to data frame with main columns
+        labels_ref_regions = {}
+        keys_node = (
+            config.ABAKeys.NAME.value,
+            config.ABAKeys.LEVEL.value,
+            config.ABAKeys.ACRONYM.value,
+        )
+        for key, val in self.ref_lookup.items():
+            # extract a subset of entries
+            labels_ref_regions.setdefault(
+                config.ABAKeys.ABA_ID.value, []).append(key)
+            for node_k in keys_node:
+                labels_ref_regions.setdefault(
+                    node_k, []).append(val[NODE][node_k])
+            labels_ref_regions.setdefault(
+                PARENT_IDS, []).append(val[PARENT_IDS])
+        df_regions = df_io.dict_to_data_frame(labels_ref_regions)
+        return df_regions
     
     def create_ref_lookup(
             self, labels_ref: Union[pd.DataFrame, Dict] = None

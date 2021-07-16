@@ -1343,6 +1343,12 @@ def volumes_by_id(
     label_ids = None
     labels_ref = ontology.LabelsRef(labels_ref_path).load()
     
+    # mapping to convert region column names
+    region_col_conv = {
+        config.ABAKeys.ABA_ID.value: config.AtlasMetrics.REGION.value,
+        config.ABAKeys.NAME.value: config.AtlasMetrics.REGION_NAME.value,
+    }
+    
     dfs = []
     dfs_all = []
     for i, img_path in enumerate(img_paths):
@@ -1368,14 +1374,9 @@ def volumes_by_id(
                 combine_sides, label_ids)
             
             # extract region names into a separate data frame
-            labels_ref_regions = {}
-            for k, v in labels_ref_exp.ref_lookup.items():
-                labels_ref_regions.setdefault(
-                    config.AtlasMetrics.REGION.value, []).append(k)
-                labels_ref_regions.setdefault(
-                    config.AtlasMetrics.REGION_NAME.value, []).append(
-                        v[ontology.NODE][config.ABAKeys.NAME.value])
-            df_regions = df_io.dict_to_data_frame(labels_ref_regions)
+            df_regions = labels_ref_exp.get_ref_lookup_as_df()[
+                [config.ABAKeys.ABA_ID.value, config.ABAKeys.NAME.value]]
+            df_regions = df_regions.rename(region_col_conv, axis=1)
         
         # load data frame if available
         df_path = "{}_volumes.csv".format(os.path.splitext(mod_path)[0])

@@ -1360,6 +1360,7 @@ def volumes_by_id(
                 labels_ref_exp = ontology.load_labels_ref(
                     labels_metadata.path_ref)
             label_ids = labels_metadata.region_ids_orig
+        df_regions = None
         if label_ids is None or labels_ref_exp is not None:
             # build IDs from labels parameter if not yet loaded or from
             # experiment even if loaded from prior experiment
@@ -1367,7 +1368,16 @@ def volumes_by_id(
             label_ids = make_label_ids_set(
                 labels_ref_path, labels_ref_lookup, max_level, combine_sides,
                 label_ids)
-        
+            
+            # extract region names into a separate data frame
+            labels_ref_regions = {}
+            for k, v in labels_ref_lookup.items():
+                labels_ref_regions.setdefault(
+                    config.AtlasMetrics.REGION.value, []).append(k)
+                labels_ref_regions.setdefault(
+                    config.AtlasMetrics.REGION_NAME.value, []).append(
+                        v[ontology.NODE][config.ABAKeys.NAME.value])
+            df_regions = df_io.dict_to_data_frame(labels_ref_regions)
         
         # load data frame if available
         df_path = "{}_volumes.csv".format(os.path.splitext(mod_path)[0])
@@ -1481,6 +1491,10 @@ def volumes_by_id(
         
         # output volume stats CSV to atlas directory and append for 
         # combined CSVs
+        if df_regions is not None:
+            # merge in region names
+            df = df_io.join_dfs(
+                (df_regions, df), config.AtlasMetrics.REGION.value)
         if max_level is None:
             df_io.data_frames_to_csv([df], df_path, sort_cols=_SORT_VOL_COLS)
         elif df_level_path is not None:

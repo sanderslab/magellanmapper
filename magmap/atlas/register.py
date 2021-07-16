@@ -1341,8 +1341,7 @@ def volumes_by_id(
     
     # set up labels reference and labels from given labels path
     label_ids = None
-    labels_ref = ontology.load_labels_ref(
-        labels_ref_path) if labels_ref_path else None
+    labels_ref = ontology.LabelsRef(labels_ref_path).load()
     
     dfs = []
     dfs_all = []
@@ -1353,25 +1352,24 @@ def volumes_by_id(
             mod_path = libmag.insert_before_ext(img_path, suffix)
 
         labels_ref_exp = labels_ref
-        if labels_ref is None:
+        if labels_ref.ref_lookup is None:
             # load labels metadata if labels reference not loaded
             labels_metadata = labels_meta.LabelsMeta(mod_path).load()
             if labels_metadata.path_ref:
-                labels_ref_exp = ontology.load_labels_ref(
-                    labels_metadata.path_ref)
+                labels_ref_exp = ontology.LabelsRef(
+                    labels_metadata.path_ref).load()
             label_ids = labels_metadata.region_ids_orig
         df_regions = None
-        if label_ids is None or labels_ref_exp is not None:
+        if label_ids is None or labels_ref_exp.ref_lookup is not None:
             # build IDs from labels parameter if not yet loaded or from
             # experiment even if loaded from prior experiment
-            labels_ref_lookup = ontology.create_ref_lookup(labels_ref_exp)
             label_ids = make_label_ids_set(
-                labels_ref_path, labels_ref_lookup, max_level, combine_sides,
-                label_ids)
+                labels_ref_path, labels_ref_exp.ref_lookup, max_level,
+                combine_sides, label_ids)
             
             # extract region names into a separate data frame
             labels_ref_regions = {}
-            for k, v in labels_ref_lookup.items():
+            for k, v in labels_ref_exp.ref_lookup.items():
                 labels_ref_regions.setdefault(
                     config.AtlasMetrics.REGION.value, []).append(k)
                 labels_ref_regions.setdefault(
@@ -1565,8 +1563,8 @@ def volumes_by_id_compare(img_paths, labels_ref_paths, unit_factor=None,
     
     # load labels references and label IDs based on the last reference
     labels_ref_paths = libmag.to_seq(labels_ref_paths)
-    labels_ref_lookups = [ontology.create_ref_lookup(
-        ontology.load_labels_ref(p)) for p in labels_ref_paths]
+    labels_ref_lookups = [
+        ontology.LabelsRef(p).load().ref_lookup for p in labels_ref_paths]
     label_ids = make_label_ids_set(
         labels_ref_paths[-1], labels_ref_lookups[-1], max_level, combine_sides)
     
@@ -1701,11 +1699,10 @@ def _test_labels_lookup():
     """
     
     # create reverse lookup dictionary
-    ref = ontology.load_labels_ref(config.load_labels)
+    ref = ontology.LabelsRef(config.load_labels).load()
     lookup_id = 15565 # short search path
     #lookup_id = 126652058 # last item
     time_dict_start = time()
-    id_dict = ontology.create_ref_lookup(ref)
     labels_img = sitk_io.load_registered_img(
         config.filename, config.RegNames.IMG_LABELS.value)
     max_labels = np.max(labels_img)
@@ -1714,7 +1711,7 @@ def _test_labels_lookup():
     
     # look up a single ID
     time_node_start = time()
-    found = id_dict[lookup_id]
+    found = ref.ref_lookup[lookup_id]
     time_node_end = time()
     print("found {}: {} with parents {}"
           .format(lookup_id, found[ontology.NODE]["name"],
@@ -1722,9 +1719,9 @@ def _test_labels_lookup():
     
     # brute-force query
     time_direct_start = time()
-    node = ontology.get_node(ref["msg"][0], "id", lookup_id, "children")
+    node = ref.get_node(ref["msg"][0], "id", lookup_id, "children")
     time_direct_end = time()
-    #print(node)
+    print(node)
     
     print("time to create id_dict (s): {}".format(time_dict_end - time_dict_start))
     print("time to find node (s): {}".format(time_node_end - time_node_start))
@@ -1764,12 +1761,11 @@ def _test_region_from_id():
             img5d = importer.read_file(config.filename, config.series)
         scaling = importer.calc_scaling(img5d.img, labels_img)
         print("loaded experiment image from {}".format(config.filename))
-    ref = ontology.load_labels_ref(config.load_labels)
-    id_dict = ontology.create_ref_lookup(ref)
+    ref = ontology.LabelsRef(config.load_labels).load()
     middle, img_region, region_ids = ontology.get_region_middle(
-        id_dict, 16652, labels_img, scaling)
+        ref.ref_lookup, 16652, labels_img, scaling)
     atlas_label = ontology.get_label(
-        middle, labels_img, id_dict, scaling, None, True)
+        middle, labels_img, ref.ref_lookup, scaling, None, True)
     props, bbox, centroid = get_scaled_regionprops(img_region, scaling)
     print("bbox: {}, centroid: {}".format(bbox, centroid))
 
@@ -1867,9 +1863,8 @@ def main():
     
     elif reg is config.RegisterTypes.EXPORT_REGIONS:
         # export regions IDs to CSV files
-        
-        ref = ontology.load_labels_ref(config.load_labels)
-        labels_ref_lookup = ontology.create_ref_lookup(ref)
+
+        ref = ontology.LabelsRef(config.load_labels).load()
         
         # export region IDs and parents at given level to CSV, using only
         # the atlas' labels if orig colors is true
@@ -1877,12 +1872,12 @@ def main():
         if config.filename:
             path = "{}_{}".format(path, config.filename)
         export_regions.export_region_ids(
-            labels_ref_lookup, path, config.labels_level,
+            ref.ref_lookup, path, config.labels_level,
             config.atlas_labels[config.AtlasLabels.ORIG_COLORS])
         
         # export region IDs to network file
         export_regions.export_region_network(
-            labels_ref_lookup, "region_network")
+            ref.ref_lookup, "region_network")
     
     elif reg is config.RegisterTypes.IMPORT_ATLAS:
         # import original atlas, mirroring if necessary

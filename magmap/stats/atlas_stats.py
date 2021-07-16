@@ -55,8 +55,7 @@ def plot_region_development(metric, size=None, show=True):
     dfs_nonbr_large = [df[df["Region"] == n] for n in ids_nonbr_large]
     
     # get data frame with region IDs of all non-brain structures removed
-    labels_ref_lookup = ontology.create_ref_lookup(
-        ontology.load_labels_ref(config.load_labels))
+    labels_ref_lookup = ontology.LabelsRef(config.load_labels).load().ref_lookup
     ids_nonbr = []
     for n in ids_nonbr_large:
         ids_nonbr.extend(

@@ -12,6 +12,7 @@ import numpy as np
 from skimage import transform
 from skimage import io
 from matplotlib import animation
+from matplotlib.image import AxesImage
 from scipy import ndimage
 
 from magmap.cv import chunking, cv_nd
@@ -259,14 +260,15 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             pool.join()
 
         if fit and plotted_imgs:
-            # fit frame to first plane's first available image
-            ax_img = None
-            for ax_img in plotted_imgs[0]:
-                # images may be None if alpha set to 0
-                if ax_img is not None: break
-            if ax_img is not None:
-                plot_support.fit_frame_to_image(
-                    ax_img.figure, ax_img.get_array().shape, self.aspect)
+            # fit each figure to its first available image
+            for ax_img in plotted_imgs:
+                # images may be flattened AxesImage, array of AxesImage and
+                # Text, or None if alpha set to 0
+                if ax_img and libmag.is_seq(ax_img):
+                    ax_img = ax_img[0]
+                if ax_img and isinstance(ax_img, AxesImage):
+                    plot_support.fit_frame_to_image(
+                        ax_img.figure, ax_img.get_array().shape, self.aspect)
         
         return plotted_imgs
 

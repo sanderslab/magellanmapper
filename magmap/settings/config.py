@@ -141,9 +141,16 @@ class LoadData(Enum):
 # TODO: support specifying sources by paths
 load_data = dict.fromkeys(LoadData, None)
 
+# Path modifiers
 
-prefix = None # alternate path
-suffix = None # modifier to existing base path
+#: Output base paths.
+prefixes: Optional[Sequence[str]] = None
+#: Output base path.
+prefix: Optional[str] = None
+# Modifiers to existing base paths.
+suffixes: Optional[Sequence[str]] = None
+#: Modifier to existing base path, typically inserted just before the extension.
+suffix: Optional[str] = None
 
 #: Tuple[str]: Plane orientations based on the two axes specifying the plane.
 PLANE = ("xy", "xz", "yz")

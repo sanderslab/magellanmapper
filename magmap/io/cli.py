@@ -245,8 +245,12 @@ def process_cli_args():
         "--meta", nargs="*",
         help="Metadata path(s), which can be given as multiple files "
              "corresponding to each image")
-    parser.add_argument("--prefix", help="Path prefix")
-    parser.add_argument("--suffix", help="Filename suffix")
+    parser.add_argument(
+        "--prefix", nargs="*", type=str,
+        help="Path prefix(es), typically used as the base path for file output")
+    parser.add_argument(
+        "--suffix", nargs="*", type=str,
+        help="Path suffix(es), typically inserted just before the extension")
     parser.add_argument("--channel", nargs="*", type=int, help="Channel index")
     parser.add_argument("--series", help="Series index")
     parser.add_argument(
@@ -627,12 +631,18 @@ def process_cli_args():
             config.notify_attach = args.notify[2]
             print("Set notification attachment path to {}"
                   .format(config.notify_attach))
+    
     if args.prefix is not None:
-        config.prefix = args.prefix
-        print("Set path prefix to {}".format(config.prefix))
+        # path output prefixes
+        config.prefixes = args.prefix
+        config.prefix = config.prefixes[0]
+        print("Set path prefixes to {}".format(config.prefixes))
+    
     if args.suffix is not None:
-        config.suffix = args.suffix
-        print("Set path suffix to {}".format(config.suffix))
+        # path suffixes
+        config.suffixes = args.suffix
+        config.suffix = config.suffixes[0]
+        print("Set path suffixes to {}".format(config.suffixes))
     
     if args.alphas:
         # specify alpha levels

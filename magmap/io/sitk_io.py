@@ -6,7 +6,7 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
-from typing import Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 
 import numpy as np
 import SimpleITK as sitk
@@ -274,37 +274,36 @@ def load_registered_img(
     return (reg_img, reg_img_path) if return_path else reg_img
 
 
-def find_atlas_labels(labels_ref_path, drawn_labels_only, labels_ref_lookup):
+def find_atlas_labels(
+        labels_ref_path: str, drawn_labels_only: bool, labels_ref_lookup: Dict
+) -> List[int]:
     """Find atlas label IDs from the labels directory.
     
     Args:
-        labels_ref_path (str): Path to labels reference from which to load
+        labels_ref_path: Path to labels reference from which to load
             labels from the original labels if ``drawn_labels_only`` is True.
-        drawn_labels_only (bool): True to load the atlas in the ``load_labels``
+        drawn_labels_only: True to load the atlas in the ``load_labels``
             folder to collect only labels drawn in this atlas; False to use
             all labels in ``labels_ref_lookup``.
-        labels_ref_lookup (dict): Labels reverse lookup dictionary of
+        labels_ref_lookup: Labels reverse lookup dictionary of
             label IDs to labels.
     
     Returns:
-        list[int]: List of label IDs.
+        List of label IDs.
     
     """
-    orig_labels_path = os.path.join(
-        os.path.dirname(labels_ref_path), config.RegNames.IMG_LABELS.value)
-    # need all labels from a reference as registered image may have lost labels
-    if drawn_labels_only and os.path.exists(orig_labels_path):
-        # use all drawn labels in original labels image
-        config.labels_img_orig = load_registered_img(
-            labels_ref_path, config.RegNames.IMG_LABELS.value)
-        orig_labels_sitk = sitk.ReadImage(orig_labels_path)
-        orig_labels_np = sitk.GetArrayFromImage(orig_labels_sitk)
-        label_ids = np.unique(orig_labels_np).tolist()
-    else:
-        # use all labels in ontology reference to include hierarchical 
-        # labels or if original labels image isn't present
-        label_ids = list(labels_ref_lookup.keys())
-    return label_ids
+    if drawn_labels_only:
+        # need all labels from a reference as registered image may have lost
+        # labels; use all drawn labels in original labels image
+        orig_labels_sitk, orig_labels_path = read_sitk(reg_out_path(
+            os.path.dirname(labels_ref_path),
+            config.RegNames.IMG_LABELS.value))
+        if orig_labels_sitk is not None:
+            config.labels_img_orig = sitk.GetArrayFromImage(orig_labels_sitk)
+            return np.unique(config.labels_img_orig).tolist()
+    # fall back to using all labels in ontology reference, including any
+    # hierarchical labels
+    return list(labels_ref_lookup.keys())
 
 
 def write_registered_image(img_np, img_path, reg_name, img_sitk=None,

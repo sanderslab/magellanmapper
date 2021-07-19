@@ -591,17 +591,21 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                 path_base, fig_dict["imgs"], config.delay, config.savefig,
                 suffix)
         else:
+            # generate single figure with axis and plane index in filename
             if collage:
                 # output filename as a collage of images
                 if not os.path.isdir(path_base):
                     path_base = os.path.dirname(path_base)
                 path_base = os.path.join(path_base, "collage")
+            
+            # insert mod as suffix, then add any additional suffix
             # TODO: config.prefix likely conflicts with intended image setup
-            out_path = libmag.make_out_path(path_base, suffix=suffix)
             mod = "_plane_{}{}".format(
                 plot_support.get_plane_axis(config.plane), planei)
+            out_path = libmag.make_out_path(path_base, suffix=mod)
+            out_path = libmag.insert_before_ext(out_path, suffix)
             plot_support.save_fig(
-                out_path, config.savefig, mod, fig_dict["fig"])
+                out_path, config.savefig, fig=fig_dict["fig"])
 
 
 def reg_planes_to_img(imgs, path=None, ax=None):

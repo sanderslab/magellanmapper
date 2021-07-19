@@ -8,7 +8,7 @@ Attributes:
 
 from enum import Enum
 import os
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 import warnings
 
 import numpy as np
@@ -451,25 +451,31 @@ def add_cols_df(df, cols):
     return df
 
 
-def join_dfs(dfs, id_col, drop_dups=False):
+def join_dfs(
+        dfs: Sequence[pd.DataFrame], id_col: Union[str, List[str]],
+        drop_dups: bool = False, how: Optional[str] = None) -> pd.DataFrame:
     """Join data frames by an ID column.
     
     Args:
-        dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to join.
-        id_col (Union[str, list[str]]): Index column.
-        drop_dups (bool): True to drop duplicates of ``id_col``; defaults
+        dfs: Sequence of data frames to join.
+        id_col: Index column.
+        drop_dups: True to drop duplicates of ``id_col``; defaults
             to False.
+        how: How to join the data frames; if None (default), uses "left".
 
     Returns:
-        :obj:`pd.DataFrame`: Data frame after serially joining data frames.
+        Data frame after serially joining data frames.
 
     """
+    if how is None:
+        how = "left"
     df_out = None
     for i, df in enumerate(dfs):
         if i == 0:
             df_out = df.set_index(id_col)
         else:
-            df_out = df_out.join(df.set_index(id_col), rsuffix="_{}".format(i))
+            df_out = df_out.join(
+                df.set_index(id_col), rsuffix="_{}".format(i), how=how)
     df_out = df_out.reset_index()
     if drop_dups:
         # keep only first match

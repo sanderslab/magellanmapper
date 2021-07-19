@@ -1494,7 +1494,7 @@ def volumes_by_id(
         if df_regions is not None:
             # merge in region names
             df = df_io.join_dfs(
-                (df_regions, df), config.AtlasMetrics.REGION.value)
+                (df_regions, df), config.AtlasMetrics.REGION.value, how="right")
         if max_level is None:
             df_io.data_frames_to_csv([df], df_path, sort_cols=_SORT_VOL_COLS)
         elif df_level_path is not None:

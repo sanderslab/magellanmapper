@@ -253,11 +253,12 @@ class LabelsRef:
             # extract a subset of entries
             labels_ref_regions.setdefault(
                 config.ABAKeys.ABA_ID.value, []).append(key)
+            node = val[NODE]
             for node_k in keys_node:
                 labels_ref_regions.setdefault(
-                    node_k, []).append(val[NODE][node_k])
+                    node_k, []).append(node.get(node_k) if node else None)
             labels_ref_regions.setdefault(
-                PARENT_IDS, []).append(val[PARENT_IDS])
+                PARENT_IDS, []).append(val.get(PARENT_IDS))
         df_regions = df_io.dict_to_data_frame(labels_ref_regions)
         return df_regions
     

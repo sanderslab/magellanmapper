@@ -6,8 +6,8 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 --- | --- | --- | --- | ---
 `--img` | `<path> [path2] ...` | Image paths. `--img` can be omitted if paths are given as the first argument. Can be given as the original filename (eg `myvolume.tiff`), the imported name, (`myvolume_image5d.npy`), a sub-image name (`myvolume_(x,y,z)x(x,y,z)_subimg.npy`), or a registered image (`myvolume_atlasVolume.mhd`). | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 `--meta` | `<metadata-path> [path2] ...` | Metadata paths corresponding to images from `--img`. | v1.0.0 | v1.0.0
-`--prefix` | `<path>` | Path prefix, typically used for the start of output paths. Takes precedence over `--img` for `--reg_suffixes` | v1.0.0 | v1.0.0
-`--suffix` | `<path>` | Path suffix, typically used for the end of output paths. | v1.0.0 | v1.0.0
+`--prefix` | `<path1> [path2] ...` | Path prefix(es), typically used for the start of output paths. Takes precedence over `--img` for `--reg_suffixes` <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Multiple paths can be given.</li></ul> | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
+`--suffix` | `<path>` | Path suffix, typically used for the end of output paths. <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Multiple paths can be given.</li></ul> | v1.0.0 | v1.0.0
 `--channel` | `<n> [n2] ...` | Indices of channels to include, starting from 0. | v1.0.0 | v1.0.0
 `--series` | `<n>` | Index of image series such as image tile, starting from 0. | v1.0.0 | v1.0.0
 `--subimg_offset` | `<x,y,z> [x2,y2,z2] ...` | Sub-image offset coordinates given as `x, y, z`. Sub-images are 3D or 3D+channel subsets of full images that can be saved as separate files. Multiple sets of coordinates can be given to load different sub-images. | v1.2.0 | v1.2.0
@@ -31,7 +31,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--truth_db` | `[mode=<mode>] [path=<path>]` | Truth database; see `config.TruthDBModes` for available modes. | v1.0.0 | v1.0.0
 `--labels` | `[path_ref="""] [level=0] [ID=0] [orig_colors=1] [symmetric_colors=1] [binary=<backround>,<foreground>] [translate_labels=<path>"] [translate_children=0]` | Atlas label settings; see `config.AtlasLabels`. <ul><li>`path_ref`: Path to the labels reference file. Should have at least these columns: `Region` or `id` for region IDs, and `RegionName` or `name` for corresponding names. Atlases generated in >=v1.5.0 with this flag will copy this file into the atlas directory so that this argument is not needed when loading the atlas and images registered to it.</li> <li>`level`: Ontology level. Structures in sub-levels will be grouped at this level for volume stats. | v1.0.0 | v1.0.0
 `--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0]` | Image transformations; see `config.Transforms`. | v1.0.0 | v1.0.0
-`--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Suffixes of registered images to load; see `config.RegSuffixes` for suffixes used throughout the package. Atlases and regenerated and registered with output paths based on the path given by `--img` or `--prefix`. For example:<ul><li>"Base" path (from `--img` or `--prefix`): `/home/me/my_image`</li><li>Intensity/histology/"atlas" image: `/home/me/my_image_atlasVolume.nii.gz`</li><li>Annotation/labels image: `/home/me/my_image_annotation.nii.gz`</li><li>Other registered images, eg atlas edges: `/home/me/my_image_atlasEdge.nii.gz`</li></ul>To load intensity and annotations image: `./run.py --img /home/me/my_image --reg_suffixes atlasVolume.nii.gz annotation.nii.gz`.<br>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Suffixes can be also given as an absolute path, such as a labels image not registered to the main image. | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
+`--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Suffixes of registered images to load; see `config.RegSuffixes` for suffixes used throughout the package. Atlases and regenerated and registered with output paths based on the path given by `--img` or `--prefix`. For example:<ul><li>"Base" path (from `--img` or `--prefix`): `/home/me/my_image`</li><li>Intensity/histology/"atlas" image: `/home/me/my_image_atlasVolume.nii.gz`</li><li>Annotation/labels image: `/home/me/my_image_annotation.nii.gz`</li><li>Other registered images, eg atlas edges: `/home/me/my_image_atlasEdge.nii.gz`</li></ul>To load intensity and annotations image: `./run.py --img /home/me/my_image --reg_suffixes atlasVolume.nii.gz annotation.nii.gz`. <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Suffixes can be also given as an absolute path, such as a labels image not registered to the main image.</li></ul> | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--plot_labels` | `[title=<title>] ...` | Plot labels; see `config.PlotLabels` for available parameters. | v1.0.0 | v1.0.0
 `--set_meta` | `[resolutions=<x,y,z>] [magnification=<n>] [zoom=<n>] [shape=<c,x,y,z,...>] [dtype=<data-type>]` | Metadata to set when importing an image; see `config.MetaKeys`. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
 `--plane` | `<xy|xz|yz>` | Transpose to the given planar orientation | v1.0.0 | v1.0.0
@@ -51,9 +51,11 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
-`--proc <task>` | `--proc <task1>=[sub-task1,...] <task2>` | v1.5.0 | Multiple processing tasks can be given as well as sub-tasks
+`--prefix <path>` | `--prefix <path1> [path2] ...` | v1.5.0 | Multiple prefixes can be given
+`--proc <task>` | `--proc <task1>=[sub-task1,...] [task2] ...` | v1.5.0 | Multiple processing tasks can be given as well as sub-tasks
 Specified in ROI profiles | `--proc preprocess=[rotate,saturate,...]` | v1.5.0 | Pre-processing tasks are integrated as sub-processing tasks; see `config.PreProcessKeys` for task names
 `--reg_suffixes [atlas=<suffix1>] ... [fixed_mask=<suffix2>] [moving_mask=<suffix3>]` | Unchanged | v1.5.0 | Suffixes can now be given as an absolute path to load directly from the path, eg a labels image not registered to the main image. Image masks for registration can also be given as `fixed_mask` and `moving_mask`.
+`--suffix <path>` | `--suffix <path1> [path2] ...` | v1.5.0 | Multiple suffixes can be given
 
 ## Changes in MagellanMapper v1.4
 

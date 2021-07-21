@@ -216,15 +216,35 @@ class LabelsRef:
         try:
             ids = df[config.ABAKeys.ABA_ID.value]
             for region_id in ids:
+                # convert region to dict
                 region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
                 region_dict = region.to_dict("records")[0]
+                
                 if config.ABAKeys.NAME.value not in region_dict:
+                    # ensure that ABA-style name column is present
                     region_dict[config.ABAKeys.NAME.value] = str(region_id)
+                
+                # add additional fields with defaults
                 region_dict[config.ABAKeys.LEVEL.value] = 1
                 region_dict[config.ABAKeys.CHILDREN.value] = []
                 region_dict[config.ABAKeys.ACRONYM.value] = ""
+                
+                # add to lookup dict
                 sub_dict = {NODE: region_dict, PARENT_IDS: []}
                 id_dict[region_id] = sub_dict
+            
+            if config.AtlasMetrics.PARENT.value in df.columns:
+                # fill children with references to each child, which should
+                # each include references until end nodes
+                for region_id in ids:
+                    children = df.loc[
+                        df[config.AtlasMetrics.PARENT.value] == region_id,
+                        config.ABAKeys.ABA_ID.value]
+                    for child in children:
+                        id_dict[region_id][NODE][
+                            config.ABAKeys.CHILDREN.value].append(
+                                id_dict[child][NODE])
+                    
         except KeyError as e:
             raise KeyError(f"Could not find this column in the labels reference "
                            f"file: {e}")

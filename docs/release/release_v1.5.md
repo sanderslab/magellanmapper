@@ -10,9 +10,16 @@
 
 #### GUI
 
+- Profile panel overhaul
+    - Preview profiles befor adding
+    - Skip the "Load" step; profiles are automaticaly loaded when added
+    - View the complete settings for all loaded profiles
+    - Clearer and more compact labels and button arrangement
+    - Settings panel for resetting preferences and finding version information
 - Window size and position are saved as user prferences
 - The default window size is smaller to fit into 720p displays
 - The default focus is no longer the main image file path to avoid accidental file loading
+- Registered image selectors are now more compact
 
 #### CLI
 
@@ -23,9 +30,13 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Atlas refinement
 
+- Adaptive kernel sizes can be used for smoothing operations
 - Metadata for labels images are saved when importing an atlas and registering the atlas to another image so that the original atlas no longer needs to be available (and `--labels` argument does not to be given) when loading the atlas or registered image
 - Smoothing metrics are output during the `--register merge_atlas_segs` task
 - The atlas profile settings `meas_edge_dists` and `meas_smoothing` turn off these metrics to save time during atlas generation, and the profile `fewerstats` turns off both these settings
+- Multiprocessing is turned off for lateral extension for better performance
+- Fixed multiprocessing tasks with SimpleElastix 2.0
+- Fixed DSC metrics between the atlas and its new labels, and more DSC metrics are saved
 
 #### Atlas registration
 
@@ -34,17 +45,35 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 #### Cell detection
 
 - Previously saved blobs are no longer loaded prior to re-detection
+- Fixed blob segmentation and showing labels when none of either are present
 
 #### Volumetric image processing
 
 #### I/O
 
+- Improvements to loading registered images
+    - The main image is no longer loaded if a registered `atlas` image is given
+    - Images can be specified as absolute paths to load any image, including those registered to another image
+    - Images loaded for edge detection can be configured using `--reg_suffixes`
+    - Files with two extensions (eg `.nii.gz`) are supported
+    - Files modified by `--prefix` can now also be found in the registered image dropdowns
+    - More support for CSV format reference files
+- Improvements to exporting image stacks
+    - Images can be exported to multiple separate figures
+    - Sub-plots are labeled
+    - Image rotation arguments are applied
+    - Plane index is only added when exporting multiple planes
 - Single plane RAW images can be loaded when importing files from a directory, in addition to multiplane RAW files
-- Fixed enabling the import directory without sufficient metadata
+- The known parts of the import image shape are populated even if the full shape is not known
+- Fixed to disable the import directory button when metadata is insufficient
 - Fixed to update metadata files when loaded through the `--meta` flag
 - Fixed error when unable to load a profile `.yml` file
+- Fixed to create parent directories when importing images
+- Fixed to create default resolutions even when none are specified
 
 #### Server pipelines
+
+- Continuous integration has been implemented through GitHub Actions to improve quality control
 
 #### Python stats and plots
 
@@ -52,9 +81,14 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Code base and docs
 
+- Multiprocessing tasks are now more widely supported in Windows
+- Type hints are now being integrated, replacing docstring types for better typing info and debugging
+
 ### Dependency Updates
 
 #### Python Dependency Changes
+
+- Workaround for failure to install Mayavi because of a newer VTK, now pinned to 9.0.1
 
 #### R Dependency Changes
 

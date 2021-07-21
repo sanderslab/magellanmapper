@@ -64,7 +64,11 @@ def export_region_ids(labels_ref_lookup, path, level=None,
     label_parents = ontology.labels_to_parent(
         labels_ref_lookup, level, allow_parent_same_level=True)
     
-    cols = ["Region", "RegionAbbr", "RegionName", "Level", "Parent"]
+    cols = [config.AtlasMetrics.REGION.value,
+            config.AtlasMetrics.REGION_ABBR.value,
+            config.AtlasMetrics.REGION_NAME.value,
+            config.AtlasMetrics.LEVEL.value,
+            config.AtlasMetrics.PARENT.value]
     data = OrderedDict()
     label_ids = sitk_io.find_atlas_labels(
         config.load_labels, drawn_labels_only, labels_ref_lookup)

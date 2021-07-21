@@ -1237,10 +1237,11 @@ def make_label_ids_set(
         List of label IDs.
 
     """
-    if label_ids is None:
+    drawn_only = max_level is None
+    if label_ids is None or not drawn_only:
         # get label IDs from at atlas
         label_ids = sitk_io.find_atlas_labels(
-            labels_ref_path, max_level is None, labels_ref_lookup)
+            labels_ref_path, drawn_only, labels_ref_lookup)
     if not combine_sides and np.all(np.array(label_ids) >= 0):
         # include opposite side as separate labels; otherwise, defer to 
         # ontology (max_level flag) or labels metrics to get labels from 
@@ -1340,9 +1341,10 @@ def volumes_by_id(
     grouping[config.AtlasMetrics.SAMPLE.value] = None
     grouping[config.AtlasMetrics.CONDITION.value] = condition
     
-    # set up labels reference and labels from given labels path
+    # set up labels reference if available
     label_ids = None
     labels_ref = ontology.LabelsRef(labels_ref_path).load()
+    ref_not_spec = labels_ref.ref_lookup is None
     
     # mapping to convert region column names
     region_col_conv = {
@@ -1358,21 +1360,18 @@ def volumes_by_id(
         if suffix is not None:
             mod_path = libmag.insert_before_ext(img_path, suffix)
 
+        labels_metadata = labels_meta.LabelsMeta(mod_path).load()
         labels_ref_exp = labels_ref
-        if labels_ref.ref_lookup is None:
-            # load labels metadata if labels reference not loaded
-            labels_metadata = labels_meta.LabelsMeta(mod_path).load()
-            if labels_metadata.path_ref:
-                labels_ref_exp = ontology.LabelsRef(
-                    labels_metadata.path_ref).load()
-            label_ids = labels_metadata.region_ids_orig
+        if ref_not_spec:
+            # load labels metadata from sample image if global ref not loaded
+            labels_ref_exp = ontology.LabelsRef(labels_metadata.path_ref).load()
+        label_ids_exp = labels_metadata.region_ids_orig
         df_regions = None
-        if label_ids is None or labels_ref_exp.ref_lookup is not None:
-            # build IDs from labels parameter if not yet loaded or from
-            # experiment even if loaded from prior experiment
+        if label_ids is None or ref_not_spec:
+            # build IDs if not yet built, or always build if no global ref
             label_ids = make_label_ids_set(
                 labels_ref_path, labels_ref_exp.ref_lookup, max_level,
-                combine_sides, label_ids)
+                combine_sides, label_ids_exp)
             
             # extract region names into a separate data frame
             df_regions = labels_ref_exp.get_ref_lookup_as_df()[

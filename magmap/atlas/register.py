@@ -1345,6 +1345,7 @@ def volumes_by_id(
     label_ids = None
     labels_ref = ontology.LabelsRef(labels_ref_path).load()
     ref_not_spec = labels_ref.ref_lookup is None
+    df_regions = None
     
     # mapping to convert region column names
     region_col_conv = {
@@ -1366,7 +1367,6 @@ def volumes_by_id(
             # load labels metadata from sample image if global ref not loaded
             labels_ref_exp = ontology.LabelsRef(labels_metadata.path_ref).load()
         label_ids_exp = labels_metadata.region_ids_orig
-        df_regions = None
         if label_ids is None or ref_not_spec:
             # build IDs if not yet built, or always build if no global ref
             label_ids = make_label_ids_set(

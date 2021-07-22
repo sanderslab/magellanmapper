@@ -64,13 +64,15 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
     - Sub-plots are labeled
     - Image rotation arguments are applied
     - Plane index is only added when exporting multiple planes
-- Single plane RAW images can be loaded when importing files from a directory, in addition to multiplane RAW files
-- The known parts of the import image shape are populated even if the full shape is not known
-- Fixed to disable the import directory button when metadata is insufficient
+- Improvements to image import
+    - Single plane RAW images can be loaded when importing files from a directory, in addition to multiplane RAW files
+    - The known parts of the import image shape are populated even if the full shape is not known
+    - The Bio-Formats library has been updated to support more file formats (from Bio-Formats 5.1.8 to 6.6.0 via Python-Bioformats 1.10 to 4.0.5, respectively)
+    - Fixed to disable the import directory button when metadata is insufficient
+    - Fixed to create parent directories when importing images
+    - Fixed to create default resolutions even when none are specified
 - Fixed to update metadata files when loaded through the `--meta` flag
 - Fixed error when unable to load a profile `.yml` file
-- Fixed to create parent directories when importing images
-- Fixed to create default resolutions even when none are specified
 
 #### Server pipelines
 
@@ -89,6 +91,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Python Dependency Changes
 
+- Python-Bioformats has been upgraded to 4.0.5 and uses a custom package that uses the existing Javabridge rather than Python-Javabridge to avoid a higher NumPy version requirement
 - Workaround for failure to install Mayavi because of a newer VTK, now pinned to 9.0.1
 
 #### R Dependency Changes

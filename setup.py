@@ -7,7 +7,8 @@ import setuptools
 _EXTRAS_IMPORT = [
     # Javabridge pre-built on Java 8
     "javabridge==1.0.19.post4+gbebed64",
-    "python-bioformats==1.1.0",
+    # Python-Bioformats built to depend on the vanilla (non-forked) Javabridge
+    "python-bioformats==4.0.5.post2+g51eb88a",
 ]
 
 # optional dependencies for Pandas

@@ -1306,12 +1306,15 @@ def _setup_vols_df(df_path, max_level):
 def volumes_by_id(
         img_paths: Sequence[str], labels_ref_path: Optional[str] = None,
         suffix: Optional[str] = None, unit_factor: Optional[str] = None,
-        groups: Optional[str] = None, max_level: Optional[int] = None,
+        groups: Optional[Dict] = None, max_level: Optional[int] = None,
         combine_sides=True, extra_metrics: Optional[str] = None):
     """Get volumes and additional label metrics for each single labels ID.
     
     Atlas (intensity) and annotation (labels) images can be configured
-    in :attr:`config.reg_suffixes`.
+    in :attr:`magmap.settings.config.reg_suffixes`.
+    :attr:`magmap.settings.config.plot_labels` can be used
+    to configure the condition field with the
+    :attr:`magmap.settings.config.PlotLabels.CONDITION` key.
     
     Args:
         img_paths: Sequence of images.
@@ -1355,6 +1358,10 @@ def volumes_by_id(
         condition = config.suffix.replace("_", "")
         out_path += config.suffix
         out_path_summary += config.suffix
+    cond_arg = config.plot_labels[config.PlotLabels.CONDITION]
+    if cond_arg:
+        # override default condition or from suffix
+        condition = cond_arg
     
     # grouping metadata, which will be combined with groups
     grouping = OrderedDict()

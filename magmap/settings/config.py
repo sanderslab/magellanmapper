@@ -281,6 +281,7 @@ class PlotLabels(Enum):
     DPI = auto()  # dots per inch
     NAN_COLOR = auto()  # color for NaN values (Matplotlib or RGBA string)
     TEXT_POS = auto()  # text (annotation) position in x,y
+    CONDITION = auto()  # condition
 
 
 #: dict[Any]: Plot labels set from command-line.

@@ -246,37 +246,43 @@ Plot2DTypes = Enum(
 )
 plot_2d_type = None
 
+
 # plot label keys for command-line parsing
-PlotLabels = Enum(
-    "PlotLabels", (
-        "TITLE",  # figure title
-        "X_LABEL", "Y_LABEL",  # axes labels
-        "X_UNIT", "Y_UNIT",  # axes units
-        "X_LIM", "Y_LIM",  # (min, max) for x-, y-axes
-        "X_TICK_LABELS", "Y_TICK_LABELS",  # labels for axis tick marks
-        "X_SCALE", "Y_SCALE",  # scaling, eg "log", "linear" (see Matplotlib)
-        "SIZE",  # in x,y 
-        "LAYOUT",  # subplot layout in num of columns, rows
-        "ALPHAS_CHL",  # alphas for main image's channels
-        "X_COL", "Y_COL",  # columns from data frame to plot
-        "GROUP_COL",  # data frame group column
-        "WT_COL",  # weight column
-        "ID_COL",  # ID column
-        "ERR_COL",  # error column(s)
-        "ANNOT_COL",  # annotation column for each point
-        "ZOOM_SHIFT",  # shift plot offset when zooming into ROI
-        "HLINE",  # horizontal line, usually fn for each group
-        "LEGEND_NAMES",  # names to display in legend
-        "PADDING",  # image padding, either as scalar or x,y,z
-        "MARGIN",  # image margin, either as scalar or x,y,z
-        "SCALE_BAR",  # True to include a scale bar
-        "MARKER",  # Matplotlib marker style
-        "DROP_DUPS",  # drop duplicates
-        "DPI",  # dots per inch
-        "NAN_COLOR",  # color for NaN values (Matplotlib or RGBA string)
-        "TEXT_POS",  # text (annotation) position in x,y
-    )
-)
+class PlotLabels(Enum):
+    TITLE = auto()  # figure title
+    X_LABEL = auto()  # axis labels
+    Y_LABEL = auto()
+    X_UNIT = auto()  # axis units
+    Y_UNIT = auto()
+    X_LIM = auto()  # (min, max) for axis
+    Y_LIM = auto()
+    X_TICK_LABELS = auto()  # labels for axis tick marks
+    Y_TICK_LABELS = auto()
+    X_SCALE = auto()  # scaling, eg "log", "linear" (see Matplotlib)
+    Y_SCALE = auto()
+    SIZE = auto()  # in x,y
+    LAYOUT = auto()  # subplot layout in num of columns, rows
+    ALPHAS_CHL = auto()  # alphas for main image's channels
+    X_COL = auto()  # column from data frame to plot
+    Y_COL = auto()
+    GROUP_COL = auto()  # data frame group column
+    WT_COL = auto()  # weight column
+    ID_COL = auto()  # ID column
+    ERR_COL = auto()  # error column(s)
+    ANNOT_COL = auto()  # annotation column for each point
+    ZOOM_SHIFT = auto()  # shift plot offset when zooming into ROI
+    HLINE = auto()  # horizontal line, usually fn for each group
+    LEGEND_NAMES = auto()  # names to display in legend
+    PADDING = auto()  # image padding, either as scalar or x,y,z
+    MARGIN = auto()  # image margin, either as scalar or x,y,z
+    SCALE_BAR = auto()  # True to include a scale bar
+    MARKER = auto()  # Matplotlib marker style
+    DROP_DUPS = auto()  # drop duplicates
+    DPI = auto()  # dots per inch
+    NAN_COLOR = auto()  # color for NaN values (Matplotlib or RGBA string)
+    TEXT_POS = auto()  # text (annotation) position in x,y
+
+
 #: dict[Any]: Plot labels set from command-line.
 plot_labels = dict.fromkeys(PlotLabels, None)
 plot_labels[PlotLabels.SCALE_BAR] = True

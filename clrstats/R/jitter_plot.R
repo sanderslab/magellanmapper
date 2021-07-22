@@ -511,10 +511,9 @@ printDirectly <- function(dev.fn, path.out, plot.size) {
 }
 
 finalizeDevice <- function(dev.fn, path.plot, plot.size) {
-  # Print and reset a device depending on device type and interactivity.
+  # Finalize a device by printing if necessary and resetting a device.
   #
-  # Print to a device if in interactive mode. Reset the device if in
-  # interactive mode or if the device is PDF if non-interactive mode..
+  # Prints to a device if in interactive mode, or simply resets the device.
   #
   # Args:
   #   dev.fn: Output device function.
@@ -524,8 +523,10 @@ finalizeDevice <- function(dev.fn, path.plot, plot.size) {
   if (interactive()) {
     # save plot from interactive (screen) device, including device reset
     printDirectly(dev.fn, path.plot, plot.size)
-  } else if (!is.null(dev.fn) & !identical(dev.fn, pdf)) {
-    # must reset non-pdf devices in non-interactive mode to output the file
+  } else if (!is.null(dev.fn)) {
+    # in non-interactive mode, must reset non-pdf devices to output the file
+    # and pdf devices to avoid stacking them into a multi-page file when
+    # too many devices are open
     resetDevice()
   }
 }

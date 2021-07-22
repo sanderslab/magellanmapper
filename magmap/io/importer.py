@@ -20,13 +20,18 @@ from time import time
 import glob
 import re
 from xml import etree as et
-import warnings
+
+import numpy as np
+from PIL import Image
+from skimage import color
+from skimage import io
 
 from magmap.io import libmag, np_io, yaml_io
 from magmap.plot import plot_3d
 from magmap.settings import config
 
-import numpy as np
+_logger = config.logger.getChild(__name__)
+
 try:
     import javabridge as jb
     import bioformats as bf
@@ -35,13 +40,10 @@ except (ImportError, ValueError, RuntimeError) as e:
     # Java cannot be initialized, or a RuntimeError if Java home dir not found 
     jb = None
     bf = None
-    warnings.warn(
-        "{} could not be found, so there will be error when attempting to "
-        "import images into Numpy format".format(
-            e.name if isinstance(e, ImportError) else "Java"), UserWarning, 2)
-from PIL import Image
-from skimage import color
-from skimage import io
+    _logger.warn(
+        "%s could not be found, so there will be error when attempting to "
+        "import images into Numpy format",
+        e.name if isinstance(e, ImportError) else "Java")
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html

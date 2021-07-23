@@ -18,6 +18,8 @@ from magmap.io import libmag
 
 EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 
+_logger = config.logger.getChild(__name__)
+
 
 def reg_out_path(file_path, reg_name, match_ext=False):
     """Generate a path for a file registered to another file.
@@ -65,7 +67,11 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     return img_sitk_back
 
 
-def match_world_info(source, target):
+def match_world_info(
+        source: sitk.Image, target: sitk.Image,
+        spacing: Union[bool, Tuple[int], List[int]] = True,
+        origin: Union[bool, Tuple[int], List[int]] = True,
+        direction: Union[bool, Tuple[int], List[int]] = True):
     """Copy world information (eg spacing, origin, direction) from one
     image object to another.
 
@@ -77,18 +83,33 @@ def match_world_info(source, target):
             will be copied into ``target``.
         target (:obj:`sitk.Image`): Target object whose corresponding
             metadata will be overwritten by that of ``source``.
+        spacing: True to copy the spacing from ``source`` to ``target``, or
+            the spacing to set in ``target``; defaults to True.
+        origin: True to copy the origin from ``source`` to ``target``, or
+            the origin to set in ``target``; defaults to True.
+        direction: True to copy the direction from ``source`` to ``target``, or
+            the direction to set in ``target``; defaults to True.
 
     """
-    spacing = source.GetSpacing()
-    origin = source.GetOrigin()
-    direction = source.GetDirection()
-    print("Adjusting spacing from {} to {}, origin from {} to {}, "
-          "direction from {} to {}"
-          .format(target.GetSpacing(), spacing, target.GetOrigin(), origin,
-                  target.GetDirection(), direction))
-    # target.SetSpacing(spacing)
-    target.SetOrigin(origin)
-    target.SetDirection(direction)
+    # get the world info from the source if not already set
+    if spacing is True:
+        spacing = source.GetSpacing()
+    if origin is True:
+        origin = source.GetOrigin()
+    if direction is True:
+        direction = source.GetDirection()
+    
+    # set the values in the target
+    _logger.debug(
+        "Adjusting spacing from %s to %s, origin from %s to %s, "
+        "direction from %s to %s", target.GetSpacing(), spacing,
+        target.GetOrigin(), origin, target.GetDirection(), direction)
+    if spacing:
+        target.SetSpacing(spacing)
+    if origin:
+        target.SetOrigin(origin)
+    if direction:
+        target.SetDirection(direction)
 
 
 def read_sitk(path, dryrun=False):

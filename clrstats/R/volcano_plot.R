@@ -41,13 +41,18 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   }
   #print(data.frame(x, size))
   
-  # point colors based on IDs of parents at the level generated for region 
-  # IDs file, using a palette with color for each unique parent
   parents <- stats$Parent
-  parents.unique <- unique(parents)
-  parents.indices <- match(parents, parents.unique)
-  colors <- RColorBrewer::brewer.pal(length(parents.unique), "Paired")
-  colors_parents <- colors[parents.indices]
+  if (length(parents) > 0) {
+    # point colors based on IDs of parents at the level generated for region 
+    # IDs file, using a palette with color for each unique parent
+    parents.unique <- unique(parents)
+    parents.indices <- match(parents, parents.unique)
+    colors <- RColorBrewer::brewer.pal(length(parents.unique), "Paired")
+    colors.parents <- colors[parents.indices]
+  } else {
+    # default to blue color for all points
+    colors.parents <- "blue"
+  }
   
   # base plot -log p vs effect size
   xlab <- "Effects"
@@ -93,7 +98,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
     x, y, xlim=c(-1 * x.max, x.max), 
     main=title, xlab=xlab, 
     ylab="-log10(p)", type="p", las=1, pch=16, cex=(size*size.mult), 
-    col=colors_parents)
+    col=colors.parents)
   abline(v=0, lty="dashed", col=gray(0.5, 0.5))
   
   # label points

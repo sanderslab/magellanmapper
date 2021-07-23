@@ -101,14 +101,12 @@ sample_tasks() {
   ./run.py --img "$IMG" --roi_profile "$MIC" --load blobs
 
   # make and view density image (heat map)
-  # TODO: not yet working on Windows
   ./run.py -v --img "$IMG" --register make_density_images
   ./run.py --img "$IMG" --roi_profile lightsheet,contrast \
     --offset 125,250,175 --vmin 0 --vmax 2 --labels "$ABA_LABELS" \
     --reg_suffixes heat.mhd annotation.mhd
 
   # volume metrics for each atlas label in the image
-  # TODO: not yet working on Windows
   ./run.py --img "$IMG" --register vol_stats --labels "$ABA_LABELS"
   
   # combine metrics for hierarchical levels
@@ -245,12 +243,11 @@ sample_tasks() {
 
   # OTHER IMAGE TRANSFORMATIONS
 
-  # rotate an image along multiple axes as specified in custom profiles;
-  # 1) create an ROI profile file with a "preprocess" key giving a list of tasks
-  # 2) create an atlas profile file specifying the rotation parameters
-  #    (see `atlas_prof.py`)
-  ./run.py --img "$IMG" --proc preprocess \
-    --roi_profile preproc.yaml --atlas_profile rotate.yaml
+  # rotate an image along multiple axes:
+  # 1) create an atlas profile file specifying the rotation parameters
+  #    (see `profiles/atlas_rotate.yml` for an example)
+  # 2) run this command
+  ./run.py --img "$img" --proc preprocess=rotate --atlas_profile rotate.yaml
 }
 
 # This call will run the `custom_tasks` function in your settings script

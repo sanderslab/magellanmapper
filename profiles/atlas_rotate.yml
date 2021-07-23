@@ -1,0 +1,14 @@
+---
+# Example profile for image rotation
+# Copy this file and edit your copy for own custom registrations
+
+rotate:
+  # rotations given as `[[degrees1, axis1], [degrees2, axis2], ...]`, where
+  # +deg = counter-clockwise, axis 0 = z-plane
+  rotation: [[45, 1]]
+  # True to expand the image size to fit the rotated original image 
+  resize: True
+  # spline interpolation order, where 0 = nearest-neighbor, 1 = bi-linear,
+  # etc (see skimage.transform.warps)
+  order: 1
+...

@@ -72,6 +72,8 @@ _SORT_VOL_COLS = [
     config.AtlasMetrics.SIDE.value,
 ]
 
+_logger = config.logger.getChild(__name__)
+
 
 def _translation_adjust(orig, transformed, translation, flip=False):
     """Adjust translation based on differences in scaling between original 
@@ -409,6 +411,15 @@ def register(
     
     Uses the first channel in :attr:`config.channel` or the first image channel.
     
+    Fallbacks:
+        * If the registration does not complete, the moving image origin and
+          direction will be changed to that of the fixed image
+        * If no reg, the spacing will also be matched
+        * If still no reg, the atlas will be output as-is 
+        * If the atlas profile ``fallback`` parameter sets a DSC threshold
+          and alternate registration settings, the image will be re-registered
+          under these new settings if below the threshold
+    
     Args:
         fixed_file: The image to register, given as a Numpy archive file to 
             be read by :importer:`read_file`.
@@ -546,27 +557,47 @@ def register(
         dsc_sample = atlas_refiner.measure_overlap(
             fixed_img_orig, img_moved, thresh_img2=thresh_mov)
         metric_sim = get_similarity_metric()
+    
     else:
         # perform a new registration
+        transformix_filter = None
         try:
             img_moved, transformix_filter = register_duo(
                 fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
         except RuntimeError:
-            libmag.warn("Could not perform registration. Will retry with"
-                        "world info (spacing, origin, etc) set to that of the "
-                        "fixed image.")
-            # fall back to simply matching all world info
-            # TODO: consider matching world info by default since output is same
+            # fall back to match some world info
+            _logger.warn(
+                "Could not perform registration. Will retry with origin and "
+                "direction set to that of the fixed image.")
             imgs = list(moving_imgs)
             if fixed_mask is not None:
                 imgs.append(fixed_mask)
             for img in imgs:
-                sitk_io.match_world_info(fixed_img, img)
-            img_moved, transformix_filter = register_duo(
-                fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
+                sitk_io.match_world_info(fixed_img, img, spacing=False)
+            try:
+                img_moved, transformix_filter = register_duo(
+                    fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
+            except RuntimeError:
+                # fall back to match all world info
+                _logger.warn(
+                    "Could not perform registration. Will retry with spacing, "
+                    "origin and direction set to that of the fixed image.")
+                for img in imgs:
+                    sitk_io.match_world_info(fixed_img, img)
+                try:
+                    img_moved, transformix_filter = register_duo(
+                        fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
+                except RuntimeError:
+                    # output atlas as-is, including world info matching
+                    _logger.warn(
+                        "Could not perform the registration despite matching world "
+                        "info. Will output images as-is unless a fallback reg is "
+                        "set in the atlas profile.")
+                    img_moved = moving_img
     
         # overlap stats comparing original and registered samples (eg histology)
-        print("DSC of original and registered sample images")
+        _logger.info("DSC of original and registered sample images")
+        thresh_mov = settings["atlas_threshold"]
         dsc_sample = atlas_refiner.measure_overlap(
             fixed_img_orig, img_moved, thresh_img2=thresh_mov)
         fallback = settings["metric_sim_fallback"]
@@ -574,18 +605,16 @@ def register(
         if fallback and dsc_sample < fallback[0]:
             # fall back to another atlas profile; update the current profile with
             # this new profile and re-set-up the original profile afterward
-            print("Registration DSC below threshold of {}, will re-register "
-                  "using {} atlas profile".format(*fallback))
+            # TODO: consider whether to reset world info
+            _logger.info(
+                f"Registration DSC below threshold of {fallback[0]}, will "
+                f"re-register using {fallback[1]} atlas profile")
             atlas_prof_name_orig = settings[settings.NAME_KEY]
             cli.setup_atlas_profiles(fallback[1], reset=False)
-            metric_sim = get_similarity_metric()
-            img_moved, transformix_filter = register_duo(
-                fixed_img, moving_img, name_prefix, fixed_mask, moving_mask)
-            cli.setup_atlas_profiles(atlas_prof_name_orig)
-            dsc_sample = atlas_refiner.measure_overlap(
-                fixed_img_orig, img_moved, thresh_img2=thresh_mov)
     
     def make_labels(truncation=None):
+        if transformix_filter is None:
+            return labels_img, None, None, None
         # apply the same transformation to labels via Transformix, with option
         # to truncate part of labels
         labels_trans = _transform_labels(
@@ -607,7 +636,8 @@ def register(
             labels_trans_cur, transformed_img_cur = _curate_img(
                 fixed_img_orig, labels_trans, [img_moved], inpaint=new_atlas,
                 thresh=thresh_carve, holes_area=settings["holes_area"])
-            print("DSC of original and registered sample images after curation")
+            _logger.info(
+                "DSC of original and registered sample images after curation")
             dsc = atlas_refiner.measure_overlap(
                 fixed_img_orig, transformed_img_cur, 
                 thresh_img2=settings["atlas_threshold"])
@@ -666,9 +696,10 @@ def register(
 
     # save transform parameters and attempt to find the original position 
     # that corresponds to the final position that will be displayed
-    _, translation = _handle_transform_file(
-        name_prefix, transformix_filter.GetTransformParameterMap())
-    _translation_adjust(moving_img, img_moved, translation, flip=True)
+    if transformix_filter is not None:
+        _, translation = _handle_transform_file(
+            name_prefix, transformix_filter.GetTransformParameterMap())
+        _translation_adjust(moving_img, img_moved, translation, flip=True)
     
     # compare original atlas with registered labels taken as a whole
     dsc_labels = atlas_refiner.measure_overlap_combined_labels(
@@ -694,7 +725,7 @@ def register(
     }
     df_path = libmag.combine_paths(
         name_prefix, config.PATH_ATLAS_IMPORT_METRICS)
-    print("\nImported {} whole atlas stats:".format(basename))
+    _logger.info("\nImported %s whole atlas stats:", basename)
     df_io.dict_to_data_frame(metrics, df_path, show="\t")
 
     '''
@@ -707,9 +738,13 @@ def register(
         sitk.GetArrayFromImage(labels_img)]
     _show_overlays(imgs, translation, fixed_file, None)
     '''
-    print("time elapsed for single registration (s): {}"
-          .format(time() - start_time))
     
+    _logger.info(
+        "Time elapsed for single registration (s): %s", time() - start_time)
+    if transformix_filter is None:
+        _logger.warn(
+            "Unable to perform the registration. Atlas images were output "
+            "with only pre-registration transformations.")
     return transformix_filter
 
 

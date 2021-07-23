@@ -1,46 +1,5 @@
 # MagellanMapper v1.4 Release Notes
 
-## MagellanMapper v1.4.1
-
-### Highlights
-
-### Changes
-
-#### Installation
-
-#### GUI
-
-#### CLI
-
-#### Atlas refinement
-
-- Multiprocessing in Windows (`spawn` start mode) is now supported, including the `--register import_atlas`, `make_edge_images`, `merge_atlas_segs`, `vol_stats`, and `make_density_images` tasks
-- Lateral extension is slightly faster by not using multiprocessing since it had to be started for each plane
-
-#### Atlas registration
-
-#### Cell detection
-
-#### Volumetric image processing
-
-#### I/O
-
-#### Server pipelines
-
-#### Python stats and plots
-
-#### R stats and plots
-
-#### Code base and docs
-
-### Dependency Updates
-
-#### Python Dependency Changes
-
-#### R Dependency Changes
-
-#### Server dependency Changes
-
 ## MagellanMapper v1.4.0
 
 ### Highlights

@@ -40,7 +40,8 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Atlas registration
 
-- Image masks can be set to focus the field for image registration; use the new `--reg_suffixes fixed_mask=<suffix-or-abs-path> moving_mask=<suffix-path>` command-line sub-arguments to load these mask files
+- Image masks can be set to focus the field for image registration. Use the new `--reg_suffixes fixed_mask=<suffix-or-abs-path> moving_mask=<suffix-path>` command-line sub-arguments to load these mask files.
+- Register multiple atlases at a time, applying the same transformation to each of them. Specify additional atlase after the first, with output paths specified as prefixes, eg: `./run.py <sample-path> <atlas1> <atlas2> --prefix <atlas1-output-path> <atlas2-output-path>`.
 
 #### Cell detection
 

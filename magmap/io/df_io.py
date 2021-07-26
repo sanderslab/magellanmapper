@@ -8,7 +8,7 @@ Attributes:
 
 from enum import Enum
 import os
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Sequence, Union
 import warnings
 
 import numpy as np
@@ -451,25 +451,31 @@ def add_cols_df(df, cols):
     return df
 
 
-def join_dfs(dfs, id_col, drop_dups=False):
+def join_dfs(
+        dfs: Sequence[pd.DataFrame], id_col: Union[str, List[str]],
+        drop_dups: bool = False, how: Optional[str] = None) -> pd.DataFrame:
     """Join data frames by an ID column.
     
     Args:
-        dfs (List[:obj:`pd.DataFrame`]): Sequence of data frames to join.
-        id_col (Union[str, list[str]]): Index column.
-        drop_dups (bool): True to drop duplicates of ``id_col``; defaults
+        dfs: Sequence of data frames to join.
+        id_col: Index column.
+        drop_dups: True to drop duplicates of ``id_col``; defaults
             to False.
+        how: How to join the data frames; if None (default), uses "left".
 
     Returns:
-        :obj:`pd.DataFrame`: Data frame after serially joining data frames.
+        Data frame after serially joining data frames.
 
     """
+    if how is None:
+        how = "left"
     df_out = None
     for i, df in enumerate(dfs):
         if i == 0:
             df_out = df.set_index(id_col)
         else:
-            df_out = df_out.join(df.set_index(id_col), rsuffix="_{}".format(i))
+            df_out = df_out.join(
+                df.set_index(id_col), rsuffix="_{}".format(i), how=how)
     df_out = df_out.reset_index()
     if drop_dups:
         # keep only first match
@@ -612,7 +618,7 @@ def dict_to_data_frame(
 
 def data_frames_to_csv(
         data_frames: List[pd.DataFrame], path: str = None,
-        sort_cols: Optional[str] = None,
+        sort_cols: Optional[Union[str, List[str]]] = None,
         show: Optional[Union[str, bool]] = None, index: bool = False):
     """Combine and export multiple data frames to CSV file.
     
@@ -621,8 +627,7 @@ def data_frames_to_csv(
             ``DataFrame``.
         path: Output path; defaults to None, in which case the data frame 
             will not be saved.
-        sort_cols: Column as a string of list of columns by which to sort; 
-            defaults to None for no sorting.
+        sort_cols: Column(s) by which to sort; defaults to None for no sorting.
         show: True or " " to print the data frame with a space-separated 
             table, or can provide an alternate separator. Defaults to None 
             to not print the data frame.

@@ -7,14 +7,14 @@ import os
 from collections import OrderedDict
 from enum import Enum
 import json
-from typing import Dict, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 import pandas as pd
 from pandas.errors import ParserError
 
 from magmap.settings import config
-from magmap.io import libmag
+from magmap.io import df_io, libmag
 
 NODE = "node"
 PARENT_IDS = "parent_ids"
@@ -31,226 +31,318 @@ class LabelColumns(Enum):
     TO_LABEL = "ToLabel"
 
 
-def load_labels_ref(path: str) -> Union[Dict, pd.DataFrame]:
-    """Load labels from a reference JSON or CSV file.
+class LabelsRef:
+    """Labels reference container and worker class.
     
-    Args:
-        path: Path to labels reference.
-    
-    Returns:
-        A JSON decoded object (eg dictionary) if the path has a JSON extension,
-        or a data frame.
-    
-    Raises:
-        FileNotFoundError: if ``path`` could not be loaded or parsed.
+    Attributes:
+        path_ref: Path to labels reference file.
+        loaded_ref: Loaded reference object.
+        ref_lookup: Reference in a dict format.
     
     """
-    path_split = os.path.splitext(path)
-    try:
-        if path_split[1] == ".json":
-            with open(path, "r") as f:
-                labels_ref = json.load(f)
+    
+    # mapping of alternate column names to ABA-style names
+    _COLS_TO_ABA: Dict[str, str] = {
+        config.AtlasMetrics.REGION.value: config.ABAKeys.ABA_ID.value,
+        config.AtlasMetrics.REGION_NAME.value: config.ABAKeys.NAME.value,
+    }
+    
+    def __init__(self, path_ref=None):
+        self.path_ref: Optional[str] = path_ref
+        self.loaded_ref: Optional[Union[Dict, pd.DataFrame]] = None
+        self.ref_lookup: Optional[Dict[int, Any]] = None
+
+    def load_labels_ref(self, path: str = None) -> Union[Dict, pd.DataFrame]:
+        """Load labels from a reference JSON or CSV file.
+        
+        Args:
+            path: Path to labels reference; defaults to None to use
+                :attr:`path_ref`.
+        
+        Returns:
+            A JSON decoded object (eg dictionary) if the path has a JSON
+            extension, or a data frame.
+        
+        Raises:
+            FileNotFoundError: if ``path`` could not be loaded or parsed.
+        
+        """
+        if not path:
+            path = self.path_ref
+        try:
+            if not path:
+                raise FileNotFoundError
+            path_split = os.path.splitext(path)
+            if path_split[1] == ".json":
+                # load JSON file
+                with open(path, "r") as f:
+                    self.loaded_ref = json.load(f)
+            else:
+                # load CSV file and rename columns to ABA-style names
+                df = pd.read_csv(path)
+                self.loaded_ref = df.rename(self._COLS_TO_ABA, axis=1)
+        except (ParserError, FileNotFoundError):
+            raise FileNotFoundError(
+                f"Could not load labels reference file from '{path}', skipping")
+        return self.loaded_ref
+
+    def get_node(self, nested_dict, key, value, key_children):
+        """Get a node from a nested dictionary by iterating through all 
+        dictionaries until the specified value is found.
+    
+        Args:
+            nested_dict: A dictionary that contains a list of dictionaries in
+                the key_children entry.
+            key: Key to check for the value.
+            value: Value to find, assumed to be unique for the given key.
+            key_children: Name of the children key, which contains a list of 
+                further dictionaries but can be empty.
+    
+        Returns:
+            The node matching the key-value pair, or None if not found.
+        """
+        try:
+            # print("checking for key {}...".format(key), end="")
+            found_val = nested_dict[key]
+            # print("found {}".format(found_val))
+            if found_val == value:
+                return nested_dict
+            children = nested_dict[key_children]
+            for child in children:
+                result = self.get_node(child, key, value, key_children)
+                if result is not None:
+                    return result
+        except KeyError as e:
+            print(e)
+        return None
+    
+    def create_aba_reverse_lookup(self, labels_ref) -> Dict[int, Any]:
+        """Create a reverse lookup dictionary for Allen Brain Atlas style
+        ontology files.
+    
+        Args:
+            labels_ref: The ontology file as a parsed JSON dictionary.
+    
+        Returns:
+            Reverse lookup dictionary as output by 
+            :func:`ontology.create_reverse_lookup`.
+        """
+        return self.create_reverse_lookup(
+            labels_ref["msg"][0], config.ABAKeys.ABA_ID.value,
+            config.ABAKeys.CHILDREN.value)
+    
+    def create_reverse_lookup(
+            self, nested_dict, key, key_children,
+            id_dict: Optional[Dict[int, Any]] = None,
+            parent_list=None) -> Dict[int, Any]:
+        """Create a reveres lookup dictionary with the values of the original 
+        dictionary as the keys of the new dictionary.
+    
+        Each value of the new dictionary is another dictionary that contains 
+        "node", the dictionary with the given key-value pair, and "parent_ids", 
+        a list of all the parents of the given node. This entry can be used to 
+        track all superceding dictionaries, and the node can be used to find 
+        all its children.
+    
+        Args:
+            nested_dict (dict): A dictionary that contains a list of
+                dictionaries in the key_children entry.
+            key (Any): Key that contains the values to use as keys in the new
+                dictionary. The values of this key should be unique throughout
+                the entire nested_dict and thus serve as IDs.
+            key_children (Any): Name of the children key, which contains a list
+                of further dictionaries but can be empty.
+            id_dict (OrderedDict): The output dictionary as an OrderedDict to
+                preserve key  order (though not hierarchical structure) so that
+                children will come after their parents. Defaults to None to
+                create an empty `OrderedDict`.
+            parent_list (list[Any]): List of values for the given key in all
+                parent dictionaries.
+    
+        Returns:
+            OrderedDict: A dictionary with the original values as the keys,
+            which each map to another dictionary containing an entry with
+            the dictionary holding the given value and another entry with a
+            list of all parent dictionary values for the given key.
+    
+        """
+        if id_dict is None:
+            id_dict = OrderedDict()
+        value = nested_dict[key]
+        sub_dict = {NODE: nested_dict}
+        if parent_list is not None:
+            sub_dict[PARENT_IDS] = parent_list
+        id_dict[value] = sub_dict
+        try:
+            children = nested_dict[key_children]
+            parent_list = [] if parent_list is None else list(parent_list)
+            parent_list.append(value)
+            for child in children:
+                # print("parents: {}".format(parent_list))
+                self.create_reverse_lookup(
+                    child, key, key_children, id_dict, parent_list)
+        except KeyError as e:
+            print(e)
+        return id_dict
+    
+    def create_lookup_pd(self, df: pd.DataFrame) -> Dict[int, Any]:
+        """Create a lookup dictionary from a Pandas data frame.
+    
+        Args:
+            df: Pandas data frame, assumed to have at
+                least columns corresponding to :const:``config.ABAKeys.ABA_ID``
+                or :const:``config.AtlasMetrics.REGION`` and 
+                :const:``config.ABAKeys.ABA_NAME`` or
+                :const:``config.AtlasMetrics.REGION_NAME``.
+    
+        Returns:
+            Dictionary similar to that generated from 
+            :meth:``create_reverse_lookup``, with IDs as keys and values 
+            corresponding of another dictionary with :const:``NODE`` and 
+            :const:``PARENT_IDS`` as keys. :const:``NODE`` in turn 
+            contains a dictionary with entries for each Enum in 
+            :const:``config.ABAKeys``.
+    
+        Raises:
+            KeyError: if the ID/region and name keys cannot be found.
+    
+        """
+        if df is None:
+            df = self.loaded_ref
+        if not isinstance(df, pd.DataFrame):
+            raise KeyError("Loaded reference is not a data frame")
+        
+        id_dict = OrderedDict()
+        try:
+            ids = df[config.ABAKeys.ABA_ID.value]
+            for region_id in ids:
+                # convert region to dict
+                region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
+                region_dict = region.to_dict("records")[0]
+                
+                if config.ABAKeys.NAME.value not in region_dict:
+                    # ensure that ABA-style name column is present
+                    region_dict[config.ABAKeys.NAME.value] = str(region_id)
+                
+                # add additional fields with defaults
+                region_dict[config.ABAKeys.LEVEL.value] = 1
+                region_dict[config.ABAKeys.CHILDREN.value] = []
+                region_dict[config.ABAKeys.ACRONYM.value] = ""
+                
+                # add to lookup dict
+                sub_dict = {NODE: region_dict, PARENT_IDS: []}
+                id_dict[region_id] = sub_dict
+            
+            if config.AtlasMetrics.PARENT.value in df.columns:
+                # fill children with references to each child, which should
+                # each include references until end nodes
+                for region_id in ids:
+                    children = df.loc[
+                        df[config.AtlasMetrics.PARENT.value] == region_id,
+                        config.ABAKeys.ABA_ID.value]
+                    for child in children:
+                        id_dict[region_id][NODE][
+                            config.ABAKeys.CHILDREN.value].append(
+                                id_dict[child][NODE])
+                    
+        except KeyError as e:
+            raise KeyError(f"Could not find this column in the labels reference "
+                           f"file: {e}")
+        return id_dict
+
+    def get_ref_lookup_as_df(self):
+        """Get the reference lookup dict as a data frame.
+        
+        Returns:
+            :attr:`ref_lookup` converted to a data frame. Returns the object
+            as-is if it is already a data frame.
+
+        """
+        if isinstance(self.ref_lookup, pd.DataFrame):
+            # return existing data frame
+            return self.ref_lookup
+        
+        # convert dict reference to data frame with main columns
+        labels_ref_regions = {}
+        keys_node = (
+            config.ABAKeys.NAME.value,
+            config.ABAKeys.LEVEL.value,
+            config.ABAKeys.ACRONYM.value,
+        )
+        for key, val in self.ref_lookup.items():
+            # extract a subset of entries
+            labels_ref_regions.setdefault(
+                config.ABAKeys.ABA_ID.value, []).append(key)
+            node = val[NODE]
+            for node_k in keys_node:
+                labels_ref_regions.setdefault(
+                    node_k, []).append(node.get(node_k) if node else None)
+            labels_ref_regions.setdefault(
+                PARENT_IDS, []).append(val.get(PARENT_IDS))
+        df_regions = df_io.dict_to_data_frame(labels_ref_regions)
+        return df_regions
+    
+    def create_ref_lookup(
+            self, labels_ref: Union[pd.DataFrame, Dict] = None
+    ) -> Dict[int, Any]:
+        """Wrapper to create a reference lookup from different sources.
+    
+        Reference data frames and dictionaries are converted to a dictionary
+        that can be looked up by ID.
+    
+        Args:
+            labels_ref: Reference dictionary or data frame, typically loaded
+                from :meth:`load_labels`.
+    
+        Returns:
+            Ordered dictionary for looking up by ID.
+    
+        """
+        if labels_ref is None:
+            labels_ref = self.loaded_ref
+        if isinstance(labels_ref, pd.DataFrame):
+            # parse CSV files loaded into data frame
+            self.ref_lookup = self.create_lookup_pd(labels_ref)
         else:
-            labels_ref = pd.read_csv(path)
-    except (ParserError, FileNotFoundError) as e:
-        _logger.exception(e)
-        raise FileNotFoundError(
-            f"Could not load labels reference file from '{path}', skipping")
-    return labels_ref
+            # parse dict from ABA JSON file
+            self.ref_lookup = self.create_aba_reverse_lookup(labels_ref)
+        return self.ref_lookup
+    
+    def load(self):
+        """Load the labels reference file to a lookup dictionary.
+        
+        Loads the file from :attr:`path_ref` to :attr:`loaded_ref` and
+        creates a lookup dictionary stored in :attr:`lookup_ref`.
+        
+        Returns:
+            This instance for chained calls.
+        
+        """
+        try:
+            self.load_labels_ref()
+            if self.loaded_ref is not None:
+                self.create_ref_lookup()
+        except (FileNotFoundError, KeyError) as e:
+            _logger.debug(e)
+        return self
 
 
 def convert_itksnap_to_df(path):
     """Convert an ITK-SNAP labels description file to a CSV file 
     compatible with MagellanMapper.
-    
+
     Args:
         path: Path to description file.
-    
+
     Returns:
         Pandas data frame of the description file.
     """
     # load description file and convert contiguous spaces to separators, 
     # remove comments, and add headers
     df = pd.read_csv(
-        path, sep="\s+", comment="#", 
+        path, sep="\s+", comment="#",
         names=[e.value for e in config.ItkSnapLabels])
     return df
-
-
-def get_node(nested_dict, key, value, key_children):
-    """Get a node from a nested dictionary by iterating through all 
-    dictionaries until the specified value is found.
-    
-    Args:
-        nested_dict: A dictionary that contains a list of dictionaries in
-            the key_children entry.
-        key: Key to check for the value.
-        value: Value to find, assumed to be unique for the given key.
-        key_children: Name of the children key, which contains a list of 
-            further dictionaries but can be empty.
-    
-    Returns:
-        The node matching the key-value pair, or None if not found.
-    """
-    try:
-        #print("checking for key {}...".format(key), end="")
-        found_val = nested_dict[key]
-        #print("found {}".format(found_val))
-        if found_val == value:
-            return nested_dict
-        children = nested_dict[key_children]
-        for child in children:
-            result = get_node(child, key, value, key_children)
-            if result is not None:
-                return result
-    except KeyError as e:
-        print(e)
-    return None
-
-
-def create_aba_reverse_lookup(labels_ref):
-    """Create a reverse lookup dictionary for Allen Brain Atlas style
-    ontology files.
-    
-    Args:
-        labels_ref: The ontology file as a parsed JSON dictionary.
-    
-    Returns:
-        Reverse lookup dictionary as output by 
-        :func:`ontology.create_reverse_lookup`.
-    """
-    return create_reverse_lookup(
-        labels_ref["msg"][0], config.ABAKeys.ABA_ID.value, 
-        config.ABAKeys.CHILDREN.value)
-
-
-def create_reverse_lookup(nested_dict, key, key_children, id_dict=None,
-                          parent_list=None):
-    """Create a reveres lookup dictionary with the values of the original 
-    dictionary as the keys of the new dictionary.
-    
-    Each value of the new dictionary is another dictionary that contains 
-    "node", the dictionary with the given key-value pair, and "parent_ids", 
-    a list of all the parents of the given node. This entry can be used to 
-    track all superceding dictionaries, and the node can be used to find 
-    all its children.
-    
-    Args:
-        nested_dict (dict): A dictionary that contains a list of dictionaries
-            in the key_children entry.
-        key (Any): Key that contains the values to use as keys in the new
-            dictionary. The values of this key should be unique throughout
-            the entire nested_dict and thus serve as IDs.
-        key_children (Any): Name of the children key, which contains a list of
-            further dictionaries but can be empty.
-        id_dict (OrderedDict): The output dictionary as an OrderedDict to
-            preserve key  order (though not hierarchical structure) so that
-            children will come after their parents. Defaults to None to create
-            an empty `OrderedDict`.
-        parent_list (list[Any]): List of values for the given key in all parent
-            dictionaries.
-    
-    Returns:
-        OrderedDict: A dictionary with the original values as the keys, which
-        each map to another dictionary containing an entry with the dictionary
-        holding the given value and another entry with a list of all parent 
-        dictionary values for the given key.
-    
-    """
-    if id_dict is None:
-        id_dict = OrderedDict()
-    value = nested_dict[key]
-    sub_dict = {NODE: nested_dict}
-    if parent_list is not None:
-        sub_dict[PARENT_IDS] = parent_list
-    id_dict[value] = sub_dict
-    try:
-        children = nested_dict[key_children]
-        parent_list = [] if parent_list is None else list(parent_list)
-        parent_list.append(value)
-        for child in children:
-            #print("parents: {}".format(parent_list))
-            create_reverse_lookup(
-                child, key, key_children, id_dict, parent_list)
-    except KeyError as e:
-        print(e)
-    return id_dict
-
-
-def create_lookup_pd(df: pd.DataFrame) -> OrderedDict:
-    """Create a lookup dictionary from a Pandas data frame.
-    
-    Args:
-        df: Pandas data frame, assumed to have at
-            least columns corresponding to :const:``config.ABAKeys.ABA_ID``
-            or :const:``config.AtlasMetrics.REGION`` and 
-            :const:``config.ABAKeys.ABA_NAME`` or
-            :const:``config.AtlasMetrics.REGION_NAME``.
-    
-    Returns:
-        Dictionary similar to that generated from 
-        :meth:``create_reverse_lookup``, with IDs as keys and values 
-        corresponding of another dictionary with :const:``NODE`` and 
-        :const:``PARENT_IDS`` as keys. :const:``NODE`` in turn 
-        contains a dictionary with entries for each Enum in 
-        :const:``config.ABAKeys``.
-    
-    Raises:
-        KeyError: if the ID/region and name keys cannot be found.
-    
-    """
-    def rename_col(key_check, key_alt):
-        # rename a column to an alternate name if not found in the data frame
-        if key_check not in df:
-            if key_alt in df:
-                cols[key_alt] = key_check
-    
-    # check for alternate essential column names
-    cols = {}
-    rename_col(config.ABAKeys.ABA_ID.value, config.AtlasMetrics.REGION.value)
-    rename_col(config.ABAKeys.NAME.value, config.AtlasMetrics.REGION_NAME.value)
-    if cols:
-        _logger.debug("Renamed labels reference file columns: %s", cols)
-        df = df.rename(cols, axis=1)
-    
-    id_dict = OrderedDict()
-    try:
-        ids = df[config.ABAKeys.ABA_ID.value]
-        for region_id in ids:
-            region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
-            region_dict = region.to_dict("records")[0]
-            if config.ABAKeys.NAME.value not in region_dict:
-                region_dict[config.ABAKeys.NAME.value] = str(region_id)
-            region_dict[config.ABAKeys.LEVEL.value] = 1
-            region_dict[config.ABAKeys.CHILDREN.value] = []
-            region_dict[config.ABAKeys.ACRONYM.value] = ""
-            sub_dict = {NODE: region_dict, PARENT_IDS: []}
-            id_dict[region_id] = sub_dict
-    except KeyError as e:
-        raise KeyError(f"Could not find this column in the labels reference "
-                       f"file: {e}")
-    return id_dict
-
-
-def create_ref_lookup(labels_ref: Union[pd.DataFrame, Dict]) -> OrderedDict:
-    """Wrapper to create a reference lookup from different sources.
-    
-    Reference data frames and dictionaries are converted to a dictionary
-    that can be looked up by ID.
-    
-    Args:
-        labels_ref: Reference dictionary or data frame, typically loaded
-            from :meth:`load_labels`.
-
-    Returns:
-        Ordered dictionary for looking up by ID.
-
-    """
-    if isinstance(labels_ref, pd.DataFrame):
-        # parse CSV files loaded into data frame
-        return create_lookup_pd(labels_ref)
-    # parse dict from ABA JSON file
-    return create_aba_reverse_lookup(labels_ref)
 
 
 def _get_children(labels_ref_lookup, label_id, children_all=[]):

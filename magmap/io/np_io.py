@@ -395,10 +395,11 @@ def setup_images(path, series=None, offset=None, size=None,
             if not ref: continue
             try:
                 # load labels reference file
-                config.labels_ref_lookup = ontology.create_ref_lookup(
-                    ontology.load_labels_ref(ref))
-                _logger.debug("Loaded labels reference file from %s", ref)
-                break
+                ref_lookup = ontology.LabelsRef(ref).load().ref_lookup
+                if ref_lookup is not None:
+                    config.labels_ref_lookup = ref_lookup
+                    _logger.debug("Loaded labels reference file from %s", ref)
+                    break
             except (FileNotFoundError, KeyError):
                 pass
         if path_labels_refs and config.labels_ref_lookup is None:

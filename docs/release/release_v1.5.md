@@ -82,7 +82,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 #### Code base and docs
 
-- Multiprocessing tasks are now more widely supported in Windows
+- Multiprocessing tasks are now more widely supported in Windows (`spawn` start mode), including the `--register import_atlas`, `make_edge_images`, `merge_atlas_segs`, `vol_stats`, and `make_density_images` tasks
 - Type hints are now being integrated, replacing docstring types for better typing info and debugging
 
 ### Dependency Updates

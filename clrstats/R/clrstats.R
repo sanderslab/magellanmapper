@@ -641,8 +641,13 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
     df$Region[region.all] <- 15564
   }
   
-  # merge in region names based on matching IDs
-  df <- merge(df, region.ids, by="Region", all.x=TRUE)
+  if (all(c("Region", "RegionName") %in% colnames(df))) {
+    # get regions and names from main df
+    region.ids <- unique(df[c("Region", "RegionName")])
+  } else {
+    # merge in region names based on matching IDs
+    df <- merge(df, region.ids, by="Region", all.x=TRUE)
+  }
   #print.data.frame(df)
   print(str(df)) # show data frame structure
   cat("\n\n")
@@ -837,7 +842,6 @@ setupConfig <- function(name=NULL) {
     config.env$PlotVolcano <- TRUE
     config.env$VolcanoLabels <- FALSE
     config.env$VolcanoLogX <- FALSE
-    config.env$JitterPlotSave <- FALSE
     config.env$Regions.Ignore <- kRegionsIgnore
     
   } else if (name == "intensnuc") {

@@ -17,6 +17,10 @@ def build_labels_diff_images(paths: Optional[Sequence[str]] = None):
     Replaces each label in an atlas labels image with the value of the effect
     size of the given metric.
     
+    :class:`magmap.settings.config.PlotLabels.X_COL` in
+    :attr:`magmap.settings.config.plot_labels` can be used to change the
+    metric column.
+    
     Args:
         paths: Paths to volume stat files output from the R pipeline.
 
@@ -40,6 +44,11 @@ def build_labels_diff_images(paths: Optional[Sequence[str]] = None):
         )
         path_dfs = [f"vols_stats_{m}.csv" for m in metrics]
     
+    # set the measurement column
+    col_meas = config.plot_labels[config.PlotLabels.X_COL]
+    if not col_meas:
+        col_meas = "vals.effect"
+    
     for path_df, metric in zip(path_dfs, metrics):
         if not os.path.exists(path_df):
             # check for existing R stats file
@@ -53,5 +62,5 @@ def build_labels_diff_images(paths: Optional[Sequence[str]] = None):
         # generate difference image
         col_wt = vols.get_metric_weight_col(metric)
         export_regions.make_labels_diff_img(
-            config.filename, path_df, "vals.effect", None, config.prefix, 
+            config.filename, path_df, col_meas, None, config.prefix, 
             config.show, meas_path_name=metric, col_wt=col_wt)

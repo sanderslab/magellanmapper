@@ -264,9 +264,9 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             for ax_img in plotted_imgs:
                 # images may be flattened AxesImage, array of AxesImage and
                 # Text, or None if alpha set to 0
-                if ax_img and libmag.is_seq(ax_img):
+                if libmag.is_seq(ax_img):
                     ax_img = ax_img[0]
-                if ax_img and isinstance(ax_img, AxesImage):
+                if isinstance(ax_img, AxesImage):
                     plot_support.fit_frame_to_image(
                         ax_img.figure, ax_img.get_array().shape, self.aspect)
         

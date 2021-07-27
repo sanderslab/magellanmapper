@@ -24,6 +24,8 @@ from magmap.io import np_io
 from magmap.plot import plot_3d
 from magmap.plot import plot_support
 
+_logger = config.logger.getChild(__name__)
+
 
 class StackPlaneIO(chunking.SharedArrsContainer):
     """Worker class to export planes from a stack with support for 
@@ -396,10 +398,11 @@ def setup_stack(
     """
     print("Starting image stack setup")
     
-    # build "z" slice, which will be applied to the transposed image; 
-    # reduce image to 1 plane if in single mode
-    interval = 1
+    # build "z" slice, which will be applied to the transposed image
+    interval = 1  # default to export each plane
     if offset is not None and roi_size is not None:
+        # extract planes based on ROI settings
+        
         # transpose coordinates to given plane
         _, arrs_1d = plot_support.transpose_images(
             config.plane, arrs_1d=[offset[::-1], roi_size[::-1]])
@@ -408,7 +411,6 @@ def setup_stack(
         
         # ROI offset and size take precedence over slice vals except 
         # for use of the interval term
-        interval = None
         if slice_vals is not None and len(slice_vals) > 2:
             interval = slice_vals[2]
         size = roi_size[2]
@@ -418,6 +420,7 @@ def setup_stack(
             img_sl = slice(img_sl.stop, img_sl.start, interval)
         print("using ROI offset {}, size {}, {}"
               .format(offset, size, img_sl))
+    
     elif slice_vals:
         # build directly from slice vals, replacing start and step if None
         sl = slice(*slice_vals)
@@ -429,6 +432,7 @@ def setup_stack(
             # default to interval/step of 1
             sl[2] = 1
         img_sl = slice(*sl)
+    
     else:
         # default to take the whole image stack
         img_sl = slice(0, None, 1)
@@ -443,7 +447,7 @@ def setup_stack(
     if path and os.path.isdir(path):
         # builds animations from all files in a directory
         planes = sorted(glob.glob(os.path.join(path, "*")))[::interval]
-        print(planes)
+        _logger.info("Importing images from %s: %s", path, planes)
         fnc = StackPlaneIO.import_img
         extracted_planes.append(planes)
     else:

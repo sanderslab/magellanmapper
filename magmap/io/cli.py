@@ -249,6 +249,10 @@ def process_cli_args():
         "--prefix", nargs="*", type=str,
         help="Path prefix(es), typically used as the base path for file output")
     parser.add_argument(
+        "--prefix_out", nargs="*", type=str,
+        help="Path prefix(es), typically used as the base path for file output "
+             "when --prefix modifies the input path")
+    parser.add_argument(
         "--suffix", nargs="*", type=str,
         help="Path suffix(es), typically inserted just before the extension")
     parser.add_argument("--channel", nargs="*", type=int, help="Channel index")
@@ -633,10 +637,16 @@ def process_cli_args():
                   .format(config.notify_attach))
     
     if args.prefix is not None:
-        # path output prefixes
+        # path input/output prefixes
         config.prefixes = args.prefix
         config.prefix = config.prefixes[0]
         print("Set path prefixes to {}".format(config.prefixes))
+    
+    if args.prefix_out is not None:
+        # path output prefixes
+        config.prefixes_out = args.prefix_out
+        config.prefix_out = config.prefixes_out[0]
+        print("Set path prefixes to {}".format(config.prefixes_out))
     
     if args.suffix is not None:
         # path suffixes

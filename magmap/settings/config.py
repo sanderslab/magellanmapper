@@ -143,10 +143,14 @@ load_data = dict.fromkeys(LoadData, None)
 
 # Path modifiers
 
-#: Output base paths.
+#: Input/output base paths.
 prefixes: Optional[Sequence[str]] = None
-#: Output base path.
+#: Input/output base path.
 prefix: Optional[str] = None
+#: Output base paths.
+prefixes_out: Optional[Sequence[str]] = None
+#: Output base path.
+prefix_out: Optional[str] = None
 # Modifiers to existing base paths.
 suffixes: Optional[Sequence[str]] = None
 #: Modifier to existing base path, typically inserted just before the extension.

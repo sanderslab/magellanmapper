@@ -304,27 +304,34 @@ def combine_paths(
     return path
 
 
-def make_out_path(base_path=None, prefix=None, suffix=None):
+def make_out_path(
+        base_path: Optional[str] = None, prefix: Optional[str] = None,
+        suffix: Optional[str] = None) -> str:
     """Make output path based on prefix and suffix settings.
     
     Args:
-        base_path (str): Base path from which to construct the output path
+        base_path: Base path from which to construct the output path
             if :attr:`config.prefix` is not available. Defaults to None
             to use :attr:`config.filename`.
-        prefix (str): Path to use; defaults to None to use
-            :attr:`config.prefix`. If this path is also None, ``base_path``
-            and ``suffix`` are used. Set to "" to ignore.
-        suffix (str): String to append to end of path just before the
+        prefix: Path, which if given will be returned as-is. Defaults to None,
+            which causes :attr:`config.prefix_out` to be used if available,
+            falling back to :attr:`config.prefix`. If both are also None,
+            ``base_path`` and ``suffix`` are used. Set to "" to ignore.
+        suffix: String to append to end of path just before the
             extension; defaults to None to use :attr:`config.suffix`.
 
     Returns:
-        str: Output path.
+        Output path.
 
     """
-    # use config setting if prefix is not given
-    out_path = config.prefix if prefix is None else prefix
+    # prioritize any prefix available in the order: 1) prefix parameter,
+    # 2) prefix-out from config, 3) prefix from config
+    out_path = config.prefix_out if prefix is None else prefix
+    if out_path is None:
+        out_path = config.prefix
+    
     if not out_path:
-        # construct from base path and suffix if prefix is not given
+        # construct from base path and suffix if no prefix available
         suffix = config.suffix if suffix is None else suffix
         out_path = insert_before_ext(
             base_path if base_path else config.filename,

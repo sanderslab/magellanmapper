@@ -27,6 +27,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 
 - Multiple processing tasks can be given in the same command; eg `--proc detect coloc_match`
 - Image preprocessing tasks have been integrated into `--proc`, no longer requiring a separate ROI profile; eg `--proc preprocess=rotate`
+- The new `--prefix_out` flag allows customizing output paths when `--prefix` is used to modify input paths
 
 #### Atlas refinement
 

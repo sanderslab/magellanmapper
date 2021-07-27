@@ -201,6 +201,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   
   result <- NULL
   col.effect <- "estimate"
+  effect.raw <- NULL
   if (model == kModel[5] | model == kModel[7]) {
     # Student's t-test
     result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
@@ -213,6 +214,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     # calculate the standardized effect size, given as z / sqrt(N),
     # where N = number of pairs
     eff <- result[[col.effect]]
+    effect.raw <- eff
     result[col.effect] <- rcompanion::wilcoxonZ(
       val.conds[[2]], val.conds[[1]], paired=paired) / sqrt(num.per.cond)
     cat("Wilcoxon estimate: ", eff, ", standardized effect: ",
@@ -231,15 +233,20 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   # basic stats data frame in format for filterStats
   coef.tab <- setupBasicStats()
   effect <- result[[col.effect]]
-  coef.tab$Value <- c(effect)
+  coef.tab$Value <- effect
+  coef.tab$Value.raw <- effect
+  if (!is.null(effect.raw)) {
+    # store raw effect if it was standardized; otherwise, leave same as effect
+    coef.tab$Value.raw <- effect.raw
+  }
   # get relative confidence intervals as pos vals
   if (is.element("conf.int", names(result))) {
     ci <- result$conf.int
-    coef.tab$CI.low <- c(effect - ci[1])
-    coef.tab$CI.hi <- c(ci[2] - effect)
+    coef.tab$CI.low <- effect - ci[1]
+    coef.tab$CI.hi <- ci[2] - effect
   }
-  coef.tab$P <- c(result$p.value)
-  coef.tab$N <- c(num.per.cond)
+  coef.tab$P <- result$p.value
+  coef.tab$N <- num.per.cond
   print(coef.tab)
   return(coef.tab)
 }
@@ -251,10 +258,10 @@ setupBasicStats <- function() {
   #   Data frame with columns for basic statistics such as mean and 
   #   confidence intervals and a single empty row.
   
-  cols <- c("N", "Value", "CI.low", "CI.hi", "P")
+  cols <- c("N", "Value", "Value.raw", "CI.low", "CI.hi", "P")
   coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
   names(coef.tab) <- cols
-  rownames(coef.tab) <- c("vals")
+  rownames(coef.tab) <- "vals"
   return(coef.tab)
 }
 
@@ -553,14 +560,13 @@ filterStats <- function(stats, corr=NULL) {
   cols <- list("Region", "Volume", "Nuclei")
   cols.orig <- cols # points to original vector if it is mutated
   offset <- length(cols)
+  cols.suffixes <- c(
+    ".n", ".effect", ".effect.raw", ".ci.low", ".ci.hi", ".p", ".pcorr",
+    ".logp")
   for (interact in interactions) {
-    cols <- append(cols, paste0(interact, ".n"))
-    cols <- append(cols, paste0(interact, ".effect"))
-    cols <- append(cols, paste0(interact, ".ci.low"))
-    cols <- append(cols, paste0(interact, ".ci.hi"))
-    cols <- append(cols, paste0(interact, ".p"))
-    cols <- append(cols, paste0(interact, ".pcorr"))
-    cols <- append(cols, paste0(interact, ".logp"))
+    for (suf in cols.suffixes) {
+      cols <- append(cols, paste0(interact, suf))
+    }
   }
   filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
   names(filtered) <- cols
@@ -574,11 +580,12 @@ filterStats <- function(stats, corr=NULL) {
     if (is.na(stats.filt$Stats[i])) next
     # get coefficients, stored in one-element list
     stats.coef <- stats.filt$Stats[i][[1]]
+    num.stats <- ncol(stats.coef)
     for (j in seq_along(interactions)) {
       # insert effect, p-value, and -log(p) after region name for each 
       # main effect/interaction, ignoring missing rows
       if (nrow(stats.coef) >= j) {
-        start <- offset + 6 * (j - 1) + 1
+        start <- offset + (num.stats + 1) * (j - 1) + 1
         filtered[i, start:(start+num.stat.cols)] <- stats.coef[j, ]
       }
     }
@@ -590,7 +597,7 @@ filterStats <- function(stats, corr=NULL) {
   
   for (interact in interactions) {
     # only correct/adjust means stats with >= 2 vals
-    filt.n = filtered[[paste0(interact, ".n")]]
+    filt.n <- filtered[[paste0(interact, ".n")]]
     mask.corr <- filt.n > 1 & !is.na(filt.n) # eg NA from basic stats
     num.regions <- nrow(filtered[mask.corr, ])
     col.for.log <- paste0(interact, ".pcorr")

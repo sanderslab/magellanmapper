@@ -983,11 +983,11 @@ def filter_adaptive_size(mask, fn_filter, filter_size, min_filter_size=1,
         region_size_filtered = np.sum(filtered)
         size_ratio = region_size_filtered / region_size
         chosen_selem_size = selem_size
-        if region_size_filtered < region_size and size_ratio > min_size_ratio:
+        if region_size_filtered != region_size and size_ratio > min_size_ratio:
             # stop filtering if filter made some change but stayed above
             # threshold size; skimage erosion treats border outside image
-            # as True, so images may not undergo erosion and should
-            # continue until lowest filter size is taken (eg NaN)
+            # as True, so images filled by foreground are not eroded and size
+            # should not be selected until lowest filter size is taken (eg NaN)
             break
     region_size_filt = np.sum(filtered)
     print(f"{name}: changed pixels from {region_size} to {region_size_filt} "

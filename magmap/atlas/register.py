@@ -59,7 +59,6 @@ from magmap.stats import atlas_stats, clustering, vols
 
 SAMPLE_VOLS = "vols_by_sample"
 SAMPLE_VOLS_LEVELS = SAMPLE_VOLS + "_levels"
-SAMPLE_VOLS_SUMMARY = SAMPLE_VOLS + "_summary"
 
 REREG_SUFFIX = "rereg"
 
@@ -1383,17 +1382,17 @@ def volumes_by_id(
     if len(img_paths) < 1:
         return None, None
     
-    # prepare data frame output path and condition column based on suffix
-    out_path = SAMPLE_VOLS
-    out_path_summary = SAMPLE_VOLS_SUMMARY
-    if max_level is not None:
-        out_path = SAMPLE_VOLS_LEVELS
-    if suffix is None:
-        condition = "original" 
-    else:
-        condition = config.suffix.replace("_", "")
-        out_path += config.suffix
-        out_path_summary += config.suffix
+    # prepare data frame output paths and 
+    out_base = SAMPLE_VOLS if max_level is None else SAMPLE_VOLS_LEVELS
+    out_path = libmag.make_out_path(out_base, suffix=suffix, prefix_is_dir=True)
+    summary_suffix = "_summary"
+    if suffix:
+        summary_suffix += suffix
+    out_path_summary = libmag.make_out_path(
+        out_base, suffix=summary_suffix, prefix_is_dir=True)
+    
+    # prep condition column based on suffix and plot labels flag
+    condition = "original" if suffix is None else suffix.replace("_", "")
     cond_arg = config.plot_labels[config.PlotLabels.CONDITION]
     if cond_arg:
         # override default condition or from suffix

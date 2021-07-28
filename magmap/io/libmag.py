@@ -306,19 +306,27 @@ def combine_paths(
 
 def make_out_path(
         base_path: Optional[str] = None, prefix: Optional[str] = None,
-        suffix: Optional[str] = None, prefix_is_dir = False) -> str:
+        suffix: Optional[str] = None, combine_prefix: bool = False) -> str:
     """Make output path based on prefix and suffix settings.
     
+    The base path is typically the default path, while the prefix and suffix
+    are given by the user. The prefix will override all other settings unless
+    flagged to combine it with them.
+    
     Args:
-        base_path: Base path from which to construct the output path
-            if :attr:`config.prefix` is not available. Defaults to None
-            to use :attr:`config.filename`.
-        prefix: Path, which if given will be returned as-is. Defaults to None,
-            which causes :attr:`config.prefix_out` to be used if available,
-            falling back to :attr:`config.prefix`. If both are also None,
-            ``base_path`` and ``suffix`` are used. Set to "" to ignore.
+        base_path: Base path from which to construct the output path.
+            Defaults to None to use :attr:`magmap.settings.config.filename`
+            if no prefix is given.
+        prefix: Path that normally overrides ``base_path`` and ``suffix``.
+            Defaults to None, which causes
+            :attr:`magmap.settings.config.prefix_out` to be used if available,
+            falling back to :attr:`magmap.settings.config.prefix`.
+            Set to "" to ignore.
         suffix: String to append to end of path just before the
-            extension; defaults to None to use :attr:`config.suffix`.
+            extension; defaults to None to use
+            :attr:`magmap.settings.config.suffix`.
+        combine_prefix: True to combine the prefix with the basename of the
+            base path and with the suffix; defaults to False.
 
     Returns:
         Output path.
@@ -332,16 +340,15 @@ def make_out_path(
     
     suffix = config.suffix if suffix is None else suffix
     if out_path:
-        if prefix_is_dir or not os.path.basename(out_path):
-            # treat prefix as a directory path, joining to basename of base
-            # path if available
-            base_path_name = os.path.basename(base_path)
-            if base_path_name:
-                out_path = os.path.join(out_path, base_path_name)
-                if suffix:
-                    out_path = insert_before_ext(out_path, suffix)
+        # prefix used as-is unless set to combine
+        if combine_prefix:
+            # combine prefix to base name of base path and suffix
+            if base_path:
+                out_path += os.path.basename(base_path)
+            if suffix:
+                out_path = insert_before_ext(out_path, suffix)
     else:
-        # construct from base path and suffix if no prefix available
+        # construct from base path (or filename) and suffix if no prefix
         out_path = base_path if base_path else config.filename
         if suffix:
             out_path = insert_before_ext(out_path, suffix)

@@ -1384,12 +1384,10 @@ def volumes_by_id(
     
     # prepare data frame output paths and 
     out_base = SAMPLE_VOLS if max_level is None else SAMPLE_VOLS_LEVELS
-    out_path = libmag.make_out_path(out_base, suffix=suffix, prefix_is_dir=True)
-    summary_suffix = "_summary"
-    if suffix:
-        summary_suffix += suffix
+    out_path = libmag.make_out_path(
+        out_base, suffix=suffix, combine_prefix=True)
     out_path_summary = libmag.make_out_path(
-        out_base, suffix=summary_suffix, prefix_is_dir=True)
+        f"{out_base}_summary", suffix=suffix, combine_prefix=True)
     
     # prep condition column based on suffix and plot labels flag
     condition = "original" if suffix is None else suffix.replace("_", "")

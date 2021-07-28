@@ -73,6 +73,7 @@ volcanoPlot <- function(stats, meas, interaction, thresh=NULL,
   if (!is.null(x.thresh)) x.threshed <- x[x.thresh]
   x.max <- max(abs(x.threshed))
   if (is.infinite(x.max)) x.max <- max(abs(x))
+  if (is.na(x.max)) x.max <- 1
   
   # use custom title if available from named list
   if (!is.null(meas.names) & is.element(meas, names(meas.names))) {

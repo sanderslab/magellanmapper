@@ -306,7 +306,7 @@ def combine_paths(
 
 def make_out_path(
         base_path: Optional[str] = None, prefix: Optional[str] = None,
-        suffix: Optional[str] = None) -> str:
+        suffix: Optional[str] = None, prefix_is_dir = False) -> str:
     """Make output path based on prefix and suffix settings.
     
     Args:
@@ -330,12 +330,21 @@ def make_out_path(
     if out_path is None:
         out_path = config.prefix
     
-    if not out_path:
+    suffix = config.suffix if suffix is None else suffix
+    if out_path:
+        if prefix_is_dir or not os.path.basename(out_path):
+            # treat prefix as a directory path, joining to basename of base
+            # path if available
+            base_path_name = os.path.basename(base_path)
+            if base_path_name:
+                out_path = os.path.join(out_path, base_path_name)
+                if suffix:
+                    out_path = insert_before_ext(out_path, suffix)
+    else:
         # construct from base path and suffix if no prefix available
-        suffix = config.suffix if suffix is None else suffix
-        out_path = insert_before_ext(
-            base_path if base_path else config.filename,
-            "" if suffix is None else suffix)
+        out_path = base_path if base_path else config.filename
+        if suffix:
+            out_path = insert_before_ext(out_path, suffix)
     return out_path
 
 

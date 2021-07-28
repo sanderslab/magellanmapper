@@ -817,14 +817,20 @@ def smooth_labels(
         region_size_smoothed = 0
         if mode in (config.SmoothingModes.opening,
                     config.SmoothingModes.adaptive_opening,
+                    config.SmoothingModes.adaptive_closing,
                     config.SmoothingModes.adaptive_erosion):
             # smoothing by erosion-based filters
             if mode in (config.SmoothingModes.adaptive_opening,
+                        config.SmoothingModes.adaptive_closing,
                         config.SmoothingModes.adaptive_erosion):
                 if mode is config.SmoothingModes.adaptive_erosion:
                     # erode with adaptive filter sizes, relying on in-painting
                     # to fill in eroded spaces
                     fn_filter = morphology.binary_erosion
+                elif mode is config.SmoothingModes.adaptive_closing:
+                    # morphologically close with "adaptive" filter sizes,
+                    # which will likely be unchanged since most labels will grow
+                    fn_filter = morphology.binary_closing
                 else:
                     # opening filter with adaptive filter sizes; uses
                     # in-painting but to lesser extent, only for opened spaces

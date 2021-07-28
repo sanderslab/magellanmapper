@@ -700,6 +700,7 @@ SmoothingModes = Enum(
         # morphological filters that adaptively decrease in size if
         # vol_new:vol_old is < a size ratio
         "adaptive_opening",  # opening filter
+        "adaptive_closing",  # closing filter
         "adaptive_erosion",  # erosion filter
         "gaussian",  # gaussian blur
         "closing",  # closing morphological filter

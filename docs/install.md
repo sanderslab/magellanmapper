@@ -1,12 +1,24 @@
 # Installation of MagellanMapper
 
+## Table of Contents
+
+- [Installation options](#installation-options)
+- [Update MagellanMapper](#update-magellanmapper)
+- [Building dependencies](#dependencies)
+- [Uninstallation](#uninstallation)
+- [Build documentation](#build-documentation)
+- [Tested platforms](#tested-platforms)
+- [Troubleshooting](#troubleshooting)
+
+## Installation Options
+
 MagellanMapper can be installed many ways depending on one's Python preferences.
 
-## Recommended: Install in a Conda environment
+### Recommended: Install in a Conda environment
 
 Conda simplifies installation by managing all supporting packages such as Java and others that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
 
-After downloading MagellanMapper, create a new Conda environment with all dependent packages using a provided setup script below for your platform.
+After downloading MagellanMapper, create a new Conda environment with all required packages using the appropriate script:
 
 **Mac, Linux**:
 
@@ -20,11 +32,11 @@ bin/setup_conda [-n name] [-s spec]
 bin/setup_conda.bat
 ```
 
-These scripts perform a full installation of Conda if not already present. Specifically, it will install:
+These scripts also install Conda if not present. Specifically, it installs:
 
-- [Miniconda](https://conda.io/miniconda.html), a free minimal installer for the Anaconda Python Distribution, if not already present based on the `conda` command
+- [Miniconda](https://conda.io/miniconda.html), a free minimal installer for the Anaconda Python Distribution, if not already present based on running the `conda` command
 - A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
-- Full dependencies based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s envs/environment_light.yml` for headless systems that do not require a GUI
+- All required packages based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s envs/environment_light.yml` for headless systems that do not require a GUI
 
 Alternatively, those who already have Conda installed can set up an envirionment directly based on the environment spec:
 
@@ -34,7 +46,7 @@ conda env create -n mag -f environment.yml
 
 See the [Readme](../README.md#run-magellanmapper) for instructions on running MagellanMapper.
 
-## Option 2: Install through Venv+Pip
+### Option 2: Install through Venv+Pip
 
 Venv is a virtual environment manager included with Python (3.3+). We have provided a convenient script to set up a new environment and install all dependencies using Pip:
 
@@ -52,9 +64,9 @@ This setup script will check and install the following dependencies:
 - Checks for other requirements, such as a C compiler to [build some dependencies](#custom-precompiled-packages)
 - Performs a Pip install of MagellanMapper and all dependencies
 
-## Option 3: Install in another virtual environment or system-wide
 On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) (same package for all three years) is required.
 
+### Option 3: Install in another virtual environment or system-wide
 
 Whether in a virtual environment of your choice or none at all, MagellanMapper can be installed through Pip:
 
@@ -68,7 +80,7 @@ The extra URL provides pre-built custom (with [certain requirements](#custom-pre
 pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-## Option 4: Even more installation methods
+### Option 4: Even more installation methods
 
 You can also install MagellanMapper these ways in the shell and Python environment of your choice:
 

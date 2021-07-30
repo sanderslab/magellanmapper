@@ -53,6 +53,8 @@ This setup script will check and install the following dependencies:
 - Performs a Pip install of MagellanMapper and all dependencies
 
 ## Option 3: Install in another virtual environment or system-wide
+On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) (same package for all three years) is required.
+
 
 Whether in a virtual environment of your choice or none at all, MagellanMapper can be installed through Pip:
 
@@ -137,12 +139,12 @@ Our custom packages assume an environment with Python 3.6 and Java 8+.
 
 ### SimpleElastix dependency
 
-SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/).
+SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/). The [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) is required to run this package.
 
 If you would prefer to build SimpleElastix yourself, we have provided a couple build scripts to ease the build process for the SimpleElastix Python wrapper:
 
 - Mac or Linux: Run the environment setup with `bin/setup_conda.sh -s` to build and install SimpleElastix during setup using the `bin/build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
-- Windows: Run `bin\build_se.bat` within your environment. See the [build_se.bat](https://github.com/sanderslab/magellanmapper/blob/master/bin/build_se.bat) script for required build components.
+- Windows: Run `bin\build_se.bat` within your environment. See the [build_se.bat](https://github.com/sanderslab/magellanmapper/blob/master/bin/build_se.bat) script for required build components. 
 
 As an alternative, the SimpleITK package can provide much of the same functionality except for our image registration pipeline.
 
@@ -282,6 +284,8 @@ Numpy is required to build Mayavi correctly, please install it first
 
 - During installation via `pip install -r envs/requirements.txt`, the Mayavi package [may fail to install](https://github.com/enthought/mayavi/issues/782)
 - Rerunning this command appears to allow Mayavi to find Numpy now that it has been installed
+- A similar error may occur in other install routes but corrects itself (ie the error can be ignored)
+- On Windows, Mayavi appears to require the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) to install
 
 ```
 ImportError: libGL.so.1: cannot open shared object file: No such file or directory

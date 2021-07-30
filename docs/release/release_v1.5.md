@@ -36,6 +36,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - Smoothing metrics are output during the `--register merge_atlas_segs` task
 - The atlas profile settings `meas_edge_dists` and `meas_smoothing` turn off these metrics to save time during atlas generation, and the profile `fewerstats` turns off both these settings
 - Multiprocessing is turned off for lateral extension for better performance
+- Labels difference images, which map metrics for labels onto the labels themselves for data visualization, can now take specific metric files and columns from the included R package
 - Fixed multiprocessing tasks with SimpleElastix 2.0
 - Fixed DSC metrics between the atlas and its new labels, and more DSC metrics are saved
 

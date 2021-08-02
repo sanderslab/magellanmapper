@@ -58,8 +58,8 @@ import vtk
 import run
 from magmap.atlas import ontology
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
-from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
-    vis_handler
+from magmap.gui import atlas_editor, bg_panel, import_threads, roi_editor, \
+    vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, profiles
@@ -222,6 +222,16 @@ class ControlsTabs(Enum):
     PROFILES = auto()
     ADJUST = auto()
     IMPORT = auto()
+
+
+class BrainGlobeArrayAdapter(TabularAdapter):
+    """Import files TraitsUI table adapter."""
+    columns = [("Atlas", 0), ("Ver", 1), ("Installed?", 2)]
+    widths = {0: 0.5, 1: 0.1, 2: 0.4}
+
+    def get_width(self, object, trait, column):
+        """Specify column widths."""
+        return self.widths[column]
 
 
 class Visualization(HasTraits):
@@ -404,6 +414,17 @@ class Visualization(HasTraits):
     _import_byte_order = List
     _import_prefix = Str
     _import_feedback = Str
+    
+    # BrainGlobe panel
+    
+    _bg_atlases = List
+    _bg_atlases_sel = List
+    _bg_atlases_table = TabularEditor(
+        adapter=BrainGlobeArrayAdapter(), editable=False, auto_resize_rows=True,
+        stretch_last_section=False, selected="_bg_atlases_sel")
+    _bg_access_btn = Button("Open")
+    _bg_remove_btn = Button("Remove")
+    _bg_feedback = Str
 
     # Image viewers
 
@@ -750,6 +771,20 @@ class Visualization(HasTraits):
         label="Import",
     )
 
+    # BrainGlobe panel
+    panel_brain_globe = VGroup(
+        VGroup(
+            Item("_bg_atlases", editor=_bg_atlases_table, show_label=False),
+            label="BrainGlobe Atlases"
+        ),
+        HGroup(
+            Item("_bg_access_btn", show_label=False),
+            Item("_bg_remove_btn", show_label=False),
+        ),
+        Item("_bg_feedback", style="custom", show_label=False),
+        label="BrainGlobe",
+    )
+
     # tabbed panel of options
     panel_options = Tabbed(
         panel_roi_selector,
@@ -757,6 +792,7 @@ class Visualization(HasTraits):
         panel_profiles,
         panel_imgadj,
         panel_import,
+        panel_brain_globe,
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
@@ -834,6 +870,9 @@ class Visualization(HasTraits):
         # set up image import
         self._clear_import_files(False)
         self._import_thread = None  # prevent prematurely destroying threads
+        
+        # set up BrainGlobe atlases
+        self._brain_globe_panel = self._setup_brain_globe()
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -3196,6 +3235,31 @@ class Visualization(HasTraits):
         if print_out:
             print(val)
         self._roi_feedback += "{}\n".format(val)
+    
+    def _set_bg_atlases(self, val):
+        self._bg_atlases = val
+    
+    def _set_bg_feedback(self, val, append=True):
+        if append:
+            if self._bg_feedback:
+                val = f"\n{val}"
+            self._bg_feedback += val
+        else:
+            self._bg_feedback = val
+    
+    def _setup_brain_globe(self):
+        panel = bg_panel.BrainGlobePanel(self._set_bg_atlases, self._set_bg_feedback)
+        return panel
+        
+    @on_trait_change("_bg_access_btn")
+    def _open_brain_globe_atlas(self):
+        if self._bg_atlases and self._bg_atlases_sel:
+            self._brain_globe_panel.open_atlas(self._bg_atlases_sel[0])
+    
+    @on_trait_change("_bg_remove_btn")
+    def _remove_brain_globe_atlas(self):
+        if self._bg_atlases and self._bg_atlases_sel:
+            self._brain_globe_panel.remove_atlas(self._bg_atlases_sel[0])
 
 
 if __name__ == "__main__":

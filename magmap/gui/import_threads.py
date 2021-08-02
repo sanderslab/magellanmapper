@@ -1,4 +1,5 @@
 # Image file import PyQt5 threads
+from typing import Any, Callable, Dict, List, Optional
 
 from PyQt5 import QtCore
 
@@ -11,17 +12,18 @@ class SetupImportThread(QtCore.QThread):
     """Thread for setting up file import by extracting image metadata.
 
     Attributes:
-        chl_paths (dict[int, List[str]]): Dictionary of channel numbers
+        chl_paths: Dictionary of channel numbers
             to sequences of paths within the given channel.
-        fn_success (func): Signal taking
-            no arguments, to be emitted upon successfull import; defaults
-            to None.
+        fn_success: Signal function taking a dictionary of metadata enum keys
+            to metadata values, to be emitted upon successfull import.
 
     """
     
     signal = QtCore.pyqtSignal(object)
     
-    def __init__(self, chl_paths, fn_success):
+    def __init__(
+            self, chl_paths: Dict[int, List[str]],
+            fn_success: Callable[[Dict[config.MetaKeys, Any]], None]):
         """Initialize the import thread."""
         super().__init__()
         self.chl_paths = chl_paths
@@ -39,23 +41,27 @@ class ImportThread(QtCore.QThread):
     """Thread for importing files into a Numpy array.
     
     Attributes:
-        mode (:obj:`ImportModes`): Import mode enum.
-        prefix (str): Destination base path from which the output path
+        mode: Import mode enum.
+        prefix: Destination base path from which the output path
             will be constructed.
-        chl_paths (dict[int, List[str]]): Dictionary of channel numbers
+        chl_paths: Dictionary of channel numbers
             to sequences of paths within the given channel.
-        import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary.
-        fn_feedback (func): Function taking a string to display feedback;
+        import_md: Import metadata dictionary.
+        fn_feedback: Function taking a string to display feedback;
             defaults to None.
-        fn_success (func): Function taking no arguments to be called upon
+        fn_success: Function taking no arguments to be called upon
             successfull import; defaults to None.
     
     """
     
     signal = QtCore.pyqtSignal()
     
-    def __init__(self, mode, prefix, chl_paths, import_md, fn_feedback=None,
-                 fn_success=None):
+    def __init__(
+            self, mode: "visualizer.ImportModes", prefix: str,
+            chl_paths: Dict[int, List[str]],
+            import_md: Dict[config.MetaKeys, Any],
+            fn_feedback: Optional[Callable[[str], None]] = None,
+            fn_success: Optional[Callable[[], None]] = None):
         """Initialize the import thread."""
         super().__init__()
         self.mode = mode

@@ -185,7 +185,8 @@ class LabelsRef:
             print(e)
         return id_dict
     
-    def create_lookup_pd(self, df: pd.DataFrame) -> Dict[int, Any]:
+    def create_lookup_pd(
+            self, df: Optional[pd.DataFrame] = None) -> Dict[int, Any]:
         """Create a lookup dictionary from a Pandas data frame.
     
         Args:
@@ -193,7 +194,8 @@ class LabelsRef:
                 least columns corresponding to :const:``config.ABAKeys.ABA_ID``
                 or :const:``config.AtlasMetrics.REGION`` and 
                 :const:``config.ABAKeys.ABA_NAME`` or
-                :const:``config.AtlasMetrics.REGION_NAME``.
+                :const:``config.AtlasMetrics.REGION_NAME``. Defaults to None,
+                in which case :attr:`loaded_ref` is used.
     
         Returns:
             Dictionary similar to that generated from 
@@ -293,7 +295,7 @@ class LabelsRef:
         return df_regions
     
     def create_ref_lookup(
-            self, labels_ref: Union[pd.DataFrame, Dict] = None
+            self, labels_ref: Optional[Union[pd.DataFrame, Dict]] = None
     ) -> Dict[int, Any]:
         """Wrapper to create a reference lookup from different sources.
     
@@ -302,7 +304,8 @@ class LabelsRef:
     
         Args:
             labels_ref: Reference dictionary or data frame, typically loaded
-                from :meth:`load_labels`.
+                from :meth:`load_labels`. Defaults to None, in which case
+                :attr:`loads_ref` is used.
     
         Returns:
             Ordered dictionary for looking up by ID.

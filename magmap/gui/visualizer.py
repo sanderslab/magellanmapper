@@ -1769,17 +1769,20 @@ class Visualization(HasTraits):
         from the Numpy image filename. Processed files (eg ROIs, blobs) 
         will not be loaded for now.
         """
-        if self._ignore_filename or not self._filename:
+        ignore_filename = self._ignore_filename or not self._filename
+        reset_filename = self._reset_filename
+        if ignore_filename:
             # avoid triggering file load, eg if only updating widget value;
             # reset flags
             self._ignore_filename = False
             self._reset_filename = True
-            return
-
-        if self._reset_filename:
+        
+        if reset_filename:
             # reset registered suffixes
             config.reg_suffixes = dict.fromkeys(config.RegSuffixes, None)
         self._reset_filename = True
+        
+        if ignore_filename or reset_filename: return
 
         # load image if possible without allowing import, deconstructing
         # filename from the selected imported image
@@ -3247,18 +3250,28 @@ class Visualization(HasTraits):
         else:
             self._bg_feedback = val
     
+    def _bg_open_handler(self, bg_atlas):
+        config.filename = str(bg_atlas.root_dir)
+        self.update_filename(config.filename, True)
+        np_io.setup_images(
+            config.filename, allow_import=False, bg_atlas=bg_atlas)
+        self._setup_for_image()
+        self.redraw_selected_viewer()
+        self.update_imgadj_for_img()
+    
     def _setup_brain_globe(self):
-        panel = bg_panel.BrainGlobePanel(self._set_bg_atlases, self._set_bg_feedback)
+        panel = bg_panel.BrainGlobePanel(
+            self._set_bg_atlases, self._set_bg_feedback, self._bg_open_handler)
         return panel
         
     @on_trait_change("_bg_access_btn")
     def _open_brain_globe_atlas(self):
-        if self._bg_atlases and self._bg_atlases_sel:
+        if self._bg_atlases_sel:
             self._brain_globe_panel.open_atlas(self._bg_atlases_sel[0])
     
     @on_trait_change("_bg_remove_btn")
     def _remove_brain_globe_atlas(self):
-        if self._bg_atlases and self._bg_atlases_sel:
+        if self._bg_atlases_sel:
             self._brain_globe_panel.remove_atlas(self._bg_atlases_sel[0])
 
 

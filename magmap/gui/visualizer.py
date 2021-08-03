@@ -57,9 +57,10 @@ import vtk
 
 import run
 from magmap.atlas import ontology
+from magmap.brain_globe import bg_controller
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
-from magmap.gui import atlas_editor, bg_panel, import_threads, roi_editor, \
-    vis_3d, vis_handler
+from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
+    vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, profiles
@@ -872,7 +873,8 @@ class Visualization(HasTraits):
         self._import_thread = None  # prevent prematurely destroying threads
         
         # set up BrainGlobe atlases
-        self._brain_globe_panel = self._setup_brain_globe()
+        self._brain_globe_panel: bg_controller.BrainGlobeCtrl \
+            = self._setup_brain_globe()
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -3260,7 +3262,7 @@ class Visualization(HasTraits):
         self.update_imgadj_for_img()
     
     def _setup_brain_globe(self):
-        panel = bg_panel.BrainGlobePanel(
+        panel = bg_controller.BrainGlobeCtrl(
             self._set_bg_atlases, self._set_bg_feedback, self._bg_open_handler)
         return panel
         

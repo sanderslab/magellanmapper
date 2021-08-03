@@ -4,7 +4,7 @@ from typing import Callable, Optional, Sequence, TYPE_CHECKING
 
 from PyQt5 import QtCore
 
-from magmap.atlas import brain_globe
+from magmap.brain_globe import bg_model
 
 if TYPE_CHECKING:
     from bg_atlasapi import BrainGlobeAtlas
@@ -25,11 +25,11 @@ class SetupAtlasesThread(QtCore.QThread):
     progress = QtCore.pyqtSignal(str)
     
     def __init__(
-            self, brain_globe_mm: brain_globe.BrainGlobeMM,
+            self, brain_globe_mm: bg_model.BrainGlobeMM,
             fn_success: Callable[[], None], fn_progress: Callable[[str], None]):
         """Initialize the setup thread."""
         super().__init__()
-        self.bg_mm: brain_globe.BrainGlobeMM = brain_globe_mm
+        self.bg_mm: bg_model.BrainGlobeMM = brain_globe_mm
         self.signal.connect(fn_success)
         self.progress.connect(fn_progress)
     
@@ -57,11 +57,11 @@ class AccessAtlasThread(QtCore.QThread):
     progress = QtCore.pyqtSignal(str)
     
     def __init__(
-            self, brain_globe_mm: brain_globe.BrainGlobeMM, name: str,
+            self, brain_globe_mm: bg_model.BrainGlobeMM, name: str,
             fn_success: Callable[[], None], fn_progress: Callable[[str], None]):
         """Initialize the atlas access thread."""
         super().__init__()
-        self.bg_mm: brain_globe.BrainGlobeMM = brain_globe_mm
+        self.bg_mm: bg_model.BrainGlobeMM = brain_globe_mm
         self.name = name
         self.signal.connect(fn_success)
         self.progress.connect(fn_progress)
@@ -75,7 +75,7 @@ class AccessAtlasThread(QtCore.QThread):
         self.signal.emit(atlas)
 
 
-class BrainGlobePanel:
+class BrainGlobeCtrl:
     def __init__(
             self, fn_set_atlases_table: Callable[[Sequence], None],
             fn_set_feedback: Callable[[str], None],
@@ -87,7 +87,7 @@ class BrainGlobePanel:
         self.fn_opened_atlas = fn_opened_atlas
         
         # set up BrainGlobe-MagellanMapper interface
-        self.bg_mm = brain_globe.BrainGlobeMM()
+        self.bg_mm = bg_model.BrainGlobeMM()
         
         # fetch listing of available atlases
         self._thread = SetupAtlasesThread(

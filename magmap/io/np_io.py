@@ -3,7 +3,7 @@
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import os
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, TYPE_CHECKING
 
 import numpy as np
 
@@ -12,6 +12,9 @@ from magmap.cv import detector
 from magmap.io import importer, libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    from bg_atlasapi import BrainGlobeAtlas
 
 _logger = config.logger.getChild(__name__)
 
@@ -148,8 +151,12 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
-def setup_images(path, series=None, offset=None, size=None,
-                 proc_type=None, allow_import=True):
+def setup_images(
+        path: str, series: Optional[int] = None,
+        offset: Optional[Sequence[int]] = None,
+        size: Optional[Sequence[int]] = None,
+        proc_type: Optional[config.ProcessTypes] = None,
+        allow_import: bool =True, bg_atlas: Optional["BrainGlobeAtlas"] = None):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -157,15 +164,18 @@ def setup_images(path, series=None, offset=None, size=None,
     be used in place of ``path`` for registered labels.
     
     Args:
-        path (str): Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will 
             be generated.
-        series (int): Image series number; defaults to None.
-        offset (List[int]): Sub-image offset given in z,y,x; defaults to None.
-        size (List[int]): Sub-image shape given in z,y,x; defaults to None.
-        proc_type (Enum): Processing type, which should be a one of
+        series: Image series number; defaults to None.
+        offset: Sub-image offset given in z,y,x; defaults to None.
+        size: Sub-image shape given in z,y,x; defaults to None.
+        proc_type: Processing type, which should be a one of
             :class:`config.ProcessTypes`.
-        allow_import (bool): True to allow importing the image if it
+        allow_import: True to allow importing the image if it
             cannot be loaded; defaults to True.
+        bg_atlas: BrainGlobe atlas; defaults to None. If provided, the
+            images and labels reference will be extracted from the atlas
+            instead of loaded from ``path``.
     
     """
     def add_metadata():
@@ -288,12 +298,21 @@ def setup_images(path, series=None, offset=None, size=None,
         # load or import the main image stack
         print("Loading main image")
         try:
-            if path.endswith(sitk_io.EXTS_3D):
+            if bg_atlas:
+                # extract image from BrainGlobeAtlas object
+                config.image5d = bg_atlas.reference[None]
+                config.img5d.img = config.image5d
+                config.img5d.path_img = str(bg_atlas.root_dir)
+                config.img5d.img_io = config.LoadIO.BRAIN_GLOBE
+                config.resolutions = np.array([bg_atlas.resolution])
+            
+            elif path.endswith(sitk_io.EXTS_3D):
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
                 config.img5d.img_io = config.LoadIO.SITK
+            
             else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
@@ -365,20 +384,29 @@ def setup_images(path, series=None, offset=None, size=None,
     # load metadata related to the labels image
     config.labels_metadata = labels_meta.LabelsMeta(path).load()
     
-    if annotation_suffix is not None:
-        try:
-            # load labels image
-            # TODO: need to support multichannel labels images
-            config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
-                path, reg_names=annotation_suffix, return_sitk=True)
-        except FileNotFoundError as e:
-            print(e)
-            if config.image5d is not None:
-                # create a blank labels images for custom annotation; colormap
-                # can be generated for the original labels loaded below
-                config.labels_img = np.zeros(
-                    config.image5d.shape[1:4], dtype=int)
-                print("Created blank labels image from main image")
+    if annotation_suffix is not None or bg_atlas:
+        if bg_atlas:
+            # extract labels image from BrainGlobeAtlas object
+            config.labels_img = bg_atlas.annotation
+            config.labels_img_sitk = sitk_io.numpy_to_sitk(config.labels_img)
+            labels_ref = ontology.LabelsRef()
+            labels_ref.loaded_ref = bg_atlas.lookup_df
+            config.labels_ref_lookup = labels_ref.create_lookup_pd()
+        else:
+            try:
+                # load labels image
+                # TODO: need to support multichannel labels images
+                config.labels_img, config.labels_img_sitk = \
+                    sitk_io.read_sitk_files(
+                        path, reg_names=annotation_suffix, return_sitk=True)
+            except FileNotFoundError as e:
+                print(e)
+                if config.image5d is not None:
+                    # create a blank labels images for custom annotation; cmap
+                    # can be generated for the original labels loaded below
+                    config.labels_img = np.zeros(
+                        config.image5d.shape[1:4], dtype=int)
+                    print("Created blank labels image from main image")
         if config.image5d is not None and config.labels_img is not None:
             # set up scaling factors by dimension between intensity and
             # labels images

@@ -519,3 +519,16 @@ def load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
     return sitk_img
+
+
+def numpy_to_sitk(img: np.ndarray):
+    """Wrapper to convert a NumPy array to a SimpleITK Image object.
+    
+    Args:
+        img: NumPary array.
+
+    Returns:
+        ``img`` as a SimpleITK Image object with default settings.
+
+    """
+    return sitk.GetImageFromArray(img)

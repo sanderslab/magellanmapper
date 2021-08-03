@@ -124,6 +124,7 @@ class LoadIO(Enum):
     """Enumerations for I/O load packages."""
     NP = auto()
     SITK = auto()
+    BRAIN_GLOBE = auto()
 
 
 #: :obj:`LoadIO`: I/O source for image5d array.

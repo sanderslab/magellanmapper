@@ -50,6 +50,8 @@ config = {
         "appdirs",
         # part of stdlib in Python >= 3.8
         "importlib-metadata >= 1.0 ; python_version < '3.8'",
+        # BrainGlobe dependencies for access to cloud-hosted atlases
+        "bg-atlasapi",
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 

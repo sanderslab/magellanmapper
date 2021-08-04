@@ -76,11 +76,21 @@ class AccessAtlasThread(QtCore.QThread):
 
 
 class BrainGlobeCtrl:
+    """BrainGlobe controller.
+    
+    Attributes:
+        fn_set_atlases_table: Handler for setting the atlases table.
+        fn_set_feedback: Handler for outputting feedback messages.
+        fn_opened_atlas: Handler for opening an atlas; defaults to None.
+        bg_mm: BrainGlobe model.
+    
+    """
     def __init__(
             self, fn_set_atlases_table: Callable[[Sequence], None],
             fn_set_feedback: Callable[[str], None],
             fn_opened_atlas: Optional[Callable[
                 ["BrainGlobeAtlas"], None]] = None):
+        """Initialize the controller."""
         # set up attributes
         self.fn_set_atlases_table = fn_set_atlases_table
         self.fn_set_feedback = fn_set_feedback
@@ -89,17 +99,24 @@ class BrainGlobeCtrl:
         # set up BrainGlobe-MagellanMapper interface
         self.bg_mm = bg_model.BrainGlobeMM()
         
-        # fetch listing of available atlases
+        # fetch listing of available atlases; save thread to avoid garbage
+        # collection
         self._thread = SetupAtlasesThread(
-            self.bg_mm, self.update_atlas_panel, self.fn_set_feedback)
+            self.bg_mm, self.update_atlas_table, self.fn_set_feedback)
         self._thread.start()
     
-    def update_atlas_panel(self):
+    def update_atlas_table(self):
+        """Update the atlas table."""
+        # use existing listing of available cloud atlases
         atlases = self.bg_mm.atlases_avail
+        
+        # get updated listing of local atlases
         atlases_local = self.bg_mm.get_local_atlases()
+        
         data = []
         if atlases:
             for name, ver in atlases.items():
+                # add available atlas to table, checking for local version
                 if name in atlases_local:
                     installed = (
                         "Yes, latest version" if atlases_local[name] == ver
@@ -107,22 +124,39 @@ class BrainGlobeCtrl:
                 else:
                     installed = "No"
                 data.append([name, ver, installed])
+        
         for name, ver in atlases_local.items():
             if not atlases or name not in atlases:
+                # add local atlas if not listed in cloud atlases
                 data.append([name, ver, "Yes"])
         self.fn_set_atlases_table(data)
     
-    def _open_atlas_handler(self, atlas):
-        self.update_atlas_panel()
+    def _open_atlas_handler(self, atlas: "BrainGlobeAtlas"):
+        """Handler to open an atlas."""
+        # update table for changes to installed status
+        self.update_atlas_table()
         if self.fn_opened_atlas:
+            # call handler
             self.fn_opened_atlas(atlas)
     
-    def open_atlas(self, name):
+    def open_atlas(self, name: str):
+        """Open atlas in a separate thread
+        
+        Args:
+            name: Atlas name
+
+        """
         self._thread = AccessAtlasThread(
             self.bg_mm, name, self._open_atlas_handler, self.fn_set_feedback)
         self._thread.start()
     
-    def remove_atlas(self, name):
+    def remove_atlas(self, name: str):
+        """Remove local copy of atlas.
+        
+        Args:
+            name: Atlas name.
+
+        """
         self.bg_mm.remove_local_atlas(name)
         self.fn_set_feedback(f"Removed atlas '{name}'")
-        self.update_atlas_panel()
+        self.update_atlas_table()

@@ -18,7 +18,7 @@ from enum import auto, Enum
 import os
 import subprocess
 import sys
-from typing import Optional
+from typing import Optional, Sequence, TYPE_CHECKING
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -64,6 +64,9 @@ from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, profiles
+
+if TYPE_CHECKING:
+    from bg_atlasapi import BrainGlobeAtlas
 
 
 #: str: default ROI name.
@@ -3241,20 +3244,45 @@ class Visualization(HasTraits):
             print(val)
         self._roi_feedback += "{}\n".format(val)
     
-    def _set_bg_atlases(self, val):
+    # BRAINGLOBE CONTROLS
+    
+    def _set_bg_atlases(self, val: Sequence):
+        """Set BrainGlobe atlases table data."""
         self._bg_atlases = val
     
-    def _set_bg_feedback(self, val, append=True):
+    def _set_bg_feedback(self, val: str, append: bool = True):
+        """Set BrainGlobe feedback string.
+        
+        Args:
+            val: Feedback string.
+            append: True to append the string; otherwise, ``val`` replaces
+                all current text. Defaults to True.
+
+        Returns:
+
+        """
         if append:
+            # append text
             if self._bg_feedback:
+                # add a newline if text is already present
                 val = f"\n{val}"
             self._bg_feedback += val
         else:
+            # replace text
             self._bg_feedback = val
     
-    def _bg_open_handler(self, bg_atlas):
+    def _bg_open_handler(self, bg_atlas: "BrainGlobeAtlas"):
+        """Handler to open a BrainGlobe atlas.
+        
+        Args:
+            bg_atlas: Atlas to open.
+
+        """
+        # update displayed filename
         config.filename = str(bg_atlas.root_dir)
         self.update_filename(config.filename, True)
+        
+        # display the atlas images
         np_io.setup_images(
             config.filename, allow_import=False, bg_atlas=bg_atlas)
         self._setup_for_image()
@@ -3262,17 +3290,20 @@ class Visualization(HasTraits):
         self.update_imgadj_for_img()
     
     def _setup_brain_globe(self):
+        """Set up the BrainGlobe controller."""
         panel = bg_controller.BrainGlobeCtrl(
             self._set_bg_atlases, self._set_bg_feedback, self._bg_open_handler)
         return panel
         
     @on_trait_change("_bg_access_btn")
     def _open_brain_globe_atlas(self):
+        """Open a BrainGlobe atlas."""
         if self._bg_atlases_sel:
             self._brain_globe_panel.open_atlas(self._bg_atlases_sel[0])
     
     @on_trait_change("_bg_remove_btn")
     def _remove_brain_globe_atlas(self):
+        """Remove a local copy of a BrainGlobe atlas."""
         if self._bg_atlases_sel:
             self._brain_globe_panel.remove_atlas(self._bg_atlases_sel[0])
 

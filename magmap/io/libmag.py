@@ -321,12 +321,15 @@ def make_out_path(
             Defaults to None, which causes
             :attr:`magmap.settings.config.prefix_out` to be used if available,
             falling back to :attr:`magmap.settings.config.prefix`.
-            Set to "" to ignore.
+            Set to "" to ignore. If given with a trailing file separator,
+            the prefix will be combined with ``base_path`` and ``suffix``
+            even if ``combine_prefix`` is False.
         suffix: String to append to end of path just before the
             extension; defaults to None to use
             :attr:`magmap.settings.config.suffix`.
         combine_prefix: True to combine the prefix with the basename of the
-            base path and with the suffix; defaults to False.
+            base path and with the suffix; defaults to False. Often used when
+            multiple files will be output.
 
     Returns:
         Output path.
@@ -340,8 +343,8 @@ def make_out_path(
     
     suffix = config.suffix if suffix is None else suffix
     if out_path:
-        # prefix used as-is unless set to combine
-        if combine_prefix:
+        # prefix used as-is unless set to combine or explicitly given as a dir
+        if combine_prefix or not os.path.basename(out_path):
             # combine prefix to base name of base path and suffix
             if base_path:
                 out_path += os.path.basename(base_path)

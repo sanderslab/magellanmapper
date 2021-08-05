@@ -1273,8 +1273,7 @@ class Visualization(HasTraits):
                 feedback.append(self._format_seg(seg))
         exp_name = sqlite.get_exp_name(
             config.img5d.path_img if config.img5d else None)
-        exp_id = sqlite.select_or_insert_experiment(
-            config.db.conn, config.db.cur, exp_name, None)
+        exp_id = config.db.select_or_insert_experiment(exp_name)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
             np.add(self._drawn_offset, self.border).tolist(),

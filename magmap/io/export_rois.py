@@ -82,7 +82,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
     if unit_factor: phys_mult /= unit_factor ** 3
     
     metrics_all = {}
-    exps = sqlite.select_experiment(db.cur, None)
+    exps = db.select_experiment(None)
     for exp in exps:
         if exp_name and exp["name"] != exp_name:
             # DBs may contain many experiments, which may not correspond to 

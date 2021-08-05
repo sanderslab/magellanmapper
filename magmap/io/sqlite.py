@@ -9,6 +9,7 @@ import os
 import glob
 import datetime
 import sqlite3
+from typing import List, Optional, Tuple
 
 import numpy as np
 
@@ -149,35 +150,6 @@ def upgrade_db(conn, cur):
     conn.commit()
 
 
-def start_db(path=None, new_db=False):
-    """Starts the database.
-    
-    Args:
-        path (str): Path where the new database resides; if None, defaults to
-            :attr:``DB_NAME``.
-        new_db (bool): If True or if ``path`` does not exist, a new database
-            will  be created; defaults to False.
-    
-    Returns:
-        conn: The connection.
-        cur: Connection's cursor.
-    """
-    if path is None:
-        path = config.db_path
-    if new_db or not os.path.exists(path):
-        conn, cur = _create_db(path)
-        print("Created a new database at {}".format(path))
-    else:
-        conn = sqlite3.connect(path)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        print("Loaded database from {}".format(path))
-    # add foreign key constraint support
-    conn.execute("PRAGMA foreign_keys=ON")
-    upgrade_db(conn, cur)
-    return conn, cur
-
-
 def insert_about(conn, cur, version, date):
     """Inserts an experiment into the database.
     
@@ -237,55 +209,6 @@ def insert_experiment(conn, cur, name, date=None):
     return cur.lastrowid
 
 
-def select_experiment(cur, name=None):
-    """Selects an experiment from the given name.
-    
-    Args:
-        cur (:obj:`sqlite3.Cursor): Connection's cursor.
-        name (str): Name of the experiment. Defaults to None to get all
-            experiments.
-    
-    Returns:
-        List[:obj:`sqlite3.Row`]: Sequence of all the experiment rows with
-        the given name.
-    
-    """
-    cols = "id, name, date"
-    #print("looking for exp: {}".format(name))
-    if name is None:
-        cur.execute("SELECT {} FROM experiments".format(cols))
-    else:
-        cur.execute("SELECT {} FROM experiments WHERE name = ?".format(cols), 
-                    (name, ))
-    rows = cur.fetchall()
-    return rows
-
-
-def select_or_insert_experiment(conn, cur, exp_name=None, date=None):
-    """Selects an experiment from the given name, or inserts the 
-    experiment if not found.
-    
-    Args:
-        conn (:class:`sqlite3.Connection): SQLite connection object.
-        cur (:class:`sqlite3.Cursor): SQLite cursor object.
-        exp_name (str): Name of the experiment, typically the filename.
-            Defaults to None to use the first experiment found.
-        date (:class:`datetime`): The date if an experiment is inserted;
-            defaults to None.
-    
-    Returns:
-        int: The ID of the selected or inserted experiment.
-    
-    """
-    exps = select_experiment(cur, exp_name)
-    if len(exps) >= 1:
-        exp_id = exps[0][0]
-    else:
-        exp_id = insert_experiment(conn, cur, exp_name, date)
-        #raise LookupError("could not find experiment {}".format(exp_name))
-    return exp_id
-
-
 def _update_experiments(db_dir):
     """Updates experiment names by shifting the old .czi extension name 
     from midway through the name to its end
@@ -299,7 +222,7 @@ def _update_experiments(db_dir):
     for db_path in db_paths:
         db = ClrDB()
         db.load_db(db_path, False)
-        rows = select_experiment(db.cur, None)
+        rows = db.select_experiment()
         for row in rows:
             name = row["name"]
             if not name.endswith(ext):
@@ -525,25 +448,27 @@ def select_blobs_confirmed(cur, confirmed):
     return _parse_blobs(cur.fetchall())[0]
 
 
-def verification_stats(cur, exp_name, treat_maybes=0):
+def verification_stats(
+        db: "ClrDB", exp_name: str, treat_maybes: int = 0
+) -> Tuple[float, float, str]:
     """Calculate accuracy metrics based on blob verification status in the
     database.
 
     Args:
-        cur (:obj:`sqlite3.Cursor): Database cursor.
-        exp_name (str): Experiment name in the database.
-        treat_maybes (int): Pass to :meth:`detector.meas_detection_accurarcy`
+        db: Database.
+        exp_name: Experiment name in the database.
+        treat_maybes: Pass to :meth:`detector.meas_detection_accurarcy`
             for how to treat maybe flags.
 
     Returns:
-        float, float, str: Output from :meth:`detector.meas_detection_accurarcy`
+        Output from :meth:`detector.meas_detection_accurarcy`
         for all blobs in an experiment matching ``exp_name``.
 
     """
     # selects experiment based on command-line arg and gathers all ROIs
     # and blobs within them
-    exp = select_experiment(cur, exp_name)
-    rois = select_rois(cur, exp[0][0])
+    exp = db.select_experiment(exp_name)
+    rois = select_rois(db.cur, exp[0][0])
     blobs = []
     for roi in rois:
         #print("got roi_id: {}".format(roi[0]))
@@ -575,10 +500,10 @@ def _merge_dbs(db_paths, db_merged=None):
         print("merging in database from {}".format(db_path))
         db = ClrDB()
         db.load_db(db_path, False)
-        exps = select_experiment(db.cur, None)
+        exps = db.select_experiment()
         for exp in exps:
-            exp_id = select_or_insert_experiment(
-                db_merged.conn, db_merged.cur, exp["name"], exp["date"])
+            exp_id = db_merged.select_or_insert_experiment(
+                exp["name"], exp["date"])
             rois = select_rois(db.cur, exp["id"])
             for roi in rois:
                 roi_id, _ = insert_roi(
@@ -609,10 +534,9 @@ def clean_up_blobs(db):
     Args:
         db: Database to clean up, typically a truth database.
     """
-    exps = select_experiment(db.cur, None)
+    exps = db.select_experiment()
     for exp in exps:
-        exp_id = select_or_insert_experiment(
-            db.conn, db.cur, exp["name"], exp["date"])
+        exp_id = db.select_or_insert_experiment(exp["name"], exp["date"])
         rois = select_rois(db.cur, exp["id"])
         for roi in rois:
             roi_id = roi["id"]
@@ -629,12 +553,15 @@ def clean_up_blobs(db):
 
 def _test_db():
     # simple database test
-    conn, cur = start_db()
+    db = ClrDB()
+    db.start_db()
     exp_name = "TextExp"
-    exp_id = select_or_insert_experiment(conn, cur, exp_name, datetime.datetime(1000, 1, 1))
-    insert_blobs(conn, cur, exp_id, 12, [[3, 2, 5, 23.4], [2, 3, 7, 13.2]])
-    conn.commit()
-    conn.close()
+    exp_id = db.select_or_insert_experiment(
+        exp_name, datetime.datetime(1000, 1, 1))
+    insert_blobs(
+        db.conn, db.cur, exp_id, 12, [[3, 2, 5, 23.4], [2, 3, 7, 13.2]])
+    db.conn.commit()
+    db.conn.close()
 
 
 def load_truth_db(filename_base):
@@ -684,7 +611,33 @@ class ClrDB:
     def __init__(self):
         """Initialize a MagellanMapper experiment database."""
         self.path = None
-    
+
+    def start_db(self, path: Optional[str] = None, new_db: bool = False):
+        """Start the database.
+
+        Args:
+            path: Path where the new database resides; if None, defaults to
+                :attr:``DB_NAME``.
+            new_db: If True or if ``path`` does not exist, a new database
+                will  be created; defaults to False.
+
+        """
+        if path is None:
+            path = config.db_path
+        if new_db or not os.path.exists(path):
+            conn, cur = _create_db(path)
+            print("Created a new database at {}".format(path))
+        else:
+            conn = sqlite3.connect(path)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            print("Loaded database from {}".format(path))
+        # add foreign key constraint support
+        conn.execute("PRAGMA foreign_keys=ON")
+        upgrade_db(conn, cur)
+        self.conn = conn
+        self.cur = cur
+
     def load_db(self, path, new_db=False):
         """Load a database from an existing path, raising an exception if
         the path does not exist.
@@ -703,12 +656,59 @@ class ClrDB:
         if not new_db and path and not os.path.exists(path):
             raise FileNotFoundError("{} not found for DB".format(path))
         self.path = path
-        self.conn, self.cur = start_db(path, new_db)
+        self.start_db(path, new_db)
     
     def load_truth_blobs(self):
         self.blobs_truth = select_blobs_confirmed(self.cur, 1)
         libmag.printv("truth blobs:\n{}".format(self.blobs_truth))
-    
+
+    def select_experiment(
+            self, name: Optional[str] = None) -> List[sqlite3.Row]:
+        """Selects an experiment from the given name.
+
+        Args:
+            name: Name of the experiment. Defaults to None to get all
+                experiments.
+
+        Returns:
+            Sequence of all the experiment rows with
+            the given name.
+
+        """
+        cols = "id, name, date"
+        # print("looking for exp: {}".format(name))
+        if name is None:
+            self.cur.execute("SELECT {} FROM experiments".format(cols))
+        else:
+            self.cur.execute(
+                "SELECT {} FROM experiments WHERE name = ?".format(cols),
+                (name,))
+        rows = self.cur.fetchall()
+        return rows
+
+    def select_or_insert_experiment(
+            self, exp_name: Optional[str] = None,
+            date: Optional[datetime.datetime] = None) -> int:
+        """Selects an experiment from the given name, or inserts the 
+        experiment if not found.
+
+        Args:
+            exp_name: Name of the experiment, typically the filename.
+                Defaults to None to use the first experiment found.
+            date: The date if an experiment is inserted; defaults to None.
+
+        Returns:
+            The ID of the selected or inserted experiment.
+
+        """
+        exps = self.select_experiment(exp_name)
+        if len(exps) >= 1:
+            exp_id = exps[0][0]
+        else:
+            exp_id = insert_experiment(self.conn, self.cur, exp_name, date)
+            # raise LookupError("could not find experiment {}".format(exp_name))
+        return exp_id
+
     def get_rois(self, exp_name, ignore_ext=True):
         """Get all ROIs for the given experiment.
         
@@ -722,7 +722,7 @@ class ClrDB:
 
         """
         # get all experiments
-        exps = select_experiment(self.cur)
+        exps = self.select_experiment()
         if ignore_ext:
             exp_name = os.path.splitext(exp_name)[0]
         for exp in exps:
@@ -962,7 +962,7 @@ def main():
         conn = config.verified_db.conn
         cur = config.verified_db.cur
     
-    #print(verification_stats(cur, os.path.basename(config.filename))[2])
+    #print(verification_stats(config.db, os.path.basename(config.filename))[2])
     #update_rois(cur, cli.offset, cli.roi_size)
     #merge_truth_dbs(config.filenames)
     #clean_up_blobs(config.truth_db)

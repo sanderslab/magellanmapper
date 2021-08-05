@@ -170,7 +170,8 @@ def parse_grid_stats(stats_dict):
                     stats_for_df.setdefault(header, []).append(stat)
             group_dict[key] = (fdr, sens, last_param_vals)
         print()
-        path_df = "gridsearch_{}.csv".format("_".join(param_keys))
+        path_df = libmag.make_out_path(
+            "gridsearch_{}.csv".format("_".join(param_keys)))
         dfs.append(df_io.dict_to_data_frame(stats_for_df, path_df, show=" "))
     return parsed_stats, dfs
 

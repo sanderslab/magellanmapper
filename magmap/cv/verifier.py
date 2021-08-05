@@ -417,8 +417,8 @@ def verify_stack(filename_base, subimg_path_base, settings, segments_all,
             rois, segments_all, config.truth_db.blobs_truth,
             verify_tol, config.verified_db, exp_id, exp_name,
             channels)
-        df_io.data_frames_to_csv(df_verify, libmag.combine_paths(
-            exp_name, "verify.csv"))
+        df_io.data_frames_to_csv(df_verify, libmag.make_out_path(
+            libmag.combine_paths(exp_name, "verify.csv")))
     except FileNotFoundError:
         libmag.warn("Could not load truth DB from {}; "
                     "will not verify ROIs".format(db_path_base))

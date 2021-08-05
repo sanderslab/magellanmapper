@@ -10,6 +10,8 @@ from magmap.io import df_io, libmag, sqlite
 from magmap.settings import config
 from magmap.stats import atlas_stats, mlearn
 
+_logger = config.logger.getChild(__name__)
+
 
 def _match_blobs(blobs, blobs_master, close, close_master, dists):
     """Group matches between blobs.
@@ -640,18 +642,34 @@ def _get_truth_db_rois(subimg_path_base, filename_base, db_path_base=None):
     exp_rois = None
     if db_path_base:
         # load truth DB
-        print("Loading truth db for verifications from", db_path_base)
+        _logger.debug(
+            "Loading truth db for verifications from '%s'", db_path_base)
         sqlite.load_truth_db(db_path_base)
     if config.truth_db is not None:
         # load experiment and ROIs from truth DB using the sub-image-based
         # name; series not included in exp name since in ROI
         name = sqlite.get_exp_name(subimg_path_base)
-        print("Loading truth ROIs from experiment:", name)
+        _logger.debug("Loading truth ROIs from experiment '%s'", name)
         exp_rois = config.truth_db.get_rois(name)
         if exp_rois is None:
             # exp may have been named without sub-image
-            print("{} experiment name not found, will try without "
-                  "sub-image offset/size".format(name))
+            old_name = name
             name = sqlite.get_exp_name(filename_base)
+            _logger.debug(
+                "'%s' experiment name not found, will try without any "
+                "sub-image offset/size: '%s'", old_name, name)
             exp_rois = config.truth_db.get_rois(name)
+        if exp_rois is None:
+            # exp may differ from image name all together
+            _logger.debug(
+                "'%s' experiment name not found, will try first "
+                "available experiment", name)
+            exps = config.truth_db.select_experiment()
+            if exps:
+                name = exps[0]["name"]
+                _logger.debug(
+                    "Loading ROIs from first available experiment: '%s'", name)
+                exp_rois = config.truth_db.get_rois(name)
+    if not exp_rois:
+        _logger.warn("No matching experiments found in the truth database")
     return name, exp_rois

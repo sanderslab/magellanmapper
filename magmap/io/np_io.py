@@ -460,7 +460,7 @@ def setup_images(path, series=None, offset=None, size=None,
         config.cmap_labels = colormaps.setup_labels_cmap(config.labels_img)
     
     if (blobs is not None and blobs.blobs is not None
-            and config.img5d.img is not None):
+            and config.img5d.img is not None and blobs.roi_size is not None):
         # scale blob coordinates to main image if shapes differ
         scaling = np.divide(config.img5d.img.shape[1:4], blobs.roi_size)
         if not np.all(scaling == 1):

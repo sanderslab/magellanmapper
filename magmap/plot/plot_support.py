@@ -6,6 +6,7 @@
 from collections import OrderedDict
 import os
 import warnings
+from typing import Sequence, TYPE_CHECKING, Tuple
 
 import numpy as np
 from matplotlib import backend_bases
@@ -24,6 +25,11 @@ try:
 except ImportError as e:
     scalebar = None
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
+
+if TYPE_CHECKING:
+    from matplotlib import figure
+
+_logger = config.logger.getChild(__name__)
 
 
 class ImageSyncMixin:
@@ -807,8 +813,8 @@ def save_fig(path, ext=None, modifier="", fig=None):
         fig = plt.gcf()
     
     if ext in config.FORMATS_3D:
-        print("Extension \"{}\" is a 3D type, will skip saving 2D figure"
-              .format(ext))
+        _logger.warn(
+            f"Extension '{ext}' is a 3D type, will skip saving 2D figure")
         return
     
     # set up output path and backup any existing file
@@ -818,8 +824,9 @@ def save_fig(path, ext=None, modifier="", fig=None):
         ext = ext[1:] if ext else config.DEFAULT_SAVEFIG
     if ext not in fig.canvas.get_supported_filetypes().keys():
         # avoid saving if the figure backend does not support the output format
-        print("Figure for {} not saved as no save extension was given"
-              .format(path))
+        _logger.warn(
+            f"Figure for '{path}' not saved as '{ext}' is not a recognized "
+            f"save extension")
         return None
     
     # backup any existing file
@@ -829,21 +836,23 @@ def save_fig(path, ext=None, modifier="", fig=None):
     # save the current or given figure with config DPI
     dpi = config.plot_labels[config.PlotLabels.DPI]
     fig.savefig(plot_path, dpi=dpi)
-    print("exported figure to", plot_path)
+    _logger.info(f"Exported figure to {plot_path}")
     return plot_path
 
 
-def setup_fig(nrows, ncols, size=None):
+def setup_fig(
+        nrows: int, ncols: int, size: Sequence[float] = None
+) -> Tuple["figure.Figure", "gridspec.GridSpec"]:
     """Setup a figure and associated :class:`gridspec.GridSpec`.
     
     Args:
-        nrows (int): Number of rows.
-        ncols (int): Number of columns.
-        size (List[float]): Sequence of figure size in ``(width, height)``
-            in inches; defaults to None.
+        nrows: Number of rows.
+        ncols: Number of columns.
+        size: Sequence of figure size in ``(width, height)`` in inches;
+            defaults to None.
 
     Returns:
-        Tuple of figure and :obj:`gridspec.GridSpec`.
+        The figure and grid spec used for its layout.
 
     """
     fig = plt.figure(frameon=False, constrained_layout=True, figsize=size)

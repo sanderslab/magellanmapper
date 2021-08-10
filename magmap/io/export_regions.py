@@ -77,9 +77,10 @@ def export_region_ids(labels_ref_lookup, path, level=None,
     if rgbs is not None:
         cols.append("RGB")
     for i, key in enumerate(label_ids):
-        # does not include laterality distinction, only using original IDs
-        if key <= 0: continue
-        label = labels_ref_lookup[key]
+        # get label dict
+        label = labels_ref_lookup.get(key)
+        if label is None: continue
+        
         # ID of parent at label_parents' level
         parent = label_parents[key]
         vals = [key, label[ontology.NODE][config.ABAKeys.ACRONYM.value],

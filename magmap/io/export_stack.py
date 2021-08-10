@@ -602,12 +602,13 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                     path_base = os.path.dirname(path_base)
                 path_base = os.path.join(path_base, "collage")
             
-            # insert mod as suffix, then add any additional suffix
-            # TODO: config.prefix likely conflicts with intended image setup
+            # insert mod as suffix, then add any additional suffix;
+            # can use config.prefix_out for make_out_path prefix
             mod = "_plane_{}{}".format(
                 plot_support.get_plane_axis(config.plane), planei)
             out_path = libmag.make_out_path(path_base, suffix=mod)
-            out_path = libmag.insert_before_ext(out_path, suffix)
+            if suffix:
+                out_path = libmag.insert_before_ext(out_path, suffix)
             plot_support.save_fig(
                 out_path, config.savefig, fig=fig_dict["fig"])
 

@@ -1,30 +1,36 @@
 # File naming conventions for MagellanMapper
 
 import os
+from typing import Optional, Tuple
 
 from magmap.io import libmag
 
 
-def make_subimage_name(base, offset, shape, suffix=None):
+def make_subimage_name(
+        base: str, offset: Optional[Tuple[int, int, int]] = None,
+        shape: Optional[Tuple[int, int, int]] = None,
+        suffix: Optional[str] = None) -> str:
     """Make name of subimage for a given offset and shape.
 
-    The order of ``offset`` and ``shape`` are assumed to be in z,y,x but
+    The order of ``offset`` and ``shape`` are assumed to be in ``z, y, x`` but
     will be reversed for the output name since the user-oriented ordering
-    is x,y,z.
+    is ``x, y, z``.
     
     Args:
-        base (str): Start of name, which can include full parent path.
-        offset (Tuple[int]): Offset, generally given as a tuple.
-        shape (Tuple[int]): Shape, generally given as a tuple.
-        suffix (str): Suffix to append, replacing any existing extension
+        base: Start of name, which can include full parent path.
+        offset: Offset as a tuple; defaults to None to ignore sub-image.
+        shape: Shape as a tuple; defaults to None to ignore sub-image.
+        suffix: Suffix to append, replacing any existing extension
             in ``base``; defaults to None.
     
     Returns:
-        str: Name (or path) to subimage.
+        Name (or path) to subimage.
     """
-    # sub-image offset/shape stored as z,y,x, but file named as x,y,z
-    roi_site = "{}x{}".format(offset[::-1], shape[::-1]).replace(" ", "")
-    name = libmag.insert_before_ext(base, roi_site, "_")
+    name = base
+    if offset is not None and shape is not None:
+        # sub-image offset/shape stored as z,y,x, but file named as x,y,z
+        roi_site = "{}x{}".format(offset[::-1], shape[::-1]).replace(" ", "")
+        name = libmag.insert_before_ext(base, roi_site, "_")
     if suffix:
         name = libmag.combine_paths(name, suffix)
     print("subimage name: {}".format(name))

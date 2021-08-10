@@ -215,25 +215,35 @@ class LabelsRef:
         id_dict = OrderedDict()
         try:
             ids = df[config.ABAKeys.ABA_ID.value]
+            has_parent = config.AtlasMetrics.PARENT.value in df.columns
             for region_id in ids:
                 # convert region to dict
-                region = df[df[config.ABAKeys.ABA_ID.value] == region_id]
+                region = df[ids == region_id]
                 region_dict = region.to_dict("records")[0]
-                
+
+                # ensure that ABA-style columns are present
                 if config.ABAKeys.NAME.value not in region_dict:
-                    # ensure that ABA-style name column is present
                     region_dict[config.ABAKeys.NAME.value] = str(region_id)
+                if config.ABAKeys.LEVEL.value not in region_dict:
+                    level = region.get(config.AtlasMetrics.LEVEL.value)
+                    region_dict[config.ABAKeys.LEVEL.value] = (
+                        1 if level is None else level.squeeze())
+                if config.ABAKeys.ACRONYM.value not in region_dict:
+                    abbr = region.get(
+                        config.AtlasMetrics.REGION_ABBR.value)
+                    region_dict[config.ABAKeys.ACRONYM.value] = (
+                        "" if abbr is None else abbr.squeeze())
                 
-                # add additional fields with defaults
-                region_dict[config.ABAKeys.LEVEL.value] = 1
+                # add list for references to children
                 region_dict[config.ABAKeys.CHILDREN.value] = []
-                region_dict[config.ABAKeys.ACRONYM.value] = ""
                 
                 # add to lookup dict
-                sub_dict = {NODE: region_dict, PARENT_IDS: []}
+                parent_ids = (region[config.AtlasMetrics.PARENT.value].tolist()
+                              if has_parent else [])
+                sub_dict = {NODE: region_dict, PARENT_IDS: parent_ids}
                 id_dict[region_id] = sub_dict
             
-            if config.AtlasMetrics.PARENT.value in df.columns:
+            if has_parent:
                 # fill children with references to each child, which should
                 # each include references until end nodes
                 for region_id in ids:
@@ -473,6 +483,7 @@ def labels_to_parent(labels_ref_lookup, level=None,
                 for parent in parents[::-1]:
                     # assume that parents are ordered by decreasing
                     # (numerically higher) level
+                    if parent not in labels_ref_lookup: break
                     parent_level = labels_ref_lookup[
                         parent][NODE][config.ABAKeys.LEVEL.value]
                     if (parent_level <= target_level
@@ -484,15 +495,18 @@ def labels_to_parent(labels_ref_lookup, level=None,
             else:
                 print("No parents at level", label_level, "for label", label_id)
         
-        parent_ref = label[NODE][config.ABAKeys.PARENT_ID.value]
+        parent_ref = label[NODE].get(config.ABAKeys.PARENT_ID.value)
+        if parent_ref is None:
+            parent_ref = label[NODE].get(config.AtlasMetrics.PARENT.value)
         try:
             # check for discrepancies between parent listed in ontology file
             # and derived from parsed parent IDs
             assert parent_ref == parent_at_level
         except AssertionError:
-            print("Parent at level {} or lower for label {} does not match"
-                  "parent listed in reference file, {}"
-                  .format(target_level, label_id, parent_at_level, parent_ref))
+            _logger.debug(
+                "Parent '%s' at level %s or lower for label %s does not match "
+                "parent listed in reference file, '%s'",
+                parent_at_level, target_level, label_id, parent_ref)
         label_parents[label_id] = parent_at_level
     return label_parents
 

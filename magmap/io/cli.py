@@ -35,7 +35,7 @@ import numpy as np
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
-from magmap.io import df_io, export_stack, importer, libmag, np_io, sqlite
+from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, sqlite
 from magmap.plot import colormaps, plot_2d
 from magmap.settings import atlas_prof, config, grid_search_prof, logs, roi_prof
 from magmap.stats import mlearn
@@ -1116,11 +1116,13 @@ def process_file(
         # will be extracted
         from magmap.io import export_rois
         db = config.db if config.truth_db is None else config.truth_db
+        export_path = naming.make_subimage_name(
+            filename_base, subimg_offset, subimg_size)
         export_rois.export_rois(
-            db, config.image5d, config.channel, filename_base,
+            db, config.image5d, config.channel, export_path,
             config.plot_labels[config.PlotLabels.PADDING],
             config.unit_factor, config.truth_db_mode,
-            os.path.basename(config.filename))
+            os.path.basename(export_path))
         
     elif proc_type is config.ProcessTypes.TRANSFORM:
         # transpose, rescale, and/or resize whole large image

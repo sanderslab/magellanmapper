@@ -23,6 +23,8 @@ from magmap.gui import roi_editor
 from magmap.io import df_io
 from magmap.stats import vols
 
+_logger = config.logger.getChild(__name__)
+
 
 def make_roi_paths(path, roi_id, channel, make_dirs=False):
     path_base = "{}_roi{}".format(path, str(roi_id).zfill(5))
@@ -84,7 +86,10 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
     metrics_all = {}
     exps = db.select_experiment(None)
     for exp in exps:
-        if exp_name and exp["name"] != exp_name:
+        db_exp_name = exp["name"]
+        _logger.info(f"Exporting ROIs from {db_exp_name}")
+        if exp_name and os.path.splitext(db_exp_name)[0] != os.path.splitext(
+                exp_name)[0]:
             # DBs may contain many experiments, which may not correspond to 
             # image5d, eg verified DBs from many truth sets
             continue
@@ -117,10 +122,10 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
             # adjust ROI size and offset if border set
             if padding is not None:
                 size = np.subtract(img3d.shape[::-1], 2 * padding)
-                img3d = plot_3d.prepare_roi(img3d, padding, size)
+                img3d = plot_3d.prepare_roi(img3d, padding, size, 3)
                 blobs[:, 0:3] = np.subtract(
                     blobs[:, 0:3], np.add(offset, padding)[::-1])
-            print("exporting ROI of shape {}".format(img3d.shape))
+            _logger.debug("Exporting ROI of shape: %s", img3d.shape)
             
             isotropic = config.roi_profile["isotropic"]
             blobs_orig = blobs
@@ -137,7 +142,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 path_img_annot, path_img_annot_nifti = make_roi_paths(
                     path, roi_id, channel, make_dirs=True)
             np.save(path_img, img3d)
-            print("saved 3D image to {}".format(path_img))
+            _logger.info(f"Saved 3D image to: {path_img}")
             # WORKAROUND: for some reason SimpleITK gives a conversion error 
             # when converting from uint16 (>u2) Numpy array
             img3d = img3d.astype(np.float64)
@@ -150,9 +155,10 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            roi_ed = roi_editor.ROIEditor(img3d)
+            roi_ed = roi_editor.ROIEditor(image5d)
             roi_ed.plot_roi(
-                blobs, channel, show=False, title=os.path.splitext(path_img)[0])
+                img3d, blobs, channel, show=False,
+                title=os.path.splitext(path_img)[0])
             libmag.show_full_arrays()
             
             # export image and blobs, stripping blob flags and adjusting 
@@ -182,12 +188,13 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 # remove fancy blending since truth set must be binary
                 img3d_truth[img3d_truth >= 0.5] = 1
                 img3d_truth[img3d_truth < 0.5] = 0
-            print("exporting truth ROI of shape {}".format(img3d_truth.shape))
+            _logger.debug("Exporting truth ROI of shape: %s", img3d_truth.shape)
             np.save(path_img_annot, img3d_truth)
-            #print(img3d_truth)
             sitk.WriteImage(
                 sitk.GetImageFromArray(img3d_truth), path_img_annot_nifti, 
                 False)
+            _logger.info(
+                "Wrote NIfTI formatted images: %s", path_img_annot_nifti)
             # avoid smoothing interpolation, using "nearest" instead
             with plt.style.context(config.rc_params_mpl2_img_interp):
                 roi_ed.plot_roi(
@@ -225,7 +232,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 for key, val in m.items():
                     metrics_all.setdefault(key, []).append(val)
             
-            print("exported {}".format(path_base))
+            _logger.info("Exported ROIs to: %s", path_base)
     
     #_test_loading_rois(db, channel, path)
     

@@ -1031,8 +1031,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
                 # shows the zoomed subplot with scale bar for the current
                 # z-plane with all segments
-                ax_z = self.show_subplot(
-                    fig, gs, i, j, image5d, channel, roi_size, zoom_offset,
+                ax_z, _ = self.show_subplot(
+                    fig, gs, i, j, channel, roi_size, zoom_offset,
                     None, segments, None, None, 1.0, z,
                     circles=self.CircleStyles.CIRCLES, roi=roi)
                 if (i == 0 and j == 0

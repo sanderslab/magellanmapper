@@ -16,7 +16,7 @@
     - View the complete settings for all loaded profiles
     - Clearer and more compact labels and button arrangement
     - Settings panel for resetting preferences and finding version information
-- Window size and position are saved as user prferences
+- Window size and position are saved as user preferences
 - The default window size is smaller to fit into 720p displays
 - The default focus is no longer the main image file path to avoid accidental file loading
 - Registered image selectors are now more compact
@@ -37,8 +37,10 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - The atlas profile settings `meas_edge_dists` and `meas_smoothing` turn off these metrics to save time during atlas generation, and the profile `fewerstats` turns off both these settings
 - Multiprocessing is turned off for lateral extension for better performance
 - Labels difference images, which map metrics for labels onto the labels themselves for data visualization, can now take specific metric files and columns from the included R package
+- Labels referencs loaded from CSV files now support level, abbreviation, and parent ID columns
 - Fixed multiprocessing tasks with SimpleElastix 2.0
 - Fixed DSC metrics between the atlas and its new labels, and more DSC metrics are saved
+- Fixed exporting labels reference files when a label ID is missing
 
 #### Atlas registration
 
@@ -48,7 +50,10 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 #### Cell detection
 
 - Previously saved blobs are no longer loaded prior to re-detection
+- More flexibility when loading databases with blob truth sets
+- Grid searches support output path modifiers
 - Fixed blob segmentation and showing labels when none of either are present
+- Fixed exporting ROIs
 
 #### Volumetric image processing
 
@@ -81,6 +86,10 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - Continuous integration has been implemented through GitHub Actions to improve quality control
 
 #### Python stats and plots
+
+- Scatter plot updates
+    - Annotation columns can be names of index columns
+    - Colors can be specified
 
 #### R stats and plots
 

@@ -5,11 +5,10 @@
 
 import os
 import math
+from typing import Optional, Sequence
 
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib import gridspec
-from matplotlib import pylab
+from matplotlib import colors as mat_colors, gridspec, pylab, pyplot as plt
 import matplotlib.transforms as transforms
 import pandas as pd
 from skimage import exposure
@@ -712,7 +711,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                  names_group=None, fig_size=None, show=True, suffix=None,
                  df=None, xy_line=False, col_size=None, size_mult=5,
                  annot_arri=None, alpha=None, legend_loc="best",
-                 ax=None, save=True, annot_thresh_fn=None, **kwargs):
+                 ax=None, save=True, annot_thresh_fn=None,
+                 colors: Optional[Sequence] = None, **kwargs):
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -756,6 +756,9 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         annot_thresh_fn (func): Function accepting ``x, y`` and returning
             a boolean indicated whether to annotate the given point;
             defaults to False.
+        colors: Color or sequence of colors for each point; defaults to None.
+            If None, distinct colors are auto-generated for each pair of x-y
+            column or for each group.
         kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
@@ -764,8 +767,14 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     """
     def plot():
         # plot a paired sequence of x/y's and annotate
+        
+        # single RGB(A) colors use the "color" param, while sequences of colors
+        # use the "c" param
+        color = colors[i]
+        scat_args = {"color" if mat_colors.is_color_like(color) else "c": color}
+        
         ax.scatter(
-            xs, ys, s=sizes_plot, label=label, color=colors[i], 
+            xs, ys, s=sizes_plot, label=label, **scat_args, 
             marker=markers[i])
         if col_annot:
             # annotate each point with val from annotation col, which can be
@@ -817,9 +826,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
     if libmag.is_seq(col_x):
         # treat each pair of col_y and col_y values as a group
         num_groups = len(col_x)
-        colors = colormaps.discrete_colormap(
-            num_groups, prioritize_default="cn", seed=config.seed,
-            alpha=alpha) / 255
+        if colors is None:
+            colors = colormaps.discrete_colormap(
+                num_groups, prioritize_default="cn", seed=config.seed,
+                alpha=alpha) / 255
         markers = libmag.pad_seq(markers, num_groups)
         for i, (x, y) in enumerate(zip(col_x, col_y)):
             label = x if names_group is None else names_group[i]
@@ -843,9 +853,10 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             groups = df_groups.unique()
         num_groups = len(groups)
         markers = libmag.pad_seq(markers, num_groups)
-        colors = colormaps.discrete_colormap(
-            num_groups, prioritize_default="cn", seed=config.seed,
-            alpha=alpha) / 255
+        if colors is None:
+            colors = colormaps.discrete_colormap(
+                num_groups, prioritize_default="cn", seed=config.seed,
+                alpha=alpha) / 255
         for i, group in enumerate(groups):
             # plot all points in each group with same color
             df_group = df

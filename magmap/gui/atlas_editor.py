@@ -141,11 +141,10 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         def setup_plot_ed(axis, gs_spec):
             # set up a PlotEditor for the given axis
 
-            # subplot grid, with larger height preference for plot for
+            # get subplot grid with extra height ratio weighting for
             # each increased row to make sliders of approx equal size and  
             # align top borders of top images
-            rows_cols = gs_spec.get_rows_columns()
-            extra_rows = rows_cols[3] - rows_cols[2]
+            extra_rows = gs_spec.rowspan.stop - gs_spec.rowspan.start - 1
             gs_plot = gridspec.GridSpecFromSubplotSpec(
                 2, 1, subplot_spec=gs_spec, 
                 height_ratios=(1, 10 + 14 * extra_rows), 

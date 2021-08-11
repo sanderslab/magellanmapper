@@ -848,14 +848,15 @@ class PlotEditor:
                         if self._ax_img_labels is not None:
                             # edit displayed image
                             img = self._ax_img_labels.get_array()
-                            rr, cc = draw.circle(y, x, self.radius, img.shape)
+                            rr, cc = draw.disk(
+                                (y, x), self.radius, shape=img.shape)
                             img[rr, cc] = self.intensity_shown
 
                             # edit underlying labels image
-                            rr, cc = draw.circle(
-                                coord[1], coord[2],
+                            rr, cc = draw.disk(
+                                (coord[1], coord[2]),
                                 self.radius * self._downsample[0],
-                                self.img3d_labels[self.coord[0]].shape)
+                                shape=self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity
                             print("changed intensity at x,y,z = {},{},{} to {}"

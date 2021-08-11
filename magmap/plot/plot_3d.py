@@ -534,7 +534,7 @@ def build_ground_truth(img3d, blobs, ellipsoid=False, labels=None,
             blobs_in = blobs[mask]
             labels_in = labels[mask]
             for blob, label in zip(blobs_in, labels_in):
-                rr, cc = draw.circle(*blob[1:4], img3d[i].shape)
+                rr, cc = draw.disk(blob[1:3], blob[3], shape=img3d[i].shape)
                 #print("drawing circle of {} x {}".format(rr, cc))
                 img3d[i, rr, cc] = label
     return img3d

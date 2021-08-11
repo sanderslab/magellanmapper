@@ -20,6 +20,8 @@ from magmap.stats import mlearn
 from magmap.plot import plot_support
 from magmap.stats import vols
 
+_logger = config.logger.getChild(__name__)
+
 
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
                   title=None):
@@ -1080,9 +1082,10 @@ def decorate_plot(ax, title=None, xlabel=None, ylabel=None, xunit=None,
         :class:`matplotlib.image.Axes`: Matplotlib plot.
 
     """
-    if config.verbose:
-        print("Parameters not recognized and ignored for plot decorations:")
-        print(kwargs)
+    if kwargs:
+        _logger.debug(
+            "Parameters not recognized and ignored for plot decorations: %s",
+            kwargs)
     
     # set x/y axis limits if given
     if xlim: ax.set_xlim(xlim)

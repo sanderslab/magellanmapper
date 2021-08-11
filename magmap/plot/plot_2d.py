@@ -722,7 +722,8 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             of names to define groups with corresponding `col_y` values.
         col_y: Name of column to plot as corresponding y-values. Can 
             also be a sequence corresponding to that of `col_x`.
-        col_annot: Name of column to annotate each point; defaults to None.
+        col_annot: Name of column with annotations for each point; defaults to
+            None. Can be the name of the index column.
         cols_group (Sequence[str]): Sequence of column names; defaults to None.
             Each unique combination in these columns specifies a group
             to plot separately.
@@ -767,19 +768,27 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             xs, ys, s=sizes_plot, label=label, color=colors[i], 
             marker=markers[i])
         if col_annot:
-            # annotate each point with val from annotation col
-            for xan, yan, annot in zip(xs, ys, df_group[col_annot]):
-                if annot_arri is not None:
-                    # attempt to convert string into array to extract
-                    # the given values
-                    annot_arr = libmag.npstr_to_array(annot)
-                    if annot_arr is not None:
-                        annot = annot_arr[annot_arri]
-                if annot_thresh_fn and not annot_thresh_fn(xan, yan): continue
-                dec_digits = 0 if libmag.is_int(annot) else 3
-                ax.annotate(
-                    "{}".format(libmag.format_num(annot, dec_digits, False)),
-                    (xan, yan))
+            # annotate each point with val from annotation col, which can be
+            # the name of the index
+            annots = None
+            if col_annot in df_group:
+                annots = df_group[col_annot]
+            elif col_annot == df_group.index.name:
+                annots = df_group.index
+            if annots is not None:
+                for xan, yan, annot in zip(xs, ys, annots):
+                    if annot_arri is not None:
+                        # attempt to convert string into array to extract
+                        # the given values
+                        annot_arr = libmag.npstr_to_array(annot)
+                        if annot_arr is not None:
+                            annot = annot_arr[annot_arri]
+                    if annot_thresh_fn and not annot_thresh_fn(xan, yan):
+                        continue
+                    dec_digits = 0 if libmag.is_int(annot) else 3
+                    ax.annotate(
+                        f"{libmag.format_num(annot, dec_digits, False)}",
+                        (xan, yan))
     
     # load data frame from CSV and setup figure
     if df is None:

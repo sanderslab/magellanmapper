@@ -366,14 +366,15 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         # only save if at least one editor has been edited
         if not any([ed.edited for ed in self.plot_eds.values()]): return
         
-        # save to the labels reg suffix; use sitk Image if loaded and store
-        # any Image loaded during saving
+        # save to the labels reg suffix, using the prefix as the base path if
+        # set; use sitk Image as template image and store the saved image
         reg_name = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
         if self._labels_img_sitk is None:
             self._labels_img_sitk = config.labels_img_sitk
         self._labels_img_sitk = sitk_io.write_registered_image(
-            self.labels_img, config.filename, reg_name, self._labels_img_sitk,
-            overwrite=True)
+            self.labels_img,
+            config.prefix if config.prefix else config.filename, reg_name,
+            self._labels_img_sitk, overwrite=True)
         
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False

@@ -5,7 +5,7 @@
 
 import os
 import math
-from typing import Optional, Sequence
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Union
 
 import numpy as np
 from matplotlib import colors as mat_colors, gridspec, pylab, pyplot as plt
@@ -19,6 +19,9 @@ from magmap.io import libmag
 from magmap.stats import mlearn
 from magmap.plot import plot_support
 from magmap.stats import vols
+
+if TYPE_CHECKING:
+    from matplotlib import axes
 
 _logger = config.logger.getChild(__name__)
 
@@ -709,12 +712,20 @@ def plot_lines(path_to_df, x_col, data_cols, linestyles=None, labels=None,
     return ax
 
 
-def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
-                 names_group=None, fig_size=None, show=True, suffix=None,
-                 df=None, xy_line=False, col_size=None, size_mult=5,
-                 annot_arri=None, alpha=None, legend_loc="best",
-                 ax=None, save=True, annot_thresh_fn=None,
-                 colors: Optional[Sequence] = None, **kwargs):
+def plot_scatter(
+        path: Optional[str], col_x: Union[str, Sequence[str]],
+        col_y: Optional[Union[str, Sequence[str]]] = None,
+        col_annot: Optional[str] = None,
+        cols_group: Optional[Sequence[str]] = None,
+        names_group: Optional[Sequence[str]] = None,
+        fig_size: Optional[Sequence[float]] = None, show: bool = True,
+        suffix: Optional[str] = None, df: Optional[pd.DataFrame] = None,
+        xy_line: bool = False, col_size: Optional[str] = None,
+        size_mult: float = 5, annot_arri: int = None,
+        alpha: Optional[float] = None, legend_loc: str = "best",
+        ax: Optional["axes.Axes"] = None, save: bool = True,
+        annot_thresh_fn: Optional[Callable[[int, int], bool]] = None,
+        colors: Optional[Sequence] = None, **kwargs) -> "axes.Axes":
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
@@ -722,8 +733,9 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
             path basis to save the figure if :attr:``config.savefig`` is set.
         col_x: Name of column to plot as x-values. Can also be a sequence 
             of names to define groups with corresponding `col_y` values.
-        col_y: Name of column to plot as corresponding y-values. Can 
-            also be a sequence corresponding to that of `col_x`.
+        col_y: Name of column to plot as corresponding y-values; defaults to
+            None. Can also be a sequence corresponding to that of `col_x`.
+            If not found, y-values are set to 0 if ``col_x`` is only one column.
         col_annot: Name of column with annotations for each point; defaults to
             None. Can be the name of the index column.
         cols_group (Sequence[str]): Sequence of column names; defaults to None.
@@ -767,6 +779,11 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
         :class:`matplotlib.image.Axes`: Matplotlib plot.
     
     """
+    def get_ys(df_y, column):
+        # get y-vals, falling back to setting all vals to 0 if y-col is not
+        # in the data frame
+        return df_y[column] if column in df_y else np.zeros(len(xs), dtype=int)
+    
     def plot():
         # plot a paired sequence of x/y's and annotate
         
@@ -833,10 +850,13 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                 num_groups, prioritize_default="cn", seed=config.seed,
                 alpha=alpha) / 255
         markers = libmag.pad_seq(markers, num_groups)
-        for i, (x, y) in enumerate(zip(col_x, col_y)):
+        col_y_seq = col_y
+        if col_y is None:
+            col_y_seq = [None] * num_groups
+        for i, (x, y) in enumerate(zip(col_x, col_y_seq)):
             label = x if names_group is None else names_group[i]
             xs = df[x]
-            ys = df[y]
+            ys = get_ys(df, y)
             plot()
     else:
         # set up groups
@@ -877,7 +897,7 @@ def plot_scatter(path, col_x, col_y, col_annot=None, cols_group=None,
                     # use given group name directly
                     label = names_group[i]
             xs = df_group[col_x]
-            ys = df_group[col_y]
+            ys = get_ys(df_group, col_y)
             plot()
     
     if xy_line:

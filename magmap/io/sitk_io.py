@@ -331,6 +331,9 @@ def write_registered_image(img_np, img_path, reg_name, img_sitk=None,
                            load_reg_names=None, overwrite=False):
     """Write a Numpy array as a registered 3D image file through SimpleITK.
     
+    To find metadata for the output image, another SimpleITK image must
+    be given or discovered as a registered image.
+    
     Args:
         img_np (:class:`numpy.ndarray`): Image array to write.
         img_path (str): Base path from which to construct output path.
@@ -387,7 +390,8 @@ def write_registered_image(img_np, img_path, reg_name, img_sitk=None,
         return reg_img
     else:
         raise FileNotFoundError(
-            "Unable to find a template file to save", reg_img_path)
+            f"Unable to find a template file for saving a registered image to "
+            f"'{reg_img_path}'")
 
 
 def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None,

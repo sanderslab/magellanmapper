@@ -1005,27 +1005,28 @@ class Visualization(HasTraits):
                 ed = self.atlas_eds[0]
         if ed is None: return
 
-        # get the display settings from the viewer
+        # get the first displayed image from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
         plot_ax_img = ed.get_img_display_settings(
-                imgi, chl=int(self._imgadj_chls))
+            imgi, chl=int(self._imgadj_chls))
         if plot_ax_img is None: return
-        norm = plot_ax_img.ax_img.norm
+        
+        # populate controls with intensity settings
         self._imgadj_brightness = plot_ax_img.brightness
         self._imgadj_contrast = plot_ax_img.contrast
         self._imgadj_alpha = plot_ax_img.ax_img.get_alpha()
+
+        # populate intensity limits, auto-scaling, and current val (if not auto)
         self._adapt_imgadj_limits(plot_ax_img)
-        
-        # populate controls with display settings
-        if norm.vmin is None:
+        if plot_ax_img.vmin is None:
             self._imgadj_min_auto = True
         else:
-            self._imgadj_min = norm.vmin
+            self._imgadj_min = plot_ax_img.ax_img.norm.vmin
             self._imgadj_min_auto = False
-        if norm.vmax is None:
+        if plot_ax_img.vmax is None:
             self._imgadj_max_auto = True
         else:
-            self._imgadj_max = norm.vmax
+            self._imgadj_max = plot_ax_img.ax_img.norm.vmax
             self._imgadj_max_auto = False
     
     def _adapt_imgadj_limits(self, plot_ax_img):

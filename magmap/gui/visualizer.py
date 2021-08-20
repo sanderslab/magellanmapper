@@ -2701,6 +2701,9 @@ class Visualization(HasTraits):
         self._ignore_roi_offset_change = True
         self.z_offset, self.y_offset, self.x_offset = offset
         self._ignore_roi_offset_change = False
+        
+        # update intensity limits, etc for the current image
+        self.update_imgadj_for_img()
     
     def get_roi_size(self):
         """Get the current ROI size.

@@ -403,7 +403,13 @@ class PlotEditor:
                 imgs2d.append(img_add)
                 self._channels.append([0])
                 cmaps.append(self.cmap_borders[channel])
-                alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
+                
+                # get alpha for last corresponding borders plane if available
+                ax_img = libmag.get_if_within(self._plot_ax_imgs, 2 + i, None)
+                alpha = (ax_img[i].ax_img.get_alpha() if ax_img else
+                         libmag.get_if_within(config.alphas, 2 + i, 1))
+                alphas.append(alpha)
+                
                 shapes.append(self._img3d_shapes[2][1:3])
                 vmaxs.append(None)
                 vmins.append(None)

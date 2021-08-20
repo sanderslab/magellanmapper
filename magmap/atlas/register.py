@@ -395,8 +395,8 @@ def register(
         fixed_file: str, moving_img_path: str, show_imgs: bool = True,
         write_imgs: bool = True, name_prefix: Optional[str] = None,
         new_atlas: bool = False,
-        transformix: Optional[sitk.TransformixImageFilter] = None
-) -> sitk.TransformixImageFilter:
+        transformix: Optional["sitk.TransformixImageFilter"] = None
+) -> "sitk.TransformixImageFilter":
     """Register an atlas to a sample image using the SimpleElastix library.
     
     Loads the images, applies any transformations to the moving image, and

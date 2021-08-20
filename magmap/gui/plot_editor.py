@@ -7,6 +7,7 @@ view of orthogonal planes.
 """
 
 import textwrap
+from typing import Optional, TYPE_CHECKING
 
 from matplotlib import patches
 import numpy as np
@@ -18,27 +19,37 @@ from magmap.settings import config
 from magmap.atlas import ontology
 from magmap.plot import plot_support
 
+if TYPE_CHECKING:
+    from matplotlib import image
+
 
 class PlotAxImg:
     """Axes image storage class to contain additional information for
     display such as brightness and contrast.
 
     Attributes:
-        ax_img (List[List[:obj:`matplotlib.image.AxesImage`]]): Nested list
-            of displayed axes image in the format:
-            ``[[AxesImage0_ch0, AxesImage0_ch1, ...], ...]``.
-        brightness (float): Brightness addend; defaults to 0.0.
-        contrast (float): Contrast factor; defaults to 1.0.
-        img (:obj:`np.ndarray`): The original underlying image data,
+        ax_img: Displayed Matplotlib image.
+        vmin: Specified vmin; defaults to None for auto-scaling. See
+            ``ax_img.norm.vmin`` for the output vmin.
+        vmax: Specified vmax; defaults to None for auto-scaling. See
+            ``ax_img.norm.vmax`` for the output vmax.
+        brightness: Brightness addend; defaults to 0.0.
+        contrast: Contrast factor; defaults to 1.0.
+        img: The original underlying image data,
             copied to allow adjusting the array in ``ax_img`` while
             retaining the original data.
 
     """
-    def __init__(self, ax_img):
+    def __init__(
+            self, ax_img: "image.AxesImage", vmin: Optional[float] = None,
+            vmax: Optional[float] = None):
         self.ax_img = ax_img
-        self.brightness = 0.0
-        self.contrast = 1.0
-        self.img = np.copy(self.ax_img.get_array())
+        self.vmin = vmin
+        self.vmax = vmax
+        
+        self.brightness: float = 0.0
+        self.contrast: float = 1.0
+        self.img: np.ndarray = np.copy(self.ax_img.get_array())
 
 
 class PlotEditor:
@@ -375,9 +386,12 @@ class PlotEditor:
         vmaxs = [None]
         vmins = [None]
         if self._plot_ax_imgs:
-            # use settings from previously displayed images if available
-            vmaxs[0] = [a.ax_img.norm.vmax for a in self._plot_ax_imgs[0]]
-            vmins[0] = [a.ax_img.norm.vmin for a in self._plot_ax_imgs[0]]
+            # use vmin/vmax from norm values in previously displayed images
+            # if available; None specifies auto-scaling
+            vmaxs[0] = [p.vmax if p.vmax is None else p.ax_img.norm.vmax
+                        for p in self._plot_ax_imgs[0]]
+            vmins[0] = [p.vmin if p.vmin is None else p.ax_img.norm.vmin
+                        for p in self._plot_ax_imgs[0]]
         
         if self.img3d_labels is not None:
             # prep labels with discrete colormap and prior alpha if available
@@ -447,10 +461,20 @@ class PlotEditor:
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
-        # store displayed images
+        # store displayed images in the PlotAxImg container class
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
-        self._plot_ax_imgs = [
-            [PlotAxImg(img) for img in imgs] for imgs in ax_imgs]
+        self._plot_ax_imgs = []
+        for i, imgs in enumerate(ax_imgs):
+            plot_ax_imgs = []
+            for j, img in enumerate(imgs):
+                plot_ax_img = PlotAxImg(img)
+                if i == 0:
+                    # specified vmin/vmax, in contrast to the AxesImages's
+                    # norm, which holds the values used for the displayed image
+                    plot_ax_img.vmin = libmag.get_if_within(vmins[i], j)
+                    plot_ax_img.vmax = libmag.get_if_within(vmaxs[i], j)
+                plot_ax_imgs.append(plot_ax_img)
+            self._plot_ax_imgs.append(plot_ax_imgs)
         
         if self.xlim is not None and self.ylim is not None:
             # restore pan/zoom view
@@ -629,6 +653,12 @@ class PlotEditor:
         if not plot_ax_img:
             return None
         if minimum is not np.nan or maximum is not np.nan:
+            # store the specified intensity limits
+            if minimum is not np.nan:
+                plot_ax_img.vmin = minimum
+            if maximum is not np.nan:
+                plot_ax_img.vmax = maximum
+            
             # set vmin and vmax; use norm rather than get_clim since norm
             # holds the actual limits
             clim = [minimum, maximum]

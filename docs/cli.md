@@ -54,6 +54,7 @@ Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
 `--prefix <path>` | `--prefix <path1> [path2] ...` | v1.5.0 | Multiple prefixes can be given
 `--proc <task>` | `--proc <task1>=[sub-task1,...] [task2] ...` | v1.5.0 | Multiple processing tasks can be given as well as sub-tasks
+None | `--proc export_tif` | v1.5.0 | Export NPY files to TIF format.
 Specified in ROI profiles | `--proc preprocess=[rotate,saturate,...]` | v1.5.0 | Pre-processing tasks are integrated as sub-processing tasks; see `config.PreProcessKeys` for task names
 `--reg_suffixes [atlas=<suffix1>] ... [fixed_mask=<suffix2>] [moving_mask=<suffix3>]` | Unchanged | v1.5.0 | Suffixes can now be given as an absolute path to load directly from the path, eg a labels image not registered to the main image. Image masks for registration can also be given as `fixed_mask` and `moving_mask`.
 `--suffix <path>` | `--suffix <path1> [path2] ...` | v1.5.0 | Multiple suffixes can be given

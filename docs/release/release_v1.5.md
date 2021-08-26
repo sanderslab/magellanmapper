@@ -30,6 +30,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - Multiple processing tasks can be given in the same command; eg `--proc detect coloc_match`
 - Image preprocessing tasks have been integrated into `--proc`, no longer requiring a separate ROI profile; eg `--proc preprocess=rotate`
 - The new `--prefix_out` flag allows customizing output paths when `--prefix` is used to modify input paths
+- The `--proc export_tif` task exports an NPY file to TIF format
 
 #### Atlas refinement
 
@@ -107,6 +108,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - Python-Bioformats has been upgraded to 4.0.5 and uses a custom package that uses the existing Javabridge rather than Python-Javabridge to avoid a higher NumPy version requirement
 - Workaround for failure to install Mayavi because of a newer VTK, now pinned to 9.0.1
 - Matplotlib >= 3.2 is now required
+- Tifffile is now a direct dependency, previously already installed as a sub-dependency of other required packages
 
 #### R Dependency Changes
 

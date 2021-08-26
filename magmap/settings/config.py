@@ -225,6 +225,7 @@ class ProcessTypes(Enum):
     EXPORT_PLANES = auto()  # export a 3D+ image to individual planes
     EXPORT_PLANES_CHANNELS = auto()  # also export channels to separate files
     EXPORT_RAW = auto()  # export an array as a raw data file
+    EXPORT_TIF = auto()  # export an array as TIF files for each channel
     PREPROCESS = auto()  # pre-process whole image
 
 

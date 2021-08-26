@@ -1176,6 +1176,10 @@ def process_file(
         libmag.backup_file(out_path)
         np_io.write_raw_file(config.image5d, out_path)
 
+    elif proc_type is config.ProcessTypes.EXPORT_TIF:
+        # export the main image as a TIF files for each channel
+        np_io.write_tif_file(config.image5d, config.filename)
+
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file
         # TODO: consider chunking option for larger images

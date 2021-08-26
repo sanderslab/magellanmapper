@@ -3,9 +3,11 @@
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import os
+import pathlib
 from typing import Optional, Sequence, Tuple
 
 import numpy as np
+import tifffile
 
 from magmap.atlas import labels_meta, ontology, transformer
 from magmap.cv import detector
@@ -499,3 +501,29 @@ def write_raw_file(arr, path):
     out_file[:] = arr[:]
     del out_file  # flushes to disk
     print("Finished writing", path)
+
+
+def write_tif_file(image5d: np.ndarray, path: str):
+    """Write a NumPy array to TIF files.
+    
+    Each channel will be exported to a separate file.
+    
+    Args:
+        image5d: NumPy array in ``t, z, y, x, c`` dimension order.
+        path: Base output path. If ``image5d`` has multiple channels, they
+            will be exported to files with ``_ch_<n>`` appended just before
+            the extension.
+
+    """
+    nchls = get_num_channels(image5d)
+    for i in range(nchls):
+        # export the given channel to a separate file, adding the channel to
+        # the filename if multiple channels exist
+        img_chl = image5d if image5d.ndim < 4 else image5d[..., i]
+        out_path = pathlib.Path(libmag.make_out_path(
+            f"{path}{f'_ch_{i}' if nchls > 1 else ''}.tif",
+            combine_prefix=True)).resolve()
+        pathlib.Path.mkdir(out_path.parent.resolve(), exist_ok=True)
+        libmag.backup_file(out_path)
+        _logger.info("Exporting image to %s", out_path)
+        tifffile.imwrite(out_path, img_chl, photometric="minisblack")

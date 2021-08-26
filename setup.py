@@ -50,6 +50,7 @@ config = {
         "appdirs",
         # part of stdlib in Python >= 3.8
         "importlib-metadata >= 1.0 ; python_version < '3.8'",
+        "tifffile",
     ], 
     "extras_require": {
         "import": _EXTRAS_IMPORT, 

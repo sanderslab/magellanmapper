@@ -229,8 +229,8 @@ class ProcessTypes(Enum):
     PREPROCESS = auto()  # pre-process whole image
 
 
-#: dict[Enum, Any]: Processing tasks.
-proc_type = dict.fromkeys(ProcessTypes, None)
+#: Processing tasks.
+proc_type: Dict[ProcessTypes, Any] = dict.fromkeys(ProcessTypes, None)
 
 # 2D PLOTTING
 

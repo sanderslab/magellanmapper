@@ -24,6 +24,6 @@ dependencies:
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar
-    - simpleitk==1.2.0rc2.dev1162+g2a79d
-    - javabridge==1.0.18.post21+g4526f53
-    - python-bioformats==1.1.0
+    - simpleitk==2.0.2rc2.dev785+g8ac4f
+    - javabridge==1.0.19.post4+gbebed64
+    - python-bioformats==4.0.5.post2+g51eb88a

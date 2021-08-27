@@ -4,7 +4,7 @@
 """
 import os
 import pathlib
-from typing import Optional, Sequence, Tuple
+from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tifffile
@@ -503,7 +503,8 @@ def write_raw_file(arr, path):
     print("Finished writing", path)
 
 
-def write_tif_file(image5d: np.ndarray, path: str):
+def write_tif_file(
+        image5d: np.ndarray, path: Union[str, pathlib.Path], **kwargs: Any):
     """Write a NumPy array to TIF files.
     
     Each channel will be exported to a separate file.
@@ -513,17 +514,25 @@ def write_tif_file(image5d: np.ndarray, path: str):
         path: Base output path. If ``image5d`` has multiple channels, they
             will be exported to files with ``_ch_<n>`` appended just before
             the extension.
+        kwargs: Arguments passed to :meth:`tifffile.imwrite`.
 
     """
     nchls = get_num_channels(image5d)
     for i in range(nchls):
         # export the given channel to a separate file, adding the channel to
         # the filename if multiple channels exist
-        img_chl = image5d if image5d.ndim < 4 else image5d[..., i]
+        img_chl = image5d if image5d.ndim <= 4 else image5d[..., i]
         out_path = pathlib.Path(libmag.make_out_path(
             f"{path}{f'_ch_{i}' if nchls > 1 else ''}.tif",
             combine_prefix=True)).resolve()
         pathlib.Path.mkdir(out_path.parent.resolve(), exist_ok=True)
         libmag.backup_file(out_path)
-        _logger.info("Exporting image to %s", out_path)
-        tifffile.imwrite(out_path, img_chl, photometric="minisblack")
+        
+        if "imagej" in kwargs and kwargs["imagej"]:
+            # ImageJ format assumes dimension order of TZCYXS
+            img_chl = img_chl[:, :, np.newaxis]
+        
+        # write to TIF
+        _logger.info(
+            "Exporting image of shape %s to '%s'", img_chl.shape, out_path)
+        tifffile.imwrite(out_path, img_chl, photometric="minisblack", **kwargs)

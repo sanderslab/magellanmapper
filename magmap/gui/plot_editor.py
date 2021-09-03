@@ -377,7 +377,8 @@ class PlotEditor:
         self.hline = None
         self.vline = None
         
-        # prep 2D image from main image, assumed to be an intensity image
+        # prep 2D image from main image, assumed to be an intensity image,
+        # with settings for each channel within this main image
         imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
         self._channels = [config.channel]
         cmaps = [config.cmaps]
@@ -385,6 +386,8 @@ class PlotEditor:
         shapes = [self._img3d_shapes[0][1:3]]
         vmaxs = [None]
         vmins = [None]
+        brightnesses = [None]
+        contrasts = [None]
         if self._plot_ax_imgs:
             # use vmin/vmax from norm values in previously displayed images
             # if available; None specifies auto-scaling
@@ -392,6 +395,11 @@ class PlotEditor:
                         for p in self._plot_ax_imgs[0]]
             vmins[0] = [p.vmin if p.vmin is None else p.ax_img.norm.vmin
                         for p in self._plot_ax_imgs[0]]
+            
+            # use opacity, brightness, anc contrast from prior images
+            alphas[0] = [p.ax_img.get_alpha() for p in self._plot_ax_imgs[0]]
+            brightnesses[0] = [p.brightness for p in self._plot_ax_imgs[0]]
+            contrasts[0] = [p.contrast for p in self._plot_ax_imgs[0]]
         
         if self.img3d_labels is not None:
             # prep labels with discrete colormap and prior alpha if available
@@ -461,7 +469,8 @@ class PlotEditor:
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
-        # store displayed images in the PlotAxImg container class
+        # store displayed images in the PlotAxImg container class and update
+        # displayed brightness/contrast
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
         self._plot_ax_imgs = []
         for i, imgs in enumerate(ax_imgs):
@@ -473,6 +482,11 @@ class PlotEditor:
                     # norm, which holds the values used for the displayed image
                     plot_ax_img.vmin = libmag.get_if_within(vmins[i], j)
                     plot_ax_img.vmax = libmag.get_if_within(vmaxs[i], j)
+                    
+                    # set brightness/contrast
+                    self.change_brightness_contrast(
+                        plot_ax_img, libmag.get_if_within(brightnesses[i], j),
+                        libmag.get_if_within(contrasts[i], j))
                 plot_ax_imgs.append(plot_ax_img)
             self._plot_ax_imgs.append(plot_ax_imgs)
         
@@ -630,7 +644,45 @@ class PlotEditor:
         """
         return self.get_plot_ax_img(
             self._plot_ax_imgs, imgi, self._channels, chl)
-    
+
+    @staticmethod
+    def change_brightness_contrast(
+            plot_ax_img: PlotAxImg, brightness: Optional[float],
+            contrast: Optional[float]):
+        """Change image brightness and contrast.
+        
+        All changes are made relative to the original image, so both
+        brightness and contrast should be given together. For example, if
+        brightness is changed, and later contrast is changed, the contrast
+        change will wipe out the brightness change unless the brightness
+        value is given again.
+        
+        Args:
+            plot_ax_img: Axes image storage instance.
+            brightness: Brightness value, centered on 0. Can be None to
+                ignore brightness changes.
+            contrast: Contrast value, centered on 1. Can be None to
+                ignore contrast changes.
+
+        """
+        # get the array for the currently displayed image, which adjusts
+        # dynamically to array changes
+        data = plot_ax_img.ax_img.get_array()
+        info = libmag.get_dtype_info(data)
+        img = plot_ax_img.img
+        
+        if brightness is not None:
+            # shift original image array by brightness
+            img = np.clip(plot_ax_img.img + brightness, info.min, info.max)
+            data[:] = img
+            plot_ax_img.brightness = brightness
+        
+        if contrast is not None:
+            # stretch original image array by contrast
+            img = np.clip(img * contrast, info.min, info.max)
+            data[:] = img
+            plot_ax_img.contrast = contrast
+
     @staticmethod
     def update_plot_ax_img_display(plot_ax_img, minimum=np.nan, maximum=np.nan,
                                    brightness=None, contrast=None, alpha=None):
@@ -685,16 +737,9 @@ class PlotEditor:
                 else:
                     norm.vmax = norm.vmin
         if brightness is not None or contrast is not None:
-            data = plot_ax_img.ax_img.get_array()
-            info = libmag.get_dtype_info(data)
-            if brightness is not None:
-                # shift original image array by brightness
-                data[:] = np.clip(
-                    plot_ax_img.img + brightness, info.min, info.max)
-            if contrast is not None:
-                # stretch original image array by contrast
-                data[:] = np.clip(
-                    plot_ax_img.img * contrast, info.min, info.max)
+            # adjust brightness and contrast together
+            PlotEditor.change_brightness_contrast(
+                plot_ax_img, brightness, contrast)
         if alpha is not None:
             # adjust opacity
             plot_ax_img.ax_img.set_alpha(alpha)

@@ -278,7 +278,8 @@ class Visualization(HasTraits):
     _labels_img_name = Str
     _labels_img_names = Instance(TraitsList)
     
-    _labels_ref_path = File  # labels ontology reference path
+    _labels_ref_path = Str  # labels ontology reference path
+    _labels_ref_btn = Button("Browse")  # button to select ref file
     _reload_btn = Button("Reload")  # button to reload images
     
     # ROI selection
@@ -494,8 +495,8 @@ class Visualization(HasTraits):
                      editor=CheckListEditor(
                          name="object._labels_img_names.selections",
                          format_func=lambda x: x)),
-                Item("_labels_ref_path", label="Reference", style="simple",
-                     editor=FileEditor(entries=10, allow_dir=False)),
+                Item("_labels_ref_path", label="Reference", style="simple"),
+                Item("_labels_ref_btn", show_label=False),
             ),
             label="Registered Images",
         ),
@@ -1796,6 +1797,16 @@ class Visualization(HasTraits):
         
         # re-setup image
         self.update_filename(self._filename, reset=False)
+    
+    @on_trait_change("_labels_ref_btn")
+    def _labels_ref_path_updated(self):
+        """Open a Pyface file dialog with path set to current image directory.
+        """
+        open_dialog = FileDialog(
+            action="open", default_path=os.path.dirname(self._filename))
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._labels_ref_path = open_dialog.path
     
     @on_trait_change("_channel")
     def update_channel(self):

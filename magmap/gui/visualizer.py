@@ -1122,11 +1122,15 @@ class Visualization(HasTraits):
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):
-        self._adjust_displayed_imgs(brightness=self._imgadj_brightness)
+        # include contrast to restore its value while adjusting the original img
+        self._adjust_displayed_imgs(
+            brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_contrast")
     def _adjust_img_contrast(self):
-        self._adjust_displayed_imgs(contrast=self._imgadj_contrast)
+        # include brightness to restore its value while adjusting the orig img
+        self._adjust_displayed_imgs(
+            brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):

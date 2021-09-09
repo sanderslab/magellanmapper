@@ -1777,11 +1777,11 @@ class Visualization(HasTraits):
         # skip first element, which serves as a dropdown box label
         atlas_suffixes = self._main_img_names.selections[1:]
         if atlas_suffixes:
-            if len(atlas_suffixes) == 1:
+            atlas_paths = [self._reg_img_names.get(s) for s in atlas_suffixes]
+            if len(atlas_paths) == 1:
                 # reduce to str if only one element
-                atlas_suffixes = atlas_suffixes[0]
-            reg_suffixes[config.RegSuffixes.ATLAS] = self._reg_img_names.get(
-                atlas_suffixes)
+                atlas_paths = atlas_paths[0]
+            reg_suffixes[config.RegSuffixes.ATLAS] = atlas_paths
         
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
             # add if not the empty first selection

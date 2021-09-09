@@ -176,7 +176,9 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
         holes_area: Maximum area of holes to fill when carving.
     
     Returns:
-        A list of images in SimpleITK format that have been curated.
+        A list of images in SimpleITK format that have been curated, starting
+        with the curated ``labels_img``, followed by the images in ``imgs``.
+    
     """
     fixed_img_np = sitk.GetArrayFromImage(fixed_img)
     labels_img_np = sitk.GetArrayFromImage(labels_img)
@@ -219,35 +221,14 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
     return result_imgs
 
 
-def _transform_labels(transformix_img_filter, labels_img, truncation=None):
-    if truncation is not None:
-        # truncate ventral and posterior portions since variable 
-        # amount of tissue or quality of imaging in these regions
-        labels_img_np = sitk.GetArrayFromImage(labels_img)
-        truncation = list(truncation)
-        rotate = config.transform[config.Transforms.ROTATE]
-        if rotate and libmag.get_if_within(rotate, 0) >= 2:
-            # assume labels were rotated 180deg around the z-axis, so 
-            # need to flip y-axis fracs
-            # TODO: take into account full transformations
-            truncation[1] = np.subtract(1, truncation[1])[::-1]
-        atlas_refiner.truncate_labels(labels_img_np, *truncation)
-        labels_img = sitk_io.replace_sitk_with_numpy(labels_img, labels_img_np)
-    
+def _transform_labels(transformix_img_filter, labels_img):
     # apply atlas transformation to labels image
-    labels_pixel_id = labels_img.GetPixelID() # now as signed int
+    labels_pixel_id = labels_img.GetPixelID()  # now as signed int
     print("labels_pixel type: {}".format(labels_img.GetPixelIDTypeAsString()))
     transformix_img_filter.SetMovingImage(labels_img)
     transformix_img_filter.Execute()
     transformed_labels_img = transformix_img_filter.GetResultImage()
     transformed_labels_img = sitk.Cast(transformed_labels_img, labels_pixel_id)
-    '''
-    # remove bottom planes after registration; make sure to turn off 
-    # bottom plane removal in mirror step
-    img_np = sitk.GetArrayFromImage(labels_img)
-    atlas_refiner._truncate_labels(img_np, z_frac=(0.2, 1.0))
-    labels_img = sitk_io.replace_sitk_with_numpy(labels_img, img_np)
-    '''
     print(transformed_labels_img)
     '''
     LabelStatistics = sitk.LabelStatisticsImageFilter()
@@ -407,9 +388,12 @@ def register(
     the intensity image used for registration, "annotation" is the atlas
     labels, "fixed_mask" is the mask for ``fixed_file`` (optional), and
     "moving_mask" is the mask for the "atlas" image (optional). If either
-    mask is given, both should be given as required by Elastix.
+    mask is given, both should be given as required by Elastix. Multiple
+    "annotation" images can be given, which will each be transformed
+    identially to the "atlas" image.
     
-    Uses the first channel in :attr:`config.channel` or the first image channel.
+    Uses the first channel in :attr:`config.channel`, or the first image
+    channel if this value is None.
     
     Fallbacks:
         * If the registration does not complete, the moving image origin and
@@ -471,19 +455,33 @@ def register(
         #img_np = plot_3d.saturate_roi(img_np)
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = sitk_io.replace_sitk_with_numpy(fixed_img, img_np)
-    
-    # load moving images based on registered image suffixes, falling back to
-    # atlas volume and labels suffixes
+
+    # dict of moving images
+    moving_imgs = {}
+
+    # load moving intensity image based on registered image suffixes, falling
+    # back to atlas volume suffix
     moving_atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
     if not moving_atlas_suffix:
         moving_atlas_suffix = config.RegNames.IMG_ATLAS.value
     moving_img = sitk_io.load_registered_img(
         moving_img_path, moving_atlas_suffix, get_sitk=True)
+    
+    # load the moving labels images
     moving_labels_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
     if not moving_labels_suffix:
-        moving_labels_suffix = config.RegNames.IMG_LABELS.value
+        moving_labels_suffix = [config.RegNames.IMG_LABELS.value]
     labels_img = sitk_io.load_registered_img(
-        moving_img_path, moving_labels_suffix, get_sitk=True)
+        moving_img_path, moving_labels_suffix[0], get_sitk=True)
+    if len(moving_labels_suffix) > 1:
+        for suffix in moving_labels_suffix[1:]:
+            try:
+                moving_imgs[suffix] = sitk_io.load_registered_img(
+                    moving_img_path, suffix, get_sitk=True)
+            except FileNotFoundError:
+                _logger.warn(
+                    "Skipping registration of '%s' as the file could not be"
+                    " found", suffix)
 
     # get image masks given as registered image suffixes relative to the
     # fixed image path or prefix
@@ -498,10 +496,24 @@ def register(
         moving_mask = sitk_io.load_registered_img(
             name_prefix, moving_mask_suffix, get_sitk=True)
         moving_mask = atlas_refiner.transpose_img(moving_mask)
-
+    
+    truncate_labels = settings["truncate_labels"]
+    if truncate_labels is not None:
+        # generate a truncated/cropped version of the labels image
+        labels_trunc_np = sitk.GetArrayFromImage(labels_img)
+        atlas_refiner.truncate_labels(labels_trunc_np, *truncate_labels)
+        labels_trunc = sitk_io.replace_sitk_with_numpy(
+            labels_img, labels_trunc_np)
+        moving_imgs["trunc"] = labels_trunc
+    
+    for key, img in moving_imgs.items():
+        _logger.info("Transposing image: %s", key)
+        moving_imgs[key] = atlas_refiner.transpose_img(img)
+    
     # transform and preprocess moving images
 
     # transpose moving images
+    # TODO: transpose rest of moving_imgs together
     moving_img = atlas_refiner.transpose_img(moving_img)
     labels_img = atlas_refiner.transpose_img(labels_img)
 
@@ -533,18 +545,19 @@ def register(
     # convert images back to sitk format
     labels_img = sitk_io.replace_sitk_with_numpy(labels_img, labels_img_np)
     moving_img = sitk_io.replace_sitk_with_numpy(moving_img, moving_img_np)
-    moving_imgs = [moving_img, labels_img]
+    moving_imgs["atlas"] = moving_img
+    moving_imgs["annot"] = labels_img
     if moving_mask is not None:
         moving_mask = sitk_io.replace_sitk_with_numpy(
             moving_mask, moving_mask_np)
-        moving_imgs.append(moving_mask)
+        moving_imgs["mask"] = moving_mask
 
     rescale = config.atlas_profile["rescale"]
     if rescale:
         # rescale images as a factor of their spacing in case the scaling
         # transformation in the affine-based registration is insufficient
         moving_img_spacing = np.multiply(moving_img.GetSpacing(), rescale)
-        for img in moving_imgs:
+        for img in moving_imgs.values():
             img.SetSpacing(moving_img_spacing)
 
     thresh_mov = settings["atlas_threshold"]
@@ -569,7 +582,7 @@ def register(
             _logger.warn(
                 "Could not perform registration. Will retry with origin and "
                 "direction set to that of the fixed image.")
-            imgs = list(moving_imgs)
+            imgs = list(moving_imgs.values())
             if fixed_mask is not None:
                 imgs.append(fixed_mask)
             for img in imgs:
@@ -609,26 +622,29 @@ def register(
             _logger.info(
                 f"Registration DSC below threshold of {fallback[0]}, will "
                 f"re-register using {fallback[1]} atlas profile")
-            atlas_prof_name_orig = settings[settings.NAME_KEY]
             cli.setup_atlas_profiles(fallback[1], reset=False)
     
-    def make_labels(truncation=None):
+    def make_labels(lbls_img):
+        # apply the same transformation to labels via Transformix
+        
         if transformix_filter is None:
-            return labels_img, None, None, None
-        # apply the same transformation to labels via Transformix, with option
-        # to truncate part of labels
-        labels_trans = _transform_labels(
-            transformix_filter, labels_img, truncation=truncation)
+            return lbls_img, None, None, None
+        # transform label
+        labels_trans = _transform_labels(transformix_filter, lbls_img)
         print(labels_trans.GetSpacing())
+        
         # WORKAROUND: labels img floating point vals may be more rounded 
         # than transformed moving img for some reason; assume transformed 
         # labels and moving image should match exactly, so replace labels 
         # with moving image's transformed spacing
         labels_trans.SetSpacing(img_moved.GetSpacing())
+        
         dsc = None
         labels_trans_cur = None
         transformed_img_cur = None
         if settings["curate"]:
+            # curate labels based on thresholded intensity image
+            # TODO: consider moving out curation to separate task
             thresh_carve = settings["carve_threshold"]
             if isinstance(thresh_carve, str):
                 # get threshold from another setting, eg atlas_threshold_all
@@ -646,7 +662,7 @@ def register(
     # apply same transformation to labels, +/- curation to carve the moving
     # image where the fixed image does not exist or in-paint where it does
     labels_moved, labels_moved_cur, img_moved_cur, dsc_sample_cur = (
-        make_labels())
+        make_labels(labels_img))
     img_moved_precur = None
     if img_moved_cur is not None:
         # save pre-curated moved image
@@ -664,10 +680,20 @@ def register(
         config.RegNames.IMG_LABELS.value: labels_moved,
         config.RegNames.IMG_LABELS_PRECUR.value: labels_moved_precur,
     }
-    truncate_labels = settings["truncate_labels"]
+    
     if truncate_labels is not None:
-        labels_img_truc = make_labels(truncate_labels)[1]
-        imgs_write[config.RegNames.IMG_LABELS_TRUNC.value] = labels_img_truc
+        # transform cropped image +/- curation
+        _logger.info("Transforming cropped/truncated labels image")
+        truncted_imgs = make_labels(moving_imgs["trunc"])
+        imgs_write[config.RegNames.IMG_LABELS_TRUNC.value] = truncted_imgs[0]
+        imgs_write[config.RegNames.IMG_LABELS_TRUNC_PRECUR.value] = truncted_imgs[1]
+    if len(moving_labels_suffix) > 1:
+        print("transforming rest of labels", moving_labels_suffix)
+        for suffix in moving_labels_suffix[1:]:
+            if suffix not in moving_imgs: continue
+            _logger.info("Transforming image: %s", moving_imgs[suffix])
+            imgs_write[suffix] = make_labels(moving_imgs[suffix])[0]
+            print("transforming label", suffix, imgs_write[suffix])
 
     if show_imgs:
         # show individual SimpleITK images in default viewer

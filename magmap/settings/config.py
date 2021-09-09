@@ -535,6 +535,7 @@ class RegNames(Enum):
     IMG_ATLAS_MASK = "atlasMask.mhd"
     IMG_LABELS_PRECUR = "annotationPrecur.mhd"
     IMG_LABELS_TRUNC = "annotationTrunc.mhd"
+    IMG_LABELS_TRUNC_PRECUR = "annotationTruncPrecur.mhd"
     IMG_LABELS_EDGE = "annotationEdge.mhd"
     IMG_LABELS_DIST = "annotationDist.mhd"
     IMG_LABELS_MARKERS = "annotationMarkers.mhd"

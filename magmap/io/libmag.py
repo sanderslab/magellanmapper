@@ -8,7 +8,7 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
 import warnings
 
 if sys.version_info >= (3, 8):
@@ -527,6 +527,48 @@ def str_to_disp(s):
         New, converted string.
     """
     return s.replace("_", " ").strip()
+
+
+def crop_mid_str(
+        vals: Sequence[str], max_chars: int = 10, unique: bool = True
+) -> List[str]:
+    """Crop out the middle portion of strings.
+    
+    The middle section is replaced with "...".
+    
+    Args:
+        vals: Sequence of strings to crop.
+        max_chars: Maximum characters to retain. Half the characters will be
+            from the start and the remaining characters from the end of the
+            string. Defaults to 10. The final output size of each string
+            is larger than this size by the number of intervening periods.
+        unique: True to ensure that cropped strings are unique. A extra "."
+            is added iteratively so the string is unique in the output list.
+            Uncropped strings are not checked for uniqueness.
+
+    Returns:
+        A list of cropped strings.
+
+    """
+    cropped = []
+    crop_in = max_chars // 2
+    crop_out = max_chars - crop_in
+    for val in vals:
+        if len(val) > max_chars:
+            # crop out middle section
+            val_crs = (val[:crop_in], val[-crop_out:])
+            sep = "..."
+            while True:
+                val_cr = sep.join(val_crs)
+                if not unique or val_cr not in cropped:
+                    break
+                # add extra periods until the cropped string is unique
+                sep += "."
+        else:
+            # add as-is if within size, without checking for uniqueness
+            val_cr = val
+        cropped.append(val_cr)
+    return cropped
 
 
 def get_int(val):

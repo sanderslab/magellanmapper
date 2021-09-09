@@ -71,8 +71,9 @@ def truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
             img_np[tuple(slices)] = 0
             slices[axis] = slice(bound_abs[1], None)
             img_np[tuple(slices)] = 0
-            print("truncated axis {} outside of bounds {}"
-                  .format(axis, bound_abs))
+            _logger.info(
+                "Truncated/cropped image that is outside of the boundaries, %s, "
+                "along axis %s", bound_abs, axis)
         axis += 1
     return img_np
 

@@ -1,24 +1,21 @@
 # Atlas measurements and statistics
-# Author: David Young, 2019
+# Author: David Young, 2019, 2021
 """Low-level measurement of atlases and statistics generation.
 
 Typically applied to specific types of atlases and less generalizable
 than measurements in :module:`vols`.
 """
 import os
+from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
+import SimpleITK as sitk
 
-from magmap.plot import colormaps
+from magmap.atlas import atlas_refiner, ontology
+from magmap.io import df_io, export_stack, libmag, np_io, sitk_io
+from magmap.plot import colormaps, plot_2d, plot_support
 from magmap.settings import config
-from magmap.io import export_stack
-from magmap.io import libmag
-from magmap.io import np_io
-from magmap.atlas import ontology
-from magmap.plot import plot_2d
-from magmap.plot import plot_support
-from magmap.io import df_io
 from magmap.stats import vols
 
 
@@ -534,6 +531,48 @@ def plot_clusters_by_label(path, z, suffix=None, show=True, scaling=None):
                 alpha=alpha)
     plot_support.save_fig(mod_path, config.savefig, "_clusplot")
     if show: plot_support.show()
+
+
+def meas_landmark_dist(
+        paths: Sequence[str], spacing: Optional[Sequence[float]] = None
+) -> Optional[pd.DataFrame]:
+    """Measure distance between corresponding labels in two labels images.
+    
+    Supports image transposition of the 2nd image by
+    :meth:`magmap.atlas.atlas_refiner` with settings from
+    :attr:`magmap.settings.config.transforms`.    
+    
+    Args:
+        paths: Sequence of paths to image files loadable by SimpleITK.
+        spacing: Spacing/scaling in ``z,y,x``; defaults to None.
+
+    Returns:
+        Data frame of output metrics.
+
+    """
+    if len(paths) < 2:
+        print("Please provide paths to 2 labels images")
+        return None
+    
+    labels_imgs = [
+        sitk_io.read_sitk_files(p, return_sitk=True)[1] for p in paths[:2]]
+    if spacing is None and len(config.resolutions) > 0:
+        # default to using loaded metadata
+        spacing = config.resolutions[0]
+    
+    # transpose 2nd image with any config settings
+    labels_imgs[1] = atlas_refiner.transpose_img(labels_imgs[1])
+    labels_imgs = [sitk.GetArrayFromImage(m) for m in labels_imgs]
+    
+    # set up output path and sample name based on 1st image's path
+    out_path = libmag.make_out_path(libmag.combine_paths(
+        paths[0], "labelsdist.csv"))
+    sample = libmag.get_filename_without_ext(paths[0])
+    
+    # measure distance
+    df = vols.labels_distance(
+        labels_imgs[0], labels_imgs[1], spacing, out_path, sample)
+    return df
 
 
 def meas_dice(mask1, mask2, img=None):

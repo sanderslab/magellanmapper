@@ -1,5 +1,5 @@
 # MagellanMapper stats in R
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2021
 
 # library to avoid overlapping text labels
 #install.packages("devtools")
@@ -72,10 +72,6 @@ kStatsFilesIn <- c(
   "vols_by_sample_compare.csv", "vols_by_sample_compare_levels.csv"
 )
 kStatsPathOut <- "vols_stats" # output stats
-
-# region-ID map from MagellanMapper, which should contain all regions including 
-# hierarchical/ontological ones
-kRegionIDsPath <- "../region_ids.csv"
 
 # configurable environment
 config.env <- new.env()
@@ -819,6 +815,9 @@ setupConfig <- function(name=NULL) {
     config.env$ylim <- NULL
     config.env$Regions.Ignore <- NULL # vector or regions to exclude
     config.env$Split.By.Side <- TRUE # FALSE to combine sides
+    # region-ID map from MagellanMapper, which should contain all regions including 
+    # hierarchical/ontological ones
+    config.env$Labels.Path <- "../region_ids.csv"
 
   } else if (endsWith(name, ".R")) {
     # load a profile file
@@ -1075,8 +1074,8 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
       stat <- "genos"
     }
     region.ids <- NULL
-    if (file.exists(kRegionIDsPath)) {
-      region.ids <- read.csv(kRegionIDsPath)
+    if (file.exists(config.env$Labels.Path)) {
+      region.ids <- read.csv(config.env$Labels.Path)
     }
     
     # reset graphics to ensure consistent layout

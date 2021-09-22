@@ -2379,20 +2379,7 @@ def main():
     elif reg is config.RegisterTypes.LABELS_DIST:
         # measure distance between corresponding labels in two different
         # labels images
-        if len(config.filenames) < 2:
-            print("Please provide paths to 2 labels images")
-            return
-        labels_imgs = [
-            sitk_io.read_sitk_files(p).img[0] for p in config.filenames[:2]]
-        spacing = scaling
-        if spacing is None and len(config.resolutions) > 0:
-            # default to using loaded metadata
-            spacing = config.resolutions[0]
-        out_path = libmag.make_out_path(libmag.combine_paths(
-            config.filename, "labelsdist.csv"))
-        # base name of first image filename
-        sample = libmag.get_filename_without_ext(config.filename)
-        vols.labels_distance(*labels_imgs[:2], spacing, out_path, sample)
+        atlas_stats.meas_landmark_dist(config.filenames, scaling)
 
     else:
         print("Could not find register task:", reg)

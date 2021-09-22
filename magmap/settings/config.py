@@ -351,6 +351,8 @@ class Transforms(Enum):
     FLIP_VERT = auto()
     #: Flip the image horizontally if 1, no flip if 0.
     FLIP_HORIZ = auto()
+    #: Axis to invert (z = 0, y = 1, ...).
+    FLIP = auto()
     #: Rescale the image by the given factor.
     RESCALE = auto()
     #: Interpolate using the given order, which corresponds to

@@ -984,6 +984,9 @@ setupConfig <- function(name=NULL) {
     # reverse the order of conditions in paired stats
     config.env$ReverseConditions <- TRUE
     
+  } else if (name == "jitter.labels") {
+    config.env$JitterLabels <- TRUE
+    
   } else {
     loaded <- FALSE
     message("Could not find ", name, " profile to load")

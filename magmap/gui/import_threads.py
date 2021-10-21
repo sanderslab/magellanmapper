@@ -6,6 +6,8 @@ from magmap.gui import visualizer
 from magmap.io import importer
 from magmap.settings import config
 
+_logger = config.logger.getChild(__name__)
+
 
 class SetupImportThread(QtCore.QThread):
     """Thread for setting up file import by extracting image metadata.
@@ -81,6 +83,14 @@ class ImportThread(QtCore.QThread):
                 img5d = importer.import_multiplane_images(
                     self.chl_paths, self.prefix, self.import_md, config.series,
                     fn_feedback=self.fn_feedback)
+        
+        except Exception as e:
+            # provide feedback for any errors during import
+            self.fn_feedback(f"Error during import:\n{e}")
+            if config.log_path:
+                self.fn_feedback(f"See log for more info: {config.log_path}\n")
+            _logger.exception(e)
+        
         finally:
             if img5d is not None:
                 # set up the image for immediate use within MagellanMapper

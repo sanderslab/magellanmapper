@@ -65,6 +65,9 @@ verbose = False
 #: :class:`logging.Logger`: Root logger for the application.
 logger = logs.setup_logger()
 
+#: Path to log file.
+log_path: Optional[pathlib.Path] = None
+
 
 # IMAGE FILES
 

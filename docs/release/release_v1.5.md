@@ -75,6 +75,8 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
     - Plane index is only added when exporting multiple planes
 - Improvements to image import
     - Single plane RAW images can be loaded when importing files from a directory, in addition to multiplane RAW files
+    - Skips single plane files that give errors (eg non-image files in the input directory)
+    - Provides import error feedback in the GUI
     - The known parts of the import image shape are populated even if the full shape is not known
     - The Bio-Formats library has been updated to support more file formats (from Bio-Formats 5.1.8 to 6.6.0 via Python-Bioformats 1.1.0 to 4.0.5, respectively)
     - Fixed to disable the import directory button when metadata is insufficient

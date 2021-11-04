@@ -1317,6 +1317,7 @@ def labels_distance(
             # in both images, scaled by spacing if provided
             centroids = [
                 cv_nd.get_label_props(m, label_id)[0].centroid for m in imgs]
+            centroids_scaled = centroids
             if spacing is not None:
                 centroids = [np.multiply(c, spacing) for c in centroids]
             dist = cdist(
@@ -1324,14 +1325,20 @@ def labels_distance(
         else:
             # label missing from at least one image
             centroids = [np.nan] * 2
+            centroids_scaled = centroids
             dist = np.nan
-        dists.append((name, label_id, *centroids[:2], dist))
+        dists.append((
+            name, label_id, *centroids_scaled[:2], *centroids[:2], dist))
     
     # export metrics to data frame
     df = df_io.dict_to_data_frame(
         dists, out_path, show=True, records_cols=(
             config.AtlasMetrics.SAMPLE.value,
-            LabelMetrics.Region.name, "Centroid1", "Centroid2",
+            LabelMetrics.Region.name,
+            "Centroid1_px",
+            "Centroid2_px",
+            "Centroid1",
+            "Centroid2",
             LabelMetrics.Dist.name))
     return df
 

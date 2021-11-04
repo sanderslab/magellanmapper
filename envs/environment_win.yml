@@ -10,8 +10,8 @@ dependencies:
   - botocore=1.20.22=pyhd8ed1ab_0
   - brotlipy=0.7.0=py36h68aa20f_1001
   - bzip2=1.0.8=h8ffe710_4
-  - ca-certificates=2020.12.5=h5b45459_0
-  - certifi=2020.12.5=py36ha15d459_1
+  - ca-certificates=2021.10.8=h5b45459_0
+  - certifi=2021.5.30=py36ha15d459_0
   - cffi=1.14.5=py36he58ceb7_0
   - cloudpickle=1.6.0=py_0
   - colorama=0.4.3=py_0
@@ -20,7 +20,7 @@ dependencies:
   - cryptography=3.4.4=py36hed13329_0
   - curl=7.75.0=hf1763fc_0
   - cycler=0.10.0=py_2
-  - cython=0.29.22=py36he2d232f_0
+  - cython=0.29.24=py36he2d232f_0
   - cytoolz=0.11.0=py36h68aa20f_3
   - dask-core=2021.3.0=pyhd8ed1ab_0
   - decorator=4.4.2=py_0
@@ -43,7 +43,7 @@ dependencies:
   - immutables=0.15=py36h68aa20f_0
   - importlib-metadata=3.7.2=py36ha15d459_0
   - importlib_metadata=3.7.2=hd8ed1ab_0
-  - importlib_resources=5.1.2=py36ha15d459_0
+  - importlib_resources=5.4.0=pyhd8ed1ab_0
   - intel-openmp=2020.3=h57928b3_311
   - jdcal=1.4.1=py_0
   - jmespath=0.10.0=pyh9f0ad1d_0
@@ -83,16 +83,16 @@ dependencies:
   - networkx=2.5=py_0
   - numpy=1.19.5=py36hd1b969e_1
   - olefile=0.46=pyh9f0ad1d_1
-  - openjdk=8.0.282=h57928b3_0
+  - openjdk=8.0.302=h57928b3_0
   - openmp=5.0.0=vc14_1
-  - openpyxl=3.0.7=pyhd8ed1ab_0
-  - openssl=1.1.1k=h8ffe710_0
+  - openpyxl=3.0.9=pyhd8ed1ab_0
+  - openssl=1.1.1l=h8ffe710_0
   - pandas=1.1.5=py36he38d939_0
   - pillow=8.1.1=py36h9cbe6be_0
-  - pip=21.0.1=pyhd8ed1ab_0
+  - pip=21.3.1=pyhd8ed1ab_0
   - proj=7.2.0=h1cfcee9_2
   - pugixml=1.11.4=h0e60522_0
-  - pyamg=4.0.0=py36h352ec11_1004
+  - pyamg=4.1.0=py36hd54642c_0
   - pyasn1=0.4.8=py_0
   - pycparser=2.20=pyh9f0ad1d_2
   - pyface=7.3.0=pyh44b312d_1
@@ -105,7 +105,7 @@ dependencies:
   - pyqtchart=5.12=py36he2d232f_7
   - pyqtwebengine=5.12.1=py36he2d232f_7
   - pysocks=1.7.1=py36ha15d459_3
-  - python=3.6.13=h39d44d4_0_cpython
+  - python=3.6.13=h39d44d4_2_cpython
   - python-dateutil=2.8.1=py_0
   - python_abi=3.6=1_cp36m
   - pytz=2021.1=pyhd8ed1ab_0
@@ -115,7 +115,7 @@ dependencies:
   - rsa=4.7.2=pyh44b312d_0
   - s3transfer=0.3.4=pyhd8ed1ab_0
   - scikit-image=0.17.2=py36he38d939_4
-  - scikit-learn=0.24.1=py36h63cef00_0
+  - scikit-learn=0.24.2=py36h5a2dbc3_1
   - scipy=1.5.3=py36h7ff6e69_0
   - setuptools=49.6.0=py36ha15d459_3
   - six=1.15.0=pyh9f0ad1d_0
@@ -128,7 +128,7 @@ dependencies:
   - toolz=0.11.1=py_0
   - tornado=6.1=py36h68aa20f_1
   - traits=6.2.0=py36h68aa20f_0
-  - traitsui=7.1.0=pyh9f0ad1d_0
+  - traitsui=7.2.0=pyhd8ed1ab_0
   - typing_extensions=3.7.4.3=py_0
   - urllib3=1.26.3=pyhd8ed1ab_0
   - utfcpp=3.1.2=0
@@ -146,7 +146,8 @@ dependencies:
   - zstd=1.4.9=h6255e5f_0
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
-    - javabridge==1.0.18.post21+g4526f53
+    - future==0.18.2
+    - javabridge==1.0.19.post4+gbebed64
     - matplotlib-scalebar==0.7.2
-    - python-bioformats==1.1.0
-    - simpleitk==1.2.0rc2.dev1162+g2a79d
+    - python-bioformats==4.0.5.post2+g51eb88a
+    - simpleitk==2.0.2rc2.dev785+g8ac4f

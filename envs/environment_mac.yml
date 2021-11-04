@@ -11,8 +11,8 @@ dependencies:
   - brotlipy=0.7.0=py36h20b66c6_1001
   - bzip2=1.0.8=hc929b4f_4
   - c-ares=1.17.1=h0d85af4_1
-  - ca-certificates=2020.12.5=h033912b_0
-  - certifi=2020.12.5=py36h79c6626_1
+  - ca-certificates=2021.10.8=h033912b_0
+  - certifi=2021.5.30=py36h79c6626_0
   - cffi=1.14.5=py36hfaecaff_0
   - cloudpickle=1.6.0=py_0
   - colorama=0.4.3=py_0
@@ -21,7 +21,7 @@ dependencies:
   - cryptography=3.4.5=py36h3d45be8_1
   - curl=7.75.0=h06286d4_0
   - cycler=0.10.0=py_2
-  - cython=0.29.22=py36hb100763_0
+  - cython=0.29.24=py36hefe7e0e_0
   - cytoolz=0.11.0=py36h20b66c6_3
   - dask-core=2021.3.0=pyhd8ed1ab_0
   - dbus=1.13.6=h0c50699_1
@@ -50,7 +50,7 @@ dependencies:
   - immutables=0.15=py36h49ba835_0
   - importlib-metadata=3.7.2=py36h79c6626_0
   - importlib_metadata=3.7.2=hd8ed1ab_0
-  - importlib_resources=5.1.2=py36h79c6626_0
+  - importlib_resources=5.4.0=pyhd8ed1ab_0
   - jdcal=1.4.1=py_0
   - jmespath=0.10.0=pyh9f0ad1d_0
   - joblib=1.0.1=pyhd8ed1ab_0
@@ -102,16 +102,16 @@ dependencies:
   - numpy=1.19.5=py36h08dc641_1
   - olefile=0.46=pyh9f0ad1d_1
   - openh264=2.1.1=hfd3ada9_0
-  - openjdk=8.0.282=h0d85af4_0
-  - openpyxl=3.0.7=pyhd8ed1ab_0
-  - openssl=1.1.1k=h0d85af4_0
+  - openjdk=8.0.302=h0d85af4_0
+  - openpyxl=3.0.9=pyhd8ed1ab_0
+  - openssl=1.1.1l=h0d85af4_0
   - pandas=1.1.5=py36h2be6da3_0
   - pcre=8.44=hb1e8313_0
   - pillow=8.1.2=py36h154fef6_0
-  - pip=21.0.1=pyhd8ed1ab_0
+  - pip=21.3.1=pyhd8ed1ab_0
   - proj=7.2.0=h78d1473_2
   - pugixml=1.11.4=h046ec9c_0
-  - pyamg=4.0.0=py36heb28341_1004
+  - pyamg=4.1.0=py36h8a49b3f_0
   - pyasn1=0.4.8=py_0
   - pycparser=2.20=pyh9f0ad1d_2
   - pyface=7.3.0=pyh44b312d_1
@@ -148,7 +148,7 @@ dependencies:
   - toolz=0.11.1=py_0
   - tornado=6.1=py36h20b66c6_1
   - traits=6.2.0=py36h20b66c6_0
-  - traitsui=7.1.0=pyh9f0ad1d_0
+  - traitsui=7.2.0=pyhd8ed1ab_0
   - typing_extensions=3.7.4.3=py_0
   - urllib3=1.26.3=pyhd8ed1ab_0
   - utfcpp=3.1.2=0
@@ -162,8 +162,8 @@ dependencies:
   - zstd=1.4.9=h582d3a0_0
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
-    - javabridge==1.0.18.post21+g4526f53
+    - future==0.18.2
+    - javabridge==1.0.19.post4+gbebed64
     - matplotlib-scalebar==0.7.2
-    - python-bioformats==1.1.0
-    - simpleitk==1.2.0rc2.dev1162+g2a79d
-
+    - python-bioformats==4.0.5.post2+g51eb88a
+    - simpleitk==2.0.2rc2.dev785+g8ac4f

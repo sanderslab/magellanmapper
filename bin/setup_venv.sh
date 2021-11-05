@@ -64,7 +64,7 @@ fi
 py_ver_majmin="" # found Python version in x.y format
 py_ver_min=(3 6) # minimum supported Python version
 py_vers=(3.6 3.7 3.8) # range of versions currently supported
-py_vers_prebuilt_deps=(3.6) # vers for which custom prebuilt deps are avail
+py_vers_prebuilt_deps=(3.6 3.7 3.8 3.9) # vers with custom prebuilt deps
 for ver in "${py_vers[@]}"; do
   # prioritize specific versions in case "python" points to lower version,
   # calling Python directly since `command` will show Pyenv Python binaries

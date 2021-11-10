@@ -162,10 +162,15 @@ fi
 python -m pip install -U pip
 pip install -U wheel
 
-# install MagellanMapper including required dependencies
+# Install MagellanMapper including required dependencies
+
+# Mayavi as of 4.7.3 does not supply wheels, and a wheel is built on the
+# current VTK during installation; force rebuild rather than using any cached
+# wheel since old builds may be incompatible with updated VTK versions
+args_update=(--no-binary=mayavi)
 if [[ -n "$update" ]]; then
   # update all dependencies based on setup.py
-  args_update=(--upgrade --upgrade-strategy eager)
+  args_update+=(--upgrade --upgrade-strategy eager)
 fi
 pip install "${args_update[@]}" -e .[all] --extra-index-url \
   https://pypi.fury.io/dd8/

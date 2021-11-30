@@ -68,6 +68,9 @@ from magmap.settings import config, profiles
 #: str: default ROI name.
 _ROI_DEFAULT = "None selected"
 
+# logging instance
+_logger = config.logger.getChild(__name__)
+
 
 def main():
     """Starts the visualization GUI.
@@ -826,6 +829,7 @@ class Visualization(HasTraits):
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
         self._update_profiles_names()
+        self._ignore_profiles_update = True
         self._init_profiles()
         
         # set up settings controls
@@ -2934,18 +2938,27 @@ class Visualization(HasTraits):
     @on_trait_change("_profiles_add_btn")
     def _add_profile(self):
         """Add the chosen profile to the profiles table."""
-        # construct profile from selected options
         for chl in self._profiles_chls:
+            # get profile name for selected channel and add to table,
+            # deferring profile load until gathering all profiles
             prof = [self._profiles_cats[0], self._profiles_name, chl]
-            print("profile to add", prof)
+            _logger.debug("Profile to add: %s", prof)
+            self._ignore_profiles_update = True
             self._profiles.append(prof)
-
-        print("profiles from table:\n", self._profiles)
-        if not self._profiles:
-            # no profiles in the table to load
+        
+        # load profiles based on final selections
+        self._refresh_profiles()
+    
+    @on_trait_change("_profiles[]")
+    def _refresh_profiles(self):
+        """Refresh the loaded profiles based on the profiles table."""
+        if self._ignore_profiles_update or not self._profiles:
+            # no profiles in the table to load or set to ignore
+            self._ignore_profiles_update = False
             return
         
         # convert to Numpy array for fancy indexing
+        _logger.debug("Profiles from table:\n%s", self._profiles)
         profs = np.array(self._profiles)
 
         # load ROI profiles to the given channel

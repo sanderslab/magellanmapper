@@ -345,7 +345,7 @@ class Visualization(HasTraits):
     )
     _profiles_table = TabularEditor(
         adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
-        stretch_last_section=False)
+        stretch_last_section=False, drag_move=True)
     _profiles = List  # profiles table list
     _profiles_add_btn = Button("Add")
     _profiles_load_btn = Button("Rescan")

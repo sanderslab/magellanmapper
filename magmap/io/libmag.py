@@ -186,15 +186,16 @@ def combine_arrs(arrs, filter_none=True, fn=None, **kwargs):
         return fn(arrs, **kwargs)
 
 
-def insert_before_ext(name, insert, sep=""):
+def insert_before_ext(
+        name: Union[str, pathlib.Path], insert: str, sep: str = "") -> str:
     """Merge two paths by splicing in ``insert`` just before the extention 
     in ``name``.
     
     Args:
-        name (str): Path; if no dot is present in the basename, simply
+        name: Path; if no dot is present in the basename, simply
             merge the string components.
-        insert (str): String to insert before the extension in ``name``.
-        sep (str): Separator between ``name`` and ``insert``; defaults to an
+        insert: String to insert before the extension in ``name``.
+        sep: Separator between ``name`` and ``insert``; defaults to an
            empty string.
     
     Returns:
@@ -203,6 +204,7 @@ def insert_before_ext(name, insert, sep=""):
     See Also:
         :func:``combine_paths`` to use the extension from ``insert``.
     """
+    name = str(name)
     if os.path.basename(name).find(".") == -1:
         # no extension in basename, so simply combine
         return name + sep + insert
@@ -781,7 +783,9 @@ def compact_float(n, max_decimals=None):
     return compact
 
 
-def backup_file(path, modifier="", i=None):
+def backup_file(
+        path: Union[str, pathlib.Path], modifier: str = "",
+        i: Optional[int] = None):
     """Backup a file to the next given available path with an index number 
     before the extension.
     

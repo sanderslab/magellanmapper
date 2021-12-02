@@ -2,6 +2,11 @@
 
 ## MagellanMapper v1.5.0
 
+### Post-release updates
+
+- The `--proc export_tif` task exports an NPY file to TIF format
+- Tifffile is now a direct dependency, previously already installed as a sub-dependency of other required packages
+
 ### Highlights
 
 This release brings many enhancements aimed at creating a smoother user experience. Key changes include:
@@ -119,3 +124,4 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - Python-Bioformats has been upgraded to 4.0.5 and uses a custom package that uses the existing Javabridge rather than Python-Javabridge to avoid a higher NumPy version requirement
 - Workaround for failure to install Mayavi because of a newer VTK, now pinned to 9.0.1
 - Matplotlib >= 3.2 is now required
+- 

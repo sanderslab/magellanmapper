@@ -28,7 +28,7 @@ from enum import Enum
 import logging
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, Union
 
 import numpy as np
 
@@ -737,6 +737,59 @@ def process_cli_args():
         _logger.info(
             f"The following command-line arguments were unrecognized and "
             f"ignored: {args_unknown}")
+
+
+def process_proc_tasks(
+        path: Optional[str] = None,
+        series_list: Optional[Sequence[int]] = None
+) -> Optional[Dict[config.ProcessTypes, Any]]:
+    """Apply processing tasks.
+    
+    Args:
+        path: Base path to main image file; defaults to None, in which case
+            :attr:`config.filename` will be used.
+        series_list: 
+
+    Returns:
+
+    """
+    if path is None:
+        path = config.filename
+    if not path:
+        print("No image filename set for processing files, skipping")
+        return None
+    if series_list is None:
+        series_list = config.series_list
+    
+    # filter out unset tasks
+    proc_tasks = {k: v for k, v in config.proc_type.items() if v}
+    for series in series_list:
+        # process files for each series, typically a tile within a
+        # microscopy image set or a single whole image
+        filename, offset, size, reg_suffixes = \
+            importer.deconstruct_img_name(path)
+        set_subimg, _ = importer.parse_deconstructed_name(
+            filename, offset, size, reg_suffixes)
+        if not set_subimg:
+            # sub-image parameters set in filename takes precedence for
+            # the loaded image, but fall back to user-supplied args
+            offset = (config.subimg_offsets[0] if config.subimg_offsets
+                      else None)
+            size = (config.subimg_sizes[0] if config.subimg_sizes
+                    else None)
+        if proc_tasks:
+            for proc_task, proc_val in proc_tasks.items():
+                # set up image for the given task
+                np_io.setup_images(
+                    filename, series, offset, size, proc_task)
+                process_file(
+                    filename, proc_task, proc_val, series, offset, size,
+                    config.roi_offsets[0] if config.roi_offsets else None,
+                    config.roi_sizes[0] if config.roi_sizes else None)
+        else:
+            # set up image without a task specified, eg for display
+            np_io.setup_images(filename, series, offset, size)
+    return proc_tasks
     
 
 def process_tasks():
@@ -765,38 +818,7 @@ def process_tasks():
         aws.main()
     else:
         # processing tasks
-        
-        # filter out unset tasks
-        proc_tasks = {k: v for k, v in config.proc_type.items() if v}
-        if config.filename:
-            for series in config.series_list:
-                # process files for each series, typically a tile within a
-                # microscopy image set or a single whole image
-                filename, offset, size, reg_suffixes = \
-                    importer.deconstruct_img_name(config.filename)
-                set_subimg, _ = importer.parse_deconstructed_name(
-                    filename, offset, size, reg_suffixes)
-                if not set_subimg:
-                    # sub-image parameters set in filename takes precedence for
-                    # the loaded image, but fall back to user-supplied args
-                    offset = (config.subimg_offsets[0] if config.subimg_offsets
-                              else None)
-                    size = (config.subimg_sizes[0] if config.subimg_sizes
-                            else None)
-                if proc_tasks:
-                    for proc_task, proc_val in proc_tasks.items():
-                        # set up image for the given task
-                        np_io.setup_images(
-                            filename, series, offset, size, proc_task)
-                        process_file(
-                            filename, proc_task, proc_val, series, offset, size,
-                            config.roi_offsets[0] if config.roi_offsets else None,
-                            config.roi_sizes[0] if config.roi_sizes else None)
-                else:
-                    # set up image without a task specified, eg for display
-                    np_io.setup_images(filename, series, offset, size)
-        else:
-            print("No image filename set for processing files, skipping")
+        proc_tasks = process_proc_tasks()
         if not proc_tasks or config.ProcessTypes.LOAD in proc_tasks:
             # do not shut down since not a command-line task or if loading files
             return
@@ -1175,6 +1197,10 @@ def process_file(
         out_path = libmag.combine_paths(config.filename, ".raw", sep="")
         libmag.backup_file(out_path)
         np_io.write_raw_file(config.image5d, out_path)
+
+    elif proc_type is config.ProcessTypes.EXPORT_TIF:
+        # export the main image as a TIF files for each channel
+        np_io.write_tif_file(config.image5d, config.filename)
 
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file

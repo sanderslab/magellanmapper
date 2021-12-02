@@ -73,7 +73,7 @@ class DiscreteColormap(colors.ListedColormap):
         
         Args:
             labels: Labels of integers for which a distinct color should be 
-                mapped to each unique label. Deafults to None, in which case 
+                mapped to each unique label. Defults to None, in which case 
                 no colormap will be generated.
             seed: Seed for randomizer to allow consistent colormap between 
                 runs; defaults to None.
@@ -160,24 +160,31 @@ class DiscreteColormap(colors.ListedColormap):
         super(DiscreteColormap, self).__init__(
             self.cmap_labels / 255.0, "discrete_cmap")
     
-    def modified_cmap(self, adjust):
+    def modified_cmap(self, adjust: int) -> "DiscreteColormap":
         """Make a modified discrete colormap from itself.
+        
+        The resulting colormap is assumed to map to the same range of label
+        image values, using the same :attr:`norm` and :attr:`img_labels`.
         
         Args:
             adjust: Value by which to adjust RGB (not A) values.
         
         Returns:
-            New ``DiscreteColormap`` instance with ``norm`` pointing to first 
-            instance and ``cmap_labels`` incremented by the given value.
+            New ``DiscreteColormap`` instance with :attr:`norm` pointing to
+            first instance, :attr:`img_labels`, and :attr:`cmap_labels`
+            incremented by ``adjust``.
+        
         """
         cmap = DiscreteColormap()
         # TODO: consider whether to copy instead
         cmap.norm = self.norm
-        cmap.cmap_labels = np.copy(self.cmap_labels)
-        # labels are uint8 so should already fit within RGB bounds; colors 
-        # that exceed these bounds will likely have slightly different tones 
-        # since RGB vals will not change uniformly
+        cmap.img_labels = self.img_labels
+        
+        # cast labels from uint8 (RBG) to int16 to accommodate adjustments
+        # outside of 0-255 range but clip back to this range
+        cmap.cmap_labels = np.copy(self.cmap_labels).astype(np.int16)
         cmap.cmap_labels[:, :3] += adjust
+        cmap.cmap_labels = cmap.cmap_labels.clip(0, 255).astype(np.uint8)
         cmap.make_cmap()
         return cmap
 

@@ -648,9 +648,11 @@ def reg_planes_to_img(imgs, path=None, ax=None):
 
 
 def export_planes(image5d, ext, channel=None, separate_chls=False):
-    """Export each plane and channel combination into separate 2D image files
+    """Export all planes of a 3D+ image into separate 2D image files.
     
-    Supports image rotation set in :attr:`magmap.settings.config.transform`.
+    Unlike :meth:`stack_to_img`, this method simply exports all planes and
+    each channel into separate files. Supports image rotation set in
+    :attr:`magmap.settings.config.transform`.
 
     Args:
         image5d (:obj:`np.ndarray`): Image in ``t,z,y,x[,c]`` format.

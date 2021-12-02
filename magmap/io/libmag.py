@@ -1202,18 +1202,28 @@ def get_git_commit(repo_dir: str) -> Optional[str]:
 def get_version(git: bool = False) -> str:
     """Get package version from installed metadata.
     
+    The version string is based on the version at time of installation,
+    which is only updated when reinstalling the package.
+    
     Args:
         git: True to add a short hash of the current Git commit.
 
     Returns:
         The version string. If ``git`` is True, the current Git commit
-        is appended as ``<ver>-<short-hash>``.
+        is appended as ``<ver>-<short-hash>``. If package metadata is not
+        available, the version is given as "n/a".
 
     """
-    # get version from installed metadata; note that this version may differ
-    # from the imported version:
-    # https://packaging.python.org/guides/single-sourcing-package-version/
-    ver = metadata.version(config.APP_NAME.lower())
+    try:
+        # get version from installed metadata; note that this version may differ
+        # from the imported version:
+        # https://packaging.python.org/guides/single-sourcing-package-version/
+        ver = metadata.version(config.APP_NAME.lower())
+    except metadata.PackageNotFoundError as e:
+        # fall back to N/A version
+        _logger.exception(e)
+        ver = "n/a"
+    
     if git:
         git_commit = get_git_commit(
             str(pathlib.Path(__file__).parent.parent.parent))

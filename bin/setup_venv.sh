@@ -13,14 +13,17 @@ Arguments:
   -e [path]: Path to folder where the new venv directory will be placed. 
     Defaults to \"../venvs\".
   -n [name]: Set the virtual environment name; defaults to CLR_ENV.
+  -r [path]: Path to Pip requirements file to install from a specific
+    listing of packages and versions.
 "
 
 CLR_ENV="mag"
 env_name="$CLR_ENV"
 venv_dir="../venvs"
+reqs=""
 
 OPTIND=1
-while getopts hn:e: opt; do
+while getopts hn:e:r: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -33,6 +36,10 @@ while getopts hn:e: opt; do
     e)
       venv_dir="$OPTARG"
       echo "Set the venv directory to $venv_dir"
+      ;;
+    r)
+      reqs="$OPTARG"
+      echo "Set the requirements file to $reqs"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -64,7 +71,7 @@ fi
 py_ver_majmin="" # found Python version in x.y format
 py_ver_min=(3 6) # minimum supported Python version
 py_vers=(3.6 3.7 3.8) # range of versions currently supported
-py_vers_prebuilt_deps=(3.6) # vers for which custom prebuilt deps are avail
+py_vers_prebuilt_deps=(3.6 3.7 3.8 3.9) # vers with custom prebuilt deps
 for ver in "${py_vers[@]}"; do
   # prioritize specific versions in case "python" points to lower version,
   # calling Python directly since `command` will show Pyenv Python binaries
@@ -162,13 +169,24 @@ fi
 python -m pip install -U pip
 pip install -U wheel
 
-# install MagellanMapper including required dependencies
+# Install MagellanMapper including required dependencies
+
+# Mayavi as of 4.7.3 does not supply wheels, and a wheel is built on the
+# current VTK during installation; force rebuild rather than using any cached
+# wheel since old builds may be incompatible with updated VTK versions
+args_update=(--no-binary=mayavi)
 if [[ -n "$update" ]]; then
   # update all dependencies based on setup.py
-  args_update=(--upgrade --upgrade-strategy eager)
+  args_update+=(--upgrade --upgrade-strategy eager)
 fi
-pip install "${args_update[@]}" -e .[all] --extra-index-url \
-  https://pypi.fury.io/dd8/
+if [[ -n "$reqs" ]]; then
+  # install from given package list
+  pip install "${args_update[@]}" -r "$reqs" -e .
+else
+  # import based on setup.py
+  pip install "${args_update[@]}" -e .[all] --extra-index-url \
+    https://pypi.fury.io/dd8/
+fi
 
 echo "MagellanMapper environment setup complete!"
 echo "** Please run \"source $env_act\" to enter your new environment **"

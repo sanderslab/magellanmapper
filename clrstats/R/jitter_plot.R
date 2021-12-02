@@ -426,21 +426,26 @@ getDevice <- function(ext) {
   #
   # Args:
   #   ext: File extension, from which the device will be determined, eg
-  #     ".pdf" for a PDF device.
+  #     "pdf" for a PDF device. The preceding period is optional.
   #
   # Returns:
   #   Output device function corresponding to the extension, or NULL if
   #   none is found.
 
-  dev.fn <- NULL
+  if (startsWith(ext, ".")) {
+    # strip extension dot
+    ext <- substring(ext, 2)
+  }
+  
   # get graphics device corresponding to extension
-  if (ext == ".pdf") {
+  dev.fn <- NULL
+  if (ext == "pdf") {
     dev.fn <- pdf
-  } else if (ext == ".png") {
+  } else if (ext == "png") {
     dev.fn <- png
-  } else if (ext %in% c(".jpg", ".jpeg")) {
+  } else if (ext %in% c("jpg", "jpeg")) {
     dev.fn <- jpeg
-  } else if (ext %in% c(".tif", ".tiff")) {
+  } else if (ext %in% c("tif", "tiff")) {
     dev.fn <- tiff
   }
   return(dev.fn)

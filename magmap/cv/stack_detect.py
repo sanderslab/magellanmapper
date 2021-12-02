@@ -535,8 +535,11 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         blobs_all.blobs = libmag.combine_arrs(
             [b.blobs for b in detection_out["blobs"]
              if b.blobs is not None])
-        print("\nTotal blobs found across channels:", len(blobs_all.blobs))
-        detector.show_blobs_per_channel(blobs_all.blobs)
+        if blobs_all.blobs is None:
+            print("\nNo blobs found across channels")
+        else:
+            print("\nTotal blobs found across channels:", len(blobs_all.blobs))
+            detector.show_blobs_per_channel(blobs_all.blobs)
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
              if b.colocalizations is not None])

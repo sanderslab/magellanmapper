@@ -1162,44 +1162,51 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
         for filei, file in enumerate(chl_files):
             libmag.printcb("importing {}".format(file), fn_feedback)
             try:
-                # load standard image types
-                img = io.imread(file)
-            except ValueError:
-                # load as a RAW image file
-                img = np.memmap(
-                    file, dtype=import_md[config.MetaKeys.DTYPE],
-                    shape=tuple(import_md[config.MetaKeys.SHAPE][2:4]),
-                    mode="r")
-                
-            if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
-                # assume that 3-channel images are RGB
-                # TODO: remove rgb_to_grayscale since must give single channel?
-                print("converted from 3-channel (assuming RGB) to grayscale")
-                img = color.rgb2gray(img)
-
-            if img5d is None:
-                # generate an array for all planes and channels based on
-                # dimensions of the first extracted plane and any channel keys
-                shape = [1, len(chl_files), *img.shape]
+                try:
+                    # load standard image types
+                    img = io.imread(file)
+                except ValueError:
+                    # load as a RAW image file
+                    img = np.memmap(
+                        file, dtype=import_md[config.MetaKeys.DTYPE],
+                        shape=tuple(import_md[config.MetaKeys.SHAPE][2:4]),
+                        mode="r")
+                    
+                if rgb_to_grayscale and img.ndim >= 3 and img.shape[2] == 3:
+                    # assume that 3-channel images are RGB
+                    # TODO: remove rgb_to_grayscale since must give single chl?
+                    libmag.printcb(
+                        "Converted from 3-channel (assuming RGB) to grayscale",
+                        fn_feedback)
+                    img = color.rgb2gray(img)
+    
+                if img5d is None:
+                    # generate an array for all planes and channels based on
+                    # dims of the first extracted plane and any channel keys
+                    shape = [1, len(chl_files), *img.shape]
+                    if num_chls > 1:
+                        shape.append(num_chls)
+                    os.makedirs(
+                        os.path.dirname(filename_image5d_npz), exist_ok=True)
+                    img5d = np.lib.format.open_memmap(
+                        filename_image5d_npz, mode="w+", dtype=img.dtype,
+                        shape=tuple(shape))
+    
+                # insert plane, without using channel dimension if no channel
+                # designators were found in file names
                 if num_chls > 1:
-                    shape.append(num_chls)
-                os.makedirs(
-                    os.path.dirname(filename_image5d_npz), exist_ok=True)
-                img5d = np.lib.format.open_memmap(
-                    filename_image5d_npz, mode="w+", dtype=img.dtype,
-                    shape=tuple(shape))
-
-            # insert plane, without using channel dimension if no channel
-            # designators were found in file names
-            if num_chls > 1:
-                img5d[0, filei, ..., chli] = img
-            else:
-                img5d[0, filei] = img
-
-            # measure near low/high intensity values
-            low, high = np.percentile(img, (0.5, 99.5))
-            lows.append(low)
-            highs.append(high)
+                    img5d[0, filei, ..., chli] = img
+                else:
+                    img5d[0, filei] = img
+    
+                # measure near low/high intensity values
+                low, high = np.percentile(img, (0.5, 99.5))
+                lows.append(low)
+                highs.append(high)
+            except ValueError as e1:
+                libmag.printcb(
+                    f"Could not load '{file}'; skipping it because of error: "
+                    f"{e1}", fn_feedback)
 
         lows_chls.append(min(lows))
         highs_chls.append(max(highs))

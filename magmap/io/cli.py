@@ -413,7 +413,7 @@ def process_cli_args():
             log_path = os.path.join(
                 config.user_app_dirs.user_data_dir, "out.log")
         # log to file
-        logs.add_file_handler(config.logger, log_path)
+        config.log_path = logs.add_file_handler(config.logger, log_path)
     
     # redirect standard out/error to logging
     sys.stdout = logs.LogWriter(config.logger.info)

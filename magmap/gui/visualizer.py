@@ -278,7 +278,8 @@ class Visualization(HasTraits):
     _labels_img_name = Str
     _labels_img_names = Instance(TraitsList)
     
-    _labels_ref_path = File  # labels ontology reference path
+    _labels_ref_path = Str  # labels ontology reference path
+    _labels_ref_btn = Button("Browse")  # button to select ref file
     _reload_btn = Button("Reload")  # button to reload images
     
     # ROI selection
@@ -494,8 +495,8 @@ class Visualization(HasTraits):
                      editor=CheckListEditor(
                          name="object._labels_img_names.selections",
                          format_func=lambda x: x)),
-                Item("_labels_ref_path", label="Reference", style="simple",
-                     editor=FileEditor(entries=10, allow_dir=False)),
+                Item("_labels_ref_path", label="Reference", style="simple"),
+                Item("_labels_ref_btn", show_label=False),
             ),
             label="Registered Images",
         ),
@@ -1121,11 +1122,15 @@ class Visualization(HasTraits):
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):
-        self._adjust_displayed_imgs(brightness=self._imgadj_brightness)
+        # include contrast to restore its value while adjusting the original img
+        self._adjust_displayed_imgs(
+            brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_contrast")
     def _adjust_img_contrast(self):
-        self._adjust_displayed_imgs(contrast=self._imgadj_contrast)
+        # include brightness to restore its value while adjusting the orig img
+        self._adjust_displayed_imgs(
+            brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):
@@ -1777,11 +1782,11 @@ class Visualization(HasTraits):
         # skip first element, which serves as a dropdown box label
         atlas_suffixes = self._main_img_names.selections[1:]
         if atlas_suffixes:
-            if len(atlas_suffixes) == 1:
+            atlas_paths = [self._reg_img_names.get(s) for s in atlas_suffixes]
+            if len(atlas_paths) == 1:
                 # reduce to str if only one element
-                atlas_suffixes = atlas_suffixes[0]
-            reg_suffixes[config.RegSuffixes.ATLAS] = self._reg_img_names.get(
-                atlas_suffixes)
+                atlas_paths = atlas_paths[0]
+            reg_suffixes[config.RegSuffixes.ATLAS] = atlas_paths
         
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
             # add if not the empty first selection
@@ -1796,6 +1801,16 @@ class Visualization(HasTraits):
         
         # re-setup image
         self.update_filename(self._filename, reset=False)
+    
+    @on_trait_change("_labels_ref_btn")
+    def _labels_ref_path_updated(self):
+        """Open a Pyface file dialog with path set to current image directory.
+        """
+        open_dialog = FileDialog(
+            action="open", default_path=os.path.dirname(self._filename))
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._labels_ref_path = open_dialog.path
     
     @on_trait_change("_channel")
     def update_channel(self):

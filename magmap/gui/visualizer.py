@@ -347,8 +347,16 @@ class Visualization(HasTraits):
         adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
         stretch_last_section=False, drag_move=True)
     _profiles = List  # profiles table list
-    _profiles_add_btn = Button("Add")
-    _profiles_load_btn = Button("Rescan")
+    _profiles_add_btn = Button(
+        "Add",
+        tooltip="Click to add the selected profile for the checked channels.\n"
+                "Press Backspace/Delete key to remove the selected table row.\n"
+                "Drag rows to rearrange the order of loaded profiles."
+    )
+    _profiles_load_btn = Button(
+        "Rescan",
+        tooltip="Rescan the 'profiles' folder for YAML files"
+    )
     _profiles_preview = Str  # preview the selected profile
     _profiles_combined = Str  # combined profiles for selected category
     _profiles_ver = Str

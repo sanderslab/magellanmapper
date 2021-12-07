@@ -10,7 +10,11 @@
 
 #### GUI
 
+- Drag and remove loaded profiles in the Profiles tab table
+
 #### CLI
+
+- The `--proc export_tif` task exports an NPY file to TIF format
 
 #### Atlas refinement
 
@@ -33,6 +37,8 @@
 ### Dependency Updates
 
 #### Python Dependency Changes
+
+- `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 
 #### R Dependency Changes
 

@@ -10,8 +10,6 @@
 
 #### GUI
 
-- Drag and remove loaded profiles in the Profiles tab table
-
 #### CLI
 
 #### Atlas refinement
@@ -42,11 +40,6 @@
 
 
 ## MagellanMapper v1.5.0
-
-### Post-release updates
-
-- The `--proc export_tif` task exports an NPY file to TIF format
-- Tifffile is now a direct dependency, previously already installed as a sub-dependency of other required packages
 
 ### Highlights
 

@@ -647,17 +647,23 @@ def reg_planes_to_img(imgs, path=None, ax=None):
         plot_support.save_fig(path, config.savefig)
 
 
-def export_planes(image5d, ext, channel=None, separate_chls=False):
+def export_planes(
+        image5d: np.ndarray, ext: str, channel: Optional[int] = None,
+        separate_chls: bool = False):
     """Export all planes of a 3D+ image into separate 2D image files.
     
-    Unlike :meth:`stack_to_img`, this method simply exports all planes and
-    each channel into separate files. Supports image rotation set in
-    :attr:`magmap.settings.config.transform`.
+    Unlike :meth:`stack_to_img`, this method exports raw planes and
+    each channels into separate files, without processing through Matplotlib.
+    Supports image rotation set in :attr:`magmap.settings.config.transform`.
+    
+    By default, all z-planes are exported. The planar orientation can be
+    configured through :attr:`config.plane`, and the plane indices through
+    :attr:`config.slice_vals`.
 
     Args:
-        image5d (:obj:`np.ndarray`): Image in ``t,z,y,x[,c]`` format.
-        ext (str): Save format given as an extension without period.
-        channel (int): Channel to save; defaults to None for all channels.
+        image5d: Image in ``t,z,y,x[,c]`` format.
+        ext: Save format given as an extension without period.
+        channel: Channel to save; defaults to None for all channels.
         separate_chls (bool): True to export all channels from each plane to
             a separate image; defaults to False. 
 
@@ -675,13 +681,17 @@ def export_planes(image5d, ext, channel=None, separate_chls=False):
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     rotate = config.transform[config.Transforms.ROTATE]
     roi = cv_nd.rotate90(roi, rotate, multichannel=multichannel)
+    stacker = setup_stack(roi[np.newaxis, :], slice_vals=config.slice_vals)
+    roi = stacker.images[0]
     
     num_planes = len(roi)
     num_digits = len(str(num_planes))
+    img_sl = stacker.img_slice
     for i, plane in enumerate(roi):
-        # add plane to output path if more than one output file
-        out_name = basename if num_planes <= 1 else "{}_{:0{}d}".format(
-            basename, i, num_digits)
+        # add plane to output path
+        out_name = f"{basename}_plane_" \
+                   f"{plot_support.get_plane_axis(config.plane)}" \
+                   f"{img_sl.start + img_sl.step * i}"
         path = os.path.join(output_dir, out_name)
         if separate_chls and multichannel:
             for chl in channels:

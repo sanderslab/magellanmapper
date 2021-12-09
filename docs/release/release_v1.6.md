@@ -26,6 +26,8 @@
 
 #### I/O
 
+- The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
+
 #### Server pipelines
 
 #### Python stats and plots

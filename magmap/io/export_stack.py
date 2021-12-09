@@ -656,9 +656,10 @@ def export_planes(
     each channels into separate files, without processing through Matplotlib.
     Supports image rotation set in :attr:`magmap.settings.config.transform`.
     
-    By default, all z-planes are exported. The planar orientation can be
-    configured through :attr:`config.plane`, and the plane indices through
-    :attr:`config.slice_vals`.
+    By default, all z-planes are exported, with plane indices specified through
+    :attr:`config.slice_vals`. Alternatively, regions of interest can be
+    specified by :attr:`config.roi_offset` and :attr:`config.roi_size`.
+    The planar orientation can be configured through :attr:`config.plane`.
 
     Args:
         image5d: Image in ``t,z,y,x[,c]`` format.
@@ -681,11 +682,13 @@ def export_planes(
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     rotate = config.transform[config.Transforms.ROTATE]
     roi = cv_nd.rotate90(roi, rotate, multichannel=multichannel)
-    stacker = setup_stack(roi[np.newaxis, :], slice_vals=config.slice_vals)
+    stacker = setup_stack(
+        roi[np.newaxis, :], offset=config.roi_offset, roi_size=config.roi_size,
+        slice_vals=config.slice_vals,
+        rescale=config.transform[config.Transforms.RESCALE])
     roi = stacker.images[0]
     
     num_planes = len(roi)
-    num_digits = len(str(num_planes))
     img_sl = stacker.img_slice
     for i, plane in enumerate(roi):
         # add plane to output path

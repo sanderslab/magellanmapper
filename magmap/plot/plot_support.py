@@ -841,13 +841,13 @@ def save_fig(path, ext=None, modifier="", fig=None):
 
 
 def setup_fig(
-        nrows: int, ncols: int, size: Sequence[float] = None
+        nrows: int = 1, ncols: int = 1, size: Sequence[float] = None
 ) -> Tuple["figure.Figure", "gridspec.GridSpec"]:
     """Setup a figure and associated :class:`gridspec.GridSpec`.
     
     Args:
-        nrows: Number of rows.
-        ncols: Number of columns.
+        nrows: Number of rows; defaults to 1.
+        ncols: Number of columns; defaults to 1.
         size: Sequence of figure size in ``(width, height)`` in inches;
             defaults to None.
 

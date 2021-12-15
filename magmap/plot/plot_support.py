@@ -27,7 +27,8 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 if TYPE_CHECKING:
-    from matplotlib import figure
+    from matplotlib import axes, colors, figure, image
+    from magmap.gui import plot_editor
 
 _logger = config.logger.getChild(__name__)
 
@@ -68,30 +69,38 @@ class ImageSyncMixin:
             return tuple(self.plot_eds.values())[0].get_displayed_img(imgi, chl)
         return None
 
-    def update_imgs_display(self, imgi, chl=None, minimum=np.nan,
-                            maximum=np.nan, brightness=None, contrast=None,
-                            alpha=None):
+    def update_imgs_display(
+            self, imgi: int,
+            chl: Optional[int] = None,
+            minimum: Optional[float] = np.nan,
+            maximum: Optional[float] = np.nan,
+            brightness: Optional[float] = None,
+            contrast: Optional[float] = None,
+            alpha: Optional[float] = None,
+            alpha_blend: Optional[float] = None) -> "plot_editor.PlotAxImg":
         """Update dislayed image settings in all Plot Editors.
 
         Args:
-            imgi (int): Index of image.
-            chl (int): Index of channel; defaults to None.
-            minimum (float): Vmin; can be None for auto setting; defaults
+            imgi: Index of image group.
+            chl: Index of channel; defaults to None.
+            minimum: Vmin; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            maximum (float): Vmax; can be None for auto setting; defaults
+            maximum: Vmax; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            brightness (float): Brightness addend; defaults to None.
-            contrast (float): Contrast multiplier; defaults to None.
-            alpha (float): Opacity value; defalts to None.
+            brightness: Brightness addend; defaults to None.
+            contrast: Contrast multiplier; defaults to None.
+            alpha: Opacity value; defalts to None.
+            alpha_blend: Opacity blending value; defaults to None.
         
         Returns:
-            :obj:`magmap.plot_editor.PlotAxImg`: The updated axes image plot.
+            The updated axes image plot.
 
         """
         plot_ax_img = None
         for ed in self.plot_eds.values():
             plot_ax_img = ed.update_img_display(
-                imgi, chl, minimum, maximum, brightness, contrast, alpha)
+                imgi, chl, minimum, maximum, brightness, contrast, alpha,
+                alpha_blend)
         return plot_ax_img
     
     def save_fig(self, path):
@@ -147,9 +156,21 @@ class ImageSyncMixin:
                 if display: ed.update_coord()
 
 
-def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
-                        vmin=None, vmax=None, origin=None, interpolation=None,
-                        norms=None, nan_color=None, ignore_invis=False):
+def imshow_multichannel(
+        ax: "axes.Axes",
+        img2d: np.ndarray,
+        channel: Optional[Union[int, Sequence[int]]],
+        cmaps: Sequence[Union[str, "colors.Colormap"]],
+        aspect: Union[str, float],
+        alpha: Optional[Union[float, Sequence[float]]] = None,
+        vmin: Optional[Union[float, Sequence[float]]] = None,
+        vmax: Optional[Union[float, Sequence[float]]] = None,
+        origin: Optional[str] = None,
+        interpolation: Optional[str] = None,
+        norms: Sequence["colors.Normalize"] = None,
+        nan_color: Optional[str] = None,
+        ignore_invis: bool = False,
+        alpha_blend: Optional[float] = None) -> List["axes.Axes"]:
     """Show multichannel 2D image with channels overlaid over one another.
 
     Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
@@ -166,20 +187,21 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
         cmaps: List of colormaps corresponding to each channel. Colormaps 
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
-        alpha (float, List[float]): Transparency level for all channels or 
+        alpha: Transparency level for all channels or 
             sequence of levels for each channel. If any value is 0, the
             corresponding image will not be output. Defaults to None to use 1.
-        vmin (float, List[float]): Scalar or sequence of vmin levels for
+        vmin: Scalar or sequence of vmin levels for
             all channels; defaults to None.
-        vmax (float, List[float]): Scalar or sequence of vmax levels for
+        vmax: Scalar or sequence of vmax levels for
             all channels; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
-        nan_color (str): String of color to use for NaN values; defaults to
+        nan_color: String of color to use for NaN values; defaults to
             None to leave these pixels empty.
-        ignore_invis (bool): True to give None instead of an ``AxesImage``
+        ignore_invis: True to give None instead of an ``AxesImage``
             object that would be invisible; defaults to False.
+        alpha_blend: Opacity blending value; defaults to None.
     
     Returns:
         List of ``AxesImage`` objects.
@@ -190,10 +212,17 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
     num_chls = len(channels)
     if alpha is None:
         alpha = 1
-    if num_chls > 1 and not libmag.is_seq(alpha):
-        # if alphas not explicitly set per channel, make all channels more
-        # translucent at a fixed value that is higher with more channels
-        alpha /= np.sqrt(num_chls + 1)
+    if num_chls > 1:
+        if alpha_blend is not None:
+            # alpha blend first two images
+            alpha1, alpha2 = alpha_blend_intersection(
+                img2d[..., 0], img2d[..., 1],
+                libmag.get_if_within(alpha_blend, 0))
+            alpha = np.stack((alpha1, alpha2))
+        elif not libmag.is_seq(alpha):
+            # if alphas not explicitly set per channel, make all channels more
+            # translucent at a fixed value that is higher with more channels
+            alpha /= np.sqrt(num_chls + 1)
 
     # transform image based on config parameters
     rotate = config.transform[config.Transforms.ROTATE]
@@ -237,9 +266,25 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
     return img
 
 
-def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
-                   vmins=None, vmaxs=None, ignore_invis=False,
-                   check_single=False):
+def overlay_images(
+        ax: "axes.Axes",
+        aspect: Union[str, float],
+        origin: str,
+        imgs2d: Sequence[np.ndarray],
+        channels: Optional[List[List[int]]],
+        cmaps: Sequence[Union[
+            str, "colors.Colormap", colormaps.DiscreteColormap]],
+        alphas: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None,
+        vmins: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None,
+        vmaxs: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None,
+        ignore_invis: bool = False,
+        check_single: bool = False,
+        alpha_blends: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None
+) -> Optional[List[List["axes.Axes"]]]:
     """Show multiple, overlaid images.
     
     Wrapper function calling :meth:`imshow_multichannel` for multiple 
@@ -251,9 +296,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         ax: Axes.
         aspect: Aspect ratio.
         origin: Image origin.
-        imgs2d (List[:obj:`np.ndarray`]): Sequence of 2D images to display,
+        imgs2d: Sequence of 2D images to display,
             where the first image may be 2D+channel.
-        channels (List[List[int]): A nested list of channels to display for
+        channels: A nested list of channels to display for
             each image, or None to use :attr:``config.channel`` for the
             first image and 0 for all subsequent images.
         cmaps: Either a single colormap for all images or a list of 
@@ -272,13 +317,15 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         vmaxs: A list of vmaxs for each image; defaults to None to use 
             :attr:``config.vmax_overview`` for the first image and None 
             for all others.
-        ignore_invis (bool): True to avoid creating ``AxesImage`` objects
+        ignore_invis : True to avoid creating ``AxesImage`` objects
             for images that would be invisible; defaults to False.
-        check_single (bool): True to check for images with a single unique
+        check_single: True to check for images with a single unique
             value displayed with a :class:`colormaps.DiscreteColormap`, which
             will not update for unclear reasons. If found, the final value
             will be incremented by one as a workaround to allow updates.
             Defaults to False.
+        alpha_blends: Opacity blending values for each image in ``imgs2d``;
+            defaults to None.
     
     Returns:
         Nested list containing a list of ``AxesImage`` objects 
@@ -303,6 +350,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
     if alphas is None:
         # start with config alphas and pad the remaining values
         alphas = libmag.pad_seq(config.alphas, num_imgs2d, 0.9)
+    if alpha_blends is None:
+        alpha_blends = [None] * num_imgs2d
 
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image
@@ -323,6 +372,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             norm = [cmap.norm]
             cmap = [cmap]
         alpha = alphas[i]
+        alpha_blend = alpha_blends[i]
         vmin = vmins[i]
         vmax = vmaxs[i]
         if i == 0:
@@ -361,7 +411,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         ax_img = imshow_multichannel(
             ax, img, channels[i], cmap, aspect, alpha, vmin, vmax, origin,
             interpolation="nearest", norms=norm, nan_color=nan_color,
-            ignore_invis=ignore_invis)
+            ignore_invis=ignore_invis, alpha_blend=alpha_blend)
         ax_imgs.append(ax_img)
     return ax_imgs
 

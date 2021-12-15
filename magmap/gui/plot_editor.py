@@ -24,8 +24,11 @@ if TYPE_CHECKING:
 
 
 class PlotAxImg:
-    """Axes image storage class to contain additional information for
-    display such as brightness and contrast.
+    """Axes image storage class.
+    
+    Tracks settings that may differ between the currently displayed image and
+    input values, such as ``None`` to specify auto-intensity and values for
+    brightness and contrast that are not stored in the image itself.
 
     Attributes:
         ax_img: Displayed Matplotlib image.
@@ -35,6 +38,7 @@ class PlotAxImg:
             ``ax_img.norm.vmax`` for the output vmax.
         brightness: Brightness addend; defaults to 0.0.
         contrast: Contrast factor; defaults to 1.0.
+        alpha: Opacity level; defaults to None.
         img: The original underlying image data,
             copied to allow adjusting the array in ``ax_img`` while
             retaining the original data.
@@ -43,12 +47,18 @@ class PlotAxImg:
     def __init__(
             self, ax_img: "image.AxesImage", vmin: Optional[float] = None,
             vmax: Optional[float] = None):
+        
+        # set from arguments
         self.ax_img = ax_img
         self.vmin = vmin
         self.vmax = vmax
         
+        # additional image attributes
         self.brightness: float = 0.0
         self.contrast: float = 1.0
+        self.alpha: Optional[float] = None
+        
+        # original underlying image data
         self.img: np.ndarray = np.copy(self.ax_img.get_array())
 
 
@@ -397,7 +407,7 @@ class PlotEditor:
                         for p in self._plot_ax_imgs[0]]
             
             # use opacity, brightness, anc contrast from prior images
-            alphas[0] = [p.ax_img.get_alpha() for p in self._plot_ax_imgs[0]]
+            alphas[0] = [p.alpha for p in self._plot_ax_imgs[0]]
             brightnesses[0] = [p.brightness for p in self._plot_ax_imgs[0]]
             contrasts[0] = [p.contrast for p in self._plot_ax_imgs[0]]
         
@@ -428,7 +438,7 @@ class PlotEditor:
                 
                 # get alpha for last corresponding borders plane if available
                 ax_img = libmag.get_if_within(self._plot_ax_imgs, 2 + i, None)
-                alpha = (ax_img[i].ax_img.get_alpha() if ax_img else
+                alpha = (ax_img[i].alpha if ax_img else
                          libmag.get_if_within(config.alphas, 2 + i, 1))
                 alphas.append(alpha)
                 

@@ -1027,7 +1027,7 @@ class Visualization(HasTraits):
         # populate controls with intensity settings
         self._imgadj_brightness = plot_ax_img.brightness
         self._imgadj_contrast = plot_ax_img.contrast
-        self._imgadj_alpha = plot_ax_img.ax_img.get_alpha()
+        self._imgadj_alpha = plot_ax_img.alpha
 
         # populate intensity limits, auto-scaling, and current val (if not auto)
         self._adapt_imgadj_limits(plot_ax_img)

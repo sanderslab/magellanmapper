@@ -382,6 +382,11 @@ class Visualization(HasTraits):
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float
+    _imgadj_alpha_blend = Float(0.5)
+    _imgadj_alpha_blend_check = Bool(
+        tooltip="Blend the overlapping parts of imags to shown alignment.\n"
+                "Applied to the first two channels of the main image."
+    )
 
     # Image import panel
 
@@ -704,14 +709,28 @@ class Visualization(HasTraits):
                      mode="slider", format="%.4g")),
             Item("_imgadj_max_auto", label="Auto", editor=BooleanEditor()),
         ),
-        Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
-                 low_name="_imgadj_brightness_low",
-                 high_name="_imgadj_brightness_high", mode="slider",
-                 format="%.4g")),
-        Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
-                 low=0.0, high=2.0, mode="slider", format="%.3g")),
-        Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
+        HGroup(
+            Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
+                     low_name="_imgadj_brightness_low",
+                     high_name="_imgadj_brightness_high", mode="slider",
+                     format="%.4g"))
+        ),
+        HGroup(
+            Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
+                     low=0.0, high=2.0, mode="slider", format="%.3g")),
+        ),
+        HGroup(
+            Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g")),
+        ),
+        
+        HGroup(
+            # alpha blending controls
+            Item("_imgadj_alpha_blend_check", label="Blend"),
+            Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
+                 low=0.0, high=1.0, mode="slider", format="%.3g"),
+                 enabled_when="_imgadj_alpha_blend_check"),
+        ),
         label="Adjust Image",
     )
     
@@ -1147,6 +1166,21 @@ class Visualization(HasTraits):
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):
         self._adjust_displayed_imgs(alpha=self._imgadj_alpha)
+
+    @on_trait_change("_imgadj_alpha_blend")
+    def _adjust_img_alpha_blend(self):
+        """Adjust the alpha blending."""
+        self._adjust_displayed_imgs(alpha_blend=self._imgadj_alpha_blend)
+
+    @on_trait_change("_imgadj_alpha_blend_check")
+    def _adjust_img_alpha_blend_check(self):
+        """Toggle alpha bledning."""
+        if self._imgadj_alpha_blend_check:
+            # turn on alpha blending
+            self._adjust_img_alpha_blend()
+        else:
+            # turn off alpha blending and reset alpha values
+            self._adjust_displayed_imgs(alpha_blend=False)
 
     def _adjust_displayed_imgs(self, **kwargs):
         """Adjust image display settings for the currently selected viewer.

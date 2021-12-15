@@ -6,13 +6,13 @@
 from collections import OrderedDict
 import os
 import warnings
-from typing import Sequence, TYPE_CHECKING, Tuple
+from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
 from matplotlib import backend_bases
 from matplotlib import gridspec
 from matplotlib import pyplot as plt
-from skimage import transform
+from skimage import filters, transform
 
 from magmap.cv import cv_nd
 from magmap.plot import colormaps
@@ -364,6 +364,45 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             ignore_invis=ignore_invis)
         ax_imgs.append(ax_img)
     return ax_imgs
+
+
+def alpha_blend_intersection(
+        img1: np.ndarray, img2: np.ndarray, alpha: float = 0.5,
+        mask1: Optional[np.ndarray] = None,
+        mask2: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
+    """Alpha blend the intersecting foreground of two images.
+    
+    Adjust the opacity to blend the parts of images that overlap while
+    retaining full opacity for their non-overlapping parts to increase
+    contrast and highlight potential misalignments.
+    
+    Args:
+        img1: First image.
+        img2: Second image.
+        alpha: Alpha level from 0-1 for the first image to use for its
+            intersecting area; the second image will use ``1 - alpha``.            
+        mask1: Foreground mask for ``img1``; defaults to None, in which case
+            the foreground will be segmented using Otsu's method.
+        mask2: Same for ``img2``; defaults to None.
+
+    Returns:
+        The foreground masks with alpha blending for the intersection area.
+
+    """
+    # default to getting foreground by Otsu's method
+    if mask1 is None:
+        mask1 = img1 > filters.threshold_otsu(img1)
+    if mask2 is None:
+        mask2 = img2 > filters.threshold_otsu(img2)
+    
+    # alpha blend the intersecting area while leaving the non-overlapping
+    # foreground at full opacity and background at full transparency 
+    intersection = np.logical_and(mask1, mask2)
+    mask1 = mask1.astype(float)
+    mask2 = mask2.astype(float)
+    mask1[intersection] = alpha
+    mask2[intersection] = 1 - alpha
+    return mask1, mask2
 
 
 def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):

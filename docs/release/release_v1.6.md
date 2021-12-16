@@ -10,6 +10,7 @@
 
 #### GUI
 
+- "Blend" option in the image adjustment panel to visualize alignment in overlaid images
 - Drag and remove loaded profiles in the Profiles tab table
 
 #### CLI

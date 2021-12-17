@@ -139,6 +139,9 @@ def parse_ome(filename):
         names: array of names of seriess within the file.
         sizes: array of tuples with dimensions for each series. Dimensions
             will be given as (time, z, y, x, channels).
+    
+    Deprecated: 1.6.0
+        Use :meth:`parse_ome_raw` instead.
     """
     time_start = time()
     metadata = bf.get_omexml_metadata(filename)

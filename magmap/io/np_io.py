@@ -290,7 +290,8 @@ def setup_images(path, series=None, offset=None, size=None,
         # load or import the main image stack
         print("Loading main image")
         try:
-            if path.endswith(sitk_io.EXTS_3D):
+            path_lower = path.lower()
+            if path_lower.endswith(sitk_io.EXTS_3D):
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
                 config.img5d.img = config.image5d

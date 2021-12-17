@@ -159,12 +159,11 @@ def parse_ome(filename):
     return names, sizes
 
 
-def parse_ome_raw(filename):
-    """Parses the microscope's XML file directly, pulling out salient info
-    for further processing.
+def parse_ome_raw(metadata: str):
+    """Parse Open Microscopy Environment XML to extract key metadata.
     
     Args:
-        filename: Image file, assumed to have metadata in OME XML format.
+        metadata: Metadata as a string in OME XML format.
     
     Returns:
         names: array of names of seriess within the file.
@@ -175,6 +174,7 @@ def parse_ome_raw(filename):
         magnification: Objective magnification.
         zoom: Zoom level.
         pixel_type: Pixel data type as a string.
+    
     """
     array_order = "TZYXC"  # desired dimension order
     names, sizes, resolutions = [], [], []
@@ -186,7 +186,6 @@ def parse_ome_raw(filename):
     zoom = 1
     magnification = 1
     pixel_type = None
-    metadata = bf.get_omexml_metadata(filename)
     metadata_root = et.ElementTree.fromstring(metadata)
     for child in metadata_root:
         # tag name is at end of a long string of other identifying info
@@ -204,7 +203,8 @@ def parse_ome_raw(filename):
                         magnification = float(magnification)
         elif child.tag.endswith("Image"):
             # image file info
-            names.append(child.attrib["Name"])
+            if "Name" in child.attrib:
+                names.append(child.attrib["Name"])
             for grandchild in child:
                 if grandchild.tag.endswith("Pixels"):
                     att = grandchild.attrib
@@ -822,7 +822,7 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
         # get available embedded metadata via Bioformats
         names, sizes, res, md[config.MetaKeys.MAGNIFICATION], \
             md[config.MetaKeys.ZOOM], md[config.MetaKeys.DTYPE] = \
-            parse_ome_raw(path)
+            parse_ome_raw(bf.get_omexml_metadata(path))
         # unlike config.resolutions, keep only single list for simplicity
         if res and len(res) > series:
             md[config.MetaKeys.RESOLUTIONS] = res[series]

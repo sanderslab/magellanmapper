@@ -298,6 +298,10 @@ def setup_images(path, series=None, offset=None, size=None,
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
                 config.img5d.img_io = config.LoadIO.SITK
+            elif path_lower.endswith((".tif", ".tiff")):
+                # load TIF file directly
+                _, config.resolutions = read_tif(path, config.img5d)
+                config.image5d = config.img5d.img
             else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY

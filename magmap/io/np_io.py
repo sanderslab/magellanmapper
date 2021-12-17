@@ -8,6 +8,7 @@ from typing import Any, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tifffile
+import zarr
 
 from magmap.atlas import labels_meta, ontology, transformer
 from magmap.cv import detector
@@ -502,6 +503,54 @@ def write_raw_file(arr, path):
     out_file[:] = arr[:]
     del out_file  # flushes to disk
     print("Finished writing", path)
+
+
+def read_tif(path: str, img5d: Image5d = None):
+    """Read TIF files with Tifffile with lazy access through Zarr.
+    
+    Args:
+        path: Path to file.
+        img5d: Image5d storage class; defaults to None.
+
+    Returns:
+        Image5d storage instance and resolutions as a ``[[z, y, x]]`` array.
+
+    """
+    if img5d is None:
+        # set up a new storage instance
+        img5d = Image5d()
+    
+    # extract metadata
+    tif = tifffile.TiffFile(path)
+    md = dict.fromkeys(config.MetaKeys)
+    if tif.ome_metadata:
+        # read OME-XML metadata
+        names, sizes, res, magnification, zoom, pixel_type = \
+            importer.parse_ome_raw(tif.ome_metadata)
+        res = np.array(res)
+        print(tif.ome_metadata)
+    else:
+        # parse resolutions
+        res = np.ones((1, 3))
+        if tif.imagej_metadata and "spacing" in tif.imagej_metadata:
+            # ImageJ format holds z-resolution as spacing
+            res[0, 0] = tif.imagej_metadata["spacing"]
+        for i, name in enumerate(("YResolution", "XResolution")):
+            # parse x/y-resolution from standard TIF metadata
+            axis_res = tif.pages[0].tags[name].value
+            if axis_res and len(axis_res) > 1 and axis_res[0]:
+                res[0, i + 1] = axis_res[1] / axis_res[0]
+    
+    with tifffile.imread(path, aszarr=True) as tif:
+        # open file as a Zarr array to access as NumPy array without loading
+        # the full file into memory
+        za = zarr.open(tif, mode="r")
+        img5d.img = np.expand_dims(za, axis=0)
+        img5d.path_img = path
+        img5d.img_io = config.LoadIO.TIFFFILE
+    
+    md[config.MetaKeys.RESOLUTIONS] = res
+    return img5d, res
 
 
 def write_tif(

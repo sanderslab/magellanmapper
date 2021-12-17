@@ -10,6 +10,8 @@ dependencies:
   - scikit-image
   - scikit-learn
   - appdirs
+  - tifffile
+  - zarr
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - simpleitk==2.0.2rc2.dev785+g8ac4f

@@ -21,6 +21,8 @@ dependencies:
   - importlib_resources  # required for pyface
   - traitsui
   - appdirs
+  - tifffile
+  - zarr
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
     - matplotlib-scalebar

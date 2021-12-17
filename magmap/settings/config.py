@@ -127,6 +127,7 @@ class LoadIO(Enum):
     """Enumerations for I/O load packages."""
     NP = auto()
     SITK = auto()
+    TIFFFILE = auto()
 
 
 #: :obj:`LoadIO`: I/O source for image5d array.

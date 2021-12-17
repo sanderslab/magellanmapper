@@ -503,7 +503,7 @@ def write_raw_file(arr, path):
     print("Finished writing", path)
 
 
-def write_tif_file(
+def write_tif(
         image5d: np.ndarray, path: Union[str, pathlib.Path], **kwargs: Any):
     """Write a NumPy array to TIF files.
     

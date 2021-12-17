@@ -8,7 +8,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 Related publications and datasets:
 - For more information on the methods used for 3D atlas construction, please see: https://elifesciences.org/articles/61408
-- For step-by-step instructions on using the software, please see: https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104
+- For step-by-step instructions on using the software, please see: https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104 (now [open access on PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7781073/)!)
 - The 3D reconstructed versions of the Allen Developing Mouse Brain Atlas: https://search.kg.ebrains.eu/instances/Project/b8a8e2d3-4787-45f2-b010-589948c33f20
 - Sample wild-type whole mouse brains at age P0: https://search.kg.ebrains.eu/instances/Dataset/2423e103-35e9-40cf-ab0c-0e3d08d24d5a
 

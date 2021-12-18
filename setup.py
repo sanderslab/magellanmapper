@@ -21,7 +21,7 @@ _EXTRAS_PANDAS = [
 _EXTRAS_AWS = ["boto3", "awscli"]
 
 # optional dependencies to build API documentation
-_EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints"]
+_EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 
 # installation configuration
 config = {

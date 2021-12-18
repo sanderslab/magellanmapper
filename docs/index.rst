@@ -10,6 +10,11 @@ Welcome to MagellanMapper's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   install.md
+   cli.md
+   settings.md
+   cloud_aws.md
+
 
 
 Indices and tables

@@ -510,7 +510,7 @@ def write_raw_file(arr, path):
 
 
 def read_tif(path: str, img5d: Image5d = None):
-    """Read TIF files with Tifffile with lazy access through Zarr.
+    """Read TIF files with Tifffile with lazy access through memory mapping.
     
     Args:
         path: Path to file.
@@ -527,6 +527,7 @@ def read_tif(path: str, img5d: Image5d = None):
     # extract metadata
     tif = tifffile.TiffFile(path)
     md = dict.fromkeys(config.MetaKeys)
+    axes = tif.series[0].axes
     if tif.ome_metadata:
         # read OME-XML metadata
         names, sizes, res, magnification, zoom, pixel_type = \
@@ -545,13 +546,17 @@ def read_tif(path: str, img5d: Image5d = None):
             if axis_res and len(axis_res) > 1 and axis_res[0]:
                 res[0, i + 1] = axis_res[1] / axis_res[0]
     
-    with tifffile.imread(path, aszarr=True) as tif:
-        # open file as a Zarr array to access as NumPy array without loading
-        # the full file into memory
-        za = zarr.open(tif, mode="r")
-        img5d.img = np.expand_dims(za, axis=0)
-        img5d.path_img = path
-        img5d.img_io = config.LoadIO.TIFFFILE
+    # load TIFF by memory mapping
+    tif_memmap = tifffile.memmap(path)
+    ndim = len(tif_memmap.shape)
+    if ndim < 4 or ndim == 4 and "c" in axes.lower():
+        # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
+        tif_memmap = np.expand_dims(tif_memmap, axis=0)
+    
+    # add image to Image5d instance
+    img5d.img = tif_memmap
+    img5d.path_img = path
+    img5d.img_io = config.LoadIO.TIFFFILE
     
     md[config.MetaKeys.RESOLUTIONS] = res
     return img5d, res

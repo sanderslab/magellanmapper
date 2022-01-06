@@ -8,7 +8,6 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tifffile
-import zarr
 
 from magmap.atlas import labels_meta, ontology, transformer
 from magmap.cv import detector

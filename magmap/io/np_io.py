@@ -4,7 +4,7 @@
 """
 import os
 import pathlib
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tifffile
@@ -300,7 +300,8 @@ def setup_images(path, series=None, offset=None, size=None,
                 config.img5d.img_io = config.LoadIO.SITK
             elif path_lower.endswith((".tif", ".tiff")):
                 # load TIF file directly
-                _, config.resolutions = read_tif(path, config.img5d)
+                _, meta = read_tif(path, config.img5d)
+                config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
                 config.image5d = config.img5d.img
             else:
                 # load or import from MagellanMapper Numpy format
@@ -509,7 +510,9 @@ def write_raw_file(arr, path):
     print("Finished writing", path)
 
 
-def read_tif(path: str, img5d: Image5d = None):
+def read_tif(
+        path: str, img5d: Image5d = None
+) -> Tuple[Image5d, Dict[config.MetaKeys, Any]]:
     """Read TIF files with Tifffile with lazy access through memory mapping.
     
     Args:
@@ -517,7 +520,7 @@ def read_tif(path: str, img5d: Image5d = None):
         img5d: Image5d storage class; defaults to None.
 
     Returns:
-        Image5d storage instance and resolutions as a ``[[z, y, x]]`` array.
+        Image5d storage instance and dictionary of extracted metadata.
 
     """
     if img5d is None:
@@ -545,6 +548,7 @@ def read_tif(path: str, img5d: Image5d = None):
             axis_res = tif.pages[0].tags[name].value
             if axis_res and len(axis_res) > 1 and axis_res[0]:
                 res[0, i + 1] = axis_res[1] / axis_res[0]
+    md[config.MetaKeys.RESOLUTIONS] = res
     
     # load TIFF by memory mapping
     tif_memmap = tifffile.memmap(path)
@@ -558,8 +562,7 @@ def read_tif(path: str, img5d: Image5d = None):
     img5d.path_img = path
     img5d.img_io = config.LoadIO.TIFFFILE
     
-    md[config.MetaKeys.RESOLUTIONS] = res
-    return img5d, res
+    return img5d, md
 
 
 def write_tif(

@@ -26,6 +26,7 @@
 
 #### I/O
 
+- Some TIF files can be loaded directly, without importing the file first (#90)
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 
 #### Server pipelines

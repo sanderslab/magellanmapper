@@ -13,12 +13,13 @@ Attributes:
         be incremented with any change to the image5d or its support "info"
         save array format.
 """
-
 from collections import OrderedDict
 import os
 from time import time
 import glob
+import pprint
 import re
+from typing import Any, Dict, List, Tuple
 from xml import etree as et
 
 import numpy as np
@@ -159,21 +160,25 @@ def parse_ome(filename):
     return names, sizes
 
 
-def parse_ome_raw(metadata: str):
+def parse_ome_raw(
+        metadata: str
+) -> Tuple[List[str], List[Tuple], Dict[config.MetaKeys, Any]]:
     """Parse Open Microscopy Environment XML to extract key metadata.
     
     Args:
         metadata: Metadata as a string in OME XML format.
     
     Returns:
-        names: array of names of seriess within the file.
-        sizes: array of tuples with dimensions for each series. Dimensions
-            will be given as (time, z, y, x, channels).
-        resolution: array of resolutions, also known as scaling, in the same
-            dimensions as sizes.
-        magnification: Objective magnification.
-        zoom: Zoom level.
-        pixel_type: Pixel data type as a string.
+        The ``names``, an array of names of seriess within the file;
+        ``sizes``, an array of tuples with dimensions for each series, where
+        dimensions are given as ``(time, z, y, x, channels)``; and
+        a ``dict`` of :attr:`magmap.settings.config.MetaKeys.RESOLUTIONS`, an
+        array of resolutions/scaling, in the same dimensions as sizes;
+        :attr:`magmap.settings.config.MetaKeys.MAGNIFICATION`, the objective
+        magnification;
+        :attr:`magmap.settings.config.MetaKeys.ZOOM`, the zoom level; and
+        :attr:`magmap.settings.config.MetaKeys.DTYPE`, the pixel data type as
+        a string.
     
     """
     array_order = "TZYXC"  # desired dimension order
@@ -217,12 +222,15 @@ def parse_ome_raw(metadata: str):
                     # assumes pixel type is same for all images
                     if pixel_type is None:
                         pixel_type = att.get("Type")
-    print("names: {}".format(names))
-    print("sizes: {}".format(sizes))
-    print("resolutions: {}".format(resolutions))
-    print("zoom: {}, magnification: {}".format(zoom, magnification))
-    print("pixel_type: {}".format(pixel_type))
-    return names, sizes, resolutions, magnification, zoom, pixel_type
+    md = dict.fromkeys(config.MetaKeys)
+    md[config.MetaKeys.RESOLUTIONS] = resolutions
+    md[config.MetaKeys.MAGNIFICATION] = magnification
+    md[config.MetaKeys.ZOOM] = zoom
+    md[config.MetaKeys.DTYPE] = pixel_type
+    _logger.debug(
+        "Extracted OME-XML metadata:\nnames: %s\nsizes: %s\n%s", names, sizes,
+        pprint.pformat(md))
+    return names, sizes, md
 
 
 def find_sizes(filename):
@@ -820,10 +828,10 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
     shape = None
     try:
         # get available embedded metadata via Bioformats
-        names, sizes, res, md[config.MetaKeys.MAGNIFICATION], \
-            md[config.MetaKeys.ZOOM], md[config.MetaKeys.DTYPE] = \
-            parse_ome_raw(bf.get_omexml_metadata(path))
+        names, sizes, md = parse_ome_raw(bf.get_omexml_metadata(path))
+        
         # unlike config.resolutions, keep only single list for simplicity
+        res = md[config.MetaKeys.RESOLUTIONS]
         if res and len(res) > series:
             md[config.MetaKeys.RESOLUTIONS] = res[series]
         if sizes and len(sizes) > series:

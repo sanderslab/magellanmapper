@@ -532,9 +532,8 @@ def read_tif(
     axes = tif.series[0].axes
     if tif.ome_metadata:
         # read OME-XML metadata
-        names, sizes, res, magnification, zoom, pixel_type = \
-            importer.parse_ome_raw(tif.ome_metadata)
-        res = np.array(res)
+        names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
+        res = np.array(md[config.MetaKeys.RESOLUTIONS])
         print(tif.ome_metadata)
     else:
         # parse resolutions

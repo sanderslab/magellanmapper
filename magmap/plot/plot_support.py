@@ -213,11 +213,11 @@ def imshow_multichannel(
     if alpha is None:
         alpha = 1
     if num_chls > 1:
-        if alpha_blend is not None:
+        alpha_bl = libmag.get_if_within(alpha_blend, 0)
+        if alpha_bl is not None:
             # alpha blend first two images
             alpha1, alpha2 = alpha_blend_intersection(
-                img2d[..., 0], img2d[..., 1],
-                libmag.get_if_within(alpha_blend, 0))
+                img2d[..., 0], img2d[..., 1], alpha_bl)
             alpha = np.stack((alpha1, alpha2))
         elif not libmag.is_seq(alpha):
             # if alphas not explicitly set per channel, make all channels more

@@ -23,6 +23,8 @@
 
 #### Cell detection
 
+- Fixed blob segmentation for newer versions of Scikit-image (#91)
+
 #### Volumetric image processing
 
 #### I/O

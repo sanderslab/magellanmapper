@@ -322,7 +322,9 @@ class Visualization(HasTraits):
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
     _scale_detections_high = Float  # needs to be trait to dynamically update
-    scale_detections = Float
+    scale_detections = Float(
+        tooltip="Change the size of blobs in the 3D viewer"
+    )
     segs_pts = None
     segs_selected = List  # indices
     # multi-select to allow updating with a list, but segment updater keeps
@@ -624,7 +626,7 @@ class Visualization(HasTraits):
                      values=[e.value for e in BlobColorStyles],
                      format_func=lambda x: x)),
         ),
-        Item("scale_detections",
+        Item("scale_detections", label="Scale 3D blobs",
              editor=RangeEditor(
                  low_name="_scale_detections_low",
                  high_name="_scale_detections_high",

@@ -442,11 +442,11 @@ class Visualization(HasTraits):
                 "Panes: show back and top panes\n"
                 "Shadows: show blob shadows as circles")
     _check_list_2d = List(
-        tooltip="Filtered: show filtered image after detection\n"
-                "Border: margin around ROIs\n"
-                "Seg: segment blobs\n"
-                "Grid: overlay a grid\n"
-                "MIP: maximum intensity projection")
+        tooltip="Filtered: show filtered image after detection in ROI planes\n"
+                "Border: margin around ROI planes\n"
+                "Seg: segment blobs during detection in ROI planes\n"
+                "Grid: overlay a grid in ROI planes\n"
+                "MIP: maximum intensity projection in overview images")
     _DEFAULTS_2D = [
         "Filtered", "Border", "Seg", "Grid", "MIP"]
     _planes_2d = List

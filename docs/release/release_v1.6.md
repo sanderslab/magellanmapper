@@ -43,6 +43,7 @@
 
 #### Python Dependency Changes
 
+- Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 
 #### R Dependency Changes

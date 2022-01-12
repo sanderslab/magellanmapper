@@ -54,7 +54,7 @@ Venv is a virtual environment manager included with Python (3.3+). We have provi
 bin/setup_venv.sh [-n name]
 ```
 
-This option assumes that you have already installed Python 3.6 and Java 8+.
+This option assumes that you have already installed Python 3.6+ and Java 8+.
 
 **UPDATE**: In MagellanMapper 1.4, Python versions 3.6-3.8 are supported now that we have built custom dependencies for these version.
 
@@ -140,8 +140,6 @@ Java versions:
 - The Conda setup pathway installs JDK 8
 - Python-Javabridge uses JDK v8+ (v12+ in Javabridge 1.0.19; see [below](#image-loading) for image loading times and setup troubleshooting with various Java versions)
 - ImageJ/Fiji currently supports Java 8 best in our experience
-
-Our custom packages assume an environment with Python 3.6 and Java 8+.
 
 ### Additional optional packages
 

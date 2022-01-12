@@ -11,8 +11,10 @@ Welcome to MagellanMapper's documentation!
    :caption: Contents:
 
    install.md
+   viewers.md
    cli.md
    settings.md
+   pipelines.md
    cloud_aws.md
 
 

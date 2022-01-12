@@ -75,11 +75,16 @@ class VisHandler(Handler):
         db = info.ui.get_ui_db("c")
         if db is not None:
             if config.verbose:
-                # show MagellanMapper related db entries
-                for k, v in db.items():
-                    if k.startswith("magmap"):
-                        _logger.debug("TraitsUI preferences for %s: %s", k, v)
-                        break
+                try:
+                    # show MagellanMapper related db entries
+                    for k, v in db.items():
+                        if k.startswith("magmap"):
+                            _logger.debug(
+                                "TraitsUI preferences for %s: %s", k, v)
+                            break
+                except ValueError as e:
+                    # may give pickle protocol error in older Python versions
+                    _logger.exception(e)
             db.close()
         
         # WORKAROUND: TraitsUI icon does not work in Mac; use PyQt directly to

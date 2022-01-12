@@ -15,8 +15,10 @@ Related publications and datasets:
 
 ## Quick Reference
 
+- **NEW**: [Full docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
 - [Installation](#installation) (more [details](docs/install.md))
-- [Intro to running MagellanMapper](#run-magellanmapper) (the GUI)
+- [Intro to running MagellanMapper](#run-magellanmapper)
+- [Using the viewers](docs/viewers.md)
 - [Command-line interface](docs/cli.md)
 - [Configuration and settings](docs/settings.md)
 
@@ -89,8 +91,6 @@ In the "Import" tab, you can select files, view and update metadata, and import 
 
 Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) can be opened with the SimpleITK/SimpleElastix Library and do not require separate import. Standard image formats such as TIFF or proprietary microscopy formats such as CZI can be imported by MagellanMapper into an industry standard Numpy format, which allows on-the-fly loading to reduce memory requirements and initial loading time.
 
-
-
 ### Sample 3D data
 
 To try out functions with sample images, download any of these practice files:
@@ -99,93 +99,6 @@ To try out functions with sample images, download any of these practice files:
 - [Sample downsampled tissue cleared whole brain (`sample_brain.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
 - [Allen Developing Mouse Brain Atlas E18.5 (`ADMBA-E18pt5.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/ADMBA-E18pt5.zip)
 
-## 3D viewer
-
-The main MagellanMapper GUI displays a 3D viewer and region of interest (ROI) selection controls. MagellanMapper uses the Mayavi data visualizer for 3D voxel or surface rendering.
-
-From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` option open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
-
-## Nuclei Annotation Editor
-
-The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Select the `ROI Editor` tab to view the editor. Press the `Redraw` button to redraw the editor at the selected ROI. To detect and display nuclei in the ROI, select the `Detect` tab and press the `Detect` button.
-
-| To Do...        | Shortcut            |
-| ---------------- | :------------------: |
-| Cycle between the 3 nuclei detection flags | Click within the dotted circles; incorrect (red), correct (green), or questionable (yellow) |
-| Move the circle's position | `shift+click` and drag (note that the original position will remain as a solid circle) |
-| Resize the circle's radius | `Alt+click` (`option+click` on Mac) and drag |
-| Copy the circle | `"c"+click` |
-| Duplicate a circle to the same position in anothe z-plane | `"v"+click` on the corresponding position in the z-plane to which the circle will be duplicated |
-| Cut the circle | `"x"+click` |
-| Delete the circle | `"d"+click` |
-| Increase/decrease the overview plots' z-plane | Arrow `up/right` to increase and `down/left` to decrease |
-| Jump to a z-plane in the overview plots corresponding to an ROI plane | `Right-click` on the the corresponding ROI plane |
-| Preview the ROI at a certain position | `Left-click` in the overview plot |
-| Redraw the editor at the chosen ROI settings | Double `right-click` in any overview plot |
-
-
-## Atlas Editor
-
-The multi-planar image plotter allows simplified viewing and editing of annotation labels for an atlas. Existing labels can be painted into adjacent areas, and synchronized planar viewing allows realtime visualization of changes in each plane.
-
-To view the editor, select the `Atlas Editor` tab. The `Redraw` button in the `ROI` tab of the left panel will redraw the editor if necessary. The `Registered images` section allows selecting any available annotations and label reference files to overlay.
-
-| To Do...       | Shortcut                    |
-| ------------- |:-------------------------: |
-| See the region name | Mouseover over any label |
-| Move the crosshairs and the corresponding planes | `Left-click` |
-| Move planes in the current plot | Scroll or arrow `up`/`down`|
-| Zoom | `Right-click` or `Ctrl+left-click` while moving the mouse up/down |
-| Pan | `Middle-click` or `Shift+left-click` while dragging the mouse |
-| Toggle between 0 and full labels alpha (opacity) | `a` |
-| Halve alpha | `shift+a` |
-| Return to original alpha | press `a` twice |
-
-Press on the "Edit" button to start painting labels using these controls:
-
-| To Do...        | Shortcut                    |
-| ------------- |:-------------------------:|
-|Paint over a new area | `Left-click`, pick a color, then drag over image |
-| Use the last picked color to paint over a new area | `Alt+Left-click`(option-click on Mac) |
-| Make the paintbrush smaller/bigger | `[`/`]` (brackets) |
-| Halve the increment of the paintbrush size | `[`/`]` and add `shift` |
-
-
-Use the save button in the main window with the atlas window still open to resave
-
-
-## Start a processing pipeline
-
-Automated processing will attempt to scale based on your system resources but may require some manual intervention. This pipeline has been tested on a Macbook Pro laptop and AWS EC2 Linux (RHEL and Amazon Linux based) instances.
-
-Optional dependencies:
-
-- ImageJ/Fiji with the BigStitcher plugin: required for tile stitching; downloaded automatically onto a server when running `deploy.sh`
-- ImageMagick: required for exporting a stack of planes to an animated GIF file
-- FFMpeg: required to export a stack to a movie format such as MP4
-- [Slack incoming webhook](https://api.slack.com/incoming-webhooks): to notify when tile stitching alignment is ready for verification and pipeline has completed
-
-### Local
-Run a pipeline in `pipelines.sh`.
-
-For example, load a `.czi` file and display in the GUI, which will import the file into a Numpy format for faster future loading:
-
-```
-bin/pipelines.sh -i data/HugeImage.czi
-```
-
-To sitch a multi-tile image and perform cell detection on the entire image, which will load BigStitcher in ImageJ/Fiji for tile stitching:
-
-```
-bin/pipelines.sh -i data/HugeImage.czi -p full
-```
-
-See `bin/pipelines.sh` for additional sample commands for common scenarios, such as cell detection on a small region of interest. The file can be edited directly to load the same image, for example.
-
-### Server
-
-You can launch a standard server, deploy MagellanMapper code, and run a pipeline. See [tools for AWS cloud management](cloud_aws.sh) for more details. 
-
 Licensed under the open-source [BSD-3 license](LICENSE.txt)
 
-Author: David Young, 2017, 2021, Stephan Sanders Lab
+Author: David Young, 2017, 2022, Stephan Sanders Lab

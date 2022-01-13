@@ -125,7 +125,7 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 | SimpleElastix | Yes, via custom package | Python 3.6-3.9 | C, C++ compilers | Load medical 3D formats, image regsitration |
 | ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
 
-[^\*]: Extended wheels to Python 3.7-3.9 in MagellanMapper 1.4, though Python 3.9 is not supported yet until Mayavi is compatible with the VTK versions that provide wheels for this version (as of Mayavi 4.7.3 and VTK 9.1, which are not currently compatible)
+[^\*]: MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies. MagellanMapper 1.6 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions.
 
 C compilers by platform:
 

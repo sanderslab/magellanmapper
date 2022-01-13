@@ -57,7 +57,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'MagellanMapper'
-copyright = '2017-2021, David Young'
+copyright = '2017-2022, David Young'
 author = 'David Young'
 
 # The version info for the project you're documenting, acts as replacement for

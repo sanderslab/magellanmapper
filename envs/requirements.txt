@@ -63,5 +63,5 @@ traits==6.3.1
 traitsui==7.2.1
 typing-extensions==3.10.0.2
 urllib3==1.26.7
-vtk==9.0.1
+vtk==9.1.0
 zipp==3.6.0

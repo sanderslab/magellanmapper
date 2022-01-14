@@ -14,6 +14,12 @@
 
 MagellanMapper can be installed many ways depending on one's Python preferences.
 
+### Recommended: Using the installer
+
+The easiest way to install MagellanMapper is using one of the [installers](https://github.com/sanderslab/magellanmapper/releases) now available for Windows, macOS, and Linux.
+
+Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
+
 ### Recommended: Install in a Conda environment
 
 Conda simplifies installation by managing all supporting packages such as Java and others that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
@@ -48,7 +54,7 @@ See the [Readme](../README.md#run-magellanmapper) for instructions on running Ma
 
 ### Option 2: Install through Venv+Pip
 
-Venv is a virtual environment manager included with Python (3.3+). We have provided a convenient script to set up a new environment and install all dependencies using Pip:
+Python 3.6-3.9 supported. Venv is a virtual environment manager included with Python. We have provided a convenient script to set up a new environment and install all dependencies using Pip:
 
 ```
 bin/setup_venv.sh [-n name]
@@ -56,7 +62,7 @@ bin/setup_venv.sh [-n name]
 
 This option assumes that you have already installed Python 3.6+ and Java 8+.
 
-**UPDATE**: In MagellanMapper 1.4, Python versions 3.6-3.8 are supported now that we have built custom dependencies for these version.
+**UPDATE**: Python 3.6 support is deprecated in MagellanMapper 1.6.
 
 This setup script will check and install the following dependencies:
 

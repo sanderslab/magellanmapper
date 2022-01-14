@@ -1,4 +1,5 @@
-# This is a basic workflow to help you get started with Actions
+# GitHub Actions Continuous Integration workflow for MagellanMapper
+# Based on initial template by GitHub Actions
 
 name: CI
 
@@ -21,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     steps:
       - name: Check out repo

@@ -79,6 +79,9 @@ class SettingsDict(dict):
         self.profiles: Dict[str, Dict] = {}
         self.timestamps = {}
         self.delimiter = ","
+        
+        # update with args
+        self.update(*args, **kwargs)
 
         #: bool: add a modifier directly as a value rather than updating
         # this dict's settings with the corresponding keys

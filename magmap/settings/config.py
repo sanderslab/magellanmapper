@@ -28,6 +28,7 @@ import numpy as np
 from magmap.settings import logs
 
 if TYPE_CHECKING:
+    import SimpleITK as sitk
     from magmap.atlas import labels_meta
 
 #: str: Application name.
@@ -505,7 +506,7 @@ load_labels: Optional[str] = None
 #: Numpy array of a labels image file, typically corresponding to ``img5d``.
 labels_img: Optional = None
 #: Labels image as a SimpleITK Image instance.
-labels_img_sitk: Optional[np.ndarray] = None
+labels_img_sitk: Optional["sitk.Image"] = None
 #: Original labels image, before any processing.
 labels_img_orig: Optional[np.ndarray] = None
 #: Scaling factors from ``labels_img`` to ``img5d``. 

@@ -27,6 +27,8 @@
 
 #### Volumetric image processing
 
+- Fixed 3D surface area measurement with Scikit-image >= v0.19
+
 #### I/O
 
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`

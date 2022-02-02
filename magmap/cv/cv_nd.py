@@ -303,19 +303,20 @@ def exterior_nd(img_np):
     return exterior
 
 
-def surface_area_3d(img_np, level=0.0, spacing=None):
+def surface_area_3d(
+        img_np: np.ndarray, level: float = 0.0,
+        spacing: Optional[Sequence[float]] = None) -> float:
     """Measure the surface area for a 3D volume.
     
     Wrapper for :func:`measure.marching_cubes_lewiner` and 
     :func:`measure.mesh_surface_area`.
     
     Args:
-        img_np (:obj:`np.ndarray`): 3D image array, which can be a mask.
-        level (float): Contour value for :func:`measure.marching_cubes_lewiner`;
+        img_np: 3D image array, which can be a mask.
+        level: Contour value for :func:`measure.marching_cubes_lewiner`;
             defaults to 0.0.
-        spacing (List[float]): Sequence of voxel spacing in same order 
-            as for ``img_np``; defaults to None, which will use a value of 
-            ``np.ones(3)``.
+        spacing: Sequence of voxel spacing in same order as for ``img_np``;
+            defaults to None, which will use a value of ``np.ones(3)``.
 
     Returns:
         Surface area in the coordinate units squared.
@@ -324,7 +325,14 @@ def surface_area_3d(img_np, level=0.0, spacing=None):
     if spacing is None:
         spacing = np.ones(3)
     try:
-        verts, faces, normals, vals = measure.marching_cubes_lewiner(
+        if hasattr(measure, "marching_cubes_lewiner"):
+            # skimage 0.14 removed `marching_cubes`
+            fn_marching = measure.marching_cubes_lewiner
+        else:
+            # skimage 0.19 removed `marching_cubes_lewiner` and went back to
+            # `marching_cubes`
+            fn_marching = measure.marching_cubes
+        verts, faces, normals, vals = fn_marching(
             img_np, level=level, spacing=spacing)
         return measure.mesh_surface_area(verts, faces)
     except RuntimeError as e:

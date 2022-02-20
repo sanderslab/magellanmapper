@@ -197,7 +197,7 @@ class DraggableCircle:
         if (event.mouseevent.key in ("control", "shift", "alt")
                 or event.artist != self.circle):
             return
-        #print("color: {}".format(self.facecolori))
+        #print("color: {}".format(self._facecolori))
         if event.mouseevent.key == "x":
             # "cut" segment
             self.picked.append((self, self.CUT))
@@ -234,7 +234,9 @@ class DraggableCircle:
             self.segment[4] = i
             self.fn_update_seg(self.segment, seg_old)
             print("picked segment: {}".format(self.segment))
-        self.circle.figure.canvas.draw()
+        if self.circle.figure:
+            # redraw if figure is still attached
+            self.circle.figure.canvas.draw()
 
     def disconnect(self):
         """Disconnect event listeners.

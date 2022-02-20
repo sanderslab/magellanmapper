@@ -6,19 +6,27 @@ The tabbed pane on the right of the graphical interface provides several  image 
 
 The multi-level 2D plotter is geared toward simplifying annotation for nuclei or other objects. Select the `ROI Editor` tab to view the editor. Press the `Redraw` button to redraw the editor at the selected ROI. To detect and display nuclei in the ROI, select the `Detect` tab and press the `Detect` button.
 
+### Navigation
+
 | To Do...        | Shortcut            |
 | ---------------- | :------------------: |
-| Cycle between the 3 nuclei detection flags | Click within the dotted circles; incorrect (red), correct (green), or questionable (yellow) |
-| Move the circle's position | `shift+click` and drag (note that the original position will remain as a solid circle) |
-| Resize the circle's radius | `Alt+click` (`option+click` on Mac) and drag |
-| Copy the circle | `"c"+click` |
-| Duplicate a circle to the same position in anothe z-plane | `"v"+click` on the corresponding position in the z-plane to which the circle will be duplicated |
-| Cut the circle | `"x"+click` |
-| Delete the circle | `"d"+click` |
 | Increase/decrease the overview plots' z-plane | Arrow `up/right` to increase and `down/left` to decrease |
 | Jump to a z-plane in the overview plots corresponding to an ROI plane | `Right-click` on the the corresponding ROI plane |
 | Preview the ROI at a certain position | `Left-click` in the overview plot |
 | Redraw the editor at the chosen ROI settings | Double `right-click` in any overview plot |
+
+### Annotations
+
+| To Do...        | Shortcut            |
+| ---------------- | :------------------: |
+| Add a circle | `Ctrl+click` at the desired location |
+| Move the circle's position | `shift+click` and drag (note that the original position will remain as a solid circle) |
+| Resize the circle's radius | `Alt+click` (`option+click` on Mac) and drag |
+| Copy the circle | `"c"+click` |
+| Duplicate a circle to the same position in another z-plane | `"v"+click` on the corresponding position in the z-plane to which the circle will be duplicated |
+| Cut the circle | `"x"+click` |
+| Delete the circle | `"d"+click` |
+| Cycle between the 3 nuclei detection flags | Click within the dotted circles; incorrect (red), correct (green), or questionable (yellow) |
 
 
 ## Atlas Editor

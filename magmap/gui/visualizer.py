@@ -25,7 +25,7 @@ matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import Qt, QtWidgets, QtCore
 
 # adjust for HiDPI screens before QGuiApplication is created, necessary
 # on Windows and Linux (not needed but no apparent affect on MacOS)
@@ -304,6 +304,7 @@ class Visualization(HasTraits):
 
     btn_redraw = Button("Redraw")
     _btn_save_fig = Button("Save Figure")
+    _roi_btn_help = Button("Help")
     roi = None  # combine with roi_array?
     _rois_selections = Instance(ListSelections)
     rois_check_list = Str
@@ -602,6 +603,7 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
+            Item("_roi_btn_help", show_label=False),
         ),
         label="ROI",
     )
@@ -1948,6 +1950,11 @@ class Visualization(HasTraits):
     def _redraw_fired(self):
         """Respond to redraw button presses."""
         self.redraw_selected_viewer()
+    
+    @on_trait_change("_roi_btn_help")
+    def _help_roi(self):
+        """Respond to ROI panel help button presses."""
+        Qt.QDesktopServices.openUrl(QtCore.QUrl(config.DOCS_URL_VIEWER))
     
     def redraw_selected_viewer(self, clear=True):
         """Redraw the selected viewer.

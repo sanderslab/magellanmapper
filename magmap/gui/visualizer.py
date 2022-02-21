@@ -327,11 +327,12 @@ class Visualization(HasTraits):
     )
     segs_pts = None
     segs_selected = List  # indices
+    _segs_row_scroll = Int()  # row index to scroll the table
     # multi-select to allow updating with a list, but segment updater keeps
     # selections to single when updating them
     segs_table = TabularEditor(
         adapter=SegmentsArrayAdapter(), multi_select=True, 
-        selected_row="segs_selected")
+        selected_row="segs_selected", scroll_to_row="_segs_row_scroll")
     segs_in_mask = None  # boolean mask for segments in the ROI
     segs_cmap = None
     segs_feedback = Str("Segments output")
@@ -2902,6 +2903,9 @@ class Visualization(HasTraits):
                 self.segments = np.concatenate((self.segments, segs))
             self.segs_selected.append(len(self.segments) - 1)
             print("added segment to table: {}".format(seg))
+        
+        # scroll to first selected row
+        self._segs_row_scroll = min(self.segs_selected)
         return seg
     
     @property

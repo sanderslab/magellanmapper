@@ -19,14 +19,14 @@ The multi-level 2D plotter is geared toward simplifying annotation for nuclei or
 
 | To Do...        | Shortcut            |
 | ---------------- | :------------------: |
-| Add a circle | `Ctrl+click` at the desired location |
+| Add a circle | `Ctrl+click` at the desired location <p>`Ctrl+1+click` to set channel 1 (replace with desired channel) |
 | Move the circle's position | `shift+click` and drag (note that the original position will remain as a solid circle) |
 | Resize the circle's radius | `Alt+click` (`option+click` on Mac) and drag |
 | Copy the circle | `"c"+click` |
 | Duplicate a circle to the same position in another z-plane | `"v"+click` on the corresponding position in the z-plane to which the circle will be duplicated |
 | Cut the circle | `"x"+click` |
 | Delete the circle | `"d"+click` |
-| Cycle between the 3 nuclei detection flags | Click within the dotted circles; incorrect (red), correct (green), or questionable (yellow) |
+| Cycle between the 3 nuclei detection flags | `click` within the dotted circles. Red = incorrect, green = correct, and yellow = questionable. <p>`"r"+click` to cycle in reverse order. |
 
 
 ## Atlas Editor

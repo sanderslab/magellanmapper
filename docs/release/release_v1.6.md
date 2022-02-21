@@ -23,6 +23,8 @@
 
 #### Cell detection
 
+- Auto-scrolls to the selected annotation
+- `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
 
 #### Volumetric image processing

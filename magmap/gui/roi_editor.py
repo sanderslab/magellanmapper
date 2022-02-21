@@ -743,24 +743,26 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 # for some reason becomes none if previous event was
                 # ctrl combo and this event is control
                 pass
+            
             elif event.key == "control" or event.key.startswith("ctrl"):
+                # add a circle
                 blob_channel = None
                 if channel:
+                    # default to using the first selected channel
                     blob_channel = channel[0]
-                    num_chls = len(channel)
-                    if num_chls > 1:
-                        chl_matches = re.search(regex_key_chl, event.key)
-                        if chl_matches:
-                            # ctrl+n to specify the n-th channel
-                            chl = int(chl_matches[0])
-                            if chl < num_chls:
-                                blob_channel = channel[chl]
-                            else:
-                                print("selected channel index {} not within"
-                                      " range up to index {}"
-                                      .format(chl, num_chls - 1))
-                                return
+                    chl_matches = re.search(regex_key_chl, event.key)
+                    if chl_matches:
+                        # ctrl+n to specify channel n
+                        chl = int(chl_matches[0])
+                        if chl in channel:
+                            blob_channel = chl
+                        else:
+                            self.fn_status_bar(
+                                f"Selected channel, {chl}, must be in "
+                                f"{channel}")
+                            return
                 try:
+                    # add the circle patch
                     axi = subplots.index(inax)
                     if (axi != -1 and self._z_planes_padding <= axi
                             < z_planes - self._z_planes_padding):
@@ -779,7 +781,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     print(e)
                     print("not on a plot to select a point")
                 fig.canvas.draw_idle()
+            
             elif event.key == "v":
+                # paste a circle
                 _circle_last_picked_len = len(self._circle_last_picked)
                 if _circle_last_picked_len < 1:
                     print("No previously picked circle to paste")

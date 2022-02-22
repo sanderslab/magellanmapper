@@ -365,6 +365,7 @@ class Visualization(HasTraits):
     _profiles_combined = Str  # combined profiles for selected category
     _profiles_ver = Str
     _profiles_reset_prefs_btn = Button("Reset preferences")
+    _profiles_btn_help = Button("Help")
     _profiles_reset_prefs = Bool  # trigger resetting prefs in handler
 
     # Image adjustment panel
@@ -686,7 +687,10 @@ class Visualization(HasTraits):
                 Item("_profiles_ver", style="readonly",
                      label="MagellanMapper version:"),
             ),
-            Item("_profiles_reset_prefs_btn", show_label=False),
+            HGroup(
+                Item("_profiles_reset_prefs_btn", show_label=False),
+                Item("_profiles_btn_help", show_label=False),
+            ),
             label="Settings",
         ),
         label="Profiles",
@@ -1951,10 +1955,27 @@ class Visualization(HasTraits):
         """Respond to redraw button presses."""
         self.redraw_selected_viewer()
     
+    @staticmethod
+    def _open_help_docs(suffix: str = ""):
+        """Open help documentation in the default web browser.
+        
+        Args:
+            suffix: Name of page within the main documentation; defaults to
+                an empty string to open the docs homepage.
+
+        """
+        Qt.QDesktopServices.openUrl(QtCore.QUrl(
+            f"{config.DocsURLs.DOCS_URL.value}/{suffix}"))
+    
     @on_trait_change("_roi_btn_help")
     def _help_roi(self):
         """Respond to ROI panel help button presses."""
-        Qt.QDesktopServices.openUrl(QtCore.QUrl(config.DOCS_URL_VIEWER))
+        self._open_help_docs(config.DocsURLs.DOCS_URL_VIEWER.value)
+
+    @on_trait_change("_profiles_btn_help")
+    def _help_profiles(self):
+        """Respond to profiles panel help button presses."""
+        self._open_help_docs(config.DocsURLs.DOCS_URL_SETTINGS.value)
     
     def redraw_selected_viewer(self, clear=True):
         """Redraw the selected viewer.

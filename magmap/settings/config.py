@@ -37,10 +37,17 @@ APP_NAME = "MagellanMapper"
 URI_SCHEME = "magmap"
 #: str: Reverse Domain Name System identifier.
 DNS_REVERSE = f"io.github.sanderslab.{APP_NAME}"
-#: Docs URL.
-DOCS_URL: str = "https://magellanmapper.readthedocs.io/en/latest"
-#: Viewer docs URL.
-DOCS_URL_VIEWER: str = f"{DOCS_URL}/viewers.html"
+
+
+class DocsURLs(Enum):
+    """URLs to online documentation."""
+    #: Docs base URL.
+    DOCS_URL = "https://magellanmapper.readthedocs.io/en/latest"
+    #: Viewer doc suffix.
+    DOCS_URL_VIEWER = "viewers.html"
+    #: Settings doc URL.
+    DOCS_URL_SETTINGS = "settings.html"
+
 
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001

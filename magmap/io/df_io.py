@@ -558,7 +558,8 @@ def print_data_frame(df, sep=" ", index=False, header=True, show=True):
     else:
         df_str = df.to_csv(sep=sep, index=index, header=header, na_rep="NaN")
     if show:
-        print(df_str)
+        # show on a new line to align headers with columns in logger
+        print(f"\n{df_str}")
     return df_str
 
 

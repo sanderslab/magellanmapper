@@ -445,8 +445,7 @@ def _get_roi_id(db, offset, shape, exp_name=None):
     if exp_name is None:
         exp_name = sqlite.get_exp_name(
             config.img5d.path_img if config.img5d else None)
-    exp_id = sqlite.select_or_insert_experiment(
-        db.conn, db.cur, exp_name, None)
+    exp_id = db.select_or_insert_experiment(exp_name, None)
     roi_id = sqlite.select_or_insert_roi(
         db.conn, db.cur, exp_id, config.series, offset, shape)[0]
     return roi_id

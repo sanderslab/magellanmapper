@@ -272,7 +272,7 @@ def get_filename_without_ext(path: str) -> str:
 
 def combine_paths(
         base_path: str, suffix: str, sep: str = "_", ext: str = None,
-        check_dir: bool = False):
+        check_dir: bool = False, keep_ext: bool = False):
     """Merge two paths by appending ``suffix``, replacing the extention 
     in ``base_path``.
     
@@ -287,6 +287,7 @@ def combine_paths(
             the extension in ``suffix``.
         check_dir: True to check if ``base_path`` is an existing directory,
             in which case it is simply joined to ``suffix``; defaults to False.
+        keep_ext: True to keep the `base_path` extension; defaults to False.
     
     Returns:
         Merged path.
@@ -301,8 +302,12 @@ def combine_paths(
         # unnecessary to split out ext and adding sep
         path = os.path.join(base_path, suffix)
     else:
-        path = splitext(base_path)[0] + sep + suffix
-    if ext: path = "{}.{}".format(splitext(path)[0], ext)
+        # remove the extension if flagged and combine with separator and suffix
+        path = base_path if keep_ext else splitext(base_path)[0]
+        path = path + sep + suffix
+    if ext:
+        # replace extension from suffix with given ext
+        path = f"{splitext(path)[0]}.{ext}"
     return path
 
 

@@ -19,6 +19,7 @@ import os
 from time import time
 import glob
 import re
+from typing import Any, Dict, Optional, Tuple, Union
 from xml import etree as et
 
 import numpy as np
@@ -252,41 +253,59 @@ def find_sizes(filename):
     return sizes, dtype
 
 
-def make_filenames(filename, series=None, modifier=""):
+def make_filenames(
+        filename: str, series: Optional[int] = None, modifier: str = "",
+        keep_ext: bool = False) -> Tuple[str, str]:
     """Make MagellanMapper-oriented image and image metadata filenames.
     
     Args:
-        filename (str): Original path from which MagellanMapper-oriented
+        filename: Original path from which MagellanMapper-oriented
             filenames  will be derived.
-        series (int): Image series; defaults to None.
-        modifier (str): Separator for image series; defaults to an empty string.
+        series: Image series; defaults to None.
+        modifier: Separator for image series; defaults to an empty string.
+        keep_ext: True to keep the `filename` extension; defaults to False.
     
     Returns:
         Tuple of path to the main image and path to metadata.
+    
     """
-    print("filename: {}".format(filename))
-    filename_base = filename_to_base(filename, series, modifier)
-    print("filename_base: {}".format(filename_base))
+    # convert to base path, which may remove extension
+    filename_base = filename_to_base(filename, series, modifier, keep_ext)
+    _logger.info(
+        f"Image filename: {filename}\n"
+        f"Converted to base filename: {filename_base}")
+    
+    # combine with image suffixes, without removing extension from base path
+    # since any extension would have been removed earlier
     filename_image5d = libmag.combine_paths(
-        filename_base, config.SUFFIX_IMAGE5D)
-    filename_meta = libmag.combine_paths(filename_base, config.SUFFIX_META)
+        filename_base, config.SUFFIX_IMAGE5D, keep_ext=True)
+    filename_meta = libmag.combine_paths(
+        filename_base, config.SUFFIX_META, keep_ext=True)
+    
     return filename_image5d, filename_meta
 
 
-def filename_to_base(filename, series=None, modifier=""):
+def filename_to_base(
+        filename: str, series: Optional[int] = None, modifier: str = "",
+        keep_ext: bool = False) -> str:
     """Convert an image path to a base path with an optional modifier.
     
     Args:
-        filename (str): Path to original image.
-        series (int): Series (eg tile) within image; defaults to None.
+        filename: Path to original image.
+        series: Series (eg tile) within image; defaults to None.
             Currently ignored, but may be implemented in the future to
             track different tiles or timepoints.
-        modifier (str): Modifier string prior to series; defaults to an
+        modifier: Modifier string prior to series; defaults to an
             empty string.
+        keep_ext: True to keep the `filename` extension; defaults to False.
+    
+    Returns:
+        Base path.
+    
     """
-    path = libmag.splitext(filename)[0]
+    path = filename if keep_ext else libmag.splitext(filename)[0]
     if modifier:
-        path = libmag.combine_paths(path, modifier)
+        path = libmag.combine_paths(path, modifier, keep_ext=True)
     return path
 
 

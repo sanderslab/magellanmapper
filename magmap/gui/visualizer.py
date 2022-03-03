@@ -311,6 +311,10 @@ class Visualization(HasTraits):
     
     btn_detect = Button("Detect")
     btn_save_segments = Button("Save Blobs")
+    _segs_labels = List(  # blob label selector
+        ["-1"],
+        tooltip="All blob labels will be set to this value when running Detect",
+    )
     _segs_visible = List  # blob visibility options
     _colocalize = List  # blob co-localization options
     _blob_color_style = List  # blob coloring
@@ -609,6 +613,13 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_detect", show_label=False),
             Item("btn_save_segments", show_label=False),
+        ),
+        HGroup(
+            Item("_segs_labels", label="Change labels to",
+                 editor=CheckListEditor(
+                     values=[str(c) for c in
+                             roi_editor.DraggableCircle.BLOB_COLORS.keys()],
+                     format_func=lambda x: x)),
         ),
         HGroup(
             Item("_segs_visible", style="custom", show_label=False,
@@ -2142,6 +2153,12 @@ class Visualization(HasTraits):
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
         if segs_all is not None:
+            # set confirmation flag to user-selected label for any
+            # un-annotated blob
+            confirmed = detector.get_blob_confirmed(segs_all)
+            confirmed[confirmed == -1] = self._segs_labels[0]
+            detector.set_blob_confirmed(segs_all, confirmed)
+            
             # convert segments to visualizer table format and plot
             self.segments = detector.shift_blob_abs_coords(
                 segs_all, offset[::-1])

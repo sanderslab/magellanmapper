@@ -846,7 +846,7 @@ class ClrDB:
             return (self.select_blob(roi_id, blob)[1] if blob_id is None
                     else blob_id)
         
-        if matches is None: return None
+        if matches is None or matches.df is None: return None
         ids = []
         for _, match in matches.df.iterrows():
             blob1_id = get_blob_id(

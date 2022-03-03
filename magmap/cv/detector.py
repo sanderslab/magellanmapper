@@ -14,12 +14,12 @@ from enum import Enum
 import math
 import pprint
 from time import time
-from typing import Dict, Optional
+from typing import Dict, Optional, Sequence
 
 import numpy as np
 from skimage.feature import blob_log
 
-from magmap.cv import cv_nd
+from magmap.cv import colocalizer, cv_nd
 from magmap.io import libmag, np_io
 from magmap.plot import plot_3d
 from magmap.settings import config
@@ -40,34 +40,30 @@ class Blobs:
     """Blob storage class.
     
     Attributes:
-        BLOBS_NP_VER (int): Current blobs Numpy archive version number.
-        blobs (:obj:`np.ndarray`): 2D Numpy array of blobs in the format
+        blobs: 2D Numpy array of blobs in the format
             ``[[z, y, x, radius, ...], ...]``; defaults to None.
-        blob_matches (:obj:`magmap.io.sqlite.BlobMatch`): Sequence of blob
-            matches; defaults to None.
-        colocalizations (:obj:`np.ndarray`): 2D Numpy array of same length
+        blob_matches: Sequence of blob matches; defaults to None.
+        colocalizations: 2D Numpy array of same length
             as ``blobs`` with a column for each channel, where 0 = no
             signal and 1 = signal at the corresponding blob's location
             in the given and channel; defaults to None.
-        path (str): Path from which blobs were loaded; defaults to None.
-        ver (int): Version number; defaults to :const:`BLOBS_NP_VER`.
-        roi_offset (Sequence[int]): Offset in ``z,y,x`` from ROI in which
-            blobs were detected.
-        roi_size (Sequence[int]): Size in ``z,y,x`` from ROI in which
-            blobs were detected.
-        resolutions (Sequence[int]): Physical unit resolution sizes in
-            ``[[z,y,x], ...]``; defaults to None.
-        basename (str): Archive name, typically the filename without extension
+        path: Path from which blobs were loaded; defaults to None.
+        ver: Version number; defaults to :const:`BLOBS_NP_VER`.
+        roi_offset: Offset in ``z,y,x`` from ROI in which blobs were detected.
+        roi_size: Size in ``z,y,x`` from ROI in which blobs were detected.
+        resolutions: Physical unit resolution sizes in ``[[z,y,x], ...]``;
+            defaults to None.
+        basename: Archive name, typically the filename without extension
             of the image file in which blobs were detected; defaults to None.
     
     """
 
-    # blobs Numpy archive versions:
-    # 0: initial version
-    # 1: added resolutions, basename, offset, roi_size fields
-    # 2: added archive version number
-    # 3: added colocs
-    BLOBS_NP_VER = 3
+    #: Current blobs Numpy archive version number.
+    #: 0: initial version
+    #: 1: added resolutions, basename, offset, roi_size fields
+    #: 2: added archive version number
+    #: 3: added colocs
+    BLOBS_NP_VER: int = 3
     
     class Keys(Enum):
         """Numpy archive metadata keys as enumerations."""
@@ -79,19 +75,24 @@ class Blobs:
         ROI_OFFSET = "offset"
         ROI_SIZE = "roi_size"
 
-    def __init__(self, blobs=None, blob_matches=None, colocalizations=None,
-                 path=None):
+    def __init__(
+            self,
+            blobs: Optional[np.ndarray] = None,
+            blob_matches: Optional["colocalizer.BlobMatch"] = None,
+            colocalizations: Optional[np.ndarray] = None,
+            path: str = None):
         """Initialize blobs storage object."""
         self.blobs = blobs
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
         self.path = path
         
-        self.ver = self.BLOBS_NP_VER
-        self.roi_offset = None
-        self.roi_size = None
-        self.resolutions = None
-        self.basename = None
+        # additional attributes
+        self.ver: int = self.BLOBS_NP_VER
+        self.roi_offset: Optional[Sequence[int]] = None
+        self.roi_size: Optional[Sequence[int]] = None
+        self.resolutions: Optional[Sequence[float]] = None
+        self.basename: Optional[str] = None
 
     def load_blobs(self, path=None):
         """Load blobs from an archive.

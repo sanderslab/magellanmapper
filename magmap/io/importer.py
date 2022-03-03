@@ -539,15 +539,16 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     return True
 
 
-def load_metadata(path, check_ver=False, assign=True):
-    """Load image info, such as saved microscopy data and image ranges, 
-    storing some values into appropriate module level variables.
+def load_metadata(
+        path: str, check_ver: bool = False, assign: bool = True
+) -> Tuple[Optional[Dict[Union[str, config.MetaKeys], Any]], int]:
+    """Load image info, such as saved microscopy data and image ranges.
     
     Args:
-        path (str): Path to image info file.
-        check_ver (bool): True to stop loading if the archive's version number  
+        path: Path to image info file.
+        check_ver: True to stop loading if the archive's version number  
             is less than :const:``IMAGE5D_NP_VER``; defaults to False.
-        assign (bool): True to assign values to module-level settings.
+        assign: True to assign values to module-level settings.
     
     Returns:
         Tuple of ``output``, the dictionary with image info, and 
@@ -562,6 +563,11 @@ def load_metadata(path, check_ver=False, assign=True):
         if output:
             # metadata is in first document
             output = output[0]
+            
+            # add entries for MetaKeys enum
+            # TODO: convert corresponding keys to enum?
+            output.update(dict.fromkeys(config.MetaKeys, None))
+    
     except FileNotFoundError as err:
         # fall back to pre-v1.4 NPZ file format
         _logger.warn("Could not load metadata file '%s', will check NPZ format",
@@ -594,47 +600,75 @@ def load_metadata(path, check_ver=False, assign=True):
     return output, image5d_ver_num
 
 
-def assign_metadata(md):
-    """Assign values from a metadata dictionary to module variables. 
+def assign_metadata(md: Dict[Union[str, config.MetaKeys], Any]):
+    """Assign values from a metadata dictionary to module variables.
+    
+    Values are also added to :class:`magmap.settings.config.MetaKeys` entries.
     
     Args:
-        md (dict): Dictionary of metadata.
+        md: Dictionary of metadata.
 
     """
     try:
+        # image names for each series; not currently used
         names = md["names"]
         print("names: {}".format(names))
     except KeyError:
         print("could not find names")
+    
     try:
+        # image shapes for each series
         config.image5d_shapes = md["sizes"]
+        # get first series' shape
+        md[config.MetaKeys.SHAPE] = libmag.get_if_within(
+            config.image5d_shapes, 0)
         print("sizes {}".format(config.image5d_shapes))
     except KeyError:
         print("could not find sizes")
+    
     try:
+        # image resolutions for each series
         config.resolutions = np.array(md["resolutions"])
+        # get first series' resolution
+        md[config.MetaKeys.RESOLUTIONS] = libmag.get_if_within(
+            config.resolutions, 0)
         print("set resolutions to {}".format(config.resolutions))
     except KeyError:
         print("could not find resolutions")
+    
     try:
+        # image objective magnification
         config.magnification = md["magnification"]
+        # get first series' mag
+        md[config.MetaKeys.MAGNIFICATION] = libmag.get_if_within(
+            config.magnification, 0)
         print("magnification: {}".format(config.magnification))
     except KeyError:
         print("could not find magnification")
+    
     try:
+        # image objective zoom
         config.zoom = md["zoom"]
+        # get first series' zoom
+        md[config.MetaKeys.ZOOM] = libmag.get_if_within(
+            config.zoom, 0)
         print("zoom: {}".format(config.zoom))
     except KeyError:
         print("could not find zoom")
+    
     try:
+        # intensity close to the min across all planes for each image series
         config.near_min = md["near_min"]
         print("set near_min to {}".format(config.near_min))
     except KeyError:
         print("could not find near_max")
+    
     try:
+        # intensity close to the max across all planes for each image series
         config.near_max = md["near_max"]
         print("set near_max to {}".format(config.near_max))
         if config.vmaxs is None:
+            # use a slightly higher value for display purposes
             config.vmax_overview = np.multiply(config.near_max, 1.1)
         print("Set vmax_overview to {}".format(config.vmax_overview))
     except KeyError:

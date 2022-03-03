@@ -79,7 +79,8 @@ def find_scaling(
     """Find scaling between two images.
     
     Scaling can be computed to translate blob coordinates into another
-    space, such as a heat map for a downsampled image.
+    space, such as a downsampled image. These compressed coordinates can be
+    used to generate a heat map of blobs.
     
     Args:
         img_path: Base path to image.
@@ -99,8 +100,7 @@ def find_scaling(
         of the full-sized image found based on ``img_path``.
 
     """
-    # get scaling and resolutions from blob space to that of a down/upsampled
-    # image space
+    # path to image, which may have been resized
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None
@@ -110,16 +110,29 @@ def find_scaling(
         img_info = importer.read_file(img_path_transposed, config.series).meta
         scaling = img_info["scaling"]
         res = np.multiply(config.resolutions[0], scaling)
-        print("retrieved scaling from resized image:", scaling)
-        print("rescaled resolution for full-scale image:", res)
+        _logger.info("Retrieved scaling from resized image: %s", scaling)
+        _logger.info("Rescaled resolution for full-scale image: %s", res)
+    
     elif scaled_shape is not None:
-        # fall back to scaling based on comparison to original image
+        # scale by comparing to original image
         img5d = importer.read_file(img_path_transposed, config.series)
-        scaling = importer.calc_scaling(
-            img5d.img, None, scaled_shape=scaled_shape)
-        res = config.resolutions[0]
-        print("using scaling compared to full image:", scaling)
-        print("resolution from full-scale image:", res)
+        img5d_shape = None
+        if img5d.img is not None:
+            # get the shape from the original image
+            img5d_shape = img5d.img.shape
+        elif img5d.meta is not None:
+            # get the shape from the original image's metadata
+            img5d_shape = img5d.meta[config.MetaKeys.SHAPE][1:4]
+        
+        if img5d_shape is not None:
+            # find the scaling factor using the original and resized image's
+            # shapes 
+            scaling = importer.calc_scaling(
+                None, None, img5d_shape, scaled_shape)
+            res = config.resolutions[0]
+            _logger.info("Using scaling compared to full image: %s", scaling)
+            _logger.info("Resolution from full-scale image: %s", res)
+    
     return scaling, res
 
 

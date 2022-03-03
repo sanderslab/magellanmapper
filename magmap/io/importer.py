@@ -933,7 +933,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
     time_start = time()
     if series is None:
         series = 0
-    filename_image5d, filename_meta = make_filenames(prefix, series)
+    filename_image5d, filename_meta = make_filenames(
+        prefix, series, keep_ext=True)
     libmag.printcb("Initializing multiplane image import planes to \"{}\", "
                    "may take awhile..."
                    .format(filename_image5d), fn_feedback)
@@ -1239,8 +1240,8 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
     # allow import of arbitrarily large images
     Image.MAX_IMAGE_PIXELS = None
     
-    print("prefix", prefix)
-    filename_image5d_npz, filename_info_npz = make_filenames(prefix + ".")
+    filename_image5d_npz, filename_info_npz = make_filenames(
+        prefix, keep_ext=True)
     libmag.printcb("Importing single-plane images into multiplane Numpy format "
                    "file: {}".format(filename_image5d_npz), fn_feedback)
     image5d = None

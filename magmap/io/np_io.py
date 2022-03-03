@@ -107,8 +107,7 @@ def find_scaling(
     res = None
     if scale is not None or load_size is not None:
         # retrieve scaling from a rescaled/resized image
-        _, img_info = importer.read_file(
-            img_path_transposed, config.series, return_info=True)
+        img_info = importer.read_file(img_path_transposed, config.series).meta
         scaling = img_info["scaling"]
         res = np.multiply(config.resolutions[0], scaling)
         print("retrieved scaling from resized image:", scaling)
@@ -326,7 +325,7 @@ def setup_images(path, series=None, offset=None, size=None,
                                 importer.DEFAULT_IMG_STACK_NAME)
                         img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
-                    elif import_only or img5d is None:
+                    elif import_only or img5d is None or img5d.img is None:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
                             path)

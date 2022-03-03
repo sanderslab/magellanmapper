@@ -675,9 +675,14 @@ def assign_metadata(md: Dict[Union[str, config.MetaKeys], Any]):
         print("could not find near_max")
 
 
-def read_file(filename, series=None, offset=None, size=None, return_info=False,
-              update_info=True):
-    """Reads an image file in Numpy format.
+def read_file(
+        filename: str,
+        series: Optional[int] = None,
+        offset: Optional[int] = None,
+        size: Optional[int] = None,
+        update_info: bool = True
+) -> "np_io.Image5d":
+    """Read an image file in Numpy format.
 
     An offset and size can be given to load an only an ROI of the image.
     
@@ -692,15 +697,11 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         size: Tuple of ROI size given as (x, y, z). If Numpy image info already 
             exists, this tuple will be used to load only an ROI of the image. 
             Defaults to None.
-        return_info: True if the Numpy info file should be returned for a 
-            dictionary of image properties; defaults to False.
         update_info: True if the associated image5d info file should be 
             updated; defaults to True.
     
     Returns:
-        :obj:`np_io.Image5d`, dict: The 5D image object, or None if it could
-        not be loaded. If ``return_info`` is True, a dictionary of image
-        properties will also be returned.
+        The image object.
     
     Raises:
         FileNotFoundError: If metadata was set to be updated, but the
@@ -708,13 +709,15 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
     """
     if series is None:
         series = 0
-    filename_image5d, filename_meta = make_filenames(
-        filename, series)
+    filename_image5d, filename_meta = make_filenames(filename, series)
+    img5d = np_io.Image5d(
+        None, filename_image5d, filename_meta, config.LoadIO.NP)
     image5d_ver_num = -1
-    metadata = None
+    
     try:
         # load image5d metadata; if updating, only fully load if curr ver
         metadata, image5d_ver_num = load_metadata(filename_meta, update_info)
+        img5d.meta = metadata
 
         # load original image, using mem-mapped accessed for the image
         # file to minimize memory requirement, only loading on-the-fly
@@ -725,6 +728,7 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             # offset and size given
             image5d = plot_3d.prepare_roi(image5d, offset, size)
             image5d = roi_to_image5d(image5d)
+        img5d.img = image5d
 
         if update_info:
             # if metadata < latest ver, update and load info
@@ -733,14 +737,11 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             if load_info:
                 # load updated archive
                 metadata, image5d_ver_num = load_metadata(filename_meta)
-        img5d = np_io.Image5d(
-            image5d, filename_image5d, filename_meta, config.LoadIO.NP)
-        if return_info:
-            return img5d, metadata
-        return img5d
-    except OSError as e:
+            img5d.meta = metadata
+    
+    except OSError as err:
         print("Could not load image files for", filename)
-        print(e)
+        print(err)
         if update_info and -1 < image5d_ver_num < IMAGE5D_NP_VER:
             # set to update metadata but could not because image5d
             # was not available;
@@ -751,9 +752,8 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
                 "current version {}) and could not be updated because "
                 "the original image5d file was not found."
                 .format(image5d_ver_num, IMAGE5D_NP_VER))
-        if return_info:
-            return None, metadata
-        return None
+    
+    return img5d
 
 
 def setup_import_multipage(filename):

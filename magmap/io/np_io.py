@@ -365,7 +365,8 @@ def setup_images(path, series=None, offset=None, size=None,
             print(e)
     
     # load metadata related to the labels image
-    config.labels_metadata = labels_meta.LabelsMeta(path).load()
+    config.labels_metadata = labels_meta.LabelsMeta(
+        f"{path}." if config.prefix else path).load()
     
     if annotation_suffix is not None:
         try:

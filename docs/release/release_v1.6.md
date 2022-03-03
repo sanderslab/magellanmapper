@@ -27,6 +27,7 @@
 - Auto-scrolls to the selected annotation (#109)
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
+- Fixed verifying and resaving blobs
 
 #### Volumetric image processing
 

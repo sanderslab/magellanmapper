@@ -1869,16 +1869,13 @@ class Visualization(HasTraits):
     
     @on_trait_change("_channel")
     def update_channel(self):
-        """Update the selected channel, resetting the current state to 
-        prevent displaying the old channel.
+        """Update the selected channel and image adjustment controls.
         """
         if not self._channel:
             # resetting channel names triggers channel update as empty array
             return
         config.channel = sorted([int(n) for n in self._channel])
         self._setup_imgadj_channels()
-        self.rois_check_list = _ROI_DEFAULT
-        self._reset_segments()
         print("Changed channel to {}".format(config.channel))
     
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):

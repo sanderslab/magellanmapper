@@ -65,9 +65,6 @@ from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, profiles
 
 
-#: str: default ROI name.
-_ROI_DEFAULT = "None selected"
-
 # logging instance
 _logger = config.logger.getChild(__name__)
 
@@ -109,11 +106,6 @@ class _MPLFigureEditor(Editor):
 class MPLFigureEditor(BasicEditorFactory):
     """Custom TraitsUI editor for a Matplotlib figure."""
     klass = _MPLFigureEditor
-
-
-class ListSelections(HasTraits):
-    """Traits-enabled list of ROIs."""
-    selections = List([_ROI_DEFAULT])
 
 
 class SegmentsArrayAdapter(TabularAdapter):
@@ -263,6 +255,9 @@ class Visualization(HasTraits):
             :class:`vis_handler.StaleFlags.IMAGE`.
     
     """
+    #: default ROI name.
+    _ROI_DEFAULT: str = "None selected"
+
     # File selection
 
     _filename = File  # file browser
@@ -306,7 +301,7 @@ class Visualization(HasTraits):
     _btn_save_fig = Button("Save Figure")
     _roi_btn_help = Button("Help")
     roi = None  # combine with roi_array?
-    _rois_selections = Instance(ListSelections)
+    _rois_selections = Instance(TraitsList)
     rois_check_list = Str
     _rois_dict = None
     _rois = None
@@ -1445,7 +1440,8 @@ class Visualization(HasTraits):
                 # GUI to turn them back on
                 self.show_orientation_axes(self.flipz)
         # updates the GUI here even though it doesn't elsewhere for some reason
-        self.rois_check_list = _ROI_DEFAULT
+        if self._rois_selections.selections:
+            self.rois_check_list = self._rois_selections.selections[0]
         self._img_region = None
         #print("reset selected ROI to {}".format(self.rois_check_list))
     
@@ -1726,17 +1722,18 @@ class Visualization(HasTraits):
         self._init_imgadj()
         
         # set up selector for loading past saved ROIs
-        self._rois_dict = {_ROI_DEFAULT: None}
+        self._rois_dict = {self._ROI_DEFAULT: None}
         img5d = config.img5d
         if config.db is not None and img5d and img5d.path_img is not None:
             self._rois = config.db.get_rois(sqlite.get_exp_name(
                 img5d.path_img))
-        self._rois_selections = ListSelections()
+        self._rois_selections = TraitsList()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
         self._rois_selections.selections = list(self._rois_dict.keys())
-        self.rois_check_list = _ROI_DEFAULT
+        if self._rois_selections.selections:
+            self.rois_check_list = self._rois_selections.selections[0]
 
     def update_filename(
             self, filename: str, ignore: bool = False, reset: bool = True):
@@ -1987,6 +1984,8 @@ class Visualization(HasTraits):
         if clear:
             self.roi = None
             self._reset_segments()
+            if self._rois_selections.selections:
+                self.rois_check_list = self._rois_selections.selections[0]
 
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
@@ -2620,7 +2619,7 @@ class Visualization(HasTraits):
     def load_roi(self):
         """Load an ROI from database, including all blobs."""
         print("got {}".format(self.rois_check_list))
-        if self.rois_check_list not in ("", _ROI_DEFAULT):
+        if self.rois_check_list not in ("", self._ROI_DEFAULT):
             # get chosen ROI to reconstruct original ROI size and offset 
             # including border
             roi = self._rois_dict[self.rois_check_list]
@@ -2669,7 +2668,8 @@ class Visualization(HasTraits):
             # any change to border flag resets ROI selection and segments
             print("changed Border flag")
             self._border_on = border_checked
-            self.rois_check_list = _ROI_DEFAULT
+            if self._rois_selections.selections:
+                self.rois_check_list = self._rois_selections.selections[0]
             self._reset_segments()
         
         # immediately update in Atlas Editors, where None uses the default max

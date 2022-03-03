@@ -4,7 +4,7 @@
 """
 import os
 import pathlib
-from typing import Any, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import tifffile
@@ -22,24 +22,32 @@ class Image5d:
     """Main image storage.
     
     Attributes:
-        img (:obj:`np.ndarray`): 5D Numpy array in the format ``t,z,y,x,c``;
+        img: 5D Numpy array in the format ``t,z,y,x,c``; defaults to None.
+        path_img: Path from which ``img`` was loaded; defaults to None.
+        path_meta: Path from which metadata for ``img`` was loaded;
             defaults to None.
-        path_img (str): Path from which ``img`` was loaded; defaults to None.
-        path_meta (str): Path from which metadata for ``img`` was loaded;
-            defaults to None.
-        img_io (enum): I/O source for image5d array; defaults to None.
-        subimg_offset (Sequence[int]): Sub-image offset in ``z,y,x``.
-        subimg_size (Sequence[int]): Sub-image size in ``z,y,x``.
+        img_io: I/O source for image5d array; defaults to None.
+        subimg_offset: Sub-image offset in ``z,y,x``; defaults to None.
+        subimg_size: Sub-image size in ``z,y,x``; defaults to None.
+        meta: Image metadata dictionary; defaults to None.
     
     """
-    def __init__(self, img=None, path_img=None, path_meta=None, img_io=None):
+    def __init__(
+            self, img: Optional[np.ndarray] = None,
+            path_img: Optional[str] = None,
+            path_meta: Optional[str] = None,
+            img_io: Optional[config.LoadIO] = None):
         """Construct an Image5d object."""
+        # attributes assignable from args
         self.img = img
         self.path_img = path_img
         self.path_meta = path_meta
         self.img_io = img_io
-        self.subimg_offset = None
-        self.subimg_size = None
+        
+        # additional attributes
+        self.subimg_offset: Optional[Sequence[int]] = None
+        self.subimg_size: Optional[Sequence[int]] = None
+        self.meta: Optional[Dict[config.MetaKeys, Any]] = None
 
 
 def img_to_blobs_path(path):

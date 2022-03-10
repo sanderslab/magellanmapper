@@ -232,8 +232,6 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
               .format(blobs_base_inner_missed))
         print("truth blobs detected by an outside blob:\n{}"
               .format(blobs_base_inner_missed[found_base_out]))
-        print("all those outside detection blobs:\n{}"
-              .format(blobs_roi_extra))
         print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
         print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
         '''

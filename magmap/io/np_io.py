@@ -170,8 +170,14 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
-def setup_images(path, series=None, offset=None, size=None,
-                 proc_type=None, allow_import=True):
+def setup_images(
+        path: str,
+        series: Optional[int] = None,
+        offset: Optional[Sequence[int]] = None,
+        size: Optional[Sequence[int]] = None,
+        proc_type: Optional["config.ProcessTypes"] = None,
+        allow_import: bool = True,
+        fallback_main_img: bool = True):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -179,15 +185,16 @@ def setup_images(path, series=None, offset=None, size=None,
     be used in place of ``path`` for registered labels.
     
     Args:
-        path (str): Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will 
             be generated.
-        series (int): Image series number; defaults to None.
-        offset (List[int]): Sub-image offset given in z,y,x; defaults to None.
-        size (List[int]): Sub-image shape given in z,y,x; defaults to None.
-        proc_type (Enum): Processing type, which should be a one of
-            :class:`config.ProcessTypes`.
-        allow_import (bool): True to allow importing the image if it
+        series: Image series number; defaults to None.
+        offset: Sub-image offset given in z,y,x; defaults to None.
+        size: Sub-image shape given in z,y,x; defaults to None.
+        proc_type: Processing type.
+        allow_import: True to allow importing the image if it
             cannot be loaded; defaults to True.
+        fallback_main_img: True to fall back to loading a registered image
+            if possible if the main image could not be loaded; defaults to True.
     
     """
     def add_metadata():
@@ -354,9 +361,8 @@ def setup_images(path, series=None, offset=None, size=None,
                     config.img5d = img5d
                     config.image5d = config.img5d.img
         except FileNotFoundError as e:
-            print(e)
-            print("Could not load {}, will fall back to any associated "
-                  "registered image".format(path))
+            _logger.exception(e)
+            _logger.info("Could not load %s", path)
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings
@@ -366,11 +372,12 @@ def setup_images(path, series=None, offset=None, size=None,
         importer.assign_metadata(config.metadatas[0])
     
     # main image is currently required since many parameters depend on it
-    if atlas_suffix is None and config.image5d is None:
+    if fallback_main_img and atlas_suffix is None and config.image5d is None:
         # fallback to atlas if main image not already loaded
         atlas_suffix = config.RegNames.IMG_ATLAS.value
-        print("main image is not set, falling back to registered "
-              "image with suffix", atlas_suffix)
+        _logger.info(
+            "Main image is not set, falling back to registered image with "
+            "suffix %s", atlas_suffix)
     # use prefix to get images registered to a different image, eg a
     # downsampled version, or a different version of registered images
     path = config.prefix if config.prefix else path

@@ -13,6 +13,8 @@ from magmap.cv import chunking, detector, stack_detect, verifier
 from magmap.io import cli, df_io, libmag, sqlite
 from magmap.settings import config
 
+_logger = config.logger.getChild(__name__)
+
 
 class BlobMatch:
     """Blob match storage class as a wrapper for a data frame of matches.
@@ -194,8 +196,9 @@ class StackColocalizer(object):
             and values are blob match objects. 
 
         """
-        print("Colocalizing blobs based on matching blobs in each pair of "
-              "channels")
+        _logger.info(
+            "Colocalizing blobs based on matching blobs in each pair of "
+            "channels")
         # set up ROI blocks from which to select blobs in each block
         sub_roi_slices, sub_rois_offsets, _, _, _, overlap_base, _, _ \
             = stack_detect.setup_blocks(config.roi_profile, shape)
@@ -238,8 +241,9 @@ class StackColocalizer(object):
             for key, val in matches.items():
                 matches_all.setdefault(key, []).append(val.df)
                 count += len(val.df)
-            print("adding {} matches from block at {} of {}"
-                  .format(count, coord, np.add(sub_roi_slices.shape, -1)))
+            _logger.info(
+                "Adding %s matches from block at %s of %s",
+                count, coord, np.add(sub_roi_slices.shape, -1))
         
         pool.close()
         pool.join()
@@ -247,36 +251,41 @@ class StackColocalizer(object):
         # prune duplicates by taking matches with shortest distance
         for key in matches_all.keys():
             matches_all[key] = pd.concat(matches_all[key])
-            for blobi in (BlobMatch.Cols.BLOB1, BlobMatch.Cols.BLOB2):
-                # convert blob column to ndarray to extract coords by column
-                matches = matches_all[key]
-                matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
-                    np.vstack(matches[blobi.value])[:, :3], axis=0,
-                    return_index=True, return_inverse=True, return_counts=True)
-                if np.sum(matches_cts > 1) > 0:
-                    # prune if at least one blob has been matched to multiple
-                    # other blobs
-                    singles = matches.iloc[matches_i[matches_cts == 1]]
-                    dups = []
-                    for i, ct in enumerate(matches_cts):
-                        # include non-duplicates to retain index
-                        if ct <= 1: continue
-                        # get indices in orig matches at given unique array
-                        # index and take match with lowest dist
-                        matches_mult = matches.loc[matches_inv == i]
-                        dists = matches_mult[BlobMatch.Cols.DIST.value]
-                        min_dist = np.amin(dists)
-                        num_matches = len(matches_mult)
-                        if config.verbose and num_matches > 1:
-                            print("pruning from", num_matches,
-                                  "matches of dist:", dists)
-                        matches_mult = matches_mult.loc[dists == min_dist]
-                        # take first in case of any ties
-                        dups.append(matches_mult.iloc[[0]])
-                    matches_all[key] = pd.concat((singles, pd.concat(dups)))
-            print("Colocalization matches for channels {}: {}"
-                  .format(key, len(matches_all[key])))
-            libmag.printv(print(matches_all[key]))
+            if matches_all[key].size > 0:
+                for blobi in (BlobMatch.Cols.BLOB1, BlobMatch.Cols.BLOB2):
+                    # convert blob column to ndarray to extract coords by column
+                    matches = matches_all[key]
+                    matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
+                        np.vstack(matches[blobi.value])[:, :3], axis=0,
+                        return_index=True, return_inverse=True,
+                        return_counts=True)
+                    if np.sum(matches_cts > 1) > 0:
+                        # prune if at least one blob has been matched to
+                        # multiple other blobs
+                        singles = matches.iloc[matches_i[matches_cts == 1]]
+                        dups = []
+                        for i, ct in enumerate(matches_cts):
+                            # include non-duplicates to retain index
+                            if ct <= 1: continue
+                            # get indices in orig matches at given unique array
+                            # index and take match with lowest dist
+                            matches_mult = matches.loc[matches_inv == i]
+                            dists = matches_mult[BlobMatch.Cols.DIST.value]
+                            min_dist = np.amin(dists)
+                            num_matches = len(matches_mult)
+                            if num_matches > 1:
+                                _logger.debug(
+                                    "Pruning from %s matches of dist: %s",
+                                    num_matches, dists)
+                            matches_mult = matches_mult.loc[dists == min_dist]
+                            # take first in case of any ties
+                            dups.append(matches_mult.iloc[[0]])
+                        matches_all[key] = pd.concat((singles, pd.concat(dups)))
+                _logger.info(
+                    "Colocalization matches for channels %s: %s",
+                    key, len(matches_all[key]))
+            _logger.debug(
+                "Blob matches for %s after pruning:\n%s", key, matches_all[key])
             # store data frame in BlobMatch object
             matches_all[key] = BlobMatch(df=matches_all[key])
         

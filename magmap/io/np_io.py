@@ -330,8 +330,8 @@ def setup_images(
                 if not import_only:
                     # load previously imported image
                     img5d = importer.read_file(path, series)
-                if allow_import:
-                    # re-import over existing image or import new image
+                if allow_import and img5d is None or img5d.img is None:
+                    # import image; will re-import over any existing image file 
                     if os.path.isdir(path) and all(
                             [r is None for r in config.reg_suffixes.values()]):
                         # import directory of single plane images to single
@@ -345,7 +345,7 @@ def setup_images(
                                 importer.DEFAULT_IMG_STACK_NAME)
                         img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
-                    elif import_only or img5d is None or img5d.img is None:
+                    elif import_only:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
                             path)

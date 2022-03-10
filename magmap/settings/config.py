@@ -30,6 +30,8 @@ from magmap.settings import logs
 if TYPE_CHECKING:
     import SimpleITK as sitk
     from magmap.atlas import labels_meta
+    from magmap.cv import detector
+    from magmap.io import np_io
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -124,11 +126,11 @@ subimg_sizes = None
 
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
-#: :obj:`magmap.io.np_io.Image5d`: Image5d object.
-img5d = None
+#: Image5d object.
+img5d: Optional["np_io.Image5d"] = None
 
-#: obj:`magmap.cv.detector.Blobs`: Blobs object.
-blobs = None
+#: Blobs object.
+blobs: Optional["detector.Blobs"] = None
 
 #: :obj:`np.ndarray`: 2D array of shapes per time point in
 # ``[n_time_point, n_shape]`` format in case image5d is not available

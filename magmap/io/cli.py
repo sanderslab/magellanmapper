@@ -781,7 +781,8 @@ def process_proc_tasks(
             for proc_task, proc_val in proc_tasks.items():
                 # set up image for the given task
                 np_io.setup_images(
-                    filename, series, offset, size, proc_task)
+                    filename, series, offset, size, proc_task,
+                    fallback_main_img=False)
                 process_file(
                     filename, proc_task, proc_val, series, offset, size,
                     config.roi_offsets[0] if config.roi_offsets else None,

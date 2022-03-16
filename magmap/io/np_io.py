@@ -330,7 +330,7 @@ def setup_images(
                 if not import_only:
                     # load previously imported image
                     img5d = importer.read_file(path, series)
-                if allow_import and img5d is None or img5d.img is None:
+                if allow_import and (img5d is None or img5d.img is None):
                     # import image; will re-import over any existing image file 
                     if os.path.isdir(path) and all(
                             [r is None for r in config.reg_suffixes.values()]):

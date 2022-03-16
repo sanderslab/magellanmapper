@@ -29,6 +29,8 @@
 
 - Auto-scrolls to the selected annotation (#109)
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
+- Match-based colocalization can run without the main image, using just its metadata instead (#117)
+- Fixed match-based colocalizations when no matches are found (#117)
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
 - Fixed verifying and resaving blobs
 
@@ -40,6 +42,7 @@
 
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
+- Fixed re-importing an image after loading it (#117)
 
 #### Server pipelines
 

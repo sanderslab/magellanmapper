@@ -184,9 +184,9 @@ texinfo_documents = [
 intersphinx_mapping = {
     'https://docs.python.org/3/': None,
     'https://numpy.org/doc/stable/': None,
-    'https://docs.scipy.org/doc/scipy/reference': None,
-    'https://matplotlib.org': None,
-    'https://pandas.pydata.org/pandas-docs/stable/': None,
+    "https://docs.scipy.org/doc/scipy/": None,
+    "https://matplotlib.org/stable/": None,
+    "https://pandas.pydata.org/docs/": None,
     "http://docs.enthought.com/mayavi/mayavi/": None,
     "https://www.riverbankcomputing.com/static/Docs/PyQt5/": None,
     "http://docs.enthought.com/mayavi/tvtk/": None,

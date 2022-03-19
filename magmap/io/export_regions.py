@@ -209,8 +209,9 @@ def make_density_image(
             defaults to None.
         labels_img_sitk: Labels image; defaults to None to load from a
             registered labels image.
-        channel: Sequence of channels to include in density image;
-            defaults to None to combine blobs from all channels.
+        channel: Sequence of channels to include in density image. For
+            multiple channels, blobs from all these channels are combined
+            into one heatmap.  Defaults to None to use all channels.
         matches: Dictionary of channel combinations to blob matches; defaults
             to None.
         atlas_profile: Atlas profile, used for scaling; defaults to None.
@@ -257,7 +258,9 @@ def make_density_image(
     # annotate blobs based on position
     blobs_chl = blobs.blobs
     if channel is not None:
-        _logger.info("Using blobs from channel: %s", channel)
+        _logger.info(
+            "Using blobs from channel(s), combining if multiple channels: %s",
+            channel)
         blobs_chl = blobs_chl[np.isin(detector.get_blobs_channel(
             blobs_chl), channel)]
     heat_map = make_heat_map()

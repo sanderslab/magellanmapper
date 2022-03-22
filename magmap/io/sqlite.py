@@ -921,7 +921,7 @@ class ClrDB:
             blobn: int,
             blob_ids: Sequence[int],
             max_params: int = 100000
-    ) -> "magmap.cv.colocalizer.BlobMatch":
+    ) -> "colocalizer.BlobMatch":
         """Select blob matches corresponding to the given blob IDs in the
         given blob column.
 

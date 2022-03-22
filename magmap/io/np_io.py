@@ -317,12 +317,18 @@ def setup_images(
         # load or import the main image stack
         print("Loading main image")
         try:
-            if path.endswith(sitk_io.EXTS_3D):
+            path_lower = path.lower()
+            if path_lower.endswith(sitk_io.EXTS_3D):
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
                 config.img5d.img_io = config.LoadIO.SITK
+            elif path_lower.endswith((".tif", ".tiff")):
+                # load TIF file directly
+                _, meta = read_tif(path, config.img5d)
+                config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
+                config.image5d = config.img5d.img
             else:
                 # load or import from MagellanMapper Numpy format
                 import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
@@ -531,7 +537,61 @@ def write_raw_file(arr, path):
     print("Finished writing", path)
 
 
-def write_tif_file(
+def read_tif(
+        path: str, img5d: Image5d = None
+) -> Tuple[Image5d, Dict[config.MetaKeys, Any]]:
+    """Read TIF files with Tifffile with lazy access through memory mapping.
+    
+    Args:
+        path: Path to file.
+        img5d: Image5d storage class; defaults to None.
+
+    Returns:
+        Image5d storage instance and dictionary of extracted metadata.
+
+    """
+    if img5d is None:
+        # set up a new storage instance
+        img5d = Image5d()
+    
+    # extract metadata
+    tif = tifffile.TiffFile(path)
+    md = dict.fromkeys(config.MetaKeys)
+    axes = tif.series[0].axes
+    if tif.ome_metadata:
+        # read OME-XML metadata
+        names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
+        res = np.array(md[config.MetaKeys.RESOLUTIONS])
+        print(tif.ome_metadata)
+    else:
+        # parse resolutions
+        res = np.ones((1, 3))
+        if tif.imagej_metadata and "spacing" in tif.imagej_metadata:
+            # ImageJ format holds z-resolution as spacing
+            res[0, 0] = tif.imagej_metadata["spacing"]
+        for i, name in enumerate(("YResolution", "XResolution")):
+            # parse x/y-resolution from standard TIF metadata
+            axis_res = tif.pages[0].tags[name].value
+            if axis_res and len(axis_res) > 1 and axis_res[0]:
+                res[0, i + 1] = axis_res[1] / axis_res[0]
+    md[config.MetaKeys.RESOLUTIONS] = res
+    
+    # load TIFF by memory mapping
+    tif_memmap = tifffile.memmap(path)
+    ndim = len(tif_memmap.shape)
+    if ndim < 4 or ndim == 4 and "c" in axes.lower():
+        # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
+        tif_memmap = np.expand_dims(tif_memmap, axis=0)
+    
+    # add image to Image5d instance
+    img5d.img = tif_memmap
+    img5d.path_img = path
+    img5d.img_io = config.LoadIO.TIFFFILE
+    
+    return img5d, md
+
+
+def write_tif(
         image5d: np.ndarray, path: Union[str, pathlib.Path], **kwargs: Any):
     """Write a NumPy array to TIF files.
     

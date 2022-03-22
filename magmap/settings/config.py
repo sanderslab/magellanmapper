@@ -142,6 +142,7 @@ class LoadIO(Enum):
     """Enumerations for I/O load packages."""
     NP = auto()
     SITK = auto()
+    TIFFFILE = auto()
 
 
 #: :obj:`LoadIO`: I/O source for image5d array.
@@ -200,16 +201,20 @@ cmap_labels = None
 
 # MICROSCOPY
 
-# metadata keys for command-line parsing
-MetaKeys = Enum(
-    "MetaKeys", (
-        "RESOLUTIONS",  # image resolutions in x,y,z
-        "MAGNIFICATION",  # objective magnification
-        "ZOOM",  # objective zoom
-        "SHAPE",  # output image shape
-        "DTYPE",  # data type as a string
-    )
-)
+class MetaKeys(Enum):
+    """Metadata keys for command-line parsing."""
+    #: Image resolutions in XYZ.
+    RESOLUTIONS = auto()
+    #: Objective magnification.
+    MAGNIFICATION = auto()
+    #: Objective zoom.
+    ZOOM = auto()
+    #: Image shape.
+    SHAPE = auto()
+    #: Data type as a string.
+    DTYPE = auto()
+
+
 #: Dictionary of metadata for image import.
 meta_dict: Dict[MetaKeys, Any] = dict.fromkeys(MetaKeys, None)
 

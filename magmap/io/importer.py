@@ -13,13 +13,13 @@ Attributes:
         be incremented with any change to the image5d or its support "info"
         save array format.
 """
-
 from collections import OrderedDict
 import os
 from time import time
 import glob
+import pprint
 import re
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from xml import etree as et
 
 import numpy as np
@@ -140,6 +140,9 @@ def parse_ome(filename):
         names: array of names of seriess within the file.
         sizes: array of tuples with dimensions for each series. Dimensions
             will be given as (time, z, y, x, channels).
+    
+    Deprecated: 1.6.0
+        Use :meth:`parse_ome_raw` instead.
     """
     time_start = time()
     metadata = bf.get_omexml_metadata(filename)
@@ -157,22 +160,26 @@ def parse_ome(filename):
     return names, sizes
 
 
-def parse_ome_raw(filename):
-    """Parses the microscope's XML file directly, pulling out salient info
-    for further processing.
+def parse_ome_raw(
+        metadata: str
+) -> Tuple[List[str], List[Tuple], Dict[config.MetaKeys, Any]]:
+    """Parse Open Microscopy Environment XML to extract key metadata.
     
     Args:
-        filename: Image file, assumed to have metadata in OME XML format.
+        metadata: Metadata as a string in OME XML format.
     
     Returns:
-        names: array of names of seriess within the file.
-        sizes: array of tuples with dimensions for each series. Dimensions
-            will be given as (time, z, y, x, channels).
-        resolution: array of resolutions, also known as scaling, in the same
-            dimensions as sizes.
-        magnification: Objective magnification.
-        zoom: Zoom level.
-        pixel_type: Pixel data type as a string.
+        The ``names``, an array of names of seriess within the file;
+        ``sizes``, an array of tuples with dimensions for each series, where
+        dimensions are given as ``(time, z, y, x, channels)``; and
+        a ``dict`` of :attr:`magmap.settings.config.MetaKeys.RESOLUTIONS`, an
+        array of resolutions/scaling, in the same dimensions as sizes;
+        :attr:`magmap.settings.config.MetaKeys.MAGNIFICATION`, the objective
+        magnification;
+        :attr:`magmap.settings.config.MetaKeys.ZOOM`, the zoom level; and
+        :attr:`magmap.settings.config.MetaKeys.DTYPE`, the pixel data type as
+        a string.
+    
     """
     array_order = "TZYXC"  # desired dimension order
     names, sizes, resolutions = [], [], []
@@ -184,7 +191,6 @@ def parse_ome_raw(filename):
     zoom = 1
     magnification = 1
     pixel_type = None
-    metadata = bf.get_omexml_metadata(filename)
     metadata_root = et.ElementTree.fromstring(metadata)
     for child in metadata_root:
         # tag name is at end of a long string of other identifying info
@@ -202,7 +208,8 @@ def parse_ome_raw(filename):
                         magnification = float(magnification)
         elif child.tag.endswith("Image"):
             # image file info
-            names.append(child.attrib["Name"])
+            if "Name" in child.attrib:
+                names.append(child.attrib["Name"])
             for grandchild in child:
                 if grandchild.tag.endswith("Pixels"):
                     att = grandchild.attrib
@@ -215,12 +222,15 @@ def parse_ome_raw(filename):
                     # assumes pixel type is same for all images
                     if pixel_type is None:
                         pixel_type = att.get("Type")
-    print("names: {}".format(names))
-    print("sizes: {}".format(sizes))
-    print("resolutions: {}".format(resolutions))
-    print("zoom: {}, magnification: {}".format(zoom, magnification))
-    print("pixel_type: {}".format(pixel_type))
-    return names, sizes, resolutions, magnification, zoom, pixel_type
+    md = dict.fromkeys(config.MetaKeys)
+    md[config.MetaKeys.RESOLUTIONS] = resolutions
+    md[config.MetaKeys.MAGNIFICATION] = magnification
+    md[config.MetaKeys.ZOOM] = zoom
+    md[config.MetaKeys.DTYPE] = pixel_type
+    _logger.debug(
+        "Extracted OME-XML metadata:\nnames: %s\nsizes: %s\n%s", names, sizes,
+        pprint.pformat(md))
+    return names, sizes, md
 
 
 def find_sizes(filename):
@@ -870,10 +880,10 @@ def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
     shape = None
     try:
         # get available embedded metadata via Bioformats
-        names, sizes, res, md[config.MetaKeys.MAGNIFICATION], \
-            md[config.MetaKeys.ZOOM], md[config.MetaKeys.DTYPE] = \
-            parse_ome_raw(path)
+        names, sizes, md = parse_ome_raw(bf.get_omexml_metadata(path))
+        
         # unlike config.resolutions, keep only single list for simplicity
+        res = md[config.MetaKeys.RESOLUTIONS]
         if res and len(res) > series:
             md[config.MetaKeys.RESOLUTIONS] = res[series]
         if sizes and len(sizes) > series:

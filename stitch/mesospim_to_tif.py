@@ -73,7 +73,7 @@ def main():
         # export imported file to TIF file
         print(f"Exporting file from '{path}' to '{filename_out}'")
         config.prefix = prefix_orig
-        np_io.write_tif_file(
+        np_io.write_tif(
             config.image5d,
             pathlib.Path(path).parent / filename_out, imagej=True)
 

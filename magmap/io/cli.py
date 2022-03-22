@@ -1206,7 +1206,7 @@ def process_file(
 
     elif proc_type is config.ProcessTypes.EXPORT_TIF:
         # export the main image as a TIF files for each channel
-        np_io.write_tif_file(config.image5d, config.filename)
+        np_io.write_tif(config.image5d, config.filename)
 
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file

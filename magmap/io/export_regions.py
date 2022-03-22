@@ -24,6 +24,9 @@ from magmap.plot import colormaps
 from magmap.settings import config, atlas_prof
 from magmap.stats import vols
 
+_logger = config.logger.getChild(__name__)
+
+
 
 def export_region_ids(labels_ref_lookup, path, level=None,
                       drawn_labels_only=False):
@@ -182,8 +185,8 @@ def make_density_image(
         shape: Optional[Sequence[int]] = None, suffix: Optional[str] = None, 
         labels_img_sitk: Optional[sitk.Image] = None,
         channel: Optional[Sequence[int]] = None,
-        matches: Dict[Tuple[int, int], colocalizer.BlobMatch] = None,
-        atlas_profile: Optional[atlas_prof.AtlasProfile] = None
+        matches: Dict[Tuple[int, int], "colocalizer.BlobMatch"] = None,
+        atlas_profile: Optional["atlas_prof.AtlasProfile"] = None
 ) -> Tuple[np.ndarray, str]:
     """Make a density image based on associated blobs.
     
@@ -206,8 +209,9 @@ def make_density_image(
             defaults to None.
         labels_img_sitk: Labels image; defaults to None to load from a
             registered labels image.
-        channel: Sequence of channels to include in density image;
-            defaults to None to combine blobs from all channels.
+        channel: Sequence of channels to include in density image. For
+            multiple channels, blobs from all these channels are combined
+            into one heatmap.  Defaults to None to use all channels.
         matches: Dictionary of channel combinations to blob matches; defaults
             to None.
         atlas_profile: Atlas profile, used for scaling; defaults to None.
@@ -222,10 +226,11 @@ def make_density_image(
         # build heat map to store densities per label px and save to file
         coord_scaled = ontology.scale_coords(
             blobs_chl[:, :3], scaling, labels_img.shape)
-        print("coords", coord_scaled)
+        _logger.debug("Scaled coords:\n%s", coord_scaled)
         return cv_nd.build_heat_map(labels_img.shape, coord_scaled)
     
     # set up paths and get labels image
+    _logger.info("\n\nGenerating heat map from blobs")
     mod_path = img_path
     if suffix is not None:
         mod_path = libmag.insert_before_ext(img_path, suffix)
@@ -248,15 +253,17 @@ def make_density_image(
             np.divide(labels_img.shape, shape))
         labels_img = np.zeros(shape, dtype=labels_img.dtype)
         labels_img_sitk.SetSpacing(labels_spacing[::-1])
-    print("using scaling: {}".format(scaling))
+    _logger.debug("Using image scaling: {}".format(scaling))
     
     # annotate blobs based on position
     blobs_chl = blobs.blobs
     if channel is not None:
+        _logger.info(
+            "Using blobs from channel(s), combining if multiple channels: %s",
+            channel)
         blobs_chl = blobs_chl[np.isin(detector.get_blobs_channel(
             blobs_chl), channel)]
     heat_map = make_heat_map()
-    print("heat map", heat_map.shape, heat_map.dtype, labels_img.shape)
     imgs_write = {
         config.RegNames.IMG_HEAT_MAP.value:
             sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)}
@@ -266,8 +273,9 @@ def make_density_image(
         # create heat maps for match-based colocalization combos
         heat_colocs = []
         for chl_combo, chl_matches in matches.items():
-            print("Generating match-based colocalization heat map "
-                  "for channel combo:", chl_combo)
+            _logger.info(
+                "Generating match-based colocalization heat map "
+                "for channel combo: %s", chl_combo)
             # use blobs in first channel of each channel pair for simplicity
             blobs_chl = chl_matches.get_blobs(1)
             heat_colocs.append(make_heat_map())
@@ -288,8 +296,9 @@ def make_density_image(
             
             heat_colocs = []
             for combo in combos:
-                print("Generating intensity-based colocalization heat map "
-                      "for channel combo:", combo)
+                _logger.info(
+                    "Generating intensity-based colocalization heat map "
+                    "for channel combo: %s", combo)
                 blobs_chl = blobs.blobs[np.all(np.equal(
                     blobs.colocalizations[:, combo], 1), axis=1)]
                 heat_colocs.append(make_heat_map())

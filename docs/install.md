@@ -14,6 +14,12 @@
 
 MagellanMapper can be installed many ways depending on one's Python preferences.
 
+### Recommended: Using the installer
+
+The easiest way to install MagellanMapper is using one of the [installers](https://github.com/sanderslab/magellanmapper/releases) now available for Windows, macOS, and Linux.
+
+Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
+
 ### Recommended: Install in a Conda environment
 
 Conda simplifies installation by managing all supporting packages such as Java and others that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
@@ -48,15 +54,15 @@ See the [Readme](../README.md#run-magellanmapper) for instructions on running Ma
 
 ### Option 2: Install through Venv+Pip
 
-Venv is a virtual environment manager included with Python (3.3+). We have provided a convenient script to set up a new environment and install all dependencies using Pip:
+Python 3.6-3.9 supported. Venv is a virtual environment manager included with Python. We have provided a convenient script to set up a new environment and install all dependencies using Pip:
 
 ```
 bin/setup_venv.sh [-n name]
 ```
 
-This option assumes that you have already installed Python 3.6 and Java 8+.
+This option assumes that you have already installed Python 3.6+ and Java 8+.
 
-**UPDATE**: In MagellanMapper 1.4, Python versions 3.6-3.8 are supported now that we have built custom dependencies for these version.
+**UPDATE**: Python 3.6 support is deprecated in MagellanMapper 1.6.
 
 This setup script will check and install the following dependencies:
 
@@ -125,7 +131,7 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 | SimpleElastix | Yes, via custom package | Python 3.6-3.9 | C, C++ compilers | Load medical 3D formats, image regsitration |
 | ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
 
-[^\*]: Extended wheels to Python 3.7-3.9 in MagellanMapper 1.4, though Python 3.9 is not supported yet until Mayavi is compatible with the VTK versions that provide wheels for this version (as of Mayavi 4.7.3 and VTK 9.1, which are not currently compatible)
+[^\*]: MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies. MagellanMapper 1.6 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions.
 
 C compilers by platform:
 
@@ -140,8 +146,6 @@ Java versions:
 - The Conda setup pathway installs JDK 8
 - Python-Javabridge uses JDK v8+ (v12+ in Javabridge 1.0.19; see [below](#image-loading) for image loading times and setup troubleshooting with various Java versions)
 - ImageJ/Fiji currently supports Java 8 best in our experience
-
-Our custom packages assume an environment with Python 3.6 and Java 8+.
 
 ### Additional optional packages
 

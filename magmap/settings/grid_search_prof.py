@@ -71,6 +71,9 @@ class GridSearchProfile(profiles.SettingsDict):
         super().__init__(self)
         self._add_mod_directly = True
         self[self.NAME_KEY] = ""
+        
+        # update with args
+        self.update(*args, **kwargs)
 
         #: OrderedDict[List[int]]: Nested dictionary where each sub-dictionary
         # contains a sequence of values over which to perform a grid search to

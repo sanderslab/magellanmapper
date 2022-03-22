@@ -18,6 +18,8 @@ from magmap.settings import config
 from magmap.io import cli
 from magmap.io import libmag
 
+_logger = config.logger.getChild(__name__)
+
 
 #: dict[:class:`config.DFTasks`, func]: Dictionary of data frame tasks
 # and function to apply.
@@ -558,7 +560,8 @@ def print_data_frame(df, sep=" ", index=False, header=True, show=True):
     else:
         df_str = df.to_csv(sep=sep, index=index, header=header, na_rep="NaN")
     if show:
-        print(df_str)
+        # show on a new line to align headers with columns in logger
+        print(f"\n{df_str}")
     return df_str
 
 
@@ -646,15 +649,21 @@ def data_frames_to_csv(
         libmag.backup_file(path)
     combined = data_frames
     if not isinstance(data_frames, pd.DataFrame):
+        # combine data frames
         combined = pd.concat(combined)
     if sort_cols is not None:
+        # sort column
         combined = combined.sort_values(sort_cols)
-    combined.to_csv(path, index=index, na_rep="NaN")
+    if path:
+        # save to file
+        combined.to_csv(path, index=index, na_rep="NaN")
     if show is not None:
+        # print to console
         print_data_frame(combined, show)
     if path:
-        print("exported volume data per sample to CSV file: \"{}\""
-              .format(path))
+        # show the exported data path
+        _logger.info(
+            "Exported volume data per sample to CSV file: \"%s\"", path)
     return combined
 
 

@@ -121,6 +121,9 @@ class ROIProfile(profiles.SettingsDict):
         
         self["isotropic_vis"] = (1, 1, 1)  # only for visualization
         self["resize_blobs"] = None  # z,y,x coord scaling before verification
+        
+        # update with args
+        self.update(*args, **kwargs)
 
         self.profiles = {
 

@@ -27,6 +27,9 @@ class RegParamMap(dict):
         # (see Elastix manual section 5.4)
         self["erode_mask"] = None
         self["point_based"] = False
+        
+        # update with args
+        self.update(*args, **kwargs)
 
 
 class AtlasProfile(profiles.SettingsDict):
@@ -267,6 +270,9 @@ class AtlasProfile(profiles.SettingsDict):
         # given as edge sizes of x,y,z-planes; decrease sizes to improve
         # performance, especially in x
         self["editor_max_sizes"] = (500, 1000, 2000)
+        
+        # update with args
+        self.update(*args, **kwargs)
 
         self.profiles = {
 

@@ -781,7 +781,8 @@ def process_proc_tasks(
             for proc_task, proc_val in proc_tasks.items():
                 # set up image for the given task
                 np_io.setup_images(
-                    filename, series, offset, size, proc_task)
+                    filename, series, offset, size, proc_task,
+                    fallback_main_img=False)
                 process_file(
                     filename, proc_task, proc_val, series, offset, size,
                     config.roi_offsets[0] if config.roi_offsets else None,
@@ -1176,8 +1177,13 @@ def process_file(
     elif proc_type is config.ProcessTypes.COLOC_MATCH:
         if config.blobs is not None and config.blobs.blobs is not None:
             # colocalize blobs in separate channels by matching blobs
-            shape = (config.image5d.shape[1:] if subimg_size is None
-                     else subimg_size)
+            shape = subimg_size
+            if shape is None:
+                # get shape from loaded image, falling back to its metadata
+                if config.image5d is not None:
+                    shape = config.image5d.shape[1:]
+                else:
+                    shape = config.img5d.meta[config.MetaKeys.SHAPE][1:]
             matches = colocalizer.StackColocalizer.colocalize_stack(
                 shape, config.blobs.blobs)
             # insert matches into database

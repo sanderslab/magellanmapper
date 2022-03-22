@@ -25,7 +25,7 @@ matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import Qt, QtWidgets, QtCore
 
 # adjust for HiDPI screens before QGuiApplication is created, necessary
 # on Windows and Linux (not needed but no apparent affect on MacOS)
@@ -64,9 +64,6 @@ from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, profiles
 
-
-#: str: default ROI name.
-_ROI_DEFAULT = "None selected"
 
 # logging instance
 _logger = config.logger.getChild(__name__)
@@ -109,11 +106,6 @@ class _MPLFigureEditor(Editor):
 class MPLFigureEditor(BasicEditorFactory):
     """Custom TraitsUI editor for a Matplotlib figure."""
     klass = _MPLFigureEditor
-
-
-class ListSelections(HasTraits):
-    """Traits-enabled list of ROIs."""
-    selections = List([_ROI_DEFAULT])
 
 
 class SegmentsArrayAdapter(TabularAdapter):
@@ -263,6 +255,9 @@ class Visualization(HasTraits):
             :class:`vis_handler.StaleFlags.IMAGE`.
     
     """
+    #: default ROI name.
+    _ROI_DEFAULT: str = "None selected"
+
     # File selection
 
     _filename = File  # file browser
@@ -304,8 +299,9 @@ class Visualization(HasTraits):
 
     btn_redraw = Button("Redraw")
     _btn_save_fig = Button("Save Figure")
+    _roi_btn_help = Button("Help")
     roi = None  # combine with roi_array?
-    _rois_selections = Instance(ListSelections)
+    _rois_selections = Instance(TraitsList)
     rois_check_list = Str
     _rois_dict = None
     _rois = None
@@ -315,6 +311,10 @@ class Visualization(HasTraits):
     
     btn_detect = Button("Detect")
     btn_save_segments = Button("Save Blobs")
+    _segs_labels = List(  # blob label selector
+        ["-1"],
+        tooltip="All blob labels will be set to this value when running Detect",
+    )
     _segs_visible = List  # blob visibility options
     _colocalize = List  # blob co-localization options
     _blob_color_style = List  # blob coloring
@@ -322,14 +322,17 @@ class Visualization(HasTraits):
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
     _scale_detections_high = Float  # needs to be trait to dynamically update
-    scale_detections = Float
+    scale_detections = Float(
+        tooltip="Change the size of blobs in the 3D viewer"
+    )
     segs_pts = None
     segs_selected = List  # indices
+    _segs_row_scroll = Int()  # row index to scroll the table
     # multi-select to allow updating with a list, but segment updater keeps
     # selections to single when updating them
     segs_table = TabularEditor(
         adapter=SegmentsArrayAdapter(), multi_select=True, 
-        selected_row="segs_selected")
+        selected_row="segs_selected", scroll_to_row="_segs_row_scroll")
     segs_in_mask = None  # boolean mask for segments in the ROI
     segs_cmap = None
     segs_feedback = Str("Segments output")
@@ -361,6 +364,7 @@ class Visualization(HasTraits):
     _profiles_combined = Str  # combined profiles for selected category
     _profiles_ver = Str
     _profiles_reset_prefs_btn = Button("Reset preferences")
+    _profiles_btn_help = Button("Help")
     _profiles_reset_prefs = Bool  # trigger resetting prefs in handler
 
     # Image adjustment panel
@@ -382,6 +386,11 @@ class Visualization(HasTraits):
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float
+    _imgadj_alpha_blend = Float(0.5)
+    _imgadj_alpha_blend_check = Bool(
+        tooltip="Blend the overlapping parts of imags to shown alignment.\n"
+                "Applied to the first two channels of the main image."
+    )
 
     # Image import panel
 
@@ -437,11 +446,11 @@ class Visualization(HasTraits):
                 "Panes: show back and top panes\n"
                 "Shadows: show blob shadows as circles")
     _check_list_2d = List(
-        tooltip="Filtered: show filtered image after detection\n"
-                "Border: margin around ROIs\n"
-                "Seg: segment blobs\n"
-                "Grid: overlay a grid\n"
-                "MIP: maximum intensity projection")
+        tooltip="Filtered: show filtered image after detection in ROI planes\n"
+                "Border: margin around ROI planes\n"
+                "Seg: segment blobs during detection in ROI planes\n"
+                "Grid: overlay a grid in ROI planes\n"
+                "MIP: maximum intensity projection in overview images")
     _DEFAULTS_2D = [
         "Filtered", "Border", "Seg", "Grid", "MIP"]
     _planes_2d = List
@@ -594,6 +603,7 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
+            Item("_roi_btn_help", show_label=False),
         ),
         label="ROI",
     )
@@ -603,6 +613,13 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_detect", show_label=False),
             Item("btn_save_segments", show_label=False),
+        ),
+        HGroup(
+            Item("_segs_labels", label="Change labels to",
+                 editor=CheckListEditor(
+                     values=[str(c) for c in
+                             roi_editor.DraggableCircle.BLOB_COLORS.keys()],
+                     format_func=lambda x: x)),
         ),
         HGroup(
             Item("_segs_visible", style="custom", show_label=False,
@@ -619,7 +636,7 @@ class Visualization(HasTraits):
                      values=[e.value for e in BlobColorStyles],
                      format_func=lambda x: x)),
         ),
-        Item("scale_detections",
+        Item("scale_detections", label="Scale 3D blobs",
              editor=RangeEditor(
                  low_name="_scale_detections_low",
                  high_name="_scale_detections_high",
@@ -676,7 +693,10 @@ class Visualization(HasTraits):
                 Item("_profiles_ver", style="readonly",
                      label="MagellanMapper version:"),
             ),
-            Item("_profiles_reset_prefs_btn", show_label=False),
+            HGroup(
+                Item("_profiles_reset_prefs_btn", show_label=False),
+                Item("_profiles_btn_help", show_label=False),
+            ),
             label="Settings",
         ),
         label="Profiles",
@@ -704,14 +724,28 @@ class Visualization(HasTraits):
                      mode="slider", format="%.4g")),
             Item("_imgadj_max_auto", label="Auto", editor=BooleanEditor()),
         ),
-        Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
-                 low_name="_imgadj_brightness_low",
-                 high_name="_imgadj_brightness_high", mode="slider",
-                 format="%.4g")),
-        Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
-                 low=0.0, high=2.0, mode="slider", format="%.3g")),
-        Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
+        HGroup(
+            Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
+                     low_name="_imgadj_brightness_low",
+                     high_name="_imgadj_brightness_high", mode="slider",
+                     format="%.4g"))
+        ),
+        HGroup(
+            Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
+                     low=0.0, high=2.0, mode="slider", format="%.3g")),
+        ),
+        HGroup(
+            Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g")),
+        ),
+        
+        HGroup(
+            # alpha blending controls
+            Item("_imgadj_alpha_blend_check", label="Blend"),
+            Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
+                 low=0.0, high=1.0, mode="slider", format="%.3g"),
+                 enabled_when="_imgadj_alpha_blend_check"),
+        ),
         label="Adjust Image",
     )
     
@@ -1027,7 +1061,7 @@ class Visualization(HasTraits):
         # populate controls with intensity settings
         self._imgadj_brightness = plot_ax_img.brightness
         self._imgadj_contrast = plot_ax_img.contrast
-        self._imgadj_alpha = plot_ax_img.ax_img.get_alpha()
+        self._imgadj_alpha = plot_ax_img.alpha
 
         # populate intensity limits, auto-scaling, and current val (if not auto)
         self._adapt_imgadj_limits(plot_ax_img)
@@ -1147,6 +1181,21 @@ class Visualization(HasTraits):
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):
         self._adjust_displayed_imgs(alpha=self._imgadj_alpha)
+
+    @on_trait_change("_imgadj_alpha_blend")
+    def _adjust_img_alpha_blend(self):
+        """Adjust the alpha blending."""
+        self._adjust_displayed_imgs(alpha_blend=self._imgadj_alpha_blend)
+
+    @on_trait_change("_imgadj_alpha_blend_check")
+    def _adjust_img_alpha_blend_check(self):
+        """Toggle alpha bledning."""
+        if self._imgadj_alpha_blend_check:
+            # turn on alpha blending
+            self._adjust_img_alpha_blend()
+        else:
+            # turn off alpha blending and reset alpha values
+            self._adjust_displayed_imgs(alpha_blend=False)
 
     def _adjust_displayed_imgs(self, **kwargs):
         """Adjust image display settings for the currently selected viewer.
@@ -1402,7 +1451,8 @@ class Visualization(HasTraits):
                 # GUI to turn them back on
                 self.show_orientation_axes(self.flipz)
         # updates the GUI here even though it doesn't elsewhere for some reason
-        self.rois_check_list = _ROI_DEFAULT
+        if self._rois_selections.selections:
+            self.rois_check_list = self._rois_selections.selections[0]
         self._img_region = None
         #print("reset selected ROI to {}".format(self.rois_check_list))
     
@@ -1683,17 +1733,18 @@ class Visualization(HasTraits):
         self._init_imgadj()
         
         # set up selector for loading past saved ROIs
-        self._rois_dict = {_ROI_DEFAULT: None}
+        self._rois_dict = {self._ROI_DEFAULT: None}
         img5d = config.img5d
         if config.db is not None and img5d and img5d.path_img is not None:
             self._rois = config.db.get_rois(sqlite.get_exp_name(
                 img5d.path_img))
-        self._rois_selections = ListSelections()
+        self._rois_selections = TraitsList()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
         self._rois_selections.selections = list(self._rois_dict.keys())
-        self.rois_check_list = _ROI_DEFAULT
+        if self._rois_selections.selections:
+            self.rois_check_list = self._rois_selections.selections[0]
 
     def update_filename(
             self, filename: str, ignore: bool = False, reset: bool = True):
@@ -1826,16 +1877,13 @@ class Visualization(HasTraits):
     
     @on_trait_change("_channel")
     def update_channel(self):
-        """Update the selected channel, resetting the current state to 
-        prevent displaying the old channel.
+        """Update the selected channel and image adjustment controls.
         """
         if not self._channel:
             # resetting channel names triggers channel update as empty array
             return
         config.channel = sorted([int(n) for n in self._channel])
         self._setup_imgadj_channels()
-        self.rois_check_list = _ROI_DEFAULT
-        self._reset_segments()
         print("Changed channel to {}".format(config.channel))
     
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
@@ -1912,6 +1960,28 @@ class Visualization(HasTraits):
         """Respond to redraw button presses."""
         self.redraw_selected_viewer()
     
+    @staticmethod
+    def _open_help_docs(suffix: str = ""):
+        """Open help documentation in the default web browser.
+        
+        Args:
+            suffix: Name of page within the main documentation; defaults to
+                an empty string to open the docs homepage.
+
+        """
+        Qt.QDesktopServices.openUrl(QtCore.QUrl(
+            f"{config.DocsURLs.DOCS_URL.value}/{suffix}"))
+    
+    @on_trait_change("_roi_btn_help")
+    def _help_roi(self):
+        """Respond to ROI panel help button presses."""
+        self._open_help_docs(config.DocsURLs.DOCS_URL_VIEWER.value)
+
+    @on_trait_change("_profiles_btn_help")
+    def _help_profiles(self):
+        """Respond to profiles panel help button presses."""
+        self._open_help_docs(config.DocsURLs.DOCS_URL_SETTINGS.value)
+    
     def redraw_selected_viewer(self, clear=True):
         """Redraw the selected viewer.
         
@@ -1925,6 +1995,8 @@ class Visualization(HasTraits):
         if clear:
             self.roi = None
             self._reset_segments()
+            if self._rois_selections.selections:
+                self.rois_check_list = self._rois_selections.selections[0]
 
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
@@ -2081,6 +2153,12 @@ class Visualization(HasTraits):
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
         if segs_all is not None:
+            # set confirmation flag to user-selected label for any
+            # un-annotated blob
+            confirmed = detector.get_blob_confirmed(segs_all)
+            confirmed[confirmed == -1] = self._segs_labels[0]
+            detector.set_blob_confirmed(segs_all, confirmed)
+            
             # convert segments to visualizer table format and plot
             self.segments = detector.shift_blob_abs_coords(
                 segs_all, offset[::-1])
@@ -2558,7 +2636,7 @@ class Visualization(HasTraits):
     def load_roi(self):
         """Load an ROI from database, including all blobs."""
         print("got {}".format(self.rois_check_list))
-        if self.rois_check_list not in ("", _ROI_DEFAULT):
+        if self.rois_check_list not in ("", self._ROI_DEFAULT):
             # get chosen ROI to reconstruct original ROI size and offset 
             # including border
             roi = self._rois_dict[self.rois_check_list]
@@ -2607,7 +2685,8 @@ class Visualization(HasTraits):
             # any change to border flag resets ROI selection and segments
             print("changed Border flag")
             self._border_on = border_checked
-            self.rois_check_list = _ROI_DEFAULT
+            if self._rois_selections.selections:
+                self.rois_check_list = self._rois_selections.selections[0]
             self._reset_segments()
         
         # immediately update in Atlas Editors, where None uses the default max
@@ -2866,6 +2945,9 @@ class Visualization(HasTraits):
                 self.segments = np.concatenate((self.segments, segs))
             self.segs_selected.append(len(self.segments) - 1)
             print("added segment to table: {}".format(seg))
+        
+        # scroll to first selected row
+        self._segs_row_scroll = min(self.segs_selected)
         return seg
     
     @property

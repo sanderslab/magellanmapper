@@ -2,7 +2,7 @@ channels:
   - conda-forge
   - defaults
 dependencies:
-  - python=3.6
+  - python=3.8
   - pip
   - cython
   - matplotlib>=3.2,!=3.3.0,!=3.3.1

@@ -8,28 +8,33 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 Related publications and datasets:
 - For more information on the methods used for 3D atlas construction, please see: https://elifesciences.org/articles/61408
-- For step-by-step instructions on using the software, please see: https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104 (now [open access on PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7781073/)!)
+- For step-by-step instructions on using v1.3.x of the software, please see: https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104 (now [open access on PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7781073/)!); see [ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/) for ongoing updates
 - The 3D reconstructed versions of the Allen Developing Mouse Brain Atlas: https://search.kg.ebrains.eu/instances/Project/b8a8e2d3-4787-45f2-b010-589948c33f20
 - Sample wild-type whole mouse brains at age P0: https://search.kg.ebrains.eu/instances/Dataset/2423e103-35e9-40cf-ab0c-0e3d08d24d5a
 
 
 ## Quick Reference
 
+- **NEW**: [Full docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
 - [Installation](#installation) (more [details](docs/install.md))
-- [Intro to running MagellanMapper](#run-magellanmapper) (the GUI)
+- [Intro to running MagellanMapper](#run-magellanmapper)
+- [Using the viewers](docs/viewers.md)
 - [Command-line interface](docs/cli.md)
 - [Configuration and settings](docs/settings.md)
 
 
 ## Installation
 
-### Install a standalone package
+### Using the installer
 
-Starting with v1.4, standlone [installers](https://github.com/sanderslab/magellanmapper/releases) are now available for Windows, macOS, and Linux!
+The easiest way to install MagellanMapper is using one of the [installers](https://github.com/sanderslab/magellanmapper/releases) now available for Windows, macOS, and Linux.
 
-These packages do not require use of the terminal, and you can skip the installation steps below. As the packages are rough around the edges, please file any [issues](https://github.com/sanderslab/magellanmapper/issues) you may enounter.
+To run:
+- **Mac**: launch MagellanMapper from LaunchPad, or double-click on the MagellanMapper app
+- **Windows**: in the Start Menu, go to "MagallanMapper v.x.y.z" and run "MagellanMapper"
+- **Linux**: in a file browser, double-click on `MagellanMapper/MagellanMapper`
 
-Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
+On Windows and Mac, you can also use "Open with" on supported file types (eg `.npy`, `.mhd`, `.nii.gz`) to open them in MagellanMapper.
 
 ### Install from source
 
@@ -46,24 +51,9 @@ git clone https://github.com/sanderslab/magellanmapper.git
 - To update the environment, rerun the appropriate `setup_conda` script above.
 - On Mac, it may be necessary to right-click and "Open with" the Terminal app.
 - On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
-- [v1.3.x releases](https://github.com/sanderslab/magellanmapper/releases/tag/v1.3.8) match the [Current Protocols guide](https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104), while v1.4.x introduces small changes to the interface and workflows (see [v1.4 release notes](https://github.com/sanderslab/magellanmapper/blob/master/docs/release/release_v1.4.md) for more details).
 - See [Installation](docs/install.md) for more details and install options, including installation Venv+Pip instead of Conda.
-  
-## Run MagellanMapper
 
-MagellanMapper consists of a graphical user interface (GUI), command-line interface (CLI), and application programming interface (API) for Python programmatic access. Here we introduce using the GUI, and the [CLI docs](docs/cli.md) can be referenced for scripting.
-
-### Using the standalone package
-
-- **Mac**: launch MagellanMapper from LaunchPad, or double-click on the MagellanMapper app
-- **Windows**: in the Start Menu, go to "MagallanMapper v.x.y.z" and run "MagellanMapper"
-- **Linux**: in a file browser, double-click on `MagellanMapper/MagellanMapper`
-
-On Windows and Mac, you can also use "Open with" on supported file types (eg `.npy`, `.mhd`, `.nii.gz`) to open them in MagellanMapper.
-
-### After installing from source
-
-#### From a file browser
+#### Run from a file browser
 
 **On Mac or Linux**: Double-click the MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
 
@@ -73,7 +63,7 @@ On Windows and Mac, you can also use "Open with" on supported file types (eg `.n
 
 Note that during the first run, there may be a delay of up to several minutes from antivirus scanning for the new Python interpreter location in the new environment. Subsequent launches are typically much faster.
 
-#### From a terminal
+#### Run from a terminal
 
 ```
 conda activate mag
@@ -82,14 +72,17 @@ python <path-to-magellanmapper>/run.py
 
 This approach is recommended when running command-line tasks or for debugging output. Replace `mag` if you gave the environment a different name.
 
-MagellanMapper can be run as a GUI as described above or headlessly for automated tasks. [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See [Settings](docs/settings.md) for how to customize parameters for your image analysis.
+## Using MagellanMapper
+
+MagellanMapper consists of a graphical user interface (GUI), command-line interface (CLI), and application programming interface (API) for Python programmatic access. See the [GUI docs](docs/viewers.md) for graphical usage and the [CLI docs](docs/cli.md) for scripting.
+
+For automated tasks, [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See [Settings](docs/settings.md) for how to customize parameters for your image analysis.
 
 ### Image file import
+
 In the "Import" tab, you can select files, view and update metadata, and import the files.
 
 Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) can be opened with the SimpleITK/SimpleElastix Library and do not require separate import. Standard image formats such as TIFF or proprietary microscopy formats such as CZI can be imported by MagellanMapper into an industry standard Numpy format, which allows on-the-fly loading to reduce memory requirements and initial loading time.
-
-
 
 ### Sample 3D data
 
@@ -99,93 +92,6 @@ To try out functions with sample images, download any of these practice files:
 - [Sample downsampled tissue cleared whole brain (`sample_brain.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
 - [Allen Developing Mouse Brain Atlas E18.5 (`ADMBA-E18pt5.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/ADMBA-E18pt5.zip)
 
-## 3D viewer
-
-The main MagellanMapper GUI displays a 3D viewer and region of interest (ROI) selection controls. MagellanMapper uses the Mayavi data visualizer for 3D voxel or surface rendering.
-
-From the ROI selection controls, two different 2D editors can be opened. All but the last `2D styles` option open various forms of the Nuclei Annotation Editor. The final option opens the Atlas Editor, a 2D/3D viewer.
-
-## Nuclei Annotation Editor
-
-The multi-level 2D plotter is geared toward simplifying annotation for nuclei. Select the `ROI Editor` tab to view the editor. Press the `Redraw` button to redraw the editor at the selected ROI. To detect and display nuclei in the ROI, select the `Detect` tab and press the `Detect` button.
-
-| To Do...        | Shortcut            |
-| ---------------- | :------------------: |
-| Cycle between the 3 nuclei detection flags | Click within the dotted circles; incorrect (red), correct (green), or questionable (yellow) |
-| Move the circle's position | `shift+click` and drag (note that the original position will remain as a solid circle) |
-| Resize the circle's radius | `Alt+click` (`option+click` on Mac) and drag |
-| Copy the circle | `"c"+click` |
-| Duplicate a circle to the same position in anothe z-plane | `"v"+click` on the corresponding position in the z-plane to which the circle will be duplicated |
-| Cut the circle | `"x"+click` |
-| Delete the circle | `"d"+click` |
-| Increase/decrease the overview plots' z-plane | Arrow `up/right` to increase and `down/left` to decrease |
-| Jump to a z-plane in the overview plots corresponding to an ROI plane | `Right-click` on the the corresponding ROI plane |
-| Preview the ROI at a certain position | `Left-click` in the overview plot |
-| Redraw the editor at the chosen ROI settings | Double `right-click` in any overview plot |
-
-
-## Atlas Editor
-
-The multi-planar image plotter allows simplified viewing and editing of annotation labels for an atlas. Existing labels can be painted into adjacent areas, and synchronized planar viewing allows realtime visualization of changes in each plane.
-
-To view the editor, select the `Atlas Editor` tab. The `Redraw` button in the `ROI` tab of the left panel will redraw the editor if necessary. The `Registered images` section allows selecting any available annotations and label reference files to overlay.
-
-| To Do...       | Shortcut                    |
-| ------------- |:-------------------------: |
-| See the region name | Mouseover over any label |
-| Move the crosshairs and the corresponding planes | `Left-click` |
-| Move planes in the current plot | Scroll or arrow `up`/`down`|
-| Zoom | `Right-click` or `Ctrl+left-click` while moving the mouse up/down |
-| Pan | `Middle-click` or `Shift+left-click` while dragging the mouse |
-| Toggle between 0 and full labels alpha (opacity) | `a` |
-| Halve alpha | `shift+a` |
-| Return to original alpha | press `a` twice |
-
-Press on the "Edit" button to start painting labels using these controls:
-
-| To Do...        | Shortcut                    |
-| ------------- |:-------------------------:|
-|Paint over a new area | `Left-click`, pick a color, then drag over image |
-| Use the last picked color to paint over a new area | `Alt+Left-click`(option-click on Mac) |
-| Make the paintbrush smaller/bigger | `[`/`]` (brackets) |
-| Halve the increment of the paintbrush size | `[`/`]` and add `shift` |
-
-
-Use the save button in the main window with the atlas window still open to resave
-
-
-## Start a processing pipeline
-
-Automated processing will attempt to scale based on your system resources but may require some manual intervention. This pipeline has been tested on a Macbook Pro laptop and AWS EC2 Linux (RHEL and Amazon Linux based) instances.
-
-Optional dependencies:
-
-- ImageJ/Fiji with the BigStitcher plugin: required for tile stitching; downloaded automatically onto a server when running `deploy.sh`
-- ImageMagick: required for exporting a stack of planes to an animated GIF file
-- FFMpeg: required to export a stack to a movie format such as MP4
-- [Slack incoming webhook](https://api.slack.com/incoming-webhooks): to notify when tile stitching alignment is ready for verification and pipeline has completed
-
-### Local
-Run a pipeline in `pipelines.sh`.
-
-For example, load a `.czi` file and display in the GUI, which will import the file into a Numpy format for faster future loading:
-
-```
-bin/pipelines.sh -i data/HugeImage.czi
-```
-
-To sitch a multi-tile image and perform cell detection on the entire image, which will load BigStitcher in ImageJ/Fiji for tile stitching:
-
-```
-bin/pipelines.sh -i data/HugeImage.czi -p full
-```
-
-See `bin/pipelines.sh` for additional sample commands for common scenarios, such as cell detection on a small region of interest. The file can be edited directly to load the same image, for example.
-
-### Server
-
-You can launch a standard server, deploy MagellanMapper code, and run a pipeline. See [tools for AWS cloud management](cloud_aws.sh) for more details. 
-
 Licensed under the open-source [BSD-3 license](LICENSE.txt)
 
-Author: David Young, 2017, 2021, Stephan Sanders Lab
+Author: David Young, 2017, 2022, Stephan Sanders Lab

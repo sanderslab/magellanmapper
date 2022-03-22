@@ -9,7 +9,7 @@ import os
 import glob
 import datetime
 import sqlite3
-from typing import List, Optional, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -25,6 +25,8 @@ DB_VERSION = 4
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
 _COLS_BLOB_MATCHES = "roi_id, blob1, blob2, dist"
+
+_logger = config.logger.getChild(__name__)
 
 
 def _create_db(path):
@@ -846,7 +848,7 @@ class ClrDB:
             return (self.select_blob(roi_id, blob)[1] if blob_id is None
                     else blob_id)
         
-        if matches is None: return None
+        if matches is None or matches.df is None: return None
         ids = []
         for _, match in matches.df.iterrows():
             blob1_id = get_blob_id(
@@ -913,39 +915,67 @@ class ClrDB:
             .format(_COLS_BLOB_MATCHES), (roi_id,))
         return self._parse_blob_matches(self.cur.fetchall())
 
-    def select_blob_matches_by_blob_id(self, row_id, blobn, blob_ids):
+    def select_blob_matches_by_blob_id(
+            self,
+            row_id: int,
+            blobn: int,
+            blob_ids: Sequence[int],
+            max_params: int = 100000
+    ) -> "colocalizer.BlobMatch":
         """Select blob matches corresponding to the given blob IDs in the
         given blob column.
 
         Args:
-            row_id (int): Row ID.
-            blobn (int): 1 or 2 to indicate the first or second blob column,
+            row_id: Row ID.
+            blobn: 1 or 2 to indicate the first or second blob column,
                 respectively.
-            blob_ids (List[int]): Blob IDs.
+            blob_ids: Blob IDs.
+            max_params: Maximum number of parameters for the `SELECT`
+                statements; defaults to 100000. The max is determined by
+                `SQLITE_MAX_VARIABLE_NUMBER` set at the sqlite3 compile
+                time. If this number is exceeded, this function is called
+                recursively with half the given `max_params`.
 
         Returns:
-            :class:`magmap.cv.colocalizer.BlobMatch`: Blob match object,
-            which is empty if not matches are found.
+            Blob match object, which is empty if not matches are found.
+        
+        Raises:
+            :meth:`sqlit3.OperationalError`: if the maximum number of
+            parameters is < 1.
 
         """
+        if max_params < 1:
+            raise sqlite3.OperationalError(
+                "Could not determine number of parameters for selecting blob "
+                "matches")
+        
         matches = []
         if isinstance(blob_ids, np.ndarray):
             blob_ids = blob_ids.tolist()
-        max_params = 990  # max params of 999 in sqlite < v3.32.0
-        for i in range(len(blob_ids) // max_params + 1):
-            # select blob matches by block to avoid exceeding sqlite parameter
-            # limit
-            ids = blob_ids[i*max_params:(i+1)*max_params]
-            ids.insert(0, row_id)
-            self.cur.execute(
-                "SELECT {}, id FROM blob_matches WHERE roi_id = ?"
-                "AND blob{} IN ({})"
-                .format(_COLS_BLOB_MATCHES, blobn,
-                        ",".join("?" * (len(ids) - 1))),
-                ids)
-            df = self._parse_blob_matches(self.cur.fetchall()).df
-            if df is not None:
-                matches.append(df)
+        try:
+            # select matches by block to avoid exceeding sqlite parameter limit
+            nblocks = len(blob_ids) // max_params + 1
+            for i in range(nblocks):
+                _logger.info(
+                    "Selecting blob matches block %s of %s", i, nblocks - 1)
+                ids = blob_ids[i*max_params:(i+1)*max_params]
+                ids.insert(0, row_id)
+                self.cur.execute(
+                    f"SELECT {_COLS_BLOB_MATCHES}, id FROM blob_matches "
+                    f"WHERE roi_id = ? AND blob{blobn} "
+                    f"IN ({','.join('?' * (len(ids) - 1))})",
+                    ids)
+                df = self._parse_blob_matches(self.cur.fetchall()).df
+                if df is not None:
+                    matches.append(df)
+        except sqlite3.OperationalError:
+            # call recursively with halved number of parameters
+            _logger.debug(
+                "Exceeded max sqlite query parameters; trying with smaller "
+                "number")
+            return self.select_blob_matches_by_blob_id(
+                row_id, blobn, blob_ids, max_params // 2)
+        
         if len(matches) > 0:
             return colocalizer.BlobMatch(df=df_io.data_frames_to_csv(matches))
         return colocalizer.BlobMatch()

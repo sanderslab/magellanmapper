@@ -28,7 +28,10 @@ import numpy as np
 from magmap.settings import logs
 
 if TYPE_CHECKING:
+    import SimpleITK as sitk
     from magmap.atlas import labels_meta
+    from magmap.cv import detector
+    from magmap.io import np_io
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -36,6 +39,18 @@ APP_NAME = "MagellanMapper"
 URI_SCHEME = "magmap"
 #: str: Reverse Domain Name System identifier.
 DNS_REVERSE = f"io.github.sanderslab.{APP_NAME}"
+
+
+class DocsURLs(Enum):
+    """URLs to online documentation."""
+    #: Docs base URL.
+    DOCS_URL = "https://magellanmapper.readthedocs.io/en/latest"
+    #: Viewer doc suffix.
+    DOCS_URL_VIEWER = "viewers.html"
+    #: Settings doc URL.
+    DOCS_URL_SETTINGS = "settings.html"
+
+
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to
@@ -111,11 +126,11 @@ subimg_sizes = None
 
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
-#: :obj:`magmap.io.np_io.Image5d`: Image5d object.
-img5d = None
+#: Image5d object.
+img5d: Optional["np_io.Image5d"] = None
 
-#: obj:`magmap.cv.detector.Blobs`: Blobs object.
-blobs = None
+#: Blobs object.
+blobs: Optional["detector.Blobs"] = None
 
 #: :obj:`np.ndarray`: 2D array of shapes per time point in
 # ``[n_time_point, n_shape]`` format in case image5d is not available
@@ -510,7 +525,7 @@ load_labels: Optional[str] = None
 #: Numpy array of a labels image file, typically corresponding to ``img5d``.
 labels_img: Optional = None
 #: Labels image as a SimpleITK Image instance.
-labels_img_sitk: Optional[np.ndarray] = None
+labels_img_sitk: Optional["sitk.Image"] = None
 #: Original labels image, before any processing.
 labels_img_orig: Optional[np.ndarray] = None
 #: Scaling factors from ``labels_img`` to ``img5d``. 

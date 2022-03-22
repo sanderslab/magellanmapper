@@ -22,24 +22,32 @@ class Image5d:
     """Main image storage.
     
     Attributes:
-        img (:obj:`np.ndarray`): 5D Numpy array in the format ``t,z,y,x,c``;
+        img: 5D Numpy array in the format ``t,z,y,x,c``; defaults to None.
+        path_img: Path from which ``img`` was loaded; defaults to None.
+        path_meta: Path from which metadata for ``img`` was loaded;
             defaults to None.
-        path_img (str): Path from which ``img`` was loaded; defaults to None.
-        path_meta (str): Path from which metadata for ``img`` was loaded;
-            defaults to None.
-        img_io (enum): I/O source for image5d array; defaults to None.
-        subimg_offset (Sequence[int]): Sub-image offset in ``z,y,x``.
-        subimg_size (Sequence[int]): Sub-image size in ``z,y,x``.
+        img_io: I/O source for image5d array; defaults to None.
+        subimg_offset: Sub-image offset in ``z,y,x``; defaults to None.
+        subimg_size: Sub-image size in ``z,y,x``; defaults to None.
+        meta: Image metadata dictionary; defaults to None.
     
     """
-    def __init__(self, img=None, path_img=None, path_meta=None, img_io=None):
+    def __init__(
+            self, img: Optional[np.ndarray] = None,
+            path_img: Optional[str] = None,
+            path_meta: Optional[str] = None,
+            img_io: Optional[config.LoadIO] = None):
         """Construct an Image5d object."""
+        # attributes assignable from args
         self.img = img
         self.path_img = path_img
         self.path_meta = path_meta
         self.img_io = img_io
-        self.subimg_offset = None
-        self.subimg_size = None
+        
+        # additional attributes
+        self.subimg_offset: Optional[Sequence[int]] = None
+        self.subimg_size: Optional[Sequence[int]] = None
+        self.meta: Optional[Dict[config.MetaKeys, Any]] = None
 
 
 def img_to_blobs_path(path):
@@ -71,7 +79,8 @@ def find_scaling(
     """Find scaling between two images.
     
     Scaling can be computed to translate blob coordinates into another
-    space, such as a heat map for a downsampled image.
+    space, such as a downsampled image. These compressed coordinates can be
+    used to generate a heat map of blobs.
     
     Args:
         img_path: Base path to image.
@@ -91,28 +100,39 @@ def find_scaling(
         of the full-sized image found based on ``img_path``.
 
     """
-    # get scaling and resolutions from blob space to that of a down/upsampled
-    # image space
+    # path to image, which may have been resized
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None
     res = None
     if scale is not None or load_size is not None:
         # retrieve scaling from a rescaled/resized image
-        _, img_info = importer.read_file(
-            img_path_transposed, config.series, return_info=True)
+        img_info = importer.read_file(img_path_transposed, config.series).meta
         scaling = img_info["scaling"]
         res = np.multiply(config.resolutions[0], scaling)
-        print("retrieved scaling from resized image:", scaling)
-        print("rescaled resolution for full-scale image:", res)
+        _logger.info("Retrieved scaling from resized image: %s", scaling)
+        _logger.info("Rescaled resolution for full-scale image: %s", res)
+    
     elif scaled_shape is not None:
-        # fall back to scaling based on comparison to original image
+        # scale by comparing to original image
         img5d = importer.read_file(img_path_transposed, config.series)
-        scaling = importer.calc_scaling(
-            img5d.img, None, scaled_shape=scaled_shape)
-        res = config.resolutions[0]
-        print("using scaling compared to full image:", scaling)
-        print("resolution from full-scale image:", res)
+        img5d_shape = None
+        if img5d.img is not None:
+            # get the shape from the original image
+            img5d_shape = img5d.img.shape
+        elif img5d.meta is not None:
+            # get the shape from the original image's metadata
+            img5d_shape = img5d.meta[config.MetaKeys.SHAPE][1:4]
+        
+        if img5d_shape is not None:
+            # find the scaling factor using the original and resized image's
+            # shapes 
+            scaling = importer.calc_scaling(
+                None, None, img5d_shape, scaled_shape)
+            res = config.resolutions[0]
+            _logger.info("Using scaling compared to full image: %s", scaling)
+            _logger.info("Resolution from full-scale image: %s", res)
+    
     return scaling, res
 
 
@@ -150,8 +170,14 @@ def _check_np_none(val):
     return None if val is None or np.all(np.equal(val, None)) else val
 
 
-def setup_images(path, series=None, offset=None, size=None,
-                 proc_type=None, allow_import=True):
+def setup_images(
+        path: str,
+        series: Optional[int] = None,
+        offset: Optional[Sequence[int]] = None,
+        size: Optional[Sequence[int]] = None,
+        proc_type: Optional["config.ProcessTypes"] = None,
+        allow_import: bool = True,
+        fallback_main_img: bool = True):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -159,15 +185,16 @@ def setup_images(path, series=None, offset=None, size=None,
     be used in place of ``path`` for registered labels.
     
     Args:
-        path (str): Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will 
             be generated.
-        series (int): Image series number; defaults to None.
-        offset (List[int]): Sub-image offset given in z,y,x; defaults to None.
-        size (List[int]): Sub-image shape given in z,y,x; defaults to None.
-        proc_type (Enum): Processing type, which should be a one of
-            :class:`config.ProcessTypes`.
-        allow_import (bool): True to allow importing the image if it
+        series: Image series number; defaults to None.
+        offset: Sub-image offset given in z,y,x; defaults to None.
+        size: Sub-image shape given in z,y,x; defaults to None.
+        proc_type: Processing type.
+        allow_import: True to allow importing the image if it
             cannot be loaded; defaults to True.
+        fallback_main_img: True to fall back to loading a registered image
+            if possible if the main image could not be loaded; defaults to True.
     
     """
     def add_metadata():
@@ -309,8 +336,8 @@ def setup_images(path, series=None, offset=None, size=None,
                 if not import_only:
                     # load previously imported image
                     img5d = importer.read_file(path, series)
-                if allow_import:
-                    # re-import over existing image or import new image
+                if allow_import and (img5d is None or img5d.img is None):
+                    # import image; will re-import over any existing image file 
                     if os.path.isdir(path) and all(
                             [r is None for r in config.reg_suffixes.values()]):
                         # import directory of single plane images to single
@@ -324,7 +351,7 @@ def setup_images(path, series=None, offset=None, size=None,
                                 importer.DEFAULT_IMG_STACK_NAME)
                         img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
-                    elif import_only or img5d is None:
+                    elif import_only:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
                             path)
@@ -340,9 +367,8 @@ def setup_images(path, series=None, offset=None, size=None,
                     config.img5d = img5d
                     config.image5d = config.img5d.img
         except FileNotFoundError as e:
-            print(e)
-            print("Could not load {}, will fall back to any associated "
-                  "registered image".format(path))
+            _logger.exception(e)
+            _logger.info("Could not load %s", path)
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings
@@ -352,11 +378,12 @@ def setup_images(path, series=None, offset=None, size=None,
         importer.assign_metadata(config.metadatas[0])
     
     # main image is currently required since many parameters depend on it
-    if atlas_suffix is None and config.image5d is None:
+    if fallback_main_img and atlas_suffix is None and config.image5d is None:
         # fallback to atlas if main image not already loaded
         atlas_suffix = config.RegNames.IMG_ATLAS.value
-        print("main image is not set, falling back to registered "
-              "image with suffix", atlas_suffix)
+        _logger.info(
+            "Main image is not set, falling back to registered image with "
+            "suffix %s", atlas_suffix)
     # use prefix to get images registered to a different image, eg a
     # downsampled version, or a different version of registered images
     path = config.prefix if config.prefix else path
@@ -371,7 +398,8 @@ def setup_images(path, series=None, offset=None, size=None,
             print(e)
     
     # load metadata related to the labels image
-    config.labels_metadata = labels_meta.LabelsMeta(path).load()
+    config.labels_metadata = labels_meta.LabelsMeta(
+        f"{path}." if config.prefix else path).load()
     
     if annotation_suffix is not None:
         try:

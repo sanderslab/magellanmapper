@@ -479,7 +479,7 @@ def get_cmap(cmap, n=None):
     if isinstance(cmap, str):
         # cmap given as a standard Matplotlib colormap name
         cmap = cm.get_cmap(cmap)
-    elif cmap in config.Cmaps:
+    elif isinstance(cmap, config.Cmaps):
         # assume default colormaps have been initialized
         cmap = CMAPS[cmap]
     return cmap

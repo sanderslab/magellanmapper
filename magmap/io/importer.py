@@ -19,7 +19,7 @@ from time import time
 import glob
 import pprint
 import re
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from xml import etree as et
 
 import numpy as np
@@ -263,41 +263,59 @@ def find_sizes(filename):
     return sizes, dtype
 
 
-def make_filenames(filename, series=None, modifier=""):
+def make_filenames(
+        filename: str, series: Optional[int] = None, modifier: str = "",
+        keep_ext: bool = False) -> Tuple[str, str]:
     """Make MagellanMapper-oriented image and image metadata filenames.
     
     Args:
-        filename (str): Original path from which MagellanMapper-oriented
+        filename: Original path from which MagellanMapper-oriented
             filenames  will be derived.
-        series (int): Image series; defaults to None.
-        modifier (str): Separator for image series; defaults to an empty string.
+        series: Image series; defaults to None.
+        modifier: Separator for image series; defaults to an empty string.
+        keep_ext: True to keep the `filename` extension; defaults to False.
     
     Returns:
         Tuple of path to the main image and path to metadata.
+    
     """
-    print("filename: {}".format(filename))
-    filename_base = filename_to_base(filename, series, modifier)
-    print("filename_base: {}".format(filename_base))
+    # convert to base path, which may remove extension
+    filename_base = filename_to_base(filename, series, modifier, keep_ext)
+    _logger.info(
+        f"Image filename: {filename}\n"
+        f"Converted to base filename: {filename_base}")
+    
+    # combine with image suffixes, without removing extension from base path
+    # since any extension would have been removed earlier
     filename_image5d = libmag.combine_paths(
-        filename_base, config.SUFFIX_IMAGE5D)
-    filename_meta = libmag.combine_paths(filename_base, config.SUFFIX_META)
+        filename_base, config.SUFFIX_IMAGE5D, keep_ext=True)
+    filename_meta = libmag.combine_paths(
+        filename_base, config.SUFFIX_META, keep_ext=True)
+    
     return filename_image5d, filename_meta
 
 
-def filename_to_base(filename, series=None, modifier=""):
+def filename_to_base(
+        filename: str, series: Optional[int] = None, modifier: str = "",
+        keep_ext: bool = False) -> str:
     """Convert an image path to a base path with an optional modifier.
     
     Args:
-        filename (str): Path to original image.
-        series (int): Series (eg tile) within image; defaults to None.
+        filename: Path to original image.
+        series: Series (eg tile) within image; defaults to None.
             Currently ignored, but may be implemented in the future to
             track different tiles or timepoints.
-        modifier (str): Modifier string prior to series; defaults to an
+        modifier: Modifier string prior to series; defaults to an
             empty string.
+        keep_ext: True to keep the `filename` extension; defaults to False.
+    
+    Returns:
+        Base path.
+    
     """
-    path = libmag.splitext(filename)[0]
+    path = filename if keep_ext else libmag.splitext(filename)[0]
     if modifier:
-        path = libmag.combine_paths(path, modifier)
+        path = libmag.combine_paths(path, modifier, keep_ext=True)
     return path
 
 
@@ -531,15 +549,16 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
     return True
 
 
-def load_metadata(path, check_ver=False, assign=True):
-    """Load image info, such as saved microscopy data and image ranges, 
-    storing some values into appropriate module level variables.
+def load_metadata(
+        path: str, check_ver: bool = False, assign: bool = True
+) -> Tuple[Optional[Dict[Union[str, config.MetaKeys], Any]], int]:
+    """Load image info, such as saved microscopy data and image ranges.
     
     Args:
-        path (str): Path to image info file.
-        check_ver (bool): True to stop loading if the archive's version number  
+        path: Path to image info file.
+        check_ver: True to stop loading if the archive's version number  
             is less than :const:``IMAGE5D_NP_VER``; defaults to False.
-        assign (bool): True to assign values to module-level settings.
+        assign: True to assign values to module-level settings.
     
     Returns:
         Tuple of ``output``, the dictionary with image info, and 
@@ -554,6 +573,11 @@ def load_metadata(path, check_ver=False, assign=True):
         if output:
             # metadata is in first document
             output = output[0]
+            
+            # add entries for MetaKeys enum
+            # TODO: convert corresponding keys to enum?
+            output.update(dict.fromkeys(config.MetaKeys, None))
+    
     except FileNotFoundError as err:
         # fall back to pre-v1.4 NPZ file format
         _logger.warn("Could not load metadata file '%s', will check NPZ format",
@@ -586,56 +610,89 @@ def load_metadata(path, check_ver=False, assign=True):
     return output, image5d_ver_num
 
 
-def assign_metadata(md):
-    """Assign values from a metadata dictionary to module variables. 
+def assign_metadata(md: Dict[Union[str, config.MetaKeys], Any]):
+    """Assign values from a metadata dictionary to module variables.
+    
+    Values are also added to :class:`magmap.settings.config.MetaKeys` entries.
     
     Args:
-        md (dict): Dictionary of metadata.
+        md: Dictionary of metadata.
 
     """
     try:
+        # image names for each series; not currently used
         names = md["names"]
         print("names: {}".format(names))
     except KeyError:
         print("could not find names")
+    
     try:
+        # image shapes for each series
         config.image5d_shapes = md["sizes"]
+        # get first series' shape
+        md[config.MetaKeys.SHAPE] = libmag.get_if_within(
+            config.image5d_shapes, 0)
         print("sizes {}".format(config.image5d_shapes))
     except KeyError:
         print("could not find sizes")
+    
     try:
+        # image resolutions for each series
         config.resolutions = np.array(md["resolutions"])
+        # get first series' resolution
+        md[config.MetaKeys.RESOLUTIONS] = libmag.get_if_within(
+            config.resolutions, 0)
         print("set resolutions to {}".format(config.resolutions))
     except KeyError:
         print("could not find resolutions")
+    
     try:
+        # image objective magnification
         config.magnification = md["magnification"]
+        # get first series' mag
+        md[config.MetaKeys.MAGNIFICATION] = libmag.get_if_within(
+            config.magnification, 0)
         print("magnification: {}".format(config.magnification))
     except KeyError:
         print("could not find magnification")
+    
     try:
+        # image objective zoom
         config.zoom = md["zoom"]
+        # get first series' zoom
+        md[config.MetaKeys.ZOOM] = libmag.get_if_within(
+            config.zoom, 0)
         print("zoom: {}".format(config.zoom))
     except KeyError:
         print("could not find zoom")
+    
     try:
+        # intensity close to the min across all planes for each image series
         config.near_min = md["near_min"]
         print("set near_min to {}".format(config.near_min))
     except KeyError:
         print("could not find near_max")
+    
     try:
+        # intensity close to the max across all planes for each image series
         config.near_max = md["near_max"]
         print("set near_max to {}".format(config.near_max))
         if config.vmaxs is None:
+            # use a slightly higher value for display purposes
             config.vmax_overview = np.multiply(config.near_max, 1.1)
         print("Set vmax_overview to {}".format(config.vmax_overview))
     except KeyError:
         print("could not find near_max")
 
 
-def read_file(filename, series=None, offset=None, size=None, return_info=False,
-              update_info=True):
-    """Reads an image file in Numpy format.
+def read_file(
+        filename: str,
+        series: Optional[int] = None,
+        offset: Optional[int] = None,
+        size: Optional[int] = None,
+        update_info: bool = True
+) -> "np_io.Image5d":
+    """Read an image file in Numpy format.
 
     An offset and size can be given to load an only an ROI of the image.
     
@@ -650,15 +707,11 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
         size: Tuple of ROI size given as (x, y, z). If Numpy image info already 
             exists, this tuple will be used to load only an ROI of the image. 
             Defaults to None.
-        return_info: True if the Numpy info file should be returned for a 
-            dictionary of image properties; defaults to False.
         update_info: True if the associated image5d info file should be 
             updated; defaults to True.
     
     Returns:
-        :obj:`np_io.Image5d`, dict: The 5D image object, or None if it could
-        not be loaded. If ``return_info`` is True, a dictionary of image
-        properties will also be returned.
+        The image object.
     
     Raises:
         FileNotFoundError: If metadata was set to be updated, but the
@@ -666,13 +719,15 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
     """
     if series is None:
         series = 0
-    filename_image5d, filename_meta = make_filenames(
-        filename, series)
+    filename_image5d, filename_meta = make_filenames(filename, series)
+    img5d = np_io.Image5d(
+        None, filename_image5d, filename_meta, config.LoadIO.NP)
     image5d_ver_num = -1
-    metadata = None
+    
     try:
         # load image5d metadata; if updating, only fully load if curr ver
         metadata, image5d_ver_num = load_metadata(filename_meta, update_info)
+        img5d.meta = metadata
 
         # load original image, using mem-mapped accessed for the image
         # file to minimize memory requirement, only loading on-the-fly
@@ -683,6 +738,7 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             # offset and size given
             image5d = plot_3d.prepare_roi(image5d, offset, size)
             image5d = roi_to_image5d(image5d)
+        img5d.img = image5d
 
         if update_info:
             # if metadata < latest ver, update and load info
@@ -691,14 +747,11 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
             if load_info:
                 # load updated archive
                 metadata, image5d_ver_num = load_metadata(filename_meta)
-        img5d = np_io.Image5d(
-            image5d, filename_image5d, filename_meta, config.LoadIO.NP)
-        if return_info:
-            return img5d, metadata
-        return img5d
-    except OSError as e:
+            img5d.meta = metadata
+    
+    except OSError as err:
         print("Could not load image files for", filename)
-        print(e)
+        print(err)
         if update_info and -1 < image5d_ver_num < IMAGE5D_NP_VER:
             # set to update metadata but could not because image5d
             # was not available;
@@ -709,9 +762,8 @@ def read_file(filename, series=None, offset=None, size=None, return_info=False,
                 "current version {}) and could not be updated because "
                 "the original image5d file was not found."
                 .format(image5d_ver_num, IMAGE5D_NP_VER))
-        if return_info:
-            return None, metadata
-        return None
+    
+    return img5d
 
 
 def setup_import_multipage(filename):
@@ -925,7 +977,8 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
     time_start = time()
     if series is None:
         series = 0
-    filename_image5d, filename_meta = make_filenames(prefix, series)
+    filename_image5d, filename_meta = make_filenames(
+        prefix, series, keep_ext=True)
     libmag.printcb("Initializing multiplane image import planes to \"{}\", "
                    "may take awhile..."
                    .format(filename_image5d), fn_feedback)
@@ -1231,8 +1284,8 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
     # allow import of arbitrarily large images
     Image.MAX_IMAGE_PIXELS = None
     
-    print("prefix", prefix)
-    filename_image5d_npz, filename_info_npz = make_filenames(prefix + ".")
+    filename_image5d_npz, filename_info_npz = make_filenames(
+        prefix, keep_ext=True)
     libmag.printcb("Importing single-plane images into multiplane Numpy format "
                    "file: {}".format(filename_image5d_npz), fn_feedback)
     image5d = None

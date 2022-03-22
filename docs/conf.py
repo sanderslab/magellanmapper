@@ -206,3 +206,32 @@ napoleon_use_admonition_for_references = False
 napoleon_use_ivar = True
 napoleon_use_param = True
 napoleon_use_rtype = True
+
+
+# automate building API .rst files, necessary for ReadTheDocs, as inspired by:
+# https://github.com/readthedocs/readthedocs.org/issues/1139#issuecomment-398083449
+def run_apidoc(_):
+    ignore_paths = []
+
+    argv = [
+        "-f",
+        "-T",
+        "-e",
+        "-M",
+        "-o", ".",
+        ".."
+    ] + ignore_paths
+
+    try:
+        # Sphinx >= 1.7
+        from sphinx.ext import apidoc
+        apidoc.main(argv)
+    except ImportError:
+        # Sphinx  < 1.7
+        from sphinx import apidoc
+        argv.insert(0, apidoc.__file__)
+        apidoc.main(argv)
+
+
+def setup(app):
+    app.connect('builder-inited', run_apidoc)

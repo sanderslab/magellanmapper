@@ -410,7 +410,7 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     if blobs is None:
         return None
     thresh, scaling, inner_pad, resize, blobs = verifier.setup_match_blobs_roi(
-        blobs, tol)
+        tol, blobs)
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}

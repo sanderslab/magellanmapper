@@ -263,6 +263,8 @@ class Blocks(NamedTuple):
     overlap: np.ndarray
     #: Similar overlap array but for padding beyond the overlap.
     overlap_padding: np.ndarray
+    #: Max pixels for each side in ``z, y, x`` order.
+    max_pixels: np.ndarray
 
 
 def setup_blocks(
@@ -318,7 +320,7 @@ def setup_blocks(
         shape, max_pixels, overlap)
     return Blocks(
         sub_roi_slices, sub_rois_offsets, denoise_max_shape,
-        exclude_border, tol, overlap_base, overlap, overlap_padding)
+        exclude_border, tol, overlap_base, overlap, overlap_padding, max_pixels)
 
 
 def detect_blobs_blocks(filename_base, image5d, offset, size, channels,

@@ -125,15 +125,16 @@ def setup_match_blobs_roi(
     scaling = thresh / tol
     # casting to int causes improper offset import into db
     inner_padding = np.floor(tol[::-1])
-    _logger.debug(
-        "verifying blobs with tol %s leading to thresh %s, scaling %s, "
-        "inner_padding %s", tol, thresh, scaling, inner_padding)
+    libmag.log_once(
+        _logger.debug, 
+        f"verifying blobs with tol {tol} leading to thresh {thresh}, "
+        f"scaling {scaling}, inner_padding {inner_padding}")
     
     # resize blobs based only on first profile
     resize = config.get_roi_profile(0)["resize_blobs"]
     if resize and blobs is not None:
         blobs = detector.multiply_blob_rel_coords(blobs, resize)
-        _logger.debug("resized blobs by %s:\n%s", resize, blobs)
+        libmag.log_once(_logger.debug, f"resized blobs by {resize}:\n{blobs}")
     
     return thresh, scaling, inner_padding, resize, blobs
 

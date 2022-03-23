@@ -1,5 +1,6 @@
 # Blob verifications against ground truth
 import os
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 from scipy import optimize
@@ -98,17 +99,19 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
     return rowis, colis, dists_closest
 
 
-def setup_match_blobs_roi(blobs, tol):
+def setup_match_blobs_roi(
+        tol: Sequence[float], blobs: Optional[np.ndarray] = None
+) -> Tuple[float, Sequence[float], np.ndarray, Sequence[float],
+           np.ndarray]:
     """Set up tolerances for matching blobs in an ROI.
     
     Args:
-        blobs (:obj:`np.ndarray`): Sequence of blobs to resize if the
-            first ROI profile (:attr:`config.roi_profiles`) ``resize_blobs``
+        tol: Sequence of tolerances.
+        blobs: Sequence of blobs to resize if the first ROI profile
+            (:attr:`magmap.config.roi_profiles`) ``resize_blobs``
             value is given.
-        tol (List[int, float]): Sequence of tolerances.
 
     Returns:
-        float, List[float], List[float], List[float], :obj:`np.ndarray`:
         Distance map threshold, scaling normalized by ``tol``, ROI padding
         shape, resize sequence retrieved from ROI profile, and ``blobs``
         after any resizing.
@@ -122,15 +125,15 @@ def setup_match_blobs_roi(blobs, tol):
     scaling = thresh / tol
     # casting to int causes improper offset import into db
     inner_padding = np.floor(tol[::-1])
-    libmag.printv(
-        "verifying blobs with tol {} leading to thresh {}, scaling {}, "
-        "inner_padding {}".format(tol, thresh, scaling, inner_padding))
+    _logger.debug(
+        "verifying blobs with tol %s leading to thresh %s, scaling %s, "
+        "inner_padding %s", tol, thresh, scaling, inner_padding)
     
     # resize blobs based only on first profile
     resize = config.get_roi_profile(0)["resize_blobs"]
-    if resize:
+    if resize and blobs is not None:
         blobs = detector.multiply_blob_rel_coords(blobs, resize)
-        libmag.printv("resized blobs by {}:\n{}".format(resize, blobs))
+        _logger.debug("resized blobs by %s:\n%s", resize, blobs)
     
     return thresh, scaling, inner_padding, resize, blobs
 
@@ -293,7 +296,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
     blobs_rois = None
     rois_falsehood = []
     thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
-        blobs, tol)
+        tol, blobs)
     
     # set up metrics dict for accuracy metrics of each ROI
     metrics = {}

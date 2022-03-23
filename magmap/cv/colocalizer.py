@@ -179,6 +179,9 @@ class StackColocalizer(object):
         if setup_cli:
             # reload command-line parameters
             cli.process_cli_args()
+        _logger.debug(
+            "Match-based colocalizing blobs in ROI at offset %s, size %s",
+            offset, shape)
         matches = colocalize_blobs_match(blobs, offset[::-1], shape[::-1], tol)
         return coord, matches
     
@@ -199,10 +202,15 @@ class StackColocalizer(object):
         _logger.info(
             "Colocalizing blobs based on matching blobs in each pair of "
             "channels")
-        # set up ROI blocks from which to select blobs in each block
+        # scale match tolerance based on block processing ROI size
         blocks = stack_detect.setup_blocks(config.roi_profile, shape)
         match_tol = np.multiply(
             blocks.overlap_base, config.roi_profile["verify_tol_factor"])
+        
+        # adjust ROI size based on required inner padding
+        inner_pad = verifier.setup_match_blobs_roi(match_tol)[2]
+        sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
+            shape, blocks.max_pixels, inner_pad[::-1])
         
         is_fork = chunking.is_fork()
         if is_fork:

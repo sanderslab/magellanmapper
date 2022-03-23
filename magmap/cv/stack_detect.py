@@ -5,10 +5,10 @@
 Detect blobs within a stack that has been chunked to allow parallel 
 processing.
 """
-
 from enum import Enum
 import os
 from time import time
+from typing import NamedTuple, Sequence, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,9 @@ from magmap.cv import chunking, colocalizer, detector, verifier
 from magmap.io import cli, df_io, importer, libmag, naming
 from magmap.plot import plot_3d
 from magmap.settings import config, roi_prof
+
+if TYPE_CHECKING:
+    from magmap.settings import profiles
 
 _logger = config.logger.getChild(__name__)
 
@@ -242,28 +245,34 @@ class StackDetector(object):
         return seg_rois
 
 
-def setup_blocks(settings, shape):
-    """Set up blocks for block processing, where each block is a chunk of
-    a larger image processed sequentially or in parallel to optimize
-    resource usage.
+def setup_blocks(
+        settings: "profiles.SettingsDict", shape: Sequence[int]) -> NamedTuple:
+    """Set up blocks for block processing
+    
+    Each block is a chunk of a larger image processed sequentially or in
+    parallel to optimize resource usage.
     
     Args:
-        settings (:obj:`magmap.settings.profiles.SettingsDict`): Settings
-            dictionary that defines that the blocks.
-        shape (List[int]): Shape of full image in z,y,x.
+        settings: Settings dictionary that defines that the blocks.
+        shape: Shape of full image in ``z, y, x``.
 
     Returns:
-        :obj:`np.ndarray`, :obj:`np.ndarray`, :obj:`np.ndarray`, List[int],
-        :obj:`np.ndarray`, :obj:`np.ndarray`, :obj:`np.ndarray`,
-        :obj:`np.ndarray`: Numpy object array of tuples containing slices
-        of each block; similar Numpy array but with tuples of offsets;
-        Numpy int array of max shape for each sub-block used for denoising;
-        List of ints for border pixels to exclude in z,y,x;
-        match tolerance as a Numpy float array in z,y,x;
-        Numpy float array of overlapping pixels in z,y,x;
-        similar overlap array but modified by the border exclusion; and
-        similar overlap array but for padding beyond the overlap.
-
+        A named tuple of the block parameters.
+        
+        - ``sub_roi_slices``: Numpy object array of tuples containing slices of
+          each block.
+        - ``sub_rois_offsets``: similar Numpy array but with tuples of offsets.
+          ``denoise_max_shape``: Numpy int array of max shape for each sub-block
+          used for denoising.
+        - ``exclude_border``: List of ints for border pixels to exclude in
+          ``z, y, x``.
+        - ``tol``: match tolerance as a Numpy float array in ``z, y, x``.
+        - ``overlap_base``: Numpy float array of overlapping pixels in
+          ``z, y, x``.
+        - ``overlap``: similar overlap array but modified by the border exclusion.
+        - ``overlap_padding``: similar overlap array but for padding beyond the
+          overlap.
+        
     """
     scaling_factor = detector.calc_scaling_factor()
     print("microsope scaling factor based on resolutions: {}"
@@ -301,8 +310,15 @@ def setup_blocks(settings, shape):
           .format(denoise_max_shape, max_pixels))
     sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
         shape, max_pixels, overlap)
-    return sub_roi_slices, sub_rois_offsets, denoise_max_shape, \
-        exclude_border, tol, overlap_base, overlap, overlap_padding
+    blocks = NamedTuple("Blocks", [
+        ("sub_roi_slices", np.ndarray), ("sub_rois_offsets", np.ndarray),
+        ("denoise_max_shape", np.ndarray), ("exclude_border", Sequence[int]),
+        ("tol", np.ndarray), ("overlap_base", np.ndarray),
+        ("overlap", np.ndarray), ("overlap_padding", np.ndarray),
+    ])
+    return blocks(
+        sub_roi_slices, sub_rois_offsets, denoise_max_shape,
+        exclude_border, tol, overlap_base, overlap, overlap_padding)
 
 
 def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
@@ -361,23 +377,21 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     time_detection_start = time()
     settings = config.get_roi_profile(channels[0])
     print("Profile for block settings:", settings[settings.NAME_KEY])
-    sub_roi_slices, sub_rois_offsets, denoise_max_shape, exclude_border, \
-        tol, overlap_base, overlap, overlap_padding = setup_blocks(
-            settings, roi.shape)
+    blocks = setup_blocks(settings, roi.shape)
     
     # TODO: option to distribute groups of sub-ROIs to different servers 
     # for blob detection
     seg_rois = StackDetector.detect_blobs_sub_rois(
-        roi, sub_roi_slices, sub_rois_offsets, denoise_max_shape,
-        exclude_border, coloc, channels)
+        roi, blocks.sub_roi_slices, blocks.sub_rois_offsets,
+        blocks.denoise_max_shape, blocks.exclude_border, coloc, channels)
     detection_time = time() - time_detection_start
     print("blob detection time (s):", detection_time)
     
     # prune blobs in overlapping portions of sub-ROIs
     time_pruning_start = time()
     segments_all, df_pruning = StackPruner.prune_blobs_mp(
-        roi, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offsets, channels,
-        overlap_padding)
+        roi, seg_rois, blocks.overlap, blocks.tol, blocks.sub_roi_slices,
+        blocks.sub_rois_offsets, channels, blocks.overlap_padding)
     pruning_time = time() - time_pruning_start
     print("blob pruning time (s):", pruning_time)
     #print("maxes:", np.amax(segments_all, axis=0))
@@ -431,7 +445,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         if verify:
             stats_detection, fdbk = verifier.verify_stack(
                 filename_base, subimg_path_base, settings, segments_all,
-                channels, overlap_base)
+                channels, blocks.overlap_base)
     
     if config.save_subimg:
         subimg_base_path = libmag.combine_paths(

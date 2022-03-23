@@ -200,10 +200,9 @@ class StackColocalizer(object):
             "Colocalizing blobs based on matching blobs in each pair of "
             "channels")
         # set up ROI blocks from which to select blobs in each block
-        sub_roi_slices, sub_rois_offsets, _, _, _, overlap_base, _, _ \
-            = stack_detect.setup_blocks(config.roi_profile, shape)
+        blocks = stack_detect.setup_blocks(config.roi_profile, shape)
         match_tol = np.multiply(
-            overlap_base, config.roi_profile["verify_tol_factor"])
+            blocks.overlap_base, config.roi_profile["verify_tol_factor"])
         
         is_fork = chunking.is_fork()
         if is_fork:

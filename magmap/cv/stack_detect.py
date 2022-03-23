@@ -245,8 +245,28 @@ class StackDetector(object):
         return seg_rois
 
 
+class Blocks(NamedTuple):
+    """Block processing chunk tuples."""
+    #: Object array of tuples containing slices of each block.
+    sub_roi_slices: np.ndarray
+    # Similar Numpy array but with tuples of offsets.
+    sub_rois_offsets: np.ndarray
+    #: Int array of max shape for each sub-block used for denoising.
+    denoise_max_shape: np.ndarray
+    #: List of ints for border pixels to exclude in ``z, y, x``.
+    exclude_border: Sequence[int]
+    #: match tolerance as a Numpy float array in ``z, y, x``.
+    tol: np.ndarray
+    #: Float array of overlapping pixels in ``z, y, x``.
+    overlap_base: np.ndarray
+    #: Similar overlap array but modified by the border exclusion.
+    overlap: np.ndarray
+    #: Similar overlap array but for padding beyond the overlap.
+    overlap_padding: np.ndarray
+
+
 def setup_blocks(
-        settings: "profiles.SettingsDict", shape: Sequence[int]) -> NamedTuple:
+        settings: "profiles.SettingsDict", shape: Sequence[int]) -> Blocks:
     """Set up blocks for block processing
     
     Each block is a chunk of a larger image processed sequentially or in
@@ -258,20 +278,6 @@ def setup_blocks(
 
     Returns:
         A named tuple of the block parameters.
-        
-        - ``sub_roi_slices``: Numpy object array of tuples containing slices of
-          each block.
-        - ``sub_rois_offsets``: similar Numpy array but with tuples of offsets.
-          ``denoise_max_shape``: Numpy int array of max shape for each sub-block
-          used for denoising.
-        - ``exclude_border``: List of ints for border pixels to exclude in
-          ``z, y, x``.
-        - ``tol``: match tolerance as a Numpy float array in ``z, y, x``.
-        - ``overlap_base``: Numpy float array of overlapping pixels in
-          ``z, y, x``.
-        - ``overlap``: similar overlap array but modified by the border exclusion.
-        - ``overlap_padding``: similar overlap array but for padding beyond the
-          overlap.
         
     """
     scaling_factor = detector.calc_scaling_factor()
@@ -310,13 +316,7 @@ def setup_blocks(
           .format(denoise_max_shape, max_pixels))
     sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
         shape, max_pixels, overlap)
-    blocks = NamedTuple("Blocks", [
-        ("sub_roi_slices", np.ndarray), ("sub_rois_offsets", np.ndarray),
-        ("denoise_max_shape", np.ndarray), ("exclude_border", Sequence[int]),
-        ("tol", np.ndarray), ("overlap_base", np.ndarray),
-        ("overlap", np.ndarray), ("overlap_padding", np.ndarray),
-    ])
-    return blocks(
+    return Blocks(
         sub_roi_slices, sub_rois_offsets, denoise_max_shape,
         exclude_border, tol, overlap_base, overlap, overlap_padding)
 

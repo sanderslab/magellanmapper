@@ -311,6 +311,7 @@ class Visualization(HasTraits):
     
     btn_detect = Button("Detect")
     btn_save_segments = Button("Save Blobs")
+    _segs_chls = List  # selected channels for blob detection, 0-based
     _segs_labels = List(  # blob label selector
         ["-1"],
         tooltip="All blob labels will be set to this value when running Detect",
@@ -612,9 +613,12 @@ class Visualization(HasTraits):
     panel_detect = VGroup(
         HGroup(
             Item("btn_detect", show_label=False),
-            Item("btn_save_segments", show_label=False),
+            Item("_segs_chls", label="Chl", style="custom",
+                 editor=CheckListEditor(
+                     name="object._channel_names.selections", cols=8)),
         ),
         HGroup(
+            Item("btn_save_segments", show_label=False),
             Item("_segs_labels", label="Change labels to",
                  editor=CheckListEditor(
                      values=[str(c) for c in
@@ -962,6 +966,7 @@ class Visualization(HasTraits):
         else:
             # select all channels
             self._channel = self._channel_names.selections
+        self._segs_chls = list(self._channel)
         self._profiles_chls = self._channel
 
     def _init_imgadj(self):
@@ -2070,6 +2075,9 @@ class Visualization(HasTraits):
         self.blobs.blob_matches = blob_matches
         cli.update_profiles()
         
+        # get selected channels for blob detection
+        chls = sorted([int(n) for n in self._segs_chls])
+        
         # process ROI in prep for showing filtered 2D view and segmenting
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         offset = self._curr_offset()
@@ -2077,8 +2085,8 @@ class Visualization(HasTraits):
         self.roi = plot_3d.prepare_roi(config.image5d, offset, roi_size)
         if not libmag.is_binary(self.roi):
             self.roi = plot_3d.saturate_roi(
-                self.roi, channel=config.channel)
-            self.roi = plot_3d.denoise_roi(self.roi, config.channel)
+                self.roi, channel=chls)
+            self.roi = plot_3d.denoise_roi(self.roi, chls)
         else:
             libmag.printv(
                 "binary image detected, will not preprocess")
@@ -2093,7 +2101,7 @@ class Visualization(HasTraits):
             if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
-            segs_all = detector.detect_blobs(roi, config.channel)
+            segs_all = detector.detect_blobs(roi, chls)
             
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # match blobs between two channels
@@ -2118,12 +2126,12 @@ class Visualization(HasTraits):
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)
             segs_all, mask_chl = detector.blobs_in_channel(
-                segs_all, config.channel, return_mask=True)
+                segs_all, chls, return_mask=True)
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # get blob matches from whole-image match colocalization,
                 # shifting blobs to relative coordinates
                 matches = colocalizer.select_matches(
-                    config.db, config.channel, offset[::-1], roi_size[::-1])
+                    config.db, chls, offset[::-1], roi_size[::-1])
                 # TODO: include all channel combos
                 if matches is not None and len(matches) > 0:
                     matches = matches[tuple(matches.keys())[0]]
@@ -2149,7 +2157,7 @@ class Visualization(HasTraits):
             print("segs_outside:\n{}".format(segs_outside))
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
             segs = detector.format_blobs(segs)
-            segs = detector.blobs_in_channel(segs, config.channel)
+            segs = detector.blobs_in_channel(segs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
         if segs_all is not None:
@@ -2202,10 +2210,10 @@ class Visualization(HasTraits):
             '''
             # could get initial segmentation from r-w
             walker = segmenter.segment_rw(
-                self.roi, config.channel, erosion=1)
+                self.roi, chls, erosion=1)
             '''
             self.labels = segmenter.segment_ws(
-                self.roi, config.channel, None, blobs)
+                self.roi, chls, None, blobs)
             '''
             # 3D-seeded random-walker with high beta to limit walking 
             # into background, also removing objects smaller than the 
@@ -2216,7 +2224,7 @@ class Visualization(HasTraits):
                 / np.mean(plot_3d.calc_isotropic_factor(1)))
             print("min size threshold for r-w: {}".format(min_size))
             self.labels = segmenter.segment_rw(
-                self.roi, config.channel, beta=100000, 
+                self.roi, chls, beta=100000, 
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)

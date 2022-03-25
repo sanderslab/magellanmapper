@@ -311,7 +311,8 @@ class Visualization(HasTraits):
     
     btn_detect = Button("Detect")
     btn_save_segments = Button("Save Blobs")
-    _segs_chls = List  # selected channels for blob detection, 0-based
+    _segs_chls_names = Instance(TraitsList)  # blob detection channels
+    _segs_chls = List  # selected channels, 0-based
     _segs_labels = List(  # blob label selector
         ["-1"],
         tooltip="All blob labels will be set to this value when running Detect",
@@ -615,7 +616,7 @@ class Visualization(HasTraits):
             Item("btn_detect", show_label=False),
             Item("_segs_chls", label="Chl", style="custom",
                  editor=CheckListEditor(
-                     name="object._channel_names.selections", cols=8)),
+                     name="object._segs_chls_names.selections", cols=8)),
         ),
         HGroup(
             Item("btn_save_segments", show_label=False),
@@ -953,10 +954,21 @@ class Visualization(HasTraits):
         # reset channel check boxes, storing selected channels beforehand
         chls_pre = list(self._channel)
         self._channel_names = TraitsList()
+        self._segs_chls_names = TraitsList()
         # 1 channel if no separate channel dimension
         num_chls = (1 if config.image5d is None or config.image5d.ndim < 5
                     else config.image5d.shape[4])
         self._channel_names.selections = [str(i) for i in range(num_chls)]
+
+        if config.blobs is not None and config.blobs.blobs is not None:
+            # set detection channels to those in loaded blobs
+            self._segs_chls_names.selections = [
+                str(n) for n in np.unique(detector.get_blobs_channel(
+                    config.blobs.blobs).astype(int))]
+        else:
+            # add detection channel selectors for all image channels
+            self._segs_chls_names.selections = list(
+                self._channel_names.selections)
         
         # pre-select channels for both main and profiles selector
         if not chls_pre and config.channel:
@@ -966,6 +978,8 @@ class Visualization(HasTraits):
         else:
             # select all channels
             self._channel = self._channel_names.selections
+        
+        # select detection and profile channels to match main channels
         self._segs_chls = list(self._channel)
         self._profiles_chls = self._channel
 

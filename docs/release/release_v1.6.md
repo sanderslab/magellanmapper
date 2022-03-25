@@ -30,13 +30,14 @@
 - Auto-scrolls to the selected annotation (#109)
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
 - Match-based colocalization can run without the main image, using just its metadata instead (#117)
-- Fixed match-based colocalizations when no matches are found (#117)
+- Fixed match-based colocalizations when no matches are found (#117, #120)
 - Fixed slow loading of match-based colocalizations (#119)
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
 - Fixed verifying and resaving blobs
 
 #### Volumetric image processing
 
+- Match-based colocalizations use larger processing blocks to avoid gaps (#120)
 - Fixed 3D surface area measurement with Scikit-image >= v0.19
 
 #### I/O

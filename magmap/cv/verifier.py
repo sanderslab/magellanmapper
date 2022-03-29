@@ -83,8 +83,6 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
         # filter out matches beyond the given threshold distance
         dists_in = dists_closest < thresh
         if config.verbose:
-            print("only keeping blob matches within threshold distance of",
-                  thresh)
             for blob, blob_sc, blob_base, blob_base_sc, dist, dist_in in zip(
                     blobs[rowis], blobs_scaled[rowis], blobs_master[colis],
                     blobs_master_scaled[colis], dists_closest,
@@ -173,9 +171,6 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
     # get all blobs in inner and total ROI
     offset_inner = np.add(offset, inner_padding)
     size_inner = np.subtract(size, inner_padding * 2)
-    libmag.printv(
-        "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
-        .format(offset, offset_inner, size, size_inner))
     blobs_roi, _ = detector.get_blobs_in_roi(blobs, offset, size)
     if resize is not None:
         # TODO: doesn't align with exported ROIs
@@ -223,6 +218,8 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
     matches = colocalizer.BlobMatch([*matches_inner, *matches_outer])
     if config.verbose:
         '''
+        print("offset: {}, offset_inner: {}, size: {}, size_inner: {}"
+              .format(offset, offset_inner, size, size_inner))
         print("blobs_roi:\n{}".format(blobs_roi))
         print("blobs_inner:\n{}".format(blobs_inner))
         print("blobs_base_inner:\n{}".format(blobs_base_inner))
@@ -239,18 +236,20 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
         print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
         '''
-
-        print("Closest matches found (truth, detected, distance):")
-        msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
-        for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
-            print(msg)
-            for match in matches_sub:
-                print(
-                    "Blob1:", match[0][:3], "chl",
-                    detector.get_blob_channel(match[0]), "Blob2:", match[1][:3],
-                    "chl", detector.get_blob_channel(match[1]),
-                    "dist:", match[2])
-        print()
+        
+        if len(matches_inner) + len(matches_outer) > 0:
+            _logger.debug("Closest matches found (truth, detected, distance):")
+            msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
+            for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
+                _logger.debug(msg)
+                for match in matches_sub:
+                    _logger.debug(
+                        f"Blob1: {match[0][:3]}, chl: "
+                        f"{detector.get_blob_channel(match[0])}, "
+                        f"Blob2: {match[1][:3]}, "
+                        f"chl: {detector.get_blob_channel(match[1])}, "
+                        f"dist: {match[2]}")
+            _logger.debug("\n")
     
     return blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \
         matches

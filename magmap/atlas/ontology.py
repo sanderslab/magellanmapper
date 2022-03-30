@@ -7,7 +7,7 @@ import os
 from collections import OrderedDict
 from enum import Enum
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -585,15 +585,18 @@ def get_label_side(label_id):
     return config.HemSides.BOTH.value
 
 
-def scale_coords(coord, scaling=None, clip_shape=None):
+def scale_coords(
+        coord: np.ndarray,
+        scaling: Optional[Sequence[int]] = None,
+        clip_shape: Optional[Sequence[int]] = None) -> np.ndarray:
     """Get the atlas label IDs for the given coordinates.
     
     Args:
-        coord (:class:`numpy.ndarray`): Coordinates of experiment image in
-            ``z,y,x`` order. Can be an ``[n, 3]`` array of coordinates.
-        scaling (Sequence[int]): Scaling factor for the labels image size
-            compared with the experiment image as ``z,y,x``; defaults to None.
-        clip_shape (Sequence[int]): Max image shape as ``z,y,x``, used to
+        coord: Coordinates of experiment image in
+            ``z,y,x,...`` order. Can be an ``[n, >=3]`` array of coordinates.
+        scaling: Scaling factor for the labels image size compared with
+            the experiment image as ``z,y,x,...``; defaults to None.
+        clip_shape: Max image shape as ``z,y,x``, used to
             round coordinates for extra precision. For simplicity, scaled
             values are simply floored. Repeated scaling such as upsampling
             after downsampling can lead to errors. If this parameter is given,
@@ -602,25 +605,38 @@ def scale_coords(coord, scaling=None, clip_shape=None):
             stay within bounds.
     
     Returns:
-        :class:`numpy.ndarray`: An scaled array of the same shape as ``coord``.
+        An scaled array of the same shape as ``coord``. If the array
+        contains a max of 3 coordinates columns, the array is casted
+        to int. If not, the first 3 columns are rounded based on
+        ``clip_shape``, but the array type is float.
     
     """
-    libmag.printv(
-        "getting label IDs from coordinates using scaling", scaling)
+    _logger.debug(
+        "Getting label IDs from coordinates using scaling: %s", scaling)
     coord_scaled = coord
     if scaling is not None:
         # scale coordinates to atlas image size
         coord_scaled = np.multiply(coord, scaling)
+    
+    # cast coordinates to int
+    coords_only = coord_scaled[..., :3]
     if clip_shape is not None:
         # round when extra precision is necessary, such as during reverse 
         # scaling, which requires clipping so coordinates don't exceed labels 
         # image shape
-        coord_scaled = np.around(coord_scaled).astype(np.int)
-        coord_scaled = np.clip(
-            coord_scaled, None, np.subtract(clip_shape, 1))
+        coords_only = np.around(coords_only).astype(np.int)
+        coords_only = np.clip(
+            coords_only, None, np.subtract(clip_shape, 1))
     else:
         # typically don't round to stay within bounds
-        coord_scaled = coord_scaled.astype(np.int)
+        coords_only = coords_only.astype(np.int)
+    if coord_scaled.shape[-1] <= 3:
+        # assume coords are spatial dimensions
+        coord_scaled = coords_only
+    else:
+        # allow float for additional dimensions, such as radius
+        coord_scaled[..., :coords_only.shape[-1]] = coords_only
+    
     return coord_scaled
 
 

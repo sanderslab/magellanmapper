@@ -55,6 +55,8 @@ class Blobs:
             defaults to None.
         basename: Archive name, typically the filename without extension
             of the image file in which blobs were detected; defaults to None.
+        scaling: Scaling factor from the blobs' space to the main image's
+            space, in ``z,y,x``; defaults to ``[1, 1, 1]``.
     
     """
 
@@ -93,6 +95,7 @@ class Blobs:
         self.roi_size: Optional[Sequence[int]] = None
         self.resolutions: Optional[Sequence[float]] = None
         self.basename: Optional[str] = None
+        self.scaling: np.ndarray = np.ones(3)
 
     def load_blobs(self, path=None):
         """Load blobs from an archive.

@@ -505,6 +505,7 @@ def setup_images(
             _logger.debug("Scaling blobs to main image by factor: %s", scaling)
             blobs.blobs[:, :4] = ontology.scale_coords(
                 blobs.blobs[:, :4], scaling)
+        blobs.scaling = scaling
 
 
 def get_num_channels(image5d):

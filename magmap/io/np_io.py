@@ -499,10 +499,12 @@ def setup_images(
             and config.img5d.img is not None and blobs.roi_size is not None):
         # scale blob coordinates to main image if shapes differ
         scaling = np.divide(config.img5d.img.shape[1:4], blobs.roi_size)
+        # scale radius by mean of other dimensions' scaling
+        scaling = np.append(scaling, np.mean(scaling))
         if not np.all(scaling == 1):
-            print("Scaling blobs to main image by factor:", scaling)
-            blobs.blobs[:, :3] = ontology.scale_coords(
-                blobs.blobs[:, :3], scaling)
+            _logger.debug("Scaling blobs to main image by factor: %s", scaling)
+            blobs.blobs[:, :4] = ontology.scale_coords(
+                blobs.blobs[:, :4], scaling)
 
 
 def get_num_channels(image5d):

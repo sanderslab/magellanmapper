@@ -2141,25 +2141,35 @@ class Visualization(HasTraits):
             segs_all = detector.format_blobs(segs_all)
             segs_all, mask_chl = detector.blobs_in_channel(
                 segs_all, chls, return_mask=True)
+            
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # get blob matches from whole-image match colocalization,
-                # shifting blobs to relative coordinates
-                matches = colocalizer.select_matches(
-                    config.db, chls, offset[::-1], roi_size[::-1])
+                # scaling the ROI to original blob space since blob matches
+                # are not scaled during loading
+                roi = [np.divide(a, config.blobs.scaling[:3])
+                       for a in (offset[::-1], roi_size[::-1])]
+                matches = colocalizer.select_matches(config.db, chls, *roi)
+                
                 # TODO: include all channel combos
                 if matches is not None and len(matches) > 0:
+                    # shift blobs to relative coordinates
                     matches = matches[tuple(matches.keys())[0]]
-                    shift = [n * -1 for n in offset[::-1]]
+                    shift = [n * -1 for n in roi[0]]
                     matches.update_blobs(detector.shift_blob_rel_coords, shift)
+                    matches.update_blobs(
+                        detector.multiply_blob_rel_coords,
+                        config.blobs.scaling[:3])
                     self.blobs.blob_matches = matches
-                print("loaded blob matches:\n", self.blobs.blob_matches)
+                _logger.debug(
+                    f"Loaded blob matches:\n{self.blobs.blob_matches}")
+            
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize
                   and config.blobs.colocalizations is not None
                   and segs is None):
                 # get corresponding blob co-localizations unless showing
                 # blobs from database, which do not have colocs
                 colocs = config.blobs.colocalizations[mask][mask_chl]
-        print("segs_all:\n{}".format(segs_all))
+        _logger.debug(f"All blobs:\n{segs_all}\nTotal blobs: {len(segs_all)}")
         
         if segs is not None:
             # segs are typically loaded from DB for a sub-ROI within the

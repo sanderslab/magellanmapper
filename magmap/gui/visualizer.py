@@ -2214,7 +2214,8 @@ class Visualization(HasTraits):
                     and config.labels_img is not None):
                 # same colors as corresponding atlas labels
                 blob_ids = ontology.get_label_ids_from_position(
-                    segs_all[self.segs_in_mask, :3].astype(np.int),
+                    detector.get_blob_abs_coords(
+                        segs_all[self.segs_in_mask]).astype(np.int),
                     config.labels_img)
                 self.segs_cmap = config.cmap_labels(
                     config.cmap_labels.convert_img_labels(blob_ids))

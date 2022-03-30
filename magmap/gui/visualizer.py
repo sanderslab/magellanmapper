@@ -2223,11 +2223,11 @@ class Visualization(HasTraits):
                 self.segs_cmap[:, 3] *= alpha
             else:
                 # default to color by channel
+                chls = detector.get_blobs_channel(
+                    segs_all[self.segs_in_mask]).astype(np.int)
                 cmap = colormaps.discrete_colormap(
-                    np_io.get_num_channels(config.image5d), alpha, True,
-                    config.seed)
-                self.segs_cmap = cmap[detector.get_blobs_channel(
-                    segs_all[self.segs_in_mask]).astype(np.int)]
+                    max(chls) + 1, alpha, True, config.seed)
+                self.segs_cmap = cmap[chls]
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]

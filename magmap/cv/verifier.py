@@ -1,5 +1,6 @@
 # Blob verifications against ground truth
 import os
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 from scipy import optimize
@@ -82,8 +83,6 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
         # filter out matches beyond the given threshold distance
         dists_in = dists_closest < thresh
         if config.verbose:
-            print("only keeping blob matches within threshold distance of",
-                  thresh)
             for blob, blob_sc, blob_base, blob_base_sc, dist, dist_in in zip(
                     blobs[rowis], blobs_scaled[rowis], blobs_master[colis],
                     blobs_master_scaled[colis], dists_closest,
@@ -98,17 +97,19 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
     return rowis, colis, dists_closest
 
 
-def setup_match_blobs_roi(blobs, tol):
+def setup_match_blobs_roi(
+        tol: Sequence[float], blobs: Optional[np.ndarray] = None
+) -> Tuple[float, Sequence[float], np.ndarray, Sequence[float],
+           np.ndarray]:
     """Set up tolerances for matching blobs in an ROI.
     
     Args:
-        blobs (:obj:`np.ndarray`): Sequence of blobs to resize if the
-            first ROI profile (:attr:`config.roi_profiles`) ``resize_blobs``
+        tol: Sequence of tolerances.
+        blobs: Sequence of blobs to resize if the first ROI profile
+            (:attr:`magmap.config.roi_profiles`) ``resize_blobs``
             value is given.
-        tol (List[int, float]): Sequence of tolerances.
 
     Returns:
-        float, List[float], List[float], List[float], :obj:`np.ndarray`:
         Distance map threshold, scaling normalized by ``tol``, ROI padding
         shape, resize sequence retrieved from ROI profile, and ``blobs``
         after any resizing.
@@ -122,15 +123,16 @@ def setup_match_blobs_roi(blobs, tol):
     scaling = thresh / tol
     # casting to int causes improper offset import into db
     inner_padding = np.floor(tol[::-1])
-    libmag.printv(
-        "verifying blobs with tol {} leading to thresh {}, scaling {}, "
-        "inner_padding {}".format(tol, thresh, scaling, inner_padding))
+    libmag.log_once(
+        _logger.debug, 
+        f"verifying blobs with tol {tol} leading to thresh {thresh}, "
+        f"scaling {scaling}, inner_padding {inner_padding}")
     
     # resize blobs based only on first profile
     resize = config.get_roi_profile(0)["resize_blobs"]
-    if resize:
+    if resize and blobs is not None:
         blobs = detector.multiply_blob_rel_coords(blobs, resize)
-        libmag.printv("resized blobs by {}:\n{}".format(resize, blobs))
+        libmag.log_once(_logger.debug, f"resized blobs by {resize}:\n{blobs}")
     
     return thresh, scaling, inner_padding, resize, blobs
 
@@ -169,9 +171,6 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
     # get all blobs in inner and total ROI
     offset_inner = np.add(offset, inner_padding)
     size_inner = np.subtract(size, inner_padding * 2)
-    libmag.printv(
-        "offset: {}, offset_inner: {}, size: {}, size_inner: {}"
-        .format(offset, offset_inner, size, size_inner))
     blobs_roi, _ = detector.get_blobs_in_roi(blobs, offset, size)
     if resize is not None:
         # TODO: doesn't align with exported ROIs
@@ -219,6 +218,8 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
     matches = colocalizer.BlobMatch([*matches_inner, *matches_outer])
     if config.verbose:
         '''
+        print("offset: {}, offset_inner: {}, size: {}, size_inner: {}"
+              .format(offset, offset_inner, size, size_inner))
         print("blobs_roi:\n{}".format(blobs_roi))
         print("blobs_inner:\n{}".format(blobs_inner))
         print("blobs_base_inner:\n{}".format(blobs_base_inner))
@@ -235,18 +236,20 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         print("blobs_inner_plus:\n{}".format(blobs_inner_plus))
         print("blobs_truth_inner_plus:\n{}".format(blobs_truth_inner_plus))
         '''
-
-        print("Closest matches found (truth, detected, distance):")
-        msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
-        for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
-            print(msg)
-            for match in matches_sub:
-                print(
-                    "Blob1:", match[0][:3], "chl",
-                    detector.get_blob_channel(match[0]), "Blob2:", match[1][:3],
-                    "chl", detector.get_blob_channel(match[1]),
-                    "dist:", match[2])
-        print()
+        
+        if len(matches_inner) + len(matches_outer) > 0:
+            _logger.debug("Closest matches found (truth, detected, distance):")
+            msgs = ("\n- Inner ROI:", "\n- Outer ROI:")
+            for msg, matches_sub in zip(msgs, (matches_inner, matches_outer)):
+                _logger.debug(msg)
+                for match in matches_sub:
+                    _logger.debug(
+                        f"Blob1: {match[0][:3]}, chl: "
+                        f"{detector.get_blob_channel(match[0])}, "
+                        f"Blob2: {match[1][:3]}, "
+                        f"chl: {detector.get_blob_channel(match[1])}, "
+                        f"dist: {match[2]}")
+            _logger.debug("\n")
     
     return blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \
         matches
@@ -293,7 +296,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
     blobs_rois = None
     rois_falsehood = []
     thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
-        blobs, tol)
+        tol, blobs)
     
     # set up metrics dict for accuracy metrics of each ROI
     metrics = {}

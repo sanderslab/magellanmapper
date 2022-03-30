@@ -2125,7 +2125,7 @@ class Visualization(HasTraits):
                 matches = colocalizer.colocalize_blobs_match(
                     segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
                     np.zeros(3, dtype=int))
-                if matches:
+                if matches and len(matches) > 0:
                     # TODO: include all channel combos
                     self.blobs.blob_matches = matches[tuple(matches.keys())[0]]
         else:
@@ -2147,11 +2147,11 @@ class Visualization(HasTraits):
                 matches = colocalizer.select_matches(
                     config.db, chls, offset[::-1], roi_size[::-1])
                 # TODO: include all channel combos
-                if matches is not None:
+                if matches is not None and len(matches) > 0:
                     matches = matches[tuple(matches.keys())[0]]
                     shift = [n * -1 for n in offset[::-1]]
                     matches.update_blobs(detector.shift_blob_rel_coords, shift)
-                self.blobs.blob_matches = matches
+                    self.blobs.blob_matches = matches
                 print("loaded blob matches:\n", self.blobs.blob_matches)
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize
                   and config.blobs.colocalizations is not None

@@ -3,11 +3,12 @@
 """Shared functions with the MagellanMapper package.
 """
 
+from functools import lru_cache
 import os
 import pathlib
 import shutil
 import sys
-from typing import Optional, Union
+from typing import Callable, Optional, Sequence, Union
 import warnings
 
 if sys.version_info >= (3, 8):
@@ -454,6 +455,20 @@ def warn(msg, category=UserWarning, stacklevel=2):
 
     """
     warnings.warn(msg, category, stacklevel=stacklevel)
+
+
+@lru_cache(10)
+def log_once(fn_log: Callable[[str], None], msg: str):
+    """Log a message only once.
+    
+    Args:
+        fn_log: Log function.
+        msg: Message
+
+    """
+    # use cache to ignore repeated calls
+    # TODO: check appropriate maxsize
+    fn_log(msg)
 
 
 def series_as_str(series):

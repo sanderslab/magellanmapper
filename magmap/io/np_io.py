@@ -318,20 +318,20 @@ def setup_images(
         print("Loading main image")
         try:
             path_lower = path.lower()
+            import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
             if path_lower.endswith(sitk_io.EXTS_3D):
                 # attempt to format supported by SimpleITK and prepend time axis
                 config.image5d = sitk_io.read_sitk_files(path)[None]
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
                 config.img5d.img_io = config.LoadIO.SITK
-            elif path_lower.endswith((".tif", ".tiff")):
+            elif not import_only and path_lower.endswith((".tif", ".tiff")):
                 # load TIF file directly
                 _, meta = read_tif(path, config.img5d)
                 config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
                 config.image5d = config.img5d.img
             else:
                 # load or import from MagellanMapper Numpy format
-                import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
                 img5d = None
                 if not import_only:
                     # load previously imported image

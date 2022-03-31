@@ -4,6 +4,7 @@
 
 from enum import Enum
 import multiprocessing as mp
+from typing import Optional
 
 import pandas as pd
 import numpy as np
@@ -20,8 +21,10 @@ class BlobMatch:
     """Blob match storage class as a wrapper for a data frame of matches.
 
     Attributes:
-        df (:class:`pandas.DataFrame`): Data frame of matches with column
-            names given by :class:`BlobMatch.Cols`.
+        df: Data frame of matches with column names given by
+            :class:`BlobMatch.Cols`; defaults to None.
+        coords: Blob match coordinates, typically the mean coordinates of
+            each blob pair; defaults to None.
 
     """
     
@@ -56,14 +59,15 @@ class BlobMatch:
             df (:class:`pandas.DataFrame`): Pandas data frame to set in
                 place of any other arguments; defaults to None.
         """
+        self.df: Optional[pd.DataFrame] = None
+        self.coords: Optional[np.ndarray] = None
+        
         if df is not None:
             # set data frame directly and ignore any other arguments
             self.df = df
             return
         if matches is None:
-            # set data frame to None and return since any other arguments
-            # must correspond to matches
-            self.df = None
+            # return since any other arguments must correspond to matches
             return
         
         matches_dict = {}
@@ -139,6 +143,19 @@ class BlobMatch:
             blobs = self.get_blobs(i + 1)
             if blobs is not None:
                 self.df[col.value] = fn(blobs, *args).tolist()
+    
+    def get_mean_coords(self):
+        """Get mean value of each pair of matched blobs.
+        
+        Returns:
+            ``[n, 3]`` array of ``n`` blob pairs, also set to :attr:`coords`.
+
+        """
+        blobs = self.get_blobs_all()
+        if any([b is None for b in blobs]):
+            return None
+        self.coords = np.mean([b[:, :3] for b in blobs], axis=0)
+        return self.coords
 
 
 class StackColocalizer(object):

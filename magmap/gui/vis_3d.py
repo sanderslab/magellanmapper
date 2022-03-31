@@ -357,7 +357,7 @@ class Vis3D:
             cmap: np.ndarray,
             roi_offset: Sequence[int], roi_size: Sequence[int],
             show_shadows: bool = False, flipz: bool = None
-    ) -> float:
+    ) -> Tuple[float, float]:
         """Show 3D blobs as points.
 
         Args:
@@ -377,12 +377,15 @@ class Vis3D:
                 defaults to False.
 
         Returns:
-            The current size of the points.
+            Tuple of:
+            - ``scale``: the current size of glyphs
+            - ``mask``: the mask size for glyphs, the denominator for the
+              fraction of glyphs displayed
         
         """
         segments = blobs.blobs
         if segments.shape[0] <= 0:
-            return 0
+            return 0, 0
         if roi_offset is None:
             roi_offset = np.zeros(3, dtype=np.int)
         if self.blobs3d:
@@ -529,7 +532,7 @@ class Vis3D:
         max_dist = max(roi_size) * 0.2
         self.scene.mlab.gcf().on_mouse_pick(pick_callback)
         
-        return scale
+        return scale, mask
 
     def _shadow_img2d(self, img2d, shape, axis):
         """Shows a plane along the given axis as a shadow parallel to

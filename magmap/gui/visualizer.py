@@ -327,6 +327,12 @@ class Visualization(HasTraits):
     scale_detections = Float(
         tooltip="Change the size of blobs in the 3D viewer"
     )
+    # for blob mask slider
+    _segs_mask_low = 1
+    _segs_mask_high = Int(1)
+    _segs_mask = Int(
+        1, tooltip="Change the fraction of blobs shown in the 3D viewer"
+    )
     segs_selected = List  # indices
     _segs_row_scroll = Int()  # row index to scroll the table
     # multi-select to allow updating with a list, but segment updater keeps
@@ -645,6 +651,11 @@ class Visualization(HasTraits):
                  low_name="_scale_detections_low",
                  high_name="_scale_detections_high",
                  mode="slider", format="%.3g")),
+        Item("_segs_mask", label="3D blobs mask size",
+             editor=RangeEditor(
+                 low_name="_segs_mask_low",
+                 high_name="_segs_mask_high",
+                 mode="slider")),
         VGroup(
             Item("_segments", editor=segs_table, show_label=False),
             Item("segs_feedback", style="custom", show_label=False),
@@ -2289,13 +2300,18 @@ class Visualization(HasTraits):
         # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
         show_shadows = Vis3dOptions.SHADOWS.value in self._check_list_3d
-        scale = self._vis3d.show_blobs(
+        scale, mask_size = self._vis3d.show_blobs(
             self.blobs, self.segs_in_mask, self.segs_cmap,
             self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
         
         # set the max scaling based on the starting value
         self._scale_detections_high = scale * 5
         self.scale_detections = scale
+        
+        # set the blob mask size
+        self._segs_mask_high = mask_size * 5
+        print("mask size", mask_size)
+        self._segs_mask = mask_size
 
     @on_trait_change("_colocalize")
     def _colocalize_blobs(self):
@@ -2328,7 +2344,14 @@ class Visualization(HasTraits):
         for glyph in (self._vis3d.blobs3d_in, self._vis3d.matches3d):
             if glyph is not None:
                 glyph.glyph.glyph.scale_factor = self.scale_detections
-    
+
+    @on_trait_change("_segs_mask")
+    def _segs_mask_changed(self):
+        """Update the glyph mask for fraction of blobs to show."""
+        for glyph in (self._vis3d.blobs3d_in, self._vis3d.matches3d):
+            if glyph is not None:
+                glyph.glyph.mask_points.on_ratio = self._segs_mask
+
     def _roi_ed_close_listener(self, evt):
         """Handle ROI Editor close events.
 

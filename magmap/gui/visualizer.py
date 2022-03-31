@@ -645,7 +645,7 @@ class Visualization(HasTraits):
              editor=RangeEditor(
                  low_name="_scale_detections_low",
                  high_name="_scale_detections_high",
-                 mode="slider")),
+                 mode="slider", format="%.3g")),
         VGroup(
             Item("_segments", editor=segs_table, show_label=False),
             Item("segs_feedback", style="custom", show_label=False),
@@ -2284,9 +2284,8 @@ class Visualization(HasTraits):
             self.blobs, self.segs_in_mask, self.segs_cmap,
             self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
         
-        # reduce number of digits to make the slider more compact
-        scale = float(libmag.format_num(scale, 4))
-        self._scale_detections_high = scale * 2
+        # set the max scaling based on the starting value
+        self._scale_detections_high = scale * 5
         self.scale_detections = scale
 
     @on_trait_change("_colocalize")

@@ -2,7 +2,7 @@
 
 import math
 from time import time
-from typing import Any, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 import numpy as np
 from skimage import filters, restoration, transform
@@ -14,21 +14,23 @@ from magmap.settings import config
 
 if TYPE_CHECKING:
     from magmap.cv import detector
+    from mayavi.modules.glyph import Glyph
+    from mayavi.tools.mlab_scene_model import MlabSceneModel
 
 
 class Vis3D:
     """3D visualization object for handling Mayavi/VTK tasks.
     
     Attributes:
-        scene (:class:`mayavi.tools.mlab_scene_model.MlabSceneModel`):
-            Mayavi scene.
-        fn_update_coords (func): Callback to update coordinates; defaults to
+        scene: Mayavi scene.
+        fn_update_coords: Callback to update coordinates; defaults to
             None.
-        surfaces (list): List of Mayavi surfaces for each displayed channel;
+        surfaces: List of Mayavi surfaces for each displayed channel;
             defaults to None.
-        blobs (list[:class:`mayavi.modules.glyph.Glyph`]): List of Mayavi
-            glyphs, where each glyph typically contains many 3D points
-            representing blob positions; defaults to None.
+        blobs3d: List of Mayavi glyphs, where each glyph typically contains
+            many 3D points representing blob positions; defaults to None.
+        blobs3d_in: Mayavi glyphs of blobs inside the ROI; defaults to None.
+        matches3d: Mayavi glyphs of blob matches; defaults to None.
     
     """
     #: float: Maximum number of points to show.
@@ -42,14 +44,16 @@ class Vis3D:
                 Mayavi scene.
         
         """
-        self.scene = scene
+        self.scene: "MlabSceneModel" = scene
         
         # callbacks
-        self.fn_update_coords = None
+        self.fn_update_coords: Optional[Callable[[np.ndarray], None]] = None
         
         # generated Mayavi objects
-        self.surfaces = None
-        self.blobs = None
+        self.surfaces: Optional[List] = None
+        self.blobs3d_in: Optional["Glyph"] = None
+        self.matches3d: Optional["Glyph"] = None
+        self.blobs3d: Optional[List["Glyph"]] = None
 
     def update_img_display(self, minimum=None, maximum=None, brightness=None,
                            contrast=None, alpha=None):
@@ -353,7 +357,7 @@ class Vis3D:
             cmap: np.ndarray,
             roi_offset: Sequence[int], roi_size: Sequence[int],
             show_shadows: bool = False, flipz: bool = None
-    ) -> Tuple[Any, float]:
+    ) -> float:
         """Show 3D blobs as points.
 
         Args:
@@ -373,20 +377,22 @@ class Vis3D:
                 defaults to False.
 
         Returns:
-            Tuple of the displayed blobs:
-            - ``pts_in``, the 3D points within the ROI
-            - ``scale``, the current size of the points
+            The current size of the points.
         
         """
         segments = blobs.blobs
         if segments.shape[0] <= 0:
-            return None, 0
+            return 0
         if roi_offset is None:
             roi_offset = np.zeros(3, dtype=np.int)
-        if self.blobs:
-            for blob in self.blobs:
+        if self.blobs3d:
+            for blob in self.blobs3d:
                 # remove existing blob glyphs from the pipeline
                 blob.remove()
+        self.blobs3d_in = None
+        self.matches3d = None
+        self.blobs3d = []
+        
         settings = config.roi_profile
         # copy blobs with duplicate columns to access original values for
         # the coordinates callback when a blob is selected
@@ -453,23 +459,21 @@ class Vis3D:
         points_len = len(segs)
         mask = math.ceil(points_len / self._MASK_DIVIDEND)
         print("points: {}, mask: {}".format(points_len, mask))
-        pts_in = None
-        self.blobs = []
         if len(segs_in) > 0:
             # each Glyph contains multiple 3D points, one for each blob
-            pts_in = self.scene.mlab.points3d(
+            self.blobs3d_in = self.scene.mlab.points3d(
                 segs_in[:, 2], segs_in[:, 1],
                 segs_in[:, 0], cmap_indices,
                 mask_points=mask, scale_mode="none", scale_factor=scale,
                 resolution=50)
-            pts_in.module_manager.scalar_lut_manager.lut.table = cmap
-            self.blobs.append(pts_in)
+            self.blobs3d_in.module_manager.scalar_lut_manager.lut.table = cmap
+            self.blobs3d.append(self.blobs3d_in)
         
         # show blobs within padding or border region as black and more
         # transparent
         segs_out_mask = np.logical_not(segs_in_mask)
         if np.sum(segs_out_mask) > 0:
-            self.blobs.append(self.scene.mlab.points3d(
+            self.blobs3d.append(self.scene.mlab.points3d(
                 segs[segs_out_mask, 2], segs[segs_out_mask, 1],
                 segs[segs_out_mask, 0], color=(0, 0, 0),
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
@@ -477,15 +481,16 @@ class Vis3D:
         
         # blob match display
         if matches is not None:
-            self.blobs.append(self.scene.mlab.points3d(
+            self.matches3d = self.scene.mlab.points3d(
                 matches[:, 2], matches[:, 1], matches[:, 0],
                 color=(0.5, 0.5, 0), opacity=0.5, mask_points=mask,
                 scale_mode="none", scale_factor=scale,
                 resolution=50, mode="cube")
+            self.blobs3d.append(self.matches3d)
 
         def pick_callback(pick):
             # handle picking blobs/glyphs
-            if pick.actor in pts_in.actor.actors:
+            if pick.actor in self.blobs3d_in.actor.actors:
                 # get the blob corresponding to the picked glyph actor
                 blobi = pick.point_id // glyph_points.shape[0]
             else:
@@ -514,12 +519,12 @@ class Vis3D:
         # blobs within 20% of the longest ROI edge to be picked if present
         outline = self.show_roi_outline(roi_offset, roi_size)
         print(outline)
-        glyph_points = pts_in.glyph.glyph_source.glyph_source.output.points.\
-            to_array()
+        glyph_points = self.blobs3d_in.glyph.glyph_source.glyph_source.\
+            output.points.to_array()
         max_dist = max(roi_size) * 0.2
         self.scene.mlab.gcf().on_mouse_pick(pick_callback)
         
-        return pts_in, scale
+        return scale
 
     def _shadow_img2d(self, img2d, shape, axis):
         """Shows a plane along the given axis as a shadow parallel to

@@ -327,7 +327,6 @@ class Visualization(HasTraits):
     scale_detections = Float(
         tooltip="Change the size of blobs in the 3D viewer"
     )
-    segs_pts = None
     segs_selected = List  # indices
     _segs_row_scroll = Int()  # row index to scroll the table
     # multi-select to allow updating with a list, but segment updater keeps
@@ -1413,7 +1412,6 @@ class Visualization(HasTraits):
         """
         self.segments = None
         self.blobs = detector.Blobs()
-        self.segs_pts = None
         self.segs_in_mask = None
         self.labels = None
         # window with circles may still be open but would lose segments 
@@ -2280,7 +2278,7 @@ class Visualization(HasTraits):
         # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
         show_shadows = Vis3dOptions.SHADOWS.value in self._check_list_3d
-        self.segs_pts, scale = self._vis3d.show_blobs(
+        scale = self._vis3d.show_blobs(
             self.blobs, self.segs_in_mask, self.segs_cmap,
             self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
         
@@ -2316,8 +2314,9 @@ class Visualization(HasTraits):
     def update_scale_detections(self):
         """Updates the glyph scale factor.
         """
-        if self.segs_pts is not None:
-            self.segs_pts.glyph.glyph.scale_factor = self.scale_detections
+        for glyph in (self._vis3d.blobs3d_in, self._vis3d.matches3d):
+            if glyph is not None:
+                glyph.glyph.glyph.scale_factor = self.scale_detections
     
     def _roi_ed_close_listener(self, evt):
         """Handle ROI Editor close events.

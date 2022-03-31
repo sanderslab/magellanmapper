@@ -397,11 +397,13 @@ class Vis3D:
         # copy blobs with duplicate columns to access original values for
         # the coordinates callback when a blob is selected
         segs = np.concatenate((segments[:, :4], segments[:, :4]), axis=1)
-
+        
         matches = None
+        matches_cmap = None
         if blobs.blob_matches is not None:
             # set up match-based colocalizations
             matches = blobs.blob_matches.coords
+            matches_cmap = blobs.blob_matches.cmap
         
         isotropic = plot_3d.get_isotropic_vis(settings)
         if flipz:
@@ -478,11 +480,17 @@ class Vis3D:
         
         # blob match display
         if matches is not None:
+            # default to yellow
+            color = (0.5, 0.5, 0) if matches_cmap is None else None
             self.matches3d = self.scene.mlab.points3d(
                 matches[:, 2], matches[:, 1], matches[:, 0],
-                color=(0.5, 0.5, 0), opacity=0.5, mask_points=mask,
+                np.arange(len(matches)),
+                color=color, opacity=0.5, mask_points=mask,
                 scale_mode="none", scale_factor=scale,
                 resolution=50, mode="cube")
+            if matches_cmap is not None:
+                self.matches3d.module_manager.scalar_lut_manager.lut.table = \
+                    matches_cmap
             self.blobs3d.append(self.matches3d)
 
         def pick_callback(pick):

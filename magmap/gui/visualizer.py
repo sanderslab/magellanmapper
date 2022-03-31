@@ -2211,15 +2211,25 @@ class Visualization(HasTraits):
             elif (self._blob_color_style[0]
                     is BlobColorStyles.ATLAS_LABELS.value
                     and config.labels_img is not None):
-                # same colors as corresponding atlas labels
-                blob_ids = ontology.get_label_ids_from_position(
-                    detector.get_blob_abs_coords(
-                        segs_all[self.segs_in_mask]).astype(np.int),
-                    config.labels_img)
-                self.segs_cmap = config.cmap_labels(
-                    config.cmap_labels.convert_img_labels(blob_ids))
-                self.segs_cmap[:, :3] *= 255
-                self.segs_cmap[:, 3] *= alpha
+                
+                def get_atlas_cmap(coords):
+                    # get colors of corresponding atlas labels
+                    if coords is None: return None
+                    blob_ids = ontology.get_label_ids_from_position(
+                        coords.astype(np.int), config.labels_img)
+                    atlas_cmap = config.cmap_labels(
+                        config.cmap_labels.convert_img_labels(blob_ids))
+                    atlas_cmap[:, :3] *= 255
+                    atlas_cmap[:, 3] *= alpha
+                    return atlas_cmap
+                
+                # set up colormaps for blobs and blob matches
+                self.segs_cmap = get_atlas_cmap(detector.get_blob_abs_coords(
+                    segs_all[self.segs_in_mask]))
+                if self.blobs.blob_matches is not None:
+                    self.blobs.blob_matches.cmap = get_atlas_cmap(
+                        np.add(self.blobs.blob_matches.coords, offset[::-1]))
+            
             else:
                 # default to color by channel
                 chls = detector.get_blobs_channel(

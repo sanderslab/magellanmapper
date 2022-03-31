@@ -2157,6 +2157,7 @@ class Visualization(HasTraits):
                     matches.update_blobs(
                         detector.multiply_blob_rel_coords,
                         config.blobs.scaling[:3])
+                    matches.get_mean_coords()
                     self.blobs.blob_matches = matches
                 _logger.debug(
                     f"Loaded blob matches:\n{self.blobs.blob_matches}")

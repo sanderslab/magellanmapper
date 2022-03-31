@@ -400,11 +400,8 @@ class Vis3D:
 
         matches = None
         if blobs.blob_matches is not None:
-            # display colocalizations at the average of matched blob pairs
-            matches = blobs.blob_matches
-            matches = np.mean(
-                (matches.get_blobs(1)[:, :3], matches.get_blobs(2)[:, :3]),
-                axis=0)
+            # set up match-based colocalizations
+            matches = blobs.blob_matches.coords
         
         isotropic = plot_3d.get_isotropic_vis(settings)
         if flipz:

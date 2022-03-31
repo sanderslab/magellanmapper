@@ -479,8 +479,9 @@ class Vis3D:
         if matches is not None:
             self.blobs.append(self.scene.mlab.points3d(
                 matches[:, 2], matches[:, 1], matches[:, 0],
-                color=(0.5, 0.5, 0), scale_mode="none", scale_factor=scale,
-                resolution=50, mode="cylinder"))
+                color=(0.5, 0.5, 0), opacity=0.5, mask_points=mask,
+                scale_mode="none", scale_factor=scale,
+                resolution=50, mode="cube")
 
         def pick_callback(pick):
             # handle picking blobs/glyphs

@@ -1574,6 +1574,10 @@ class Visualization(HasTraits):
         if feedback:
             self._update_roi_feedback(" ".join(feedback), print_out=True)
         self.stale_viewers[vis_handler.ViewerTabs.MAYAVI] = None
+        
+        if Vis3dOptions.CLEAR.value in self._check_list_3d:
+            # after clearing the scene, re-orient camera to the new surface
+            self.orient_camera()
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.

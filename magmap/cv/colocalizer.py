@@ -91,7 +91,7 @@ class BlobMatch:
         """Format the underlying data frame."""
         if self.df is None:
             return "Empty blob matches"
-        return df_io.print_data_frame(self.df, show=False)
+        return df_io.print_data_frame(self.df, show=False, max_rows=10)
     
     def get_blobs(self, n):
         """Get blobs as a numpy array.

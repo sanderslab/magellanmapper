@@ -2,14 +2,18 @@
 
 import math
 from time import time
+from typing import Any, Sequence, Tuple, TYPE_CHECKING
 
 import numpy as np
 from skimage import filters, restoration, transform
 
-from magmap.cv import segmenter
+from magmap.cv import colocalizer, segmenter
 from magmap.io import libmag
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    from magmap.cv import detector
 
 
 class Vis3D:
@@ -342,31 +346,39 @@ class Vis3D:
         pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
         return pts_shadows
 
-    def show_blobs(self, segments, segs_in_mask, cmap, roi_offset, roi_size,
-                   show_shadows=False, flipz=None):
+    def show_blobs(
+            self,
+            blobs: "detector.Blobs",
+            segs_in_mask: np.ndarray,
+            cmap: np.ndarray,
+            roi_offset: Sequence[int], roi_size: Sequence[int],
+            show_shadows: bool = False, flipz: bool = None
+    ) -> Tuple[Any, float]:
         """Show 3D blobs as points.
 
         Args:
-            segments: Labels from 3D blob detection method.
+            blobs: Detected blobs. Blob matches will also be displayed.
             segs_in_mask: Boolean mask for segments within the ROI; all other 
                 segments are assumed to be from padding and border regions 
                 surrounding the ROI.
-            cmap (:class:`numpy.ndaarry`): Colormap as a 2D Numpy array in the
+            cmap: Colormap as a 2D Numpy array in the
                 format  ``[[R, G, B, alpha], ...]``.
-            roi_offset (Sequence[int]): Region of interest offset in ``z,y,x``.
-            roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
+            roi_offset: Region of interest offset in ``z,y,x``.
+            roi_size: Region of interest size in ``z,y,x``.
                 Used to show the ROI outline.
             show_shadows: True if shadows of blobs should be depicted on planes 
                 behind the blobs; defaults to False.
-            flipz (bool): True to invert blobs along the z-axis to match
+            flipz: True to invert blobs along the z-axis to match
                 the handedness of Matplotlib with z progressing upward;
                 defaults to False.
 
         Returns:
-            A 3-element tuple containing ``pts_in``, the 3D points within the 
-            ROI; ``cmap'', the random colormap generated with a color for each 
-            blob, and ``scale``, the current size of the points.
+            Tuple of the displayed blobs:
+            - ``pts_in``, the 3D points within the ROI
+            - ``scale``, the current size of the points
+        
         """
+        segments = blobs.blobs
         if segments.shape[0] <= 0:
             return None, 0
         if roi_offset is None:
@@ -379,6 +391,14 @@ class Vis3D:
         # copy blobs with duplicate columns to access original values for
         # the coordinates callback when a blob is selected
         segs = np.concatenate((segments[:, :4], segments[:, :4]), axis=1)
+
+        matches = None
+        if blobs.blob_matches is not None:
+            # display colocalizations at the average of matched blob pairs
+            matches = blobs.blob_matches
+            matches = np.mean(
+                (matches.get_blobs(1)[:, :3], matches.get_blobs(2)[:, :3]),
+                axis=0)
         
         isotropic = plot_3d.get_isotropic_vis(settings)
         if flipz:
@@ -390,11 +410,16 @@ class Vis3D:
             roi_size = np.copy(roi_size)
             roi_size[0] *= -1
             segs[:, :3] = np.add(segs[:, :3], roi_offset)
+            if matches is not None:
+                matches[:, 0] *= -1
+                matches[:, :3] = np.add(matches[:, :3], roi_offset)
         if isotropic is not None:
             # adjust position based on isotropic factor
             roi_offset = np.multiply(roi_offset, isotropic)
             roi_size = np.multiply(roi_size[:3], isotropic)
             segs[:, :3] = np.multiply(segs[:, :3], isotropic)
+            if matches is not None:
+                matches[:, :3] = np.multiply(matches[:, :3], isotropic)
     
         radii = segs[:, 3]
         scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
@@ -450,6 +475,13 @@ class Vis3D:
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
                 resolution=50, opacity=0.2))
         
+        # blob match display
+        if matches is not None:
+            self.blobs.append(self.scene.mlab.points3d(
+                matches[:, 2], matches[:, 1], matches[:, 0],
+                color=(0.5, 0.5, 0), scale_mode="none", scale_factor=scale,
+                resolution=50, mode="cylinder"))
+
         def pick_callback(pick):
             # handle picking blobs/glyphs
             if pick.actor in pts_in.actor.actors:

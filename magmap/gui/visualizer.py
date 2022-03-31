@@ -2281,7 +2281,7 @@ class Visualization(HasTraits):
         roi_size = self.roi_array[0].astype(int)
         show_shadows = Vis3dOptions.SHADOWS.value in self._check_list_3d
         self.segs_pts, scale = self._vis3d.show_blobs(
-            self.segments, self.segs_in_mask, self.segs_cmap,
+            self.blobs, self.segs_in_mask, self.segs_cmap,
             self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
         
         # reduce number of digits to make the slider more compact

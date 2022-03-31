@@ -25,6 +25,7 @@ class BlobMatch:
             :class:`BlobMatch.Cols`; defaults to None.
         coords: Blob match coordinates, typically the mean coordinates of
             each blob pair; defaults to None.
+        cmap: Colormap for each match; defaults to None.
 
     """
     
@@ -61,6 +62,7 @@ class BlobMatch:
         """
         self.df: Optional[pd.DataFrame] = None
         self.coords: Optional[np.ndarray] = None
+        self.cmap: Optional[np.ndarray] = None
         
         if df is not None:
             # set data frame directly and ignore any other arguments

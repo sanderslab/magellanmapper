@@ -15,6 +15,7 @@
 - "Help" buttons added to open the online documentation (#109)
 - Default confirmation labels can be set before detection (#115)
 - Fixed to reset the ROI selector when redrawing (#115)
+- Fixed to reorient the camera after clearing the 3D space (#121)
 
 #### CLI
 
@@ -27,13 +28,24 @@
 
 #### Cell detection
 
-- Auto-scrolls to the selected annotation (#109)
+##### Detection
+
+- Detection channels can be selected, including those not in the currently displayed image or loaded from a saved blobs file (#121)
+- Auto-scrolls the detections table to the selected annotation (#109)
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
-- Match-based colocalization can run without the main image, using just its metadata instead (#117)
-- Fixed match-based colocalizations when no matches are found (#117, #120)
-- Fixed slow loading of match-based colocalizations (#119)
+- Added a slider to choose the fraction of 3D blobs to display (#121)
+- Improved blob size slider range and readability (#121)
+- Fixed to scale blobs' radii when viewing blobs detections on a downsampled image (#121)
+- Fixed getting atlas colors for blobs for ROIs inside the main image (#121)
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
 - Fixed verifying and resaving blobs
+
+##### Colocalization
+
+- Match-based colocalization can run without the main image, using just its metadata instead (#117)
+- These colocalizations are now displayed in the 3D viewer (#121)
+- Fixed match-based colocalizations when no matches are found (#117, #120)
+- Fixed slow loading of match-based colocalizations (#119)
 
 #### Volumetric image processing
 

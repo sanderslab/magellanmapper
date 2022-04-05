@@ -4,7 +4,7 @@
 
 from enum import Enum
 import multiprocessing as mp
-from typing import Optional
+from typing import List, Optional, Sequence
 
 import pandas as pd
 import numpy as np
@@ -99,27 +99,29 @@ class BlobMatch:
             return "Empty blob matches"
         return df_io.print_data_frame(self.df, show=False, max_rows=10)
     
-    def get_blobs(self, n):
+    def get_blobs(self, n: int) -> Optional[np.ndarray]:
         """Get blobs as a numpy array.
 
         Args:
-            n (int): 1 for blob1, otherwise blob 2.
+            n: 1 for blob1, otherwise blob 2.
 
         Returns:
-            :class:`numpy.ndarray`: Numpy array of the given blob type, or
+            Numpy array of the given blob type, or
             None if the :attr:`df` is None or the blob column does not exist.
 
         """
         col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
         if self.df is None or col.value not in self.df:
             return None
-        return np.vstack(self.df[col.value])
+        df = self.df[col.value]
+        if len(df) == 0:
+            return None
+        return np.vstack(df)
     
-    def get_blobs_all(self):
+    def get_blobs_all(self) -> Optional[List[np.ndarray]]:
         """Get all blobs in the blob matches.
         
         Returns:
-            tuple[:class:`numpy.ndarray`, :class:`numpy.ndarray`]:
             Tuple of ``(blobs1, blobs2)``, or None if either are None.
 
         """

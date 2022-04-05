@@ -465,14 +465,16 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     return matches_chls
 
 
-def _get_roi_id(db, offset, shape, exp_name=None):
+def _get_roi_id(
+        db: "sqlite.ClrDB", offset: Sequence[int], shape: Sequence[int],
+        exp_name: Optional[str] = None) -> int:
     """Get database ROI ID for the given ROI position within the main image5d.
     
     Args:
-        db (:obj:`sqlite.ClrDB`): Database object.
-        offset (List[int]): ROI offset in z,y,x.
-        shape (List[int]): ROI shape in z,y,x.
-        exp_name (str): Name of experiment; defaults to None to attempt
+        db: Database object.
+        offset: ROI offset in z,y,x.
+        shape: ROI shape in z,y,x.
+        exp_name: Name of experiment; defaults to None to attempt
             discovery through any image loaded to :attr:`config.img5d`.
 
     Returns:
@@ -531,33 +533,31 @@ def select_matches(db, channels, offset=None, shape=None, exp_name=None):
         of blob matches. None if no blob matches are found.
 
     """
-    # get ROI for whole image
+    # get ROI for whole image, where whole-image matches are stored
     roi_id = _get_roi_id(db, (0, 0, 0), (0, 0, 0), exp_name)
-    if offset is not None and shape is not None:
-        # get blob from matches within ROI
-        blobs, blob_ids = db.select_blobs_by_position(
-            roi_id, offset[::-1], shape[::-1])
-    else:
-        # get blobs from matches within the whole image
-        blobs, blob_ids = db.select_blobs_by_roi(roi_id)
-    if blobs is None or len(blobs) == 0:
-        print("No blob matches found")
+    blob_matches = db.select_blob_matches(roi_id, offset, shape)
+    if blob_matches.df is None or len(blob_matches.df) == 0:
+        _logger.info("No blob matches found")
         return None
     
-    blob_ids = np.array(blob_ids)
     matches = {}
     for chl in channels:
         # pair channels
         for chl_other in channels:
             if chl >= chl_other: continue
-            # select matches for blobs in the given first channel of the pair
-            # of channels, assuming chls were paired this way during insertion
-            chl_matches = db.select_blob_matches_by_blob_id(
-                roi_id, 1,
-                blob_ids[detector.get_blobs_channel(blobs) == chl])
+            # select matches for blobs in the first channel of the channel pair,
+            # assuming chls were paired this way during insertion
+            blobs1 = blob_matches.get_blobs(1)
+            if blobs1 is None: continue
+            chl_matches = BlobMatch(df=blob_matches.df.loc[
+                detector.get_blobs_channel(blobs1) == chl])
+            
+            # also extract only blob1's paired to blob2's in the 2nd channel 
             blobs2 = chl_matches.get_blobs(2)
-            if blobs2 is not None:
-                chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
-                    blobs2) == chl_other]
-                matches[(chl, chl_other)] = BlobMatch(df=chl_matches)
+            if blobs2 is None: continue
+            chl_matches.df = chl_matches.df.loc[
+                detector.get_blobs_channel(blobs2) == chl_other]
+            
+            # store the matches with chl1-chl2 as key
+            matches[(chl, chl_other)] = chl_matches
     return matches

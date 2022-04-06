@@ -461,6 +461,7 @@ class PlotEditor:
                 self._channels.append([0])
                 cmaps.append(("Greys",))
                 alphas.append(0.4)
+                alpha_blends.append(None)
                 shapes.append(self._img3d_shapes[imgi][1:3])
                 vmaxs.append(None)
                 vmins.append(None)

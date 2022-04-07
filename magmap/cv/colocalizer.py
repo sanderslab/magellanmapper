@@ -228,8 +228,10 @@ class StackColocalizer(object):
         match_tol = np.multiply(
             blocks.overlap_base, config.roi_profile["verify_tol_factor"])
         
-        # adjust ROI size based on required inner padding
+        # re-split stack with ROI size adjusted to the inner padding plus
+        # the raw overlap size
         inner_pad = verifier.setup_match_blobs_roi(match_tol)[2]
+        inner_pad = np.add(inner_pad, blocks.overlap_base)
         sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
             shape, blocks.max_pixels, inner_pad[::-1])
         

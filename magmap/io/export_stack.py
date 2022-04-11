@@ -190,7 +190,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
                 ax, self.aspect, self.origin, imgs, None, cmaps_all,
                 ignore_invis=True, check_single=True)
             if (colorbar is not None and len(ax_imgs) > 0
-                    and len(ax_imgs[0]) > 0):
+                    and len(ax_imgs[0]) > 0 and imgi == 0):
                 # add colorbar with scientific notation if outside limits
                 cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, **colorbar)
                 plot_support.set_scinot(cbar.ax, lbls=None, units=None)

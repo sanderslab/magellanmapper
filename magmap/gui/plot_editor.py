@@ -383,9 +383,6 @@ class PlotEditor:
 
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
-        # assume colorbar already shown if set and image previously displayed
-        colorbar = (config.roi_profile["colorbar"]
-                    and len(self.axes.images) < 1)
         self.axes.clear()
         self.hline = None
         self.vline = None
@@ -482,7 +479,7 @@ class PlotEditor:
             cbar = self._plot_ax_imgs[0][0].colorbar
         if cbar:
             cbar.update_normal(ax_imgs[0][0])
-        elif colorbar:
+        elif config.roi_profile["colorbar"]:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
         
         # display coordinates and label values for each image

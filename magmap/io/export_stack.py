@@ -189,9 +189,10 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             ax_imgs = plot_support.overlay_images(
                 ax, self.aspect, self.origin, imgs, None, cmaps_all,
                 ignore_invis=True, check_single=True)
-            if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
+            if (colorbar is not None and len(ax_imgs) > 0
+                    and len(ax_imgs[0]) > 0):
                 # add colorbar with scientific notation if outside limits
-                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
+                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, **colorbar)
                 plot_support.set_scinot(cbar.ax, lbls=None, units=None)
             plotted_imgs[imgi] = np.array(ax_imgs).flatten()
             

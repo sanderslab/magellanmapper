@@ -1148,18 +1148,20 @@ class Visualization(HasTraits):
     def _set_inten_min_to_curr(self, plot_ax_img):
         # set min intensity to current image value
         if plot_ax_img is not None:
-            self._imgadj_min_ignore_update = True
             vmin = plot_ax_img.ax_img.norm.vmin
             self._adapt_imgadj_limits(plot_ax_img)
-            self._imgadj_min = vmin
+            if self._imgadj_min != vmin:
+                self._imgadj_min_ignore_update = True
+                self._imgadj_min = vmin
 
     def _set_inten_max_to_curr(self, plot_ax_img):
         # set max intensity to current image value
         if plot_ax_img is not None:
-            self._imgadj_max_ignore_update = True
             vmax = plot_ax_img.ax_img.norm.vmax
             self._adapt_imgadj_limits(plot_ax_img)
-            self._imgadj_max = vmax
+            if self._imgadj_max != vmax:
+                self._imgadj_max_ignore_update = True
+                self._imgadj_max = vmax
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):

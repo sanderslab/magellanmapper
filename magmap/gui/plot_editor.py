@@ -192,6 +192,7 @@ class PlotEditor:
         self._editing = False
         self._show_labels = True  # show atlas labels on mouseover
         self._show_crosslines = False  # show crosslines to orthogonal views
+        self._colorbar = None  # colorbar for first main image
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -473,14 +474,13 @@ class PlotEditor:
             alpha_blends=alpha_blends)
         
         # add or update colorbar
-        cbar = None
-        if self._plot_ax_imgs and self._plot_ax_imgs[0]:
-            # get colorbar from first image
-            cbar = self._plot_ax_imgs[0][0].colorbar
-        if cbar:
-            cbar.update_normal(ax_imgs[0][0])
+        if self._colorbar:
+            self._colorbar.update_normal(ax_imgs[0][0])
         elif config.roi_profile["colorbar"]:
-            self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
+            # store colorbar since it's tied to the artist, which will be
+            # replaced with the next display and cannot be further accessed
+            self._colorbar = self.axes.figure.colorbar(
+                ax_imgs[0][0], ax=self.axes)
         
         # display coordinates and label values for each image
         self.axes.format_coord = pixel_display.PixelDisplay(

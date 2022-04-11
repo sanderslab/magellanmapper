@@ -474,8 +474,18 @@ class PlotEditor:
             self.axes, self.aspect, self.origin, imgs2d, self._channels, cmaps,
             alphas, vmins, vmaxs, check_single=(self._ax_img_labels is None),
             alpha_blends=alpha_blends)
-        if colorbar:
+        
+        # add or update colorbar
+        cbar = None
+        if self._plot_ax_imgs and self._plot_ax_imgs[0]:
+            # get colorbar from first image
+            cbar = self._plot_ax_imgs[0][0].colorbar
+        if cbar:
+            cbar.update_normal(ax_imgs[0][0])
+        elif colorbar:
             self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
+        
+        # display coordinates and label values for each image
         self.axes.format_coord = pixel_display.PixelDisplay(
             imgs2d, ax_imgs, shapes, cmap_labels=self.cmap_labels)
 

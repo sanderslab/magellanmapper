@@ -556,6 +556,7 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                 title = os.path.basename(path_sub)
             
             if not stacker.images: continue
+            ax = None
             for k in range(len(stacker.images[0])):
                 # create or retrieve fig; animation has only 1 fig
                 planei = 0 if animated else (
@@ -567,7 +568,9 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                         nrows, ncols, config.plot_labels[config.PlotLabels.SIZE])
                     fig_dict = {"fig": fig, "gs": gs, "imgs": []}
                     figs[planei] = fig_dict
-                ax = fig_dict["fig"].add_subplot(fig_dict["gs"][i, j])
+                if ax is None:
+                    # generate new axes for the gridspec position
+                    ax = fig_dict["fig"].add_subplot(fig_dict["gs"][i, j])
                 if title:
                     ax.title.set_text(title)
                 axs.append(ax)

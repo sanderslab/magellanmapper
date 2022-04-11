@@ -317,15 +317,22 @@ plot_labels = dict.fromkeys(PlotLabels, None)
 plot_labels[PlotLabels.SCALE_BAR] = True
 plot_labels[PlotLabels.DPI] = 150.0
 
-# image transformation keys for command-line parsing
-Transforms = Enum(
-    "Transforms", (
-        "ROTATE",  # num of times to rotate by 90 deg
-        "FLIP_VERT",  # 1 to invert top to bottom
-        "FLIP_HORIZ",  # 1 to invert left to right
-        "RESCALE",  # rescaling factor for an image shape
-    )
-)
+
+class Transforms(Enum):
+    """Image transformation keys for command-line parsing."""
+    #: Rotate by 90 deg the number of specified times.
+    ROTATE = auto()
+    #: Flip the image vertically if 1, no flip if 0.
+    FLIP_VERT = auto()
+    #: Flip the image horizontally if 1, no flip if 0.
+    FLIP_HORIZ = auto()
+    #: Rescale the image by the given factor.
+    RESCALE = auto()
+    #: Interpolate using the given order, which corresponds to
+    #: :meth:`skimage.transform.resize`.
+    INTERPOLATION = auto()
+
+
 transform = dict.fromkeys(Transforms, None)
 
 

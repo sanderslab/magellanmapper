@@ -53,6 +53,8 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             axes.
     """
     imgs = None
+    #: Interpolation order, used in :meth:`skimage.transform.resize`.
+    interp_order: Optional[int] = None
     
     def __init__(self):
         super().__init__()
@@ -133,7 +135,8 @@ class StackPlaneIO(chunking.SharedArrsContainer):
                 # atlas image
                 img = transform.resize(
                     img_stack[i], target_size, mode="reflect",
-                    preserve_range=True, anti_aliasing=True)
+                    preserve_range=True, anti_aliasing=True,
+                    order=cls.interp_order)
             else:
                 # labels-based image, using nearest-neighbor interpolation
                 img = transform.resize(
@@ -486,6 +489,8 @@ def setup_stack(
     
     # store in stack worker
     stacker = StackPlaneIO()
+    StackPlaneIO.interp_order = config.transform[
+        config.Transforms.INTERPOLATION]
     stacker.images = extracted_planes
     stacker.fn_process = fnc
     stacker.rescale = rescale
@@ -638,6 +643,8 @@ def reg_planes_to_img(imgs, path=None, ax=None):
             1, 1, config.plot_labels[config.PlotLabels.SIZE])
         ax = fig.add_subplot(gs[0, 0])
     stacker = StackPlaneIO()
+    StackPlaneIO.interp_order = config.transform[
+        config.Transforms.INTERPOLATION]
     stacker.images = [img[None] for img in imgs]
     stacker.fn_process = StackPlaneIO.process_plane
     stacker.cmaps_labels = _setup_labels_cmaps(imgs)

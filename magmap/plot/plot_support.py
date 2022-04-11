@@ -21,6 +21,7 @@ from magmap.io import libmag
 from magmap.plot import plot_3d
 
 try:
+    from matplotlib.axes import Axes
     from matplotlib_scalebar import scalebar
 except ImportError as e:
     scalebar = None
@@ -761,7 +762,10 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
     ax.set_title(title)
 
 
-def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
+def set_scinot(
+        ax: "Axes", lims: Sequence[int] = (-3, 4),
+        lbls: Optional[Sequence[str]] = None,
+        units: Optional[Sequence[str]] = None):
     """Set scientific notation for tick labels and shift exponents from 
     axes to their labels.
     
@@ -772,16 +776,16 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
     unit labels. Units will be formatted with math text.
     
     Args:
-        ax (:class:`matplotlib.image.Axes`): Axis object.
-        lims (Sequence[int]): Scientific notation limits as a sequence of lower
+        ax: Axis object.
+        lims: Scientific notation limits as a sequence of lower
             and upper bounds outside of which scientific notation will
             be used for each applicable axis. Defaults to ``(-2, 4)``.
-        lbls (Sequence[str]): Sequence of axis labels given in the order
+        lbls: Sequence of axis labels given in the order
             ``(y-axis, x-axis)``. Defaults to None, which causes the
             corresponding value from :attr:`config.plot_labels` to be used
             if available. A None element prevents the label main text from
             displaying and will show the unit without parentheses if available.
-        units (Sequence[str]): Sequence of units given in the order
+        units: Sequence of units given in the order
             ``(y-axis, x-axis)``. Defaults to None, which causes the
             corresponding value from :attr:`config.plot_labels` to be used
             if available. A None element prevents unit display other than

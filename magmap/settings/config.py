@@ -550,16 +550,21 @@ GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100  # labels multiplier for sub-segmentations
 REGION_ALL = "all"
 
-# registered image suffix keys for command-line parsing
-RegSuffixes = Enum(
-    "RegSuffixes", [
-        "ATLAS",  # intensity image
-        "ANNOTATION",  # labels image
-        "BORDERS",  # label borders image
-        "FIXED_MASK",  # registration fixed image mask
-        "MOVING_MASK",  # registration moving image mask
-    ]
-)
+
+class RegSuffixes(Enum):
+    """Registered image suffix keys for command-line parsing."""
+    #: Intensity image.
+    ATLAS = auto()
+    #: Labels image.
+    ANNOTATION = auto()
+    #: Borders image.
+    BORDERS = auto()
+    #: Fixed mask for image registration.
+    FIXED_MASK = auto()
+    #: Moving mask for image registration
+    MOVING_MASK = auto()
+
+
 reg_suffixes = dict.fromkeys(RegSuffixes, None)
 
 

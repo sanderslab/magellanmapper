@@ -190,7 +190,9 @@ def make_density_image(
 ) -> Tuple[np.ndarray, str]:
     """Make a density image based on associated blobs.
     
-    Uses the shape of the registered labels image by default to set 
+    Uses the size and resolutions of the original image stores in the blobs
+    if available to determine scaling between the blobs and the output image.
+    Otherwise, uses the shape of the registered labels image to set 
     the voxel sizes for the blobs.
     
     If ``matches`` is given, a heat map will be generated for each set
@@ -234,25 +236,40 @@ def make_density_image(
     mod_path = img_path
     if suffix is not None:
         mod_path = libmag.insert_before_ext(img_path, suffix)
-    if labels_img_sitk is None:
-        labels_img_sitk = sitk_io.load_registered_img(
-            mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-    labels_img = sitk.GetArrayFromImage(labels_img_sitk)
     
     # load blobs
     blobs = detector.Blobs().load_blobs(np_io.img_to_blobs_path(img_path))
-    target_size = (
-        None if atlas_profile is None else atlas_profile["target_size"])
-    scaling = np_io.find_scaling(
-        img_path, labels_img.shape, scale, target_size)[0]
-    if shape is not None:
-        # scale blob coordinates and heat map to an alternative final shape
-        scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
-        labels_spacing = np.multiply(
-            labels_img_sitk.GetSpacing()[::-1], 
-            np.divide(labels_img.shape, shape))
-        labels_img = np.zeros(shape, dtype=labels_img.dtype)
+    
+    if (shape is not None and blobs.roi_size is not None
+            and blobs.resolutions is not None):
+        # prepare output image and scaling factor from it to the blobs
+        scaling = np.divide(shape, blobs.roi_size)
+        labels_spacing = np.divide(blobs.resolutions[0], scaling)
+        labels_img = np.zeros(shape, dtype=np.uint8)
+        labels_img_sitk = sitk.GetImageFromArray(labels_img)
         labels_img_sitk.SetSpacing(labels_spacing[::-1])
+    
+    else:
+        # default to use labels image as the size of the output image
+        if labels_img_sitk is None:
+            labels_img_sitk = sitk_io.load_registered_img(
+                mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
+        labels_img = sitk.GetArrayFromImage(labels_img_sitk)
+        
+        # find the scaling between the blobs and the labels image
+        target_size = (
+            None if atlas_profile is None else atlas_profile["target_size"])
+        scaling = np_io.find_scaling(
+            img_path, labels_img.shape, scale, target_size)[0]
+        
+        if shape is not None:
+            # scale blob coordinates and heat map to an alternative final shape
+            scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
+            labels_spacing = np.multiply(
+                labels_img_sitk.GetSpacing()[::-1], 
+                np.divide(labels_img.shape, shape))
+            labels_img = np.zeros(shape, dtype=labels_img.dtype)
+            labels_img_sitk.SetSpacing(labels_spacing[::-1])
     _logger.debug("Using image scaling: {}".format(scaling))
     
     # annotate blobs based on position

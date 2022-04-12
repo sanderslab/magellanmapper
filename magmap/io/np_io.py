@@ -47,7 +47,7 @@ class Image5d:
         # additional attributes
         self.subimg_offset: Optional[Sequence[int]] = None
         self.subimg_size: Optional[Sequence[int]] = None
-        self.meta: Optional[Dict[config.MetaKeys, Any]] = None
+        self.meta: Optional[Dict[Union[str, config.MetaKeys], Any]] = None
 
 
 def img_to_blobs_path(path):

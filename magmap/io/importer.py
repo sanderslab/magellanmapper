@@ -19,7 +19,7 @@ from time import time
 import glob
 import pprint
 import re
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 from xml import etree as et
 
 import numpy as np
@@ -1386,22 +1386,26 @@ def save_np_image(image, filename, series=None):
         lows, highs)
 
 
-def calc_scaling(image5d, scaled, image5d_shape=None, scaled_shape=None):
+def calc_scaling(
+        image5d: Optional[np.ndarray], scaled: Optional[np.ndarray],
+        image5d_shape: Optional[Sequence[int]] = None,
+        scaled_shape: Optional[Sequence[int]] = None) -> np.ndarray:
     """Calculate the exact scaling between two images where one image had 
     been scaled from the other.
     
     Args:
-        image5d (:obj:`np.ndarray`): Original image in 5D (time included,
-            channel optional) format.
-        scaled (:obj:`np.ndarray`): Scaled image, assumed to be in either
-            3D or 5D format (3D with channel not currently supported).
-        image5d_shape (List): ``image5d`` shape, which can be given if
+        image5d: Original image in 5D (time included, channel optional) format.
+            Can be None if ``image5d_shape`` is given.
+        scaled: Scaled image, assumed to be in either 3D or 5D format (3D with
+            channel not currently supported). Can be None if ``scaled_shape``
+            is given.
+        image5d_shape: ``image5d`` shape, which can be given if
             ``image5d`` is None; defaults to None.
-        scaled_shape (List): ``scaled`` shape, which can be given if
+        scaled_shape: ``scaled`` shape, which can be given if
             ``scaled`` is None; defaults to None.
     
     Returns:
-        Array of (z, y, x) scaling factors from the original to the scaled
+        Array of ``z,y,x`` scaling factors from the original to the scaled
         image.
     """
     if image5d_shape is None:
@@ -1415,7 +1419,7 @@ def calc_scaling(image5d, scaled, image5d_shape=None, scaled_shape=None):
     if len(scaled_shape) >= 4:
         scaled_shape = scaled_shape[1:4]
     scaling = np.divide(scaled_shape[:3], image5d_shape[:3])
-    print("image scaling compared to image5d: {}".format(scaling))
+    _logger.debug("Image scaling compared to image5d: %s", scaling)
     return scaling
 
 

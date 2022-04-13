@@ -1504,10 +1504,13 @@ def volumes_by_id(
                 print(e)
                 libmag.warn("will ignore label markers")
             
-            # load heat map of nuclei per voxel if available
+            # load heat map of nuclei per voxel if available; use density
+            # suffix if provided
+            density_suffix = config.reg_suffixes[config.RegSuffixes.DENSITY]
+            if not density_suffix:
+                density_suffix = config.RegNames.IMG_HEAT_MAP.value
             try:
-                heat_map = sitk_io.load_registered_img(
-                    mod_path, config.RegNames.IMG_HEAT_MAP.value)
+                heat_map = sitk_io.load_registered_img(mod_path, density_suffix)
             except FileNotFoundError as e:
                 print(e)
                 libmag.warn("will ignore nuclei stats")

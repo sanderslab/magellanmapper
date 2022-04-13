@@ -50,6 +50,7 @@
 #### Volumetric image processing
 
 - Match-based colocalizations use larger processing blocks to avoid gaps (#120)
+- Voxel density maps no longer require a registered image (#125)
 - Fixed 3D surface area measurement with Scikit-image >= v0.19
 
 #### I/O

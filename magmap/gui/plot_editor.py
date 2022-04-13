@@ -474,13 +474,14 @@ class PlotEditor:
             alpha_blends=alpha_blends)
         
         # add or update colorbar
+        colobar_prof = config.roi_profile["colorbar"]
         if self._colorbar:
             self._colorbar.update_normal(ax_imgs[0][0])
-        elif config.roi_profile["colorbar"]:
+        elif colobar_prof:
             # store colorbar since it's tied to the artist, which will be
             # replaced with the next display and cannot be further accessed
             self._colorbar = self.axes.figure.colorbar(
-                ax_imgs[0][0], ax=self.axes)
+                ax_imgs[0][0], ax=self.axes, **colobar_prof)
         
         # display coordinates and label values for each image
         self.axes.format_coord = pixel_display.PixelDisplay(

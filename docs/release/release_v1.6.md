@@ -21,6 +21,7 @@
 #### CLI
 
 - The `--proc export_tif` task exports an NPY file to TIF format
+- the `--transform interpolation=<n>` configures the type of interpolation when resizing images during stack export (#127)
 - Fixed to only remove the final extension from image paths, and paths given by the `--prefix <path>` CLI argument do not undergo any stripping (#115)
 
 #### Atlas refinement

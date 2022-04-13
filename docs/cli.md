@@ -31,7 +31,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--theme` | `<theme1> [theme2] ...` | User interface themes; see `config.Themes`. | v1.1.4 | v1.1.4
 `--truth_db` | `[mode=<mode>] [path=<path>]` | Truth database; see `config.TruthDBModes` for available modes. | v1.0.0 | v1.0.0
 `--labels` | `[path_ref="""] [level=0] [ID=0] [orig_colors=1] [symmetric_colors=1] [binary=<backround>,<foreground>] [translate_labels=<path>"] [translate_children=0]` | Atlas label settings; see `config.AtlasLabels`. <ul><li>`path_ref`: Path to the labels reference file. Should have at least these columns: `Region` or `id` for region IDs, and `RegionName` or `name` for corresponding names. Atlases generated in >=v1.5.0 with this flag will copy this file into the atlas directory so that this argument is not needed when loading the atlas and images registered to it.</li> <li>`level`: Ontology level. Structures in sub-levels will be grouped at this level for volume stats. | v1.0.0 | v1.0.0
-`--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0]` | Image transformations; see `config.Transforms`. | v1.0.0 | v1.0.0
+`--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0] [interpolation=1]` | Image transformations; see `config.Transforms`. <ul><li>`interpolation`: Interpolation order `n` for the main (intensity) image, where `n` is passed to the `order` argument in Scikit-image's [`transform.resize`](https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.resize) function | v1.0.0 | v1.6.0
 `--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Suffixes of registered images to load; see `config.RegSuffixes` for suffixes used throughout the package. Atlases and regenerated and registered with output paths based on the path given by `--img` or `--prefix`. For example:<ul><li>"Base" path (from `--img` or `--prefix`): `/home/me/my_image`</li><li>Intensity/histology/"atlas" image: `/home/me/my_image_atlasVolume.nii.gz`</li><li>Annotation/labels image: `/home/me/my_image_annotation.nii.gz`</li><li>Other registered images, eg atlas edges: `/home/me/my_image_atlasEdge.nii.gz`</li></ul>To load intensity and annotations image: `./run.py --img /home/me/my_image --reg_suffixes atlasVolume.nii.gz annotation.nii.gz`. <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Suffixes can be also given as an absolute path, such as a labels image not registered to the main image.</li></ul> | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--plot_labels` | `[title=<title>] ...` | Plot labels; see `config.PlotLabels` for available parameters. | v1.0.0 | v1.0.0
 `--set_meta` | `[resolutions=<x,y,z>] [magnification=<n>] [zoom=<n>] [shape=<c,x,y,z,...>] [dtype=<data-type>]` | Metadata to set when importing an image; see `config.MetaKeys`. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
@@ -47,6 +47,12 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--savefig` | `<ext>` | Extension to use when saving figures, without period. When unset, defaults to PNG when exporting images. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
 `--groups` | `[group1] [group2] ...` | Group ID corresponding to each image in `--img`. | v1.0.0 | v1.0.0
 `--verbose`, `-v` | `[level=<n>] [path=<path>]` | Verbose output. `level` can range from `1` (`DEBUG`) to 5 (`CRITICAL`); defaults to debug if `level` is not set, or info if `-v` is not given. `path` is the output log path. | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
+
+## Changes in MagellanMapper v1.6
+
+Old | New | Version | Purpose of Change |
+--- | --- | --- | ---
+`--transform ...` | `--transform [interpolation=n] ...` | v1.6.0 | Interpolation order can be specified when exporting the main image.
 
 ## Changes in MagellanMapper v1.5
 

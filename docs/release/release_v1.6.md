@@ -16,6 +16,7 @@
 - Default confirmation labels can be set before detection (#115)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
+- Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 
 
 #### CLI
 

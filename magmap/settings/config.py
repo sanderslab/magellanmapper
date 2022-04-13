@@ -552,7 +552,7 @@ REGION_ALL = "all"
 
 
 class RegSuffixes(Enum):
-    """Registered image suffix keys for command-line parsing."""
+    """Registered image suffix type keys for command-line parsing."""
     #: Intensity image.
     ATLAS = auto()
     #: Labels image.
@@ -563,9 +563,12 @@ class RegSuffixes(Enum):
     FIXED_MASK = auto()
     #: Moving mask for image registration
     MOVING_MASK = auto()
+    #: Density image.
+    DENSITY = auto()
 
 
-reg_suffixes = dict.fromkeys(RegSuffixes, None)
+#: Dictionary of registered suffix names for each suffix type.
+reg_suffixes: Dict[RegSuffixes, str] = dict.fromkeys(RegSuffixes, None)
 
 
 class ABAKeys(Enum):

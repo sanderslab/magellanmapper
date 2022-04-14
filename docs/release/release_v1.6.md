@@ -67,6 +67,7 @@
 
 #### Python stats and plots
 
+- Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 
 #### R stats and plots

@@ -23,6 +23,9 @@ _EXTRAS_AWS = ["boto3", "awscli"]
 # optional dependencies to build API documentation
 _EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 
+# optional dependencies for Jupyter notebooks
+_EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
+
 # installation configuration
 config = {
     "name": "magellanmapper", 
@@ -53,16 +56,18 @@ config = {
         "tifffile",
     ], 
     "extras_require": {
-        "import": _EXTRAS_IMPORT, 
+        "import": _EXTRAS_IMPORT,
         "aws": _EXTRAS_AWS,
         "pandas_plus": _EXTRAS_PANDAS,
         "docs": _EXTRAS_DOCS,
+        "jupyter": _EXTRAS_JUPYTER,
         "all": [
-            "matplotlib_scalebar", 
+            "matplotlib_scalebar",
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             *_EXTRAS_PANDAS,
-            *_EXTRAS_IMPORT,  
-            *_EXTRAS_AWS, 
+            *_EXTRAS_IMPORT,
+            *_EXTRAS_AWS,
+            *_EXTRAS_JUPYTER,
         ]
     }, 
 }

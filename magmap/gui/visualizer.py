@@ -2185,11 +2185,14 @@ class Visualization(HasTraits):
                 # get corresponding blob co-localizations unless showing
                 # blobs from database, which do not have colocs
                 colocs = config.blobs.colocalizations[mask][mask_chl]
-        _logger.debug(f"All blobs:\n{segs_all}\nTotal blobs: {len(segs_all)}")
+        _logger.debug(
+            f"All blobs:\n{segs_all}\nTotal blobs: "
+            f"{0 if segs_all is None else len(segs_all)}")
         
         if segs is not None:
             # segs are typically loaded from DB for a sub-ROI within the
             # current ROI, so fill in the padding area from segs_all
+            # TODO: remove since blobs from different sources may be confusing?
             _, segs_in_mask = detector.get_blobs_in_roi(
                 segs_all, np.zeros(3), 
                 roi_size, np.multiply(self.border, -1))

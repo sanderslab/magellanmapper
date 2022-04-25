@@ -4,7 +4,7 @@
 
 from enum import Enum
 import multiprocessing as mp
-from typing import List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 import numpy as np
@@ -419,22 +419,24 @@ def colocalize_blobs(roi, blobs, thresh=None):
     return colocs
 
 
-def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
+def colocalize_blobs_match(
+        blobs: np.ndarray, offset: Sequence[int], size: Sequence[int],
+        tol: Sequence[float], inner_padding: Optional[Sequence[int]] = None
+) -> Optional[Dict[Tuple[int, int], "BlobMatch"]]:
     """Co-localize blobs in separate channels but the same ROI by finding
     optimal blob matches.
 
     Args:
-        blobs (:obj:`np.ndarray`): Blobs from separate channels.
-        offset (List[int]): ROI offset given as x,y,z.
-        size (List[int]): ROI shape given as x,y,z.
-        tol (List[float]): Tolerances for matching given as x,y,z
-        inner_padding (List[int]): ROI padding given as x,y,z; defaults
+        blobs: Blobs from separate channels.
+        offset: ROI offset given as x,y,z.
+        size: ROI shape given as x,y,z.
+        tol: Tolerances for matching given as x,y,z
+        inner_padding: ROI padding given as x,y,z; defaults
             to None to use the padding based on ``tol``.
 
     Returns:
-        dict[tuple[int, int], :class:`BlobMatch`]:
         Dictionary where keys are tuples of the two channels compared and
-        values are blob matches objects.
+        values are blob matches objects, or None if ``blobs`` is None.
 
     """
     if blobs is None:

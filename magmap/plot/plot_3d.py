@@ -4,6 +4,7 @@
 
 Prepare volumetric image stacks for plotting.
 """
+from typing import Optional, Sequence
 
 import numpy as np
 from skimage import draw
@@ -47,23 +48,25 @@ def setup_channels(roi, channel, dim_channel):
     return multichannel, channels
 
 
-def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
-                 channel=None):
+def saturate_roi(
+        roi: np.ndarray, clip_vmin: float = -1, clip_vmax: float = -1,
+        max_thresh_factor: float = -1, channel: Optional[Sequence[int]] = None
+) -> np.ndarray:
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
     
     Args:
-        roi (:obj:`np.ndarray`): Region of interest.
-        clip_vmin (float): Percent for lower clipping. Defaults to -1
+        roi: Region of interest.
+        clip_vmin: Percent for lower clipping. Defaults to -1
             to use each channel's profile setting.
-        clip_vmax (float): Percent for upper clipping. Defaults to -1
+        clip_vmax: Percent for upper clipping. Defaults to -1
             to use each channel's profile setting.
-        max_thresh_factor (float): Multiplier of :attr:`config.near_max`
+        max_thresh_factor: Multiplier of :attr:`config.near_max`
             for ROI's scaled maximum value. If the max data range value
             adjusted through``clip_vmax``is below this product, this max
             value will be set to this product. Defaults to -1 to use each
             channel's profile setting.
-        channel (List[int]): Sequence of channel indices in ``roi`` to
+        channel: Sequence of channel indices in ``roi`` to
             saturate. Defaults to None to use all channels.
     
     Returns:
@@ -85,11 +88,14 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
         # enhance contrast and normalize to 0-1 scale, adjusting the near max
         # value derived globally from image5d for the chl
         vmin, vmax = np.percentile(roi_show, (clip_vmin_prof, clip_vmax_prof))
-        max_thresh = config.near_max[chl] * max_thresh_factor_prof
-        if vmax < max_thresh:
-            vmax = max_thresh
-        saturated = np.clip(roi_show, vmin, vmax)
-        saturated = (saturated - vmin) / (vmax - vmin)
+        if vmin == vmax:
+            saturated = roi_show
+        else:
+            max_thresh = config.near_max[chl] * max_thresh_factor_prof
+            if vmax < max_thresh:
+                vmax = max_thresh
+            saturated = np.clip(roi_show, vmin, vmax)
+            saturated = (saturated - vmin) / (vmax - vmin)
         
         # insert into output array
         if multichannel:

@@ -262,19 +262,21 @@ def show_blob_surroundings(blobs, roi, padding=1):
     np.set_printoptions()
 
 
-def detect_blobs(roi, channel, exclude_border=None):
+def detect_blobs(
+        roi: np.ndarray, channel: Sequence[int],
+        exclude_border: Optional[Sequence[int]] = None) -> Optional[np.ndarray]:
     """Detects objects using 3D blob detection technique.
     
     Args:
         roi: Region of interest to segment.
-        channel (Sequence[int]): Sequence of channels to select, which can
+        channel: Sequence of channels to select, which can
             be None to indicate all channels.
         exclude_border: Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     
     Returns:
-        Array of detected blobs, each given as 
-            (z, row, column, radius, confirmation).
+        Array of detected blobs, each given as
+        ``z, row, column, radius, confirmation``.
     """
     time_start = time()
     shape = roi.shape

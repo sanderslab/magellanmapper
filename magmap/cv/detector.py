@@ -196,6 +196,19 @@ class Blobs:
         if config.verbose:
             pprint.pprint(blobs_arc)
         return blobs_arc
+    
+    @staticmethod
+    def get_blobs_channel(blobs: np.ndarray) -> np.ndarray:
+        """Get the blobs' channels.
+                
+        Args:
+            blobs: Blobs array.
+
+        Returns:
+            Array of channels.
+
+        """
+        return blobs[:, 6]
 
 
 def calc_scaling_factor():
@@ -507,9 +520,6 @@ def get_blob_channel(blob):
     return blob[6]
 
 
-def get_blobs_channel(blobs):
-    return blobs[:, 6]
-
 
 def set_blob_channel(blob, val):
     """Set the channel of a blob or blobs.
@@ -547,7 +557,7 @@ def blobs_in_channel(blobs, channel, return_mask=False):
     blobs_chl = blobs
     mask = None
     if channel is not None:
-        mask = np.isin(get_blobs_channel(blobs), channel)
+        mask = np.isin(Blobs.get_blobs_channel(blobs), channel)
         blobs_chl = blobs[mask]
     if return_mask:
         return blobs_chl, mask
@@ -879,7 +889,7 @@ def show_blobs_per_channel(blobs):
     Args:
         blobs: Blobs as 2D array of [n, [z, row, column, radius, ...]].
     """
-    channels = np.unique(get_blobs_channel(blobs))
+    channels = np.unique(Blobs.get_blobs_channel(blobs))
     for channel in channels:
         num_blobs = len(blobs_in_channel(blobs, channel))
         print("- blobs in channel {}: {}".format(int(channel), num_blobs))

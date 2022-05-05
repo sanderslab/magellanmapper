@@ -278,7 +278,7 @@ def make_density_image(
         _logger.info(
             "Using blobs from channel(s), combining if multiple channels: %s",
             channel)
-        blobs_chl = blobs_chl[np.isin(detector.get_blobs_channel(
+        blobs_chl = blobs_chl[np.isin(detector.Blobs.get_blobs_channel(
             blobs_chl), channel)]
     heat_map = make_heat_map()
     imgs_write = {

@@ -973,7 +973,7 @@ class Visualization(HasTraits):
         if config.blobs is not None and config.blobs.blobs is not None:
             # set detection channels to those in loaded blobs
             self._segs_chls_names.selections = [
-                str(n) for n in np.unique(detector.get_blobs_channel(
+                str(n) for n in np.unique(detector.Blobs.get_blobs_channel(
                     config.blobs.blobs).astype(int))]
         else:
             # add detection channel selectors for all image channels
@@ -2252,7 +2252,7 @@ class Visualization(HasTraits):
             
             else:
                 # default to color by channel
-                chls = detector.get_blobs_channel(
+                chls = detector.Blobs.get_blobs_channel(
                     segs_all[self.segs_in_mask]).astype(np.int)
                 cmap = colormaps.discrete_colormap(
                     max(chls) + 1, alpha, True, config.seed)
@@ -2730,7 +2730,7 @@ class Visualization(HasTraits):
             blobs = config.db.select_blobs_by_roi(roi_id)[0]
             if len(blobs) > 0:
                 # change to single-channel if all blobs are from same channel
-                chls = np.unique(detector.get_blobs_channel(blobs))
+                chls = np.unique(detector.Blobs.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
             

@@ -361,7 +361,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
     # surrounds, but ROI is not available for them
     blobs_roi, blobs_roi_mask = detector.get_blobs_in_roi(
         blobs, (0, 0, 0), roi.shape[:3], reverse=False)
-    blobs_chl = detector.get_blobs_channel(blobs_roi)
+    blobs_chl = detector.Blobs.get_blobs_channel(blobs_roi)
     blobs_range_chls = []
     
     # get labeled masks of blobs for each channel and threshold intensities
@@ -390,7 +390,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
             roi_mask = roi if np.sum(mask_blobs) < 1 else roi[mask_blobs, chl]
             threshs.append(np.percentile(roi_mask, thresh))
 
-    channels = np.unique(detector.get_blobs_channel(blobs_roi)).astype(int)
+    channels = np.unique(detector.Blobs.get_blobs_channel(blobs_roi)).astype(int)
     colocs_roi = np.zeros((blobs_roi.shape[0], roi.shape[3]), dtype=np.uint8)
     for chl in channels:
         # get labeled mask of blobs in the given channel
@@ -446,7 +446,7 @@ def colocalize_blobs_match(
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}
-    channels = np.unique(detector.get_blobs_channel(blobs)).astype(int)
+    channels = np.unique(detector.Blobs.get_blobs_channel(blobs)).astype(int)
     for chl in channels:
         # pair channels
         blobs_chl = detector.blobs_in_channel(blobs, chl)
@@ -554,13 +554,13 @@ def select_matches(db, channels, offset=None, shape=None, exp_name=None):
             blobs1 = blob_matches.get_blobs(1)
             if blobs1 is None: continue
             chl_matches = BlobMatch(df=blob_matches.df.loc[
-                detector.get_blobs_channel(blobs1) == chl])
+                detector.Blobs.get_blobs_channel(blobs1) == chl])
             
             # also extract only blob1's paired to blob2's in the 2nd channel 
             blobs2 = chl_matches.get_blobs(2)
             if blobs2 is None: continue
             chl_matches.df = chl_matches.df.loc[
-                detector.get_blobs_channel(blobs2) == chl_other]
+                detector.Blobs.get_blobs_channel(blobs2) == chl_other]
             
             # store the matches with chl1-chl2 as key
             matches[(chl, chl_other)] = chl_matches

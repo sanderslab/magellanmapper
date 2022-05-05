@@ -768,7 +768,7 @@ def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None,
         vols_phys = np.multiply(vols_phys, physical_mult)
     if unit_factor is not None:
         # further conversion to given unit size
-        unit_factor_vol = unit_factor ** 3
+        unit_factor_vol = unit_factor ** len(spacing)
         vols_phys = np.divide(vols_phys, unit_factor_vol)
     if unit_factor is not None:
         # convert metrics not extracted from data frame

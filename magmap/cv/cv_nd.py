@@ -76,25 +76,32 @@ def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
     return roi_carved, mask
 
 
-def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
+def rotate_nd(
+        img_np: np.ndarray, angle, axis: int = 0, order: int = 1,
+        resize: bool = False) -> np.ndarray:
     """Rotate an image of arbitrary dimensions along a given axis.
     
     This function is essentially a wrapper of 
-    :func:``skimage.transform.rotate``, applied to each 2D plane along a 
+    :func:`skimage.transform.rotate`, applied to each 2D plane along a 
     given axis for volumetric rotation.
     
     Args:
-        img_np (:obj:`np.ndarray`): Numpy array.
-        angle (float): Angle by which to rotate.
-        axis (int): Axis along which to rotate, given as an int in standard
+        img_np: 2D or higher dimensional NumPy array.
+        angle: Angle by which to rotate.
+        axis: Axis along which to rotate, given as an int in standard
             Numpy axis convention; defaults to 0
-        order (int): Spline interpolation order; defaults to 1.
-        resize (bool): True to resize the output image to avoid any
+        order: Spline interpolation order; defaults to 1.
+        resize: True to resize the output image to avoid any
             image cropping; defaults to False.
     
     Returns:
         The rotated image.
     """
+    is_2d = img_np.ndim == 2
+    if is_2d:
+        # wrap in another dim to make 3D
+        img_np = img_np[None]
+    
     slices = [slice(None)] * img_np.ndim
     imgs = []
     for i in range(img_np.shape[axis]):
@@ -104,6 +111,7 @@ def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
         imgs.append(transform.rotate(
             img2d, angle, order=order, mode="constant", preserve_range=True,
             resize=resize))
+    
     if resize:
         # find output shape based on max plane size, allowing rotated images
         # to be of different sizes such as for progressive rotation, although
@@ -126,6 +134,10 @@ def rotate_nd(img_np, angle, axis=0, order=1, resize=False):
         for i, img in enumerate(imgs):
             slices[axis] = i
             rotated[tuple(slices)] = img
+    
+    if is_2d:
+        # convert back to 2D
+        rotated = rotated[0]
     return rotated
 
 

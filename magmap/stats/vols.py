@@ -1227,7 +1227,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         df_cond = df["Condition"]
         conds = sorted(np.unique(df_cond), reverse=reverse)
 
-    if col_wt is not None:
+    if col_wt is not None and len(df) > 0:
         # weight given column for the first condition and normalizing it to
         # its maximum value, or use the whole column if no conditions exist
         print("weighting stats by", col_wt)

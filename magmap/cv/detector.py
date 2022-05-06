@@ -304,6 +304,15 @@ class Blobs:
         return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL])
     
     @classmethod
+    def _get_rel_inds(cls) -> List[int]:
+        """Get relative coordinate indices."""
+        return [
+            cls.col_inds[cls.Cols.Z],
+            cls.col_inds[cls.Cols.Y],
+            cls.col_inds[cls.Cols.X]
+        ]
+
+    @classmethod
     def _get_abs_inds(cls) -> List[int]:
         """Get absolute coordinate indices."""
         return [
@@ -412,6 +421,48 @@ class Blobs:
         return blobs
     
     @classmethod
+    def shift_blob_rel_coords(
+            cls, blob: np.ndarray, offset: Sequence[int]) -> np.ndarray:
+        """Shift blob relative coordinates by offset.
+
+        Args:
+            blob: Either a sequence starting with blob coordinates,
+                typically in ``z, y, x, ...``, or a sequence of blobs.
+            offset: Sequence of coordinates by which to shift
+                the corresponding elements from the start of ``blob``.
+
+        Returns:
+            The shifted blob or sequence of blobs.
+
+        """
+        if blob.ndim > 1:
+            blob[..., cls._get_rel_inds()] += offset
+        else:
+            blob[cls._get_rel_inds()] += offset
+        return blob
+    
+    @classmethod
+    def shift_blob_abs_coords(cls, blobs, offset):
+        blobs[..., cls._get_abs_inds()] += offset
+        return blobs
+    
+    @classmethod
+    def multiply_blob_rel_coords(cls, blobs, factor):
+        if blobs is not None:
+            inds = cls._get_rel_inds()
+            rel_coords = blobs[..., inds] * factor
+            blobs[..., inds] = rel_coords.astype(np.int)
+        return blobs
+    
+    @classmethod
+    def multiply_blob_abs_coords(cls, blobs, factor):
+        if blobs is not None:
+            inds = cls._get_abs_inds()
+            abs_coords = blobs[..., inds] * factor
+            blobs[..., inds] = abs_coords.astype(np.int)
+        return blobs
+
+    @classmethod
     def remove_abs_blob_coords(
             cls, blobs: np.ndarray, remove_extra: bool = False) -> np.ndarray:
         """Remove blob absolute coordinate columns.
@@ -427,6 +478,11 @@ class Blobs:
         """
         inds = cls.col_inds.values() if remove_extra else slice(blobs.shape[1])
         return blobs[:, [i for i in inds if i not in cls._get_abs_inds()]]
+    
+    @classmethod
+    def replace_rel_with_abs_blob_coords(cls, blobs):
+        blobs[:, cls._get_rel_inds()] = blobs[:, cls._get_abs_inds()]
+        return blobs
 
     @classmethod
     def blobs_in_channel(
@@ -466,6 +522,29 @@ class Blobs:
         for channel in channels:
             num_blobs = len(cls.blobs_in_channel(blobs, channel))
             _logger.info("- blobs in channel %s: %s", int(channel), num_blobs)
+    
+    @classmethod
+    def blob_for_db(cls, blob: np.ndarray) -> np.ndarray:
+        """Convert blob to absolute coordinates.
+         
+        Changes the blob format from that used within this module 
+        to that used in :module:`sqlite`, where coordinates are absolute 
+        rather than relative to the offset.
+
+        Args:
+            blob: Single blob.
+
+        Returns:
+            Blob in ``abs_z, abs_y, abs_x, rad, confirmed, truth, channel``
+            format.
+        """
+        inds = [
+            cls.col_inds[cls.Cols.RADIUS],
+            cls.col_inds[cls.Cols.CONFIRMED],
+            cls.col_inds[cls.Cols.TRUTH],
+            cls.col_inds[cls.Cols.CHANNEL],
+        ]
+        return np.array([*blob[cls._get_abs_inds()], *blob[inds]])
 
 
 def calc_scaling_factor():
@@ -598,8 +677,9 @@ def detect_blobs(
         # if detected on isotropic ROI, need to reposition blob coordinates 
         # for original, non-isotropic ROI
         isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
-        blobs_all = multiply_blob_rel_coords(blobs_all, 1 / isotropic_factor)
-        blobs_all = multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
+        blobs_all = Blobs.multiply_blob_rel_coords(
+            blobs_all, 1 / isotropic_factor)
+        blobs_all = Blobs.multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
     
     if exclude_border is not None:
         # exclude blobs from the border in x,y,z
@@ -649,67 +729,6 @@ def format_blobs(blobs, channel=None):
         # prior to v.0.6.0, need to update channel with default value
         blobs[:, channel_dim] = 0
     return blobs
-
-
-def shift_blob_rel_coords(blob, offset):
-    """Shift blob relative coordinates by offset.
-    
-    Args:
-        blob (List): Either a sequence starting with blob coordinates,
-            typically in ``z, y, x, ...``, or a sequence of blobs.
-        offset (List[int]): Sequence of coordinates by which to shift
-            the corresponding elements from the start of ``blob``.
-
-    Returns:
-        List: The shifted blob or sequence of blobs.
-
-    """
-    if blob.ndim > 1:
-        blob[..., :len(offset)] += offset
-    else:
-        blob[:len(offset)] += offset
-    return blob
-
-
-def shift_blob_abs_coords(blobs, offset):
-    blobs[..., 7:7+len(offset)] += offset
-    return blobs
-
-
-def multiply_blob_rel_coords(blobs, factor):
-    if blobs is not None:
-        rel_coords = blobs[..., :3] * factor
-        blobs[..., :3] = rel_coords.astype(np.int)
-    return blobs
-
-
-def multiply_blob_abs_coords(blobs, factor):
-    if blobs is not None:
-        abs_slice = slice(7, 7 + len(factor))
-        abs_coords = blobs[..., abs_slice] * factor
-        blobs[..., abs_slice] = abs_coords.astype(np.int)
-    return blobs
-
-
-def replace_rel_with_abs_blob_coords(blobs):
-    blobs[:, :3] = blobs[:, 7:10]
-    return blobs
-
-
-def blob_for_db(blob):
-    """Convert segment output from the format used within this module 
-    to that used in :module:`sqlite`, where coordinates are absolute 
-    rather than relative to the offset.
-    
-    Args:
-        seg: Segment in 
-            (z, y, x, rad, confirmed, truth, channel, abs_z, abs_y, abs_x) 
-            format.
-    
-    Returns:
-        Segment in (abs_z, abs_y, abs_x, rad, confirmed, truth, channel) format.
-    """
-    return np.array([*blob[-3:], *blob[3:7]])
 
 
 def remove_duplicate_blobs(blobs, region):

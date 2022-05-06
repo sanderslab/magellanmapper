@@ -300,7 +300,7 @@ def setup_images(
                         img_to_blobs_path(filename_base))
                     blobs.blobs, _ = detector.get_blobs_in_roi(
                         blobs.blobs, offset, size, reverse=False)
-                    detector.shift_blob_rel_coords(
+                    detector.Blobs.shift_blob_rel_coords(
                         blobs.blobs, np.multiply(offset, -1))
             else:
                 # load full image blobs

@@ -2154,7 +2154,7 @@ class Visualization(HasTraits):
             
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
-            segs_all = detector.format_blobs(segs_all)
+            segs_all = detector.Blobs.format_blobs(segs_all)
             segs_all, mask_chl = detector.Blobs.blobs_in_channel(
                 segs_all, chls, return_mask=True)
             
@@ -2201,7 +2201,7 @@ class Visualization(HasTraits):
             segs_outside = segs_all[np.logical_not(segs_in_mask)]
             print("segs_outside:\n{}".format(segs_outside))
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
-            segs = detector.format_blobs(segs)
+            segs = detector.Blobs.format_blobs(segs)
             segs = detector.Blobs.blobs_in_channel(segs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             

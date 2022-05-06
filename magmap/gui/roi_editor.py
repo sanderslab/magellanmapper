@@ -769,7 +769,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                         blob = np.array([[axi - self._z_planes_padding,
                                          event.ydata.astype(int),
                                          event.xdata.astype(int), -5]])
-                        blob = detector.format_blobs(blob, blob_channel)
+                        blob = detector.Blobs.format_blobs(blob, blob_channel)
                         detector.Blobs.shift_blob_abs_coords(blob, offset[::-1])
                         detector.Blobs.set_blob_confirmed(blob, 1)
                         blob = fn_update_seg(blob[0])

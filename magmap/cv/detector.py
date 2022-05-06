@@ -242,6 +242,50 @@ class Blobs:
         return blobs_arc
     
     @classmethod
+    def format_blobs(
+            cls, blobs: np.ndarray,
+            channel: Optional[Union[int, Sequence[int]]] = None) -> np.ndarray:
+        """Format blobs with the full set of fields.
+         
+
+        Blobs in MagellanMapper can be assumed to start with ``z, y, x, radius``
+        but should use this class's functions to manipulate other fields to 
+        ensure that the correct columns are accessed. This function adds
+        these fields: ``confirmation, truth, channel, abs z, abs y, abs x``.
+
+        "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
+
+        "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where 
+        a "matched" truth blob is one that has a detected blob within a given 
+        tolerance.
+
+        Args:
+            blobs: Numpy 2D array in ``[[z, y, x, radius, ...], ...]`` format.
+            channel: Channel to set. Defaults to None, in which case the channel 
+                will not be updated.
+
+        Returns:
+            Blobs array formatted as 
+            ``[[z, y, x, radius, confirmation, truth, channel, 
+              abs_z, abs_y, abs_x], ...]``.
+        
+        """
+        # target num of cols minus current cols
+        shape = blobs.shape
+        extra_cols = len(cls.Cols) - shape[1]
+        extras = np.ones((shape[0], extra_cols)) * -1
+        blobs = np.concatenate((blobs, extras), axis=1)
+        
+        # copy relative to absolute coords
+        blobs[:, cls._get_abs_inds()] = blobs[:, cls._get_rel_inds()]
+        
+        if channel is not None:
+            # update channel
+            cls.set_blob_channel(blobs, channel)
+        
+        return blobs
+
+    @classmethod
     def get_blob_col(
             cls, blob: np.ndarray, col: int) -> Union[int, float, np.ndarray]:
         """Get the value for the given column of a blob or blobs.
@@ -742,7 +786,7 @@ def detect_blobs(
             libmag.printv("no blobs detected")
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-        blobs = format_blobs(blobs_log, chl)
+        blobs = Blobs.format_blobs(blobs_log, chl)
         #print(blobs)
         blobs_all.append(blobs)
     if not blobs_all:
@@ -761,49 +805,6 @@ def detect_blobs(
         blobs_all = get_blobs_interior(blobs_all, shape, *exclude_border)
     
     return blobs_all
-
-
-def format_blobs(blobs, channel=None):
-    """Format blobs with additional fields for confirmation, truth, and 
-    channel, abs z, abs y, abs x values.
-    
-    Blobs in MagellanMapper can be assumed to start with (z, y, x, radius) but should 
-    use ``detector`` functions to manipulate other fields of blob arrays to 
-    ensure that the correct columns are accessed.
-    
-    "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
-    
-    "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where 
-    a "matched" truth blob is one that has a detected blob within a given 
-    tolerance.
-    
-    Args:
-        blobs: Numpy 2D array in [[z, y, x, radius, ...], ...] format.
-        channel: Channel to set. Defaults to None, in which case the channel 
-            will not be updated.
-    
-    Returns:
-        Blobs array formatted as 
-        [[z, y, x, radius, confirmation, truth, channel, 
-          abs_z, abs_y, abs_x], ...].
-    """
-    # target num of cols minus current cols
-    shape = blobs.shape
-    extra_cols = 10 - shape[1]
-    #print("extra_cols: {}".format(extra_cols))
-    extras = np.ones((shape[0], extra_cols)) * -1
-    blobs = np.concatenate((blobs, extras), axis=1)
-    # copy relative coords to abs coords
-    blobs[:, -3:] = blobs[:, :3]
-    channel_dim = 6
-    if channel is not None:
-        # update channel if given
-        blobs[:, channel_dim] = channel
-    elif shape[1] <= channel_dim:
-        # if original shape of each blob was 6 or less as was the case 
-        # prior to v.0.6.0, need to update channel with default value
-        blobs[:, channel_dim] = 0
-    return blobs
 
 
 def remove_duplicate_blobs(blobs, region):

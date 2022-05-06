@@ -35,6 +35,8 @@ CONFIRMATION: Dict[int, str] = {
 # pixel number multiplier by scaling for max overlapping pixels per ROI
 OVERLAP_FACTOR: int = 5
 
+_logger = config.logger.getChild(__name__)
+
 
 class Blobs:
     """Blob storage class.
@@ -113,9 +115,14 @@ class Blobs:
         # load blobs and display counts
         if path is not None:
             self.path = path
-        print("Loading blobs from", self.path)
+        _logger.info("Loading blobs from: %s", self.path)
+        
         with np.load(self.path) as archive:
             info = np_io.read_np_archive(archive)
+            
+            if config.verbose:
+                _logger.debug(
+                    "Blobs archive metadata:\n%s", pprint.pformat(info))
 
             if self.Keys.VER.value in info:
                 # load archive version number
@@ -124,7 +131,7 @@ class Blobs:
             if self.Keys.BLOBS.value in info:
                 # load blobs as a Numpy array
                 self.blobs = info[self.Keys.BLOBS.value]
-                print("Loaded {} blobs".format(len(self.blobs)))
+                _logger.info("Loaded %s blobs", len(self.blobs))
                 if config.verbose:
                     show_blobs_per_channel(self.blobs)
             
@@ -132,8 +139,9 @@ class Blobs:
                 # load intensity-based colocalizations
                 self.colocalizations = info[self.Keys.COLOCS.value]
                 if self.colocalizations is not None:
-                    print("Loaded blob co-localizations for {} channels"
-                          .format(self.colocalizations.shape[1]))
+                    _logger.info(
+                        "Loaded blob co-localizations for %s channels",
+                        self.colocalizations.shape[1])
             
             if self.Keys.RESOLUTIONS.value in info:
                 # load resolutions of image from which blobs were detected
@@ -151,8 +159,6 @@ class Blobs:
                 # load size of ROI from which blobs were detected
                 self.roi_size = info[self.Keys.ROI_SIZE.value]
             
-            if config.verbose:
-                pprint.pprint(info)
         return self
 
     def save_archive(self, to_add=None, update=False):
@@ -191,7 +197,7 @@ class Blobs:
         with open(self.path, "wb") as archive:
             # save as uncompressed zip Numpy archive file
             np.savez(archive, **blobs_arc)
-            print("Saved blobs archive to:", self.path)
+            _logger.info("Saved blobs archive to: %s", self.path)
         
         if config.verbose:
             pprint.pprint(blobs_arc)

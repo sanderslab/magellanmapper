@@ -14,7 +14,7 @@ from enum import Enum
 import math
 import pprint
 from time import time
-from typing import Dict, Optional, Sequence
+from typing import Dict, Optional, Sequence, Union
 
 import numpy as np
 from skimage.feature import blob_log
@@ -258,6 +258,76 @@ class Blobs:
         if blobs.ndim > 1:
             return blobs[..., chli]
         return blobs[chli]
+    
+    @classmethod
+    def set_blob_col(
+            cls, blob: np.ndarray, col: int, val: Union[int, np.ndarray]
+    ) -> np.ndarray:
+        """Set the value for the given column of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            col: Column index in ``blob``.
+            val: New value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        if blob.ndim > 1:
+            blob[..., col] = val
+        else:
+            blob[col] = val
+        return blob
+    
+    @classmethod
+    def set_blob_confirmed(
+            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+        """Set the confirmed flag of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            val: Confirmed value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CONFIRMED], val)
+    
+    @classmethod
+    def set_blob_truth(
+            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+        """Set the truth flag of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            val: Truth value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        return Blobs.set_blob_col(blob, cls.col_inds[cls.Cols.TRUTH], val)
+    
+    @classmethod
+    def set_blob_channel(
+            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+        """Set the channel of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            val: Channel value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        return Blobs.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
 
 
 def calc_scaling_factor():
@@ -502,39 +572,6 @@ def get_blob_confirmed(blob):
     return blob[4]
 
 
-def set_blob_col(blob, col, val):
-    """Set the value for the given column of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        col (int): Column index in ``blob``.
-        val (int): Truth value.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    if blob.ndim > 1:
-        blob[..., col] = val
-    else:
-        blob[col] = val
-    return blob
-
-
-def set_blob_confirmed(blob, val):
-    """Set the confirmed flag of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        val (int): Confirmed flag.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    return set_blob_col(blob, 4, val)
-
-
 def get_blob_truth(blob):
     """Get the truth flag of a blob or blobs.
     
@@ -549,34 +586,6 @@ def get_blob_truth(blob):
     if blob.ndim > 1:
         return blob[..., 5]
     return blob[5]
-
-
-def set_blob_truth(blob, val):
-    """Set the truth flag of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        val (int): Truth value.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    return set_blob_col(blob, 5, val)
-
-
-def set_blob_channel(blob, val):
-    """Set the channel of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        val (int): Channel value.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    return set_blob_col(blob, 6, val)
 
 
 def replace_rel_with_abs_blob_coords(blobs):

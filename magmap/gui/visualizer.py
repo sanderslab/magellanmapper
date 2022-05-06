@@ -2208,7 +2208,7 @@ class Visualization(HasTraits):
             # un-annotated blob
             confirmed = detector.get_blob_confirmed(segs_all)
             confirmed[confirmed == -1] = self._segs_labels[0]
-            detector.set_blob_confirmed(segs_all, confirmed)
+            detector.Blobs.set_blob_confirmed(segs_all, confirmed)
             
             # convert segments to visualizer table format and plot
             self.segments = detector.shift_blob_abs_coords(
@@ -2954,7 +2954,7 @@ class Visualization(HasTraits):
     
     def _flag_seg_for_deletion(self, seg):
         seg[3] = -1 * abs(seg[3])
-        detector.set_blob_confirmed(seg, -1)
+        detector.Blobs.set_blob_confirmed(seg, -1)
     
     def update_segment(self, segment_new, segment_old=None, remove=False):
         """Update this class object's segments list with a new or updated 

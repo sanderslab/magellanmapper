@@ -242,22 +242,66 @@ class Blobs:
         return blobs_arc
     
     @classmethod
-    def get_blobs_channel(cls, blobs: np.ndarray) -> np.ndarray:
-        """Get the blobs' channels.
-                
+    def get_blob_col(
+            cls, blob: np.ndarray, col: int) -> Union[int, float, np.ndarray]:
+        """Get the value for the given column of a blob or blobs.
+
         Args:
-            blobs: Blobs array, which can be a 1D array of one blob or a
-                2D array of multiple blobs.
+            blob: 1D blob array or 2D array of blobs.
+            col: Column index in ``blob``.
 
         Returns:
-            Array of channels.
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        if blob.ndim > 1:
+            return blob[..., col]
+        return blob[col]
+    
+    @classmethod
+    def get_blob_confirmed(
+            cls, blob: np.ndarray) -> Union[int, float, np.ndarray]:
+        """Get the confirmed value for blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CONFIRMED])
+    
+    @classmethod
+    def get_blob_truth(cls, blob: np.ndarray) -> Union[int, float, np.ndarray]:
+        """Get the truth value for blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.TRUTH])
+
+    @classmethod
+    def get_blobs_channel(cls, blob: np.ndarray) -> np.ndarray:
+        """Get the channel value for blob or blobs.
+        
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
 
         """
         # get the channel index from the class attribute of indices
-        chli = cls.col_inds[cls.Cols.CHANNEL]
-        if blobs.ndim > 1:
-            return blobs[..., chli]
-        return blobs[chli]
+        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL])
     
     @classmethod
     def set_blob_col(
@@ -564,28 +608,6 @@ def multiply_blob_abs_coords(blobs, factor):
         abs_coords = blobs[..., abs_slice] * factor
         blobs[..., abs_slice] = abs_coords.astype(np.int)
     return blobs
-
-
-def get_blob_confirmed(blob):
-    if blob.ndim > 1:
-        return blob[..., 4]
-    return blob[4]
-
-
-def get_blob_truth(blob):
-    """Get the truth flag of a blob or blobs.
-    
-    Args:
-        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
-
-    Returns:
-        int or :obj:`np.ndarray`: The truth flag of the blob as an int
-        for a single blob or array of truth flags for an array of blobs. 
-
-    """
-    if blob.ndim > 1:
-        return blob[..., 5]
-    return blob[5]
 
 
 def replace_rel_with_abs_blob_coords(blobs):

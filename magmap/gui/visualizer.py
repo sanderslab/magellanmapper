@@ -1290,7 +1290,7 @@ class Visualization(HasTraits):
         """
         seg_str = seg[0:3].astype(int).astype(str).tolist()
         seg_str.append(str(round(seg[3], 3)))
-        seg_str.append(str(int(detector.get_blob_confirmed(seg))))
+        seg_str.append(str(int(detector.Blobs.get_blob_confirmed(seg))))
         seg_str.append(str(int(detector.Blobs.get_blobs_channel(seg))))
         return ", ".join(seg_str)
     
@@ -1354,7 +1354,7 @@ class Visualization(HasTraits):
             # unverified blobs are those with default confirmation setting 
             # and radius > 0, where radii < 0 would indicate a user-added circle
             unverified = np.logical_and(
-                detector.get_blob_confirmed(segs_transposed_np) == -1, 
+                detector.Blobs.get_blob_confirmed(segs_transposed_np) == -1, 
                 np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH))
         if np.any(unverified):
             # show missing verifications
@@ -2206,7 +2206,7 @@ class Visualization(HasTraits):
         if segs_all is not None:
             # set confirmation flag to user-selected label for any
             # un-annotated blob
-            confirmed = detector.get_blob_confirmed(segs_all)
+            confirmed = detector.Blobs.get_blob_confirmed(segs_all)
             confirmed[confirmed == -1] = self._segs_labels[0]
             detector.Blobs.set_blob_confirmed(segs_all, confirmed)
             

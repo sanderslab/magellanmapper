@@ -1294,7 +1294,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     segments_z = segs_in[segs_in[:, 0] == z_relative]
                     if segs_out_z is not None:
                         segs_out_z_confirmed = segs_out_z[
-                            detector.get_blob_confirmed(segs_out_z) == 1]
+                            detector.Blobs.get_blob_confirmed(segs_out_z) == 1]
                         if len(segs_out_z_confirmed) > 0:
                             # include confirmed blobs; TODO: show contextual
                             # circles in adjacent planes?
@@ -1388,7 +1388,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         """
         channel = detector.Blobs.get_blobs_channel(segment)
         facecolor = DraggableCircle.BLOB_COLORS[
-            detector.get_blob_confirmed(segment)]
+            detector.Blobs.get_blob_confirmed(segment)]
         if linestyle is None:
             linestyle = self._BLOB_LINESTYLES[channel]
         circle = patches.Circle(

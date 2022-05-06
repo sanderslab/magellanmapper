@@ -374,7 +374,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
         blob_entry.extend(blob)
         #print("blob type:\n{}".format(blob.dtype))
         blobs_list.append(blob_entry)
-        if detector.get_blob_confirmed(blob) == 1:
+        if detector.Blobs.get_blob_confirmed(blob) == 1:
             confirmed += 1
     #print(match_elements(_COLS_BLOBS, ", ", "?"))
     cur.executemany("INSERT OR REPLACE INTO blobs ({}) VALUES ({})"

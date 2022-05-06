@@ -291,7 +291,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
         metrics in a data frame.
     
     """
-    blobs_truth = detector.blobs_in_channel(blobs_truth, channel)
+    blobs_truth = detector.Blobs.blobs_in_channel(blobs_truth, channel)
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []

@@ -451,13 +451,13 @@ def colocalize_blobs_match(
     channels = np.unique(detector.Blobs.get_blobs_channel(blobs)).astype(int)
     for chl in channels:
         # pair channels
-        blobs_chl = detector.blobs_in_channel(blobs, chl)
+        blobs_chl = detector.Blobs.blobs_in_channel(blobs, chl)
         for chl_other in channels:
             # prevent duplicates by skipping other channels below given channel
             if chl >= chl_other: continue
             # find colocalizations between blobs from one channel to blobs
             # in another channel
-            blobs_chl_other = detector.blobs_in_channel(blobs, chl_other)
+            blobs_chl_other = detector.Blobs.blobs_in_channel(blobs, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
                 size_inner, matches = verifier.match_blobs_roi(
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,

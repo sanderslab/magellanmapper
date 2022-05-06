@@ -484,7 +484,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         print("\nNo blobs detected")
     else:
         print("\nTotal blobs found:", len(segments_all))
-        detector.show_blobs_per_channel(segments_all)
+        detector.Blobs.show_blobs_per_channel(segments_all)
     print("\nTotal detection processing times (s):")
     path_times = "stack_detection_times.csv" if save_dfs else None
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
@@ -555,7 +555,7 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
             print("\nNo blobs found across channels")
         else:
             print("\nTotal blobs found across channels:", len(blobs_all.blobs))
-            detector.show_blobs_per_channel(blobs_all.blobs)
+            detector.Blobs.show_blobs_per_channel(blobs_all.blobs)
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
              if b.colocalizations is not None])
@@ -675,7 +675,7 @@ class StackPruner(object):
         for i in channels:
             # prune blobs from each channel separately to avoid pruning based on 
             # co-localized channel signals
-            blobs = detector.blobs_in_channel(blobs_merged, i)
+            blobs = detector.Blobs.blobs_in_channel(blobs_merged, i)
             for axis in range(3):
                 # prune planes with all the overlapping regions within a given axis,
                 # skipping if this axis has no overlapping sub-regions

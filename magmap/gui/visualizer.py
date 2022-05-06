@@ -1325,7 +1325,7 @@ class Visualization(HasTraits):
             for i in range(len(self.segments)):
                 seg = self.segments[i]
                 # uses absolute coordinates from end of seg
-                seg_db = detector.blob_for_db(seg)
+                seg_db = detector.Blobs.blob_for_db(seg)
                 if seg[4] == -1 and seg[3] < config.POS_THRESH:
                     # attempts to delete user added segments, where radius
                     # assumed to be < 0, that are no longer selected
@@ -1382,7 +1382,8 @@ class Visualization(HasTraits):
         # delete the original entry of blobs that moved since replacement
         # is based on coordinates, so moved blobs wouldn't be replaced
         for i in range(len(self._segs_moved)):
-            self._segs_moved[i] = detector.blob_for_db(self._segs_moved[i])
+            self._segs_moved[i] = detector.Blobs.blob_for_db(
+                self._segs_moved[i])
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, self._segs_moved)
         self._segs_moved = []
@@ -1394,7 +1395,7 @@ class Visualization(HasTraits):
         # insert blob matches
         if self.blobs.blob_matches is not None:
             self.blobs.blob_matches.update_blobs(
-                detector.shift_blob_rel_coords, offset[::-1])
+                detector.Blobs.shift_blob_rel_coords, offset[::-1])
             config.db.insert_blob_matches(roi_id, self.blobs.blob_matches)
         
         # add ROI to selection dropdown
@@ -2170,9 +2171,10 @@ class Visualization(HasTraits):
                     # shift blobs to relative coordinates
                     matches = matches[tuple(matches.keys())[0]]
                     shift = [n * -1 for n in roi[0]]
-                    matches.update_blobs(detector.shift_blob_rel_coords, shift)
                     matches.update_blobs(
-                        detector.multiply_blob_rel_coords,
+                        detector.Blobs.shift_blob_rel_coords, shift)
+                    matches.update_blobs(
+                        detector.Blobs.multiply_blob_rel_coords,
                         config.blobs.scaling[:3])
                     matches.get_mean_coords()
                     self.blobs.blob_matches = matches
@@ -2211,7 +2213,7 @@ class Visualization(HasTraits):
             detector.Blobs.set_blob_confirmed(segs_all, confirmed)
             
             # convert segments to visualizer table format and plot
-            self.segments = detector.shift_blob_abs_coords(
+            self.segments = detector.Blobs.shift_blob_abs_coords(
                 segs_all, offset[::-1])
             self.blobs.blobs = self.segments
             if colocs is not None:
@@ -2738,7 +2740,7 @@ class Visualization(HasTraits):
             # get matches between blobs, such as verifications
             blob_matches = config.db.select_blob_matches(roi_id)
             blob_matches.update_blobs(
-                detector.shift_blob_rel_coords,
+                detector.Blobs.shift_blob_rel_coords,
                 [n * -1 for n in config.roi_offset[::-1]])
             
             # display blobs
@@ -2997,7 +2999,7 @@ class Visualization(HasTraits):
             # TODO: consider requiring new seg to already have abs coord updated
             self._segs_moved.append(segment_old)
             diff = np.subtract(seg[:3], segment_old[:3])
-            detector.shift_blob_abs_coords(seg, diff)
+            detector.Blobs.shift_blob_abs_coords(seg, diff)
             segi = self._get_vis_segments_index(segment_old)
             if segi == -1:
                 # try to find old blob from deleted blobs

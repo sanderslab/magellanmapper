@@ -134,7 +134,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 img3d = cv_nd.make_isotropic(img3d, isotropic)
                 isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
                 blobs_orig = np.copy(blobs)
-                blobs = detector.multiply_blob_rel_coords(
+                blobs = detector.Blobs.multiply_blob_rel_coords(
                     blobs, isotropic_factor)
             
             # export ROI and 2D plots

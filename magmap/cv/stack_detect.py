@@ -160,8 +160,8 @@ class StackDetector(object):
             # absolute positioning, using the latter set to store shifted 
             # coordinates based on duplicates and the former for initial 
             # positions to check for multiple duplicates
-            detector.shift_blob_rel_coords(segments, offset)
-            detector.shift_blob_abs_coords(segments, offset)
+            detector.Blobs.shift_blob_rel_coords(segments, offset)
+            detector.Blobs.shift_blob_abs_coords(segments, offset)
             #print("segs after:\n{}".format(segments))
         return coord, segments
     
@@ -435,7 +435,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     colocs = None
     if segments_all is not None:
         # remove the duplicated elements that were used for pruning
-        detector.replace_rel_with_abs_blob_coords(segments_all)
+        detector.Blobs.replace_rel_with_abs_blob_coords(segments_all)
         if coloc:
             colocs = segments_all[:, 10:10+num_chls_roi].astype(np.uint8)
         # remove absolute coordinate and any co-localization columns

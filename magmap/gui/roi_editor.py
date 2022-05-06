@@ -770,7 +770,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                          event.ydata.astype(int),
                                          event.xdata.astype(int), -5]])
                         blob = detector.format_blobs(blob, blob_channel)
-                        detector.shift_blob_abs_coords(blob, offset[::-1])
+                        detector.Blobs.shift_blob_abs_coords(blob, offset[::-1])
                         detector.Blobs.set_blob_confirmed(blob, 1)
                         blob = fn_update_seg(blob[0])
                         # adds a circle to denote the new segment
@@ -803,7 +803,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     seg_new = fn_update_seg(seg_new, seg_old)
                 else:
                     print("Pasting a copied in segment")
-                    detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
+                    detector.Blobs.shift_blob_abs_coords(seg_new, (dz, 0, 0))
                     seg_new = fn_update_seg(seg_new)
                 self._plot_circle(
                     inax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
@@ -1286,7 +1286,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                             # adjusting rel and abs z coords to the given plane
                             z_diff = z_relative - seg[0]
                             seg[0] = z_relative
-                            detector.shift_blob_abs_coords(
+                            detector.Blobs.shift_blob_abs_coords(
                                 segments_z[i], (z_diff, 0, 0))
                             segments_z[i] = fn_update_seg(seg)
                 else:

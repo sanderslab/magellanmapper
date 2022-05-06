@@ -14,7 +14,7 @@ from enum import Enum
 import math
 import pprint
 from time import time
-from typing import Dict, Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from skimage.feature import blob_log
@@ -170,7 +170,7 @@ class Blobs:
                 self.blobs = info[self.Keys.BLOBS.value]
                 _logger.info("Loaded %s blobs", len(self.blobs))
                 if config.verbose:
-                    show_blobs_per_channel(self.blobs)
+                    self.show_blobs_per_channel(self.blobs)
             
             if self.Keys.COLOCS.value in info:
                 # load intensity-based colocalizations
@@ -372,6 +372,45 @@ class Blobs:
 
         """
         return Blobs.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
+    
+    @classmethod
+    def blobs_in_channel(
+            cls, blobs: np.ndarray, channel: Union[int, np.ndarray],
+            return_mask: bool = False
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+        """Get blobs in the given channels.
+
+        Args:
+            blobs: 1D blob array or 2D array of blobs.
+            channel: Sequence of channels to include.
+            return_mask: True to return the mask of blobs in ``channel``.
+
+        Returns:
+            A view of the blobs in the channel, or all  blobs if ``channel``
+            is None. If ``return_mask`` is True, also return the mask of
+            blobs in the given channels.
+
+        """
+        blobs_chl = blobs
+        mask = None
+        if channel is not None:
+            mask = np.isin(cls.get_blobs_channel(blobs), channel)
+            blobs_chl = blobs[mask]
+        if return_mask:
+            return blobs_chl, mask
+        return blobs_chl
+    
+    @classmethod
+    def show_blobs_per_channel(cls, blobs: np.ndarray):
+        """Show the number of blobs in each channel.
+
+        Args:
+            blobs: 1D blob array or 2D array of blobs.
+        """
+        channels = np.unique(cls.get_blobs_channel(blobs))
+        for channel in channels:
+            num_blobs = len(cls.blobs_in_channel(blobs, channel))
+            _logger.info("- blobs in channel %s: %s", int(channel), num_blobs)
 
 
 def calc_scaling_factor():
@@ -613,30 +652,6 @@ def multiply_blob_abs_coords(blobs, factor):
 def replace_rel_with_abs_blob_coords(blobs):
     blobs[:, :3] = blobs[:, 7:10]
     return blobs
-
-
-def blobs_in_channel(blobs, channel, return_mask=False):
-    """Get blobs in the given channels
-    
-    Args:
-        blobs (:obj:`np.ndarray`): Blobs in the format,
-            ``[[z, y, x, r, c, ...], ...]``.
-        channel (List[int]): Sequence of channels to include.
-        return_mask (bool): True to return the mask of blobs in ``channel``.
-
-    Returns:
-        :obj:`np.ndarray`: A view of the blobs in the channel, or all
-        blobs if ``channel`` is None.
-
-    """
-    blobs_chl = blobs
-    mask = None
-    if channel is not None:
-        mask = np.isin(Blobs.get_blobs_channel(blobs), channel)
-        blobs_chl = blobs[mask]
-    if return_mask:
-        return blobs_chl, mask
-    return blobs_chl
 
 
 def blob_for_db(blob):
@@ -956,18 +971,6 @@ def get_blobs_interior(blobs, shape, pad_start, pad_end):
             blobs[:, 1] < shape[1] - pad_end[1],
             blobs[:, 2] >= pad_start[2], 
             blobs[:, 2] < shape[2] - pad_end[2]], axis=0)]
-
-
-def show_blobs_per_channel(blobs):
-    """Show the number of blobs in each channel.
-    
-    Args:
-        blobs: Blobs as 2D array of [n, [z, row, column, radius, ...]].
-    """
-    channels = np.unique(Blobs.get_blobs_channel(blobs))
-    for channel in channels:
-        num_blobs = len(blobs_in_channel(blobs, channel))
-        print("- blobs in channel {}: {}".format(int(channel), num_blobs))
 
 
 def _test_blob_duplicates():

@@ -2154,7 +2154,7 @@ class Visualization(HasTraits):
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
             segs_all = detector.format_blobs(segs_all)
-            segs_all, mask_chl = detector.blobs_in_channel(
+            segs_all, mask_chl = detector.Blobs.blobs_in_channel(
                 segs_all, chls, return_mask=True)
             
             if ColocalizeOptions.MATCHES.value in self._colocalize:
@@ -2200,7 +2200,7 @@ class Visualization(HasTraits):
             print("segs_outside:\n{}".format(segs_outside))
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
             segs = detector.format_blobs(segs)
-            segs = detector.blobs_in_channel(segs, chls)
+            segs = detector.Blobs.blobs_in_channel(segs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
         if segs_all is not None:

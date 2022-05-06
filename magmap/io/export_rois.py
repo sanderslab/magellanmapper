@@ -109,14 +109,14 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 # verified DBs use a truth value of -1 to indicate "detected",
                 # non-truth blobs, including both correct and incorrect 
                 # detections, while the rest of blobs are "truth" blobs
-                truth_vals = detector.get_blob_truth(blobs)
+                truth_vals = detector.Blobs.get_blob_truth(blobs)
                 blobs_detected = blobs[truth_vals == -1]
                 blobs = blobs[truth_vals != -1]
             else:
                 # default to include only confirmed blobs; truth sets 
                 # ironically do not use the truth flag but instead
                 # assume all confirmed blobs are "truth"
-                blobs = blobs[detector.get_blob_confirmed(blobs) == 1]
+                blobs = blobs[detector.Blobs.get_blob_confirmed(blobs) == 1]
             blobs[:, 4] = -1
             
             # adjust ROI size and offset if border set

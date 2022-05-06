@@ -14,7 +14,7 @@ from enum import Enum
 import math
 import pprint
 from time import time
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from skimage.feature import blob_log
@@ -304,6 +304,28 @@ class Blobs:
         return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL])
     
     @classmethod
+    def _get_abs_inds(cls) -> List[int]:
+        """Get absolute coordinate indices."""
+        return [
+            cls.col_inds[cls.Cols.ABS_Z],
+            cls.col_inds[cls.Cols.ABS_Y],
+            cls.col_inds[cls.Cols.ABS_X]
+        ]
+    
+    @classmethod
+    def get_blob_abs_coords(cls, blobs: np.ndarray) -> np.ndarray:
+        """Get blob absolute coordinates.
+        
+        Args:
+            blobs: 2D array of blobs.
+
+        Returns:
+            2D array of absolute coordinates.
+
+        """
+        return blobs[:, cls._get_abs_inds()]
+
+    @classmethod
     def set_blob_col(
             cls, blob: np.ndarray, col: int, val: Union[int, np.ndarray]
     ) -> np.ndarray:
@@ -373,6 +395,39 @@ class Blobs:
         """
         return Blobs.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
     
+    @classmethod
+    def set_blob_abs_coords(cls, blobs: np.ndarray, coords: np.ndarray) -> np.ndarray:
+        """Set blob absolute coordinates.
+        
+        Args:
+            blobs: 2D array of blobs.
+            coords: 2D array of absolute coordinates in the same order of
+                coordinates as in ``blobs``.
+
+        Returns:
+            Modified ``blobs``.
+
+        """
+        blobs[:, cls._get_abs_inds()] = coords
+        return blobs
+    
+    @classmethod
+    def remove_abs_blob_coords(
+            cls, blobs: np.ndarray, remove_extra: bool = False) -> np.ndarray:
+        """Remove blob absolute coordinate columns.
+        
+        Args:
+            blobs: 2D array of blobs.
+            remove_extra: True to also remove any extra columns not in
+                :attr:`cols_inds`; defaults to False.
+
+        Returns:
+            Modified ``blobs``.
+
+        """
+        inds = cls.col_inds.values() if remove_extra else slice(blobs.shape[1])
+        return blobs[:, [i for i in inds if i not in cls._get_abs_inds()]]
+
     @classmethod
     def blobs_in_channel(
             cls, blobs: np.ndarray, channel: Union[int, np.ndarray],
@@ -596,19 +651,6 @@ def format_blobs(blobs, channel=None):
     return blobs
 
 
-def remove_abs_blob_coords(blobs):
-    return blobs[:, :7]
-
-
-def get_blob_abs_coords(blobs):
-    return blobs[:, 7:10]
-
-
-def set_blob_abs_coords(blobs, coords):
-    blobs[:, 7:10] = coords
-    return blobs
-
-
 def shift_blob_rel_coords(blob, offset):
     """Shift blob relative coordinates by offset.
     
@@ -785,9 +827,9 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     # allow detection of duplicates that occur in multiple ROI pairs
     abs_between = np.around(
         np.divide(
-            np.add(get_blob_abs_coords(blobs_master[match_master]), 
-                   get_blob_abs_coords(blobs[match_check])), 2))
-    blobs_master[match_master] = set_blob_abs_coords(
+            np.add(Blobs.get_blob_abs_coords(blobs_master[match_master]), 
+                   Blobs.get_blob_abs_coords(blobs[match_check])), 2))
+    blobs_master[match_master] = Blobs.set_blob_abs_coords(
         blobs_master[match_master], abs_between)
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
@@ -898,9 +940,10 @@ def remove_close_blobs_within_sorted_array(blobs, tol):
                     # may lead to further pruning
                     abs_between = np.around(
                         np.divide(
-                            np.add(get_blob_abs_coords(blobs_all[i, None]), 
-                                   get_blob_abs_coords(blob[None])), 2))
-                    set_blob_abs_coords(blobs_all[i, None], abs_between)
+                            np.add(
+                                Blobs.get_blob_abs_coords(blobs_all[i, None]), 
+                                Blobs.get_blob_abs_coords(blob[None])), 2))
+                    Blobs.set_blob_abs_coords(blobs_all[i, None], abs_between)
                     #print("updated blob:", blobs_all[i])
                     #print("removed blob:", blob)
                     break

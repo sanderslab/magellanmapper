@@ -14,7 +14,7 @@ from enum import Enum
 import math
 import pprint
 from time import time
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from skimage.feature import blob_log
@@ -386,7 +386,7 @@ class Blobs:
             ``blob`` after modifications.
 
         """
-        return Blobs.set_blob_col(blob, cls.col_inds[cls.Cols.TRUTH], val)
+        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.TRUTH], val)
     
     @classmethod
     def set_blob_channel(
@@ -402,7 +402,7 @@ class Blobs:
             ``blob`` after modifications.
 
         """
-        return Blobs.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
+        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
     
     @classmethod
     def set_blob_abs_coords(cls, blobs: np.ndarray, coords: np.ndarray) -> np.ndarray:
@@ -421,46 +421,112 @@ class Blobs:
         return blobs
     
     @classmethod
+    def shift_blobs(
+            cls, blob: np.ndarray, cols: Union[int, Sequence[int]],
+            fn: Callable,
+            vals: Union[int, float, Sequence[Union[int, float]]],
+            to_int: bool = False
+    ) -> np.ndarray:
+        """Shift blob columns with a function.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            cols: Column(s) to modify.
+            fn: Function that takes a subset of ``blob`` and ``vals``.
+            vals: Values by which to shift the corresponding elements of
+                ``blob``.
+            to_int: True to convert the shifted elements to int; defaults
+                to False.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        if blob is not None:
+            # shift elements in the given columns with the provided function
+            is_1d = blob.ndim == 1
+            sub = blob[cols] if is_1d else blob[..., cols]
+            sub = fn(sub, vals)
+            
+            if to_int:
+                # convert shifted values to ints
+                sub = sub.astype(np.int)
+            
+            # replace values
+            if is_1d:
+                blob[cols] = sub
+            else:
+                blob[..., cols] = sub
+        
+        return blob
+
+    @classmethod
     def shift_blob_rel_coords(
             cls, blob: np.ndarray, offset: Sequence[int]) -> np.ndarray:
         """Shift blob relative coordinates by offset.
 
         Args:
-            blob: Either a sequence starting with blob coordinates,
-                typically in ``z, y, x, ...``, or a sequence of blobs.
+            blob: 1D blob array or 2D array of blobs.
             offset: Sequence of coordinates by which to shift
-                the corresponding elements from the start of ``blob``.
+                the corresponding elements of ``blob``.
 
         Returns:
-            The shifted blob or sequence of blobs.
+            ``blob`` shifted in-place.
 
         """
-        if blob.ndim > 1:
-            blob[..., cls._get_rel_inds()] += offset
-        else:
-            blob[cls._get_rel_inds()] += offset
-        return blob
+        return cls.shift_blobs(blob, cls._get_rel_inds(), np.add, offset)
     
     @classmethod
-    def shift_blob_abs_coords(cls, blobs, offset):
-        blobs[..., cls._get_abs_inds()] += offset
-        return blobs
+    def shift_blob_abs_coords(
+            cls, blob: np.ndarray, offset: Sequence[int]) -> np.ndarray:
+        """Shift blob absolute coordinates by offset.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            offset: Sequence of coordinates by which to shift
+                the corresponding elements of ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(blob, cls._get_abs_inds(), np.add, offset)
     
     @classmethod
-    def multiply_blob_rel_coords(cls, blobs, factor):
-        if blobs is not None:
-            inds = cls._get_rel_inds()
-            rel_coords = blobs[..., inds] * factor
-            blobs[..., inds] = rel_coords.astype(np.int)
-        return blobs
+    def multiply_blob_rel_coords(
+            cls, blob: np.ndarray,
+            factor: Union[int, float, Sequence[Union[int, float]]]
+    ) -> np.ndarray:
+        """Multiply blob relative coordinates.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            factor: Factor by which to shift the corresponding elements of
+                ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(
+            blob, cls._get_rel_inds(), np.multiply, factor, True)
     
     @classmethod
-    def multiply_blob_abs_coords(cls, blobs, factor):
-        if blobs is not None:
-            inds = cls._get_abs_inds()
-            abs_coords = blobs[..., inds] * factor
-            blobs[..., inds] = abs_coords.astype(np.int)
-        return blobs
+    def multiply_blob_abs_coords(
+            cls, blob: np.ndarray, factor: Union[int, float]) -> np.ndarray:
+        """Multiply blob absolute coordinates.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            factor: Factor by which to shift the corresponding elements of
+                ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(
+            blob, cls._get_abs_inds(), np.multiply, factor, True)
 
     @classmethod
     def remove_abs_blob_coords(
@@ -473,14 +539,23 @@ class Blobs:
                 :attr:`cols_inds`; defaults to False.
 
         Returns:
-            Modified ``blobs``.
+            ``blob`` modified in-place.
 
         """
         inds = cls.col_inds.values() if remove_extra else slice(blobs.shape[1])
         return blobs[:, [i for i in inds if i not in cls._get_abs_inds()]]
     
     @classmethod
-    def replace_rel_with_abs_blob_coords(cls, blobs):
+    def replace_rel_with_abs_blob_coords(cls, blobs: np.ndarray) -> np.ndarray:
+        """Replace relative with absolute coordinates.
+        
+        Args:
+            blobs: 2D array of blobs.
+
+        Returns:
+            ``blob`` modified in-place.
+
+        """
         blobs[:, cls._get_rel_inds()] = blobs[:, cls._get_abs_inds()]
         return blobs
 

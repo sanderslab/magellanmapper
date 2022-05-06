@@ -67,7 +67,8 @@ class Blobs:
     #: 1: added resolutions, basename, offset, roi_size fields
     #: 2: added archive version number
     #: 3: added colocs
-    BLOBS_NP_VER: int = 3
+    #: 4: added "columns" for column names
+    BLOBS_NP_VER: int = 4
     
     class Keys(Enum):
         """Numpy archive metadata keys as enumerations."""
@@ -78,7 +79,24 @@ class Blobs:
         BASENAME = "basename"
         ROI_OFFSET = "offset"
         ROI_SIZE = "roi_size"
-
+        COLS = "columns"
+    
+    class Cols(Enum):
+        """Blob column names."""
+        Z = "z"
+        Y = "y"
+        X = "x"
+        RADIUS = "radius"
+        CONFIRMED = "confirmed"
+        TRUTH = "truth"
+        CHANNEL = "channel"
+        ABS_Z = "abs_z"
+        ABS_Y = "abs_y"
+        ABS_X = "abs_x"
+    
+    #: Dictionary of column types to column indices in :attr:`blobs`.
+    col_inds: Dict["Cols", int] = {c: i for i, c in enumerate(Cols)}
+    
     def __init__(
             self,
             blobs: Optional[np.ndarray] = None,
@@ -98,18 +116,21 @@ class Blobs:
         self.resolutions: Optional[Sequence[float]] = None
         self.basename: Optional[str] = None
         self.scaling: np.ndarray = np.ones(3)
+        
+        # blobs have first 6 columns by default
+        self.cols: Sequence[str] = [c.value for c in self.Cols][:6]
 
-    def load_blobs(self, path=None):
+    def load_blobs(self, path: str = None) -> "Blobs":
         """Load blobs from an archive.
 
         Also loads associated metadata from the archive.
 
         Args:
-            path (str): Path to set :attr:`path`; defaults to None to use
+            path: Path to set :attr:`path`; defaults to None to use
                 the existing path.
 
         Returns:
-            :class:`Blobs`: Blobs object.
+            Blobs object.
 
         """
         # load blobs and display counts
@@ -127,6 +148,22 @@ class Blobs:
             if self.Keys.VER.value in info:
                 # load archive version number
                 self.basename = info[self.Keys.VER.value]
+            
+            if self.Keys.COLS.value in info:
+                # load column indices into class attribute
+                # TODO: convert to instance attribute after moving all blob
+                # functions into this class
+                self.cols = info[self.Keys.COLS.value]
+                Blobs.col_inds = {c: None for c in self.Cols}
+                for i, col in enumerate(self.cols):
+                    try:
+                        Blobs.col_inds[self.Cols(col)] = i
+                    except ValueError:
+                        _logger.warn(
+                            "%s is not a valid Blobs column, skipping", col)
+                _logger.debug(
+                    "Loaded column indices:\n%s",
+                    pprint.pformat(Blobs.col_inds))
 
             if self.Keys.BLOBS.value in info:
                 # load blobs as a Numpy array
@@ -184,6 +221,7 @@ class Blobs:
                 Blobs.Keys.ROI_OFFSET.value: self.roi_offset,
                 Blobs.Keys.ROI_SIZE.value: self.roi_size,
                 Blobs.Keys.COLOCS.value: self.colocalizations,
+                Blobs.Keys.COLS.value: self.cols,
             }
         else:
             blobs_arc = to_add
@@ -203,18 +241,23 @@ class Blobs:
             pprint.pprint(blobs_arc)
         return blobs_arc
     
-    @staticmethod
-    def get_blobs_channel(blobs: np.ndarray) -> np.ndarray:
+    @classmethod
+    def get_blobs_channel(cls, blobs: np.ndarray) -> np.ndarray:
         """Get the blobs' channels.
                 
         Args:
-            blobs: Blobs array.
+            blobs: Blobs array, which can be a 1D array of one blob or a
+                2D array of multiple blobs.
 
         Returns:
             Array of channels.
 
         """
-        return blobs[:, 6]
+        # get the channel index from the class attribute of indices
+        chli = cls.col_inds[cls.Cols.CHANNEL]
+        if blobs.ndim > 1:
+            return blobs[..., chli]
+        return blobs[chli]
 
 
 def calc_scaling_factor():
@@ -520,11 +563,6 @@ def set_blob_truth(blob, val):
 
     """
     return set_blob_col(blob, 5, val)
-
-
-def get_blob_channel(blob):
-    return blob[6]
-
 
 
 def set_blob_channel(blob, val):

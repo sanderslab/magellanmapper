@@ -1386,7 +1386,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         Returns:
             The DraggableCircle object.
         """
-        channel = detector.get_blob_channel(segment)
+        channel = detector.Blobs.get_blobs_channel(segment)
         facecolor = DraggableCircle.BLOB_COLORS[
             detector.get_blob_confirmed(segment)]
         if linestyle is None:
@@ -1453,7 +1453,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                         blob[2], blob[1],
                         ",".join([str(c) for c in np.where(coloc > 0)[0]]),
                         color="C{}".format(
-                            int(detector.get_blob_channel(blob))),
+                            int(detector.Blobs.get_blobs_channel(blob))),
                         alpha=0.8, horizontalalignment="center",
                         verticalalignment="center"))
         self.fig.canvas.draw_idle()

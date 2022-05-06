@@ -399,7 +399,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
     """
     deleted = 0
     for blob in blobs:
-        blob_entry = [roi_id, *blob[:3], detector.get_blob_channel(blob)]
+        blob_entry = [roi_id, *blob[:3], detector.Blobs.get_blobs_channel(blob)]
         print("attempting to delete blob {}".format(blob))
         cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
                     "AND x = ? AND channel = ?", blob_entry)

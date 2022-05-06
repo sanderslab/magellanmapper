@@ -245,9 +245,9 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
                 for match in matches_sub:
                     _logger.debug(
                         f"Blob1: {match[0][:3]}, chl: "
-                        f"{detector.get_blob_channel(match[0])}, "
+                        f"{detector.Blobs.get_blobs_channel(match[0])}, "
                         f"Blob2: {match[1][:3]}, "
-                        f"chl: {detector.get_blob_channel(match[1])}, "
+                        f"chl: {detector.Blobs.get_blobs_channel(match[1])}, "
                         f"dist: {match[2]}")
             _logger.debug("\n")
     

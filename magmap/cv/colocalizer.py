@@ -465,8 +465,8 @@ def colocalize_blobs_match(
             
             # reset truth and confirmation blob flags in matches
             chl_combo = (chl, chl_other)
-            matches.update_blobs(detector.set_blob_truth, -1)
-            matches.update_blobs(detector.set_blob_confirmed, -1)
+            matches.update_blobs(detector.Blobs.set_blob_truth, -1)
+            matches.update_blobs(detector.Blobs.set_blob_confirmed, -1)
             matches_chls[chl_combo] = matches
     return matches_chls
 

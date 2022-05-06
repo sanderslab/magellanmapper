@@ -1291,7 +1291,7 @@ class Visualization(HasTraits):
         seg_str = seg[0:3].astype(int).astype(str).tolist()
         seg_str.append(str(round(seg[3], 3)))
         seg_str.append(str(int(detector.get_blob_confirmed(seg))))
-        seg_str.append(str(int(detector.get_blob_channel(seg))))
+        seg_str.append(str(int(detector.Blobs.get_blobs_channel(seg))))
         return ", ".join(seg_str)
     
     def _append_roi(self, roi, rois_dict):

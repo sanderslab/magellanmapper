@@ -403,8 +403,10 @@ def colocalize_blobs(roi, blobs, thresh=None):
                 mask_blob = mask == blobi
                 blob_avg = np.mean(roi[mask_blob, chl_other])
                 if config.verbose:
-                    print(blobi, detector.get_blob_channel(blobs_roi[blobi]),
-                          blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
+                    print(
+                        blobi, detector.Blobs.get_blobs_channel(
+                            blobs_roi[blobi]),
+                        blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
                 if blob_avg >= threshs[chl_other]:
                     # intensities in another channel around blob's position
                     # is above that channel's threshold
@@ -415,7 +417,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
     colocs[blobs_roi_mask] = colocs_roi
     if config.verbose:
         for i, (blob, coloc) in enumerate(zip(blobs_roi, colocs)):
-            print(i, detector.get_blob_channel(blob), blob[:3], coloc)
+            print(i, detector.Blobs.get_blobs_channel(blob), blob[:3], coloc)
     return colocs
 
 

@@ -439,7 +439,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         if coloc:
             colocs = segments_all[:, 10:10+num_chls_roi].astype(np.uint8)
         # remove absolute coordinate and any co-localization columns
-        segments_all = detector.remove_abs_blob_coords(segments_all)
+        segments_all = detector.Blobs.remove_abs_blob_coords(segments_all, True)
         
         # compare detected blobs with truth blobs
         # TODO: assumes ground truth is relative to any ROI offset,

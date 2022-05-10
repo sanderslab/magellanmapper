@@ -437,7 +437,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         # means tests
         coef.tab <- meansModel(
           vals, df.region.nonnan[[group.col]], model, paired, 
-          config.env$ReversePairedStats)
+          config.env$ReverseConditions)
         
       } else if (model == kModel[10]) {
         # basic stats
@@ -764,7 +764,7 @@ setupConfig <- function(name=NULL) {
     config.env$JitterPlotSave <- TRUE
     config.env$JitterLabels <- FALSE
     config.env$Axes.In.Range <- FALSE
-    config.env$ReversePairedStats <- FALSE
+    config.env$ReverseConditions <- FALSE
     config.env$SummaryStats <- kSummaryStats[2]
     config.env$GroupCol <- NULL
     config.env$Sort.Groups <- TRUE
@@ -939,9 +939,9 @@ setupConfig <- function(name=NULL) {
     # square plots
     config.env$PlotSize <- c(7, 7)
     
-  } else if (name == "revpairedstats") {
+  } else if (name == "revconds") {
     # reverse the order of conditions in paired stats
-    config.env$ReversePairedStats <- TRUE
+    config.env$ReverseConditions <- TRUE
     
   } else {
     loaded <- FALSE

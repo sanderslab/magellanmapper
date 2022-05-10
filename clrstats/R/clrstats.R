@@ -231,11 +231,12 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     }
     print(result)
   }, error=function(e) {
-    message("Unable generate stat, skipping")
-    print(e)
-    return(NULL)
+    message("Unable to generate stat, skipping")
   }, finally={
-  }, include.full.call.stack=FALSE)
+  }, include.full.call.stack=FALSE, include.compact.call.stack = FALSE)
+  
+  # return if no stats
+  if (is.null(result)) return(NULL)
   
   # basic stats data frame in format for filterStats
   coef.tab <- setupBasicStats()

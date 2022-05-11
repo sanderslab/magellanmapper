@@ -6,7 +6,7 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import SimpleITK as sitk
@@ -175,7 +175,32 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     return img_sitk, loaded_path
 
 
-def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
+def _make_3d(img_sitk: sitk.Image, spacing_z=1) -> sitk.Image:
+    """Make a 2D image into a 3D image with a single plane.
+    
+    Args:
+        img_sitk: Image in SimpleITK format.
+        spacing_z: Z-axis spacing; defaults to 1.
+
+    Returns:
+        ``img_sitk`` converted to a 3D image if previously 2D.
+
+    """
+    spacing = img_sitk.GetSpacing()
+    if len(spacing) == 2:
+        # prepend an additional axis for 2D images to make them 3D
+        img_np = sitk.GetArrayFromImage(img_sitk)[None]
+        spacing = list(spacing) + [spacing_z]
+        img_sitk = sitk.GetImageFromArray(img_np)
+        img_sitk.SetSpacing(spacing)
+    return img_sitk
+
+
+def read_sitk_files(
+        filename_sitk: str,
+        reg_names: Optional[Union[str, Sequence[str]]] = None,
+        return_sitk: bool = False, make_3d: bool = False
+) -> Union[np.ndarray, Tuple[np.ndarray, sitk.Image]]:
     """Read image files through SimpleITK.
     
     Supports identifying files based on registered suffixes and combining
@@ -185,18 +210,19 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
     :attr:`magmap.settings.config.resolutions` if not already set.
 
     Args:
-        filename_sitk (str): Path to file in a format that can be read by
+        filename_sitk: Path to file in a format that can be read by
             SimpleITK.
-        reg_names (Union[str, List[str]]): Path or sequence of paths of
+        reg_names: Path or sequence of paths of
             registered names. Can be a registered suffix or a full path.
             Defaults to None to open ``filename_sitk`` as-is through
             :meth:`read_sitk`.
-        return_sitk (bool): True to return the loaded SimpleITK Image object.
+        return_sitk: True to return the loaded SimpleITK Image object.
+        make_3d: True to convert 2D images to 3D; defaults to False.
 
     Returns:
-        :class:`numpy.ndarray`: Image array in Numpy 3D format (or 4D if
-        multi-channel). Associated metadata is loaded into :module:`config`
-        attributes.
+        ``img_np``: Image array in Numpy 3D format (or 4D if
+        multi-channel). Associated metadata is loaded into
+        :module:`magmap.settings.config` attributes.
         
         If ``return_sitk`` is True, also returns the first loaded image
         in SimpleITK format.
@@ -232,6 +258,11 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
             raise FileNotFoundError(
                 "could not find file {}".format(filename_sitk))
         img_sitk, _ = read_sitk(filename_sitk)
+        img_np = sitk.GetArrayFromImage(img_sitk)
+    
+    if make_3d:
+        # convert 2D images to 3D
+        img_sitk = _make_3d(img_sitk)
         img_np = sitk.GetArrayFromImage(img_sitk)
     
     if config.resolutions is None:

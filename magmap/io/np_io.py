@@ -320,8 +320,10 @@ def setup_images(
             path_lower = path.lower()
             import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
             if path_lower.endswith(sitk_io.EXTS_3D):
-                # attempt to format supported by SimpleITK and prepend time axis
-                config.image5d = sitk_io.read_sitk_files(path)[None]
+                # load format supported by SimpleITK and prepend time axis;
+                # if 2D, convert to 3D
+                config.image5d = sitk_io.read_sitk_files(
+                    path, make_3d=True)[None]
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
                 config.img5d.img_io = config.LoadIO.SITK
@@ -391,7 +393,7 @@ def setup_images(
         try:
             # will take the place of any previously loaded image5d
             config.image5d = sitk_io.read_sitk_files(
-                path, reg_names=atlas_suffix)[None]
+                path, atlas_suffix, make_3d=True)[None]
             config.img5d.img = config.image5d
             config.img5d.img_io = config.LoadIO.SITK
         except FileNotFoundError as e:
@@ -406,7 +408,7 @@ def setup_images(
             # load labels image
             # TODO: need to support multichannel labels images
             config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
-                path, reg_names=annotation_suffix, return_sitk=True)
+                path, annotation_suffix, True, True)
         except FileNotFoundError as e:
             print(e)
             if config.image5d is not None:
@@ -448,7 +450,7 @@ def setup_images(
         # load borders image, which can also be another labels image
         try:
             config.borders_img = sitk_io.read_sitk_files(
-                path, reg_names=borders_suffix)
+                path, borders_suffix, make_3d=True)
         except FileNotFoundError as e:
             print(e)
     

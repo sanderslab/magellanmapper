@@ -633,7 +633,8 @@ filterStats <- function(stats, corr=NULL) {
 #' @param model Model type to use for stats, which should be one of 
 #'   [kModel].
 #' @param region.ids Data frame of region IDs to merge by the "Region"
-#'   column. Defaults to NULL.
+#'   column. Defaults to NULL, in which case region data will be merged
+#'   from `df` if available.
 #' @param split.by.side True to plot separate sub-scatter plots for each 
 #'   region by side; defaults to True.
 #' @return Filtered data frame from [filterStats].
@@ -653,9 +654,11 @@ calcVolStats <- function(
     df$Region[region.all] <- 15564
   }
   
-  if (all(c("Region", "RegionName") %in% colnames(df))) {
-    # get regions and names from main df
-    region.ids <- unique(df[c("Region", "RegionName")])
+  if (is.null(region.ids)) {
+    # get regions columns from main df
+    cols <- c("Region", "RegionName", "Level")
+    cols <- cols[cols %in% colnames(df)]
+    region.ids <- unique(df[cols])
   } else {
     # merge in region names based on matching IDs
     df <- merge(df, region.ids, by="Region", all.x=TRUE)

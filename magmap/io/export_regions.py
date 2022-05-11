@@ -27,7 +27,6 @@ from magmap.stats import vols
 _logger = config.logger.getChild(__name__)
 
 
-
 def export_region_ids(labels_ref_lookup, path, level=None,
                       drawn_labels_only=False):
     """Export region IDs from annotation reference reverse mapped dictionary 
@@ -240,6 +239,7 @@ def make_density_image(
     # load blobs
     blobs = detector.Blobs().load_blobs(np_io.img_to_blobs_path(img_path))
     
+    is_2d = False
     if (shape is not None and blobs.roi_size is not None
             and blobs.resolutions is not None):
         # prepare output image and scaling factor from it to the blobs
@@ -255,6 +255,11 @@ def make_density_image(
             labels_img_sitk = sitk_io.load_registered_img(
                 mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
         labels_img = sitk.GetArrayFromImage(labels_img_sitk)
+        
+        is_2d = labels_img.ndim == 2
+        if is_2d:
+            # temporarily convert 2D images to 3D
+            labels_img = labels_img[None]
         
         # find the scaling between the blobs and the labels image
         target_size = (
@@ -281,6 +286,9 @@ def make_density_image(
         blobs_chl = blobs_chl[np.isin(detector.Blobs.get_blobs_channel(
             blobs_chl), channel)]
     heat_map = make_heat_map()
+    if is_2d:
+        # convert back to 3D
+        heat_map = heat_map[0]
     imgs_write = {
         config.RegNames.IMG_HEAT_MAP.value:
             sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_map)}

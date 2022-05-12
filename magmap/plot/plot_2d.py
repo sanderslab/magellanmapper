@@ -1205,6 +1205,7 @@ def main(ax=None):
     y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
     legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
     hline = config.plot_labels[config.PlotLabels.HLINE]
+    col_vspan = config.plot_labels[config.PlotLabels.VSPAN_COL]
     
     # perform 2D plot task, deferring save until the post-processing step
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
@@ -1216,6 +1217,7 @@ def main(ax=None):
             legend_names=legend_names, col_groups=group_col, title=title,
             y_label=y_lbl, y_unit=y_unit, hline=hline,
             size=size, show=False, groups=config.groups,
+            col_vspan=col_vspan, vspan_fmt="L{}",
             prefix=config.prefix, save=False,
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
@@ -1247,7 +1249,7 @@ def main(ax=None):
             legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, save=False,
             size=size, show=False, groups=config.groups, 
-            prefix=config.prefix, col_vspan="Level", vspan_fmt="L{}", 
+            prefix=config.prefix, col_vspan=col_vspan, vspan_fmt="L{}", 
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
 
     elif plot_2d_type is config.Plot2DTypes.LINE_PLOT:

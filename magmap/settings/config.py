@@ -310,6 +310,8 @@ class PlotLabels(Enum):
     NAN_COLOR = auto()  # color for NaN values (Matplotlib or RGBA string)
     TEXT_POS = auto()  # text (annotation) position in x,y
     CONDITION = auto()  # condition
+    #: Column indicating grouping for vertical span.
+    VSPAN_COL = auto()
 
 
 #: dict[Any]: Plot labels set from command-line.

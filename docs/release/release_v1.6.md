@@ -68,9 +68,16 @@
 #### Python stats and plots
 
 - Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
+- Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
+- Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 
 #### R stats and plots
+
+- Region IDs file is no longer required since volume stats output from the Python pipeline already includes this region metadata (#132)
+- The `revpairedstats` profile is now `revconds` since it applies to reversing conditions in general, not just for paired stats (#132)
+- Added a `mann.whitney` profile for Mann-Whitney tests (#132)
+- Stats errors are caught rather than stopping the pipeline (#132)
 
 #### Code base and docs
 

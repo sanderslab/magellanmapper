@@ -1189,30 +1189,33 @@ def main(ax=None):
     size = config.plot_labels[config.PlotLabels.SIZE]
     plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
+    x_cols = config.plot_labels[config.PlotLabels.X_COL]
+    data_cols = config.plot_labels[config.PlotLabels.Y_COL]
     annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]
+    group_col = config.plot_labels[config.PlotLabels.GROUP_COL]
+    err_col = config.plot_labels[config.PlotLabels.ERR_COL]
+    col_wt = config.plot_labels[config.PlotLabels.WT_COL]
     marker = config.plot_labels[config.PlotLabels.MARKER]
     scale_x = config.plot_labels[config.PlotLabels.X_SCALE]
     scale_y = config.plot_labels[config.PlotLabels.Y_SCALE]
+    title = config.plot_labels[config.PlotLabels.TITLE]
+    x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
+    x_lbl = config.plot_labels[config.PlotLabels.X_LABEL]
+    y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
+    y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
+    legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
+    hline = config.plot_labels[config.PlotLabels.HLINE]
     
     # perform 2D plot task, deferring save until the post-processing step
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
-        title = config.plot_labels[config.PlotLabels.TITLE]
-        x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
-        data_cols = config.plot_labels[config.PlotLabels.Y_COL]
         if data_cols is not None and not libmag.is_seq(data_cols):
             data_cols = (data_cols, )
-        y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
-        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
-        col_wt = config.plot_labels[config.PlotLabels.WT_COL]
-        col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
-        legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
-        hline = config.plot_labels[config.PlotLabels.HLINE]
         ax = plot_bars(
-            config.filename, data_cols=data_cols, 
-            legend_names=legend_names, col_groups=col_groups, title=title,
+            config.filename, data_cols=data_cols, err_cols=err_col,
+            legend_names=legend_names, col_groups=group_col, title=title,
             y_label=y_lbl, y_unit=y_unit, hline=hline,
-            size=size, show=False, groups=config.groups, 
+            size=size, show=False, groups=config.groups,
             prefix=config.prefix, save=False,
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
@@ -1229,10 +1232,6 @@ def main(ax=None):
         # barplot for data frame from R stats test effect sizes and CIs
         
         # setup labels
-        title = config.plot_labels[config.PlotLabels.TITLE]
-        x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
-        y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
-        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
         if y_lbl is None: y_lbl = "Effect size"
         
         # assume stat is just before the extension in the filename, and 
@@ -1254,14 +1253,9 @@ def main(ax=None):
     elif plot_2d_type is config.Plot2DTypes.LINE_PLOT:
         # generic line plot
         
-        title = config.plot_labels[config.PlotLabels.TITLE]
-        x_cols = config.plot_labels[config.PlotLabels.X_COL]
-        data_cols = libmag.to_seq(
-            config.plot_labels[config.PlotLabels.Y_COL])
-        labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
-                  config.plot_labels[config.PlotLabels.X_LABEL])
-        err_cols = libmag.to_seq(
-            config.plot_labels[config.PlotLabels.ERR_COL])
+        data_cols = libmag.to_seq(data_cols)
+        labels = (y_lbl, x_lbl)
+        err_cols = libmag.to_seq(err_col)
         ax = plot_lines(
             config.filename, x_col=x_cols, data_cols=data_cols,
             labels=labels, err_cols=err_cols, title=title, size=size,
@@ -1280,24 +1274,20 @@ def main(ax=None):
         # scatter plot
         
         # get data frame columns and corresponding labels
-        cols = (config.plot_labels[config.PlotLabels.Y_COL],
-                config.plot_labels[config.PlotLabels.X_COL])
-        labels = [config.plot_labels[config.PlotLabels.Y_LABEL],
-                  config.plot_labels[config.PlotLabels.X_LABEL]]
+        cols = (data_cols, x_cols)
+        labels = [y_lbl, x_lbl]
         for i, (col, label) in enumerate(zip(cols, labels)):
             # default to use data frame columns
             if not label: labels[i] = col
         
         # get group columns and title
-        cols_group = config.plot_labels[config.PlotLabels.GROUP_COL]
-        if cols_group and not libmag.is_seq(cols_group):
-            cols_group = [cols_group]
-        title = config.plot_labels[config.PlotLabels.TITLE]
+        if group_col and not libmag.is_seq(group_col):
+            group_col = [group_col]
         if not title: title = "{} Vs. {}".format(*labels)
         
         ax = plot_scatter(
             config.filename, cols[1], cols[0], annot_col,
-            cols_group=cols_group, labels=labels, title=title,
+            cols_group=group_col, labels=labels, title=title,
             fig_size=size, show=config.show, suffix=config.suffix,
             alpha=config.alphas[0], scale_x=scale_x, scale_y=scale_y,
             ax=ax, save=False)

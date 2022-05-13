@@ -956,7 +956,7 @@ setupConfig <- function(name=NULL) {
 }
 
 runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
-                     verbose=NULL, stat.type=NULL) {
+                     verbose=NULL, stat.type=NULL, model=NULL) {
   # Load data and run full stats.
   #
   # Args:
@@ -969,6 +969,8 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
   #   verbose: True to show verbose debugging information; defaults to NULL.
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
+  #   model: Statistical model to use, which should be one of `kModel`.
+  #     Defaults to NULL to use the model in [config.env].
 
   if (is.null(stat.type)) {
     message("Running general stats")
@@ -1005,6 +1007,11 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
     measurements.split <- strsplit(measurements, ",")[[1]]
   }
   cat("Measurements:", paste(measurements.split), "\n")
+
+  if (!is.null(model)) {
+    config.env$Model <- model
+    message("Set stats model to: ", config.env$Model)
+  }
 
   if (!is.null(prefix)) {
     # set path prefix

@@ -892,10 +892,6 @@ setupConfig <- function(name=NULL) {
     config.env$GroupCol <- "Geno"
     config.env$JitterLabels <- TRUE
     
-  } else if (name == "mann.whitney") {
-    # Mann-Whitney or Wilcoxon rank-sum test 
-    config.env$Model <- kModel[6]
-    
   } else if (name == "lessstringent") {
     # compare 2 genotypes with slightly less stringent tests
     setupConfig("benjamini.hochman")

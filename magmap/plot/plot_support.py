@@ -264,6 +264,11 @@ def imshow_multichannel(
             # to avoid repeated inversions with repeated calls
             ax.invert_yaxis()
     
+    bgd = config.plot_labels[config.PlotLabels.BACKGROUND]
+    if bgd:
+        # change the background color
+        ax.set_facecolor(bgd)
+    
     return img
 
 

@@ -275,8 +275,8 @@ Plot2DTypes = Enum(
 plot_2d_type = None
 
 
-# plot label keys for command-line parsing
 class PlotLabels(Enum):
+    """Plot label keys for command-line sub-arguments."""
     TITLE = auto()  # figure title
     X_LABEL = auto()  # axis labels
     Y_LABEL = auto()
@@ -307,11 +307,14 @@ class PlotLabels(Enum):
     MARKER = auto()  # Matplotlib marker style
     DROP_DUPS = auto()  # drop duplicates
     DPI = auto()  # dots per inch
-    NAN_COLOR = auto()  # color for NaN values (Matplotlib or RGBA string)
+    #: # Color for NaN values as a Matplotlib or RGBA string.
+    NAN_COLOR = auto()
     TEXT_POS = auto()  # text (annotation) position in x,y
     CONDITION = auto()  # condition
     #: Column indicating grouping for vertical span.
     VSPAN_COL = auto()
+    #: Background color as a Matplotlib or RGBA string.
+    BACKGROUND = auto()
 
 
 #: dict[Any]: Plot labels set from command-line.

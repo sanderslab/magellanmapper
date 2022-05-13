@@ -212,13 +212,12 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
       result <- wilcox.test(
         val.conds[[2]], val.conds[[1]], paired=paired, conf.int=TRUE)
   
-      # calculate the standardized effect size, given as z / sqrt(N),
-      # where N = number of pairs
-      eff <- result[[col.effect]]
-      effect.raw <- eff
+      # replace the main effect with a standardized effect size, given as
+      # z / sqrt(N), where N = number of pairs
+      effect.raw <- result[[col.effect]]
       result[col.effect] <- rcompanion::wilcoxonZ(
         val.conds[[2]], val.conds[[1]], paired=paired) / sqrt(num.per.cond)
-      cat("Wilcoxon estimate: ", eff, ", standardized effect: ",
+      cat("Wilcoxon estimate: ", effect.raw, ", standardized effect: ",
           result[[col.effect]], "\n", sep="")
   
     } else if (model == kModel[9]) {
@@ -247,11 +246,12 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     # store raw effect if it was standardized; otherwise, leave same as effect
     coef.tab$Value.raw <- effect.raw
   }
-  # get relative confidence intervals as pos vals
   if (is.element("conf.int", names(result))) {
+    # convert confidence intervals from absolute vals to relative, positive
+    # vals for Matplotlib
     ci <- result$conf.int
-    coef.tab$CI.low <- effect - ci[1]
-    coef.tab$CI.hi <- ci[2] - effect
+    coef.tab$CI.low <- coef.tab$Value.raw - ci[1]
+    coef.tab$CI.hi <- ci[2] - coef.tab$Value.raw
   }
   coef.tab$P <- result$p.value
   coef.tab$N <- num.per.cond

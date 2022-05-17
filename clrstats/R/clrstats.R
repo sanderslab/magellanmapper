@@ -674,7 +674,7 @@ calcVolStats <- function(
   
   if (is.null(region.ids)) {
     # get regions columns from main df
-    cols <- c("Region", "RegionName", "Level")
+    cols <- c("Region", "RegionName", "RegionAbbr", "Level")
     cols <- cols[cols %in% colnames(df)]
     region.ids <- unique(df[cols])
   } else {
@@ -1083,7 +1083,7 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
       
       if (!is.null(stats) & config.env$PlotVolcano) {
         # plot effects and p's
-        volcanoPlot(stats, meas, stat, c(NA, 1.3, 0.2), config.env$VolcanoLogX, 
+        volcanoPlot(stats, meas, stat, c(NA, 1.3, NA), config.env$VolcanoLogX, 
                     config.env$VolcanoLabels, config.env$PlotSize, 
                     meas.names=kMeasNames)
         volcanoPlot(stats, meas, "sidesR", c(25, 2.5, 0.2), 

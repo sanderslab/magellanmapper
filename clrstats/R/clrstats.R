@@ -20,7 +20,8 @@ kStatTypes <- c(
 # statistical models
 kModel <- c(
   "logit", "linregr", "gee", "logit.ord", "ttest",
-  "wilcoxon", "ttest.paired", "wilcoxon.paired", "fligner", "basic")
+  "wilcoxon", "ttest.paired", "wilcoxon.paired", "fligner", "basic",
+  "diff.mean")
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c(
@@ -236,6 +237,12 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
       result <- fligner.test(vals, conditions)
       effect <- result[["statistic"]]
   
+    } else if (model == kModel[11]) {
+      # difference of means
+      effect <- mean(
+        val.conds[[2]], na.rm=TRUE) - mean(val.conds[[1]], na.rm=TRUE)
+      result <- list(estimate=effect, p.value=NA)
+  
     } else {
       cat("Sorry, model", model, "not found\n")
     }
@@ -372,9 +379,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   #   group.col: Name of group column; defaults to NULL, which uses "Condition"
   #     for means models and "Geno" otherwise.
   
+  mean_model_inds <- c(5:9, 11)
   if (is.null(group.col)) {
     # set up default group column name
-    if (is.element(model, kModel[5:9])) {
+    if (is.element(model, kModel[mean_model_inds])) {
       # means models default to splitting by condition
       group.col <- "Condition"
     } else {
@@ -420,7 +428,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         df.region.nonnan <- df.region.nonnan[nonnan, ]
         if (is.null(df.region.nonnan)) next
       }
-      if (is.element(model, kModel[5:9])) {
+      if (is.element(model, kModel[mean_model_inds])) {
         # filter for means tests, which compare groups specified in group.col
         # TODO: reconsider aggregating sides but need way to properly
         # average variations in a weighted manner
@@ -443,7 +451,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       # apply stats and store in stats data frame, using list to allow 
       # arbitrary size and storing mean volume as well
       coef.tab <- NULL
-      if (is.element(model, kModel[5:9])) {
+      if (is.element(model, kModel[mean_model_inds])) {
         # means tests
         coef.tab <- meansModel(
           vals, df.region.nonnan[[group.col]], model, paired, 

@@ -190,7 +190,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   val.conds <- list()
   num.per.cond <- NULL
   for (i in seq_along(conditions.unique)) {
-    val.conds[[i]] <- vals[conditions == conditions.unique[i]]
+    val.conds[[paste0("cond", i)]] <- vals[conditions == conditions.unique[i]]
     num.per.cond <- length(val.conds[[i]])
     if (is.element(model, kModel[c(5, 7)]) & num.per.cond <= 1) {
       # T-tests requires >= 2 values
@@ -200,12 +200,23 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   }
   
   result <- NULL
-  col.effect <- "estimate"
+  effect <- NULL
   effect.raw <- NULL
   tryCatchLog::tryCatchLog({
     if (model == kModel[5] | model == kModel[7]) {
       # Student's t-test
       result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
+      
+      # calculate Cohen's d for standardized effect
+      mat <- purrr::map_dfr(val.conds, ~dplyr::as_data_frame(t(.)))
+      df <- tidyr::gather(data.frame(t(mat)))
+      eff <- rstatix::cohens_d(df, value ~ key, paired=paired)
+      print(eff)
+      effect <- -eff$effsize
+      effect.raw <- result[["estimate"]]
+      if (length(effect.raw) > 1) {
+        effect.raw <- -diff(effect.raw)
+      }
   
     } else if (model == kModel[6] | model == kModel[8]) {
       # Wilcoxon test (Mann-Whitney if not paired)
@@ -214,16 +225,16 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   
       # replace the main effect with a standardized effect size, given as
       # z / sqrt(N), where N = number of pairs
-      effect.raw <- result[[col.effect]]
-      result[col.effect] <- rcompanion::wilcoxonZ(
+      effect.raw <- result[["estimate"]]
+      effect <- rcompanion::wilcoxonZ(
         val.conds[[2]], val.conds[[1]], paired=paired) / sqrt(num.per.cond)
       cat("Wilcoxon estimate: ", effect.raw, ", standardized effect: ",
-          result[[col.effect]], "\n", sep="")
+          effect, "\n", sep="")
   
     } else if (model == kModel[9]) {
       # Fligner-Killen test of variance
       result <- fligner.test(vals, conditions)
-      col.effect <- "statistic"
+      effect <- result[["statistic"]]
   
     } else {
       cat("Sorry, model", model, "not found\n")
@@ -239,7 +250,6 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   
   # basic stats data frame in format for filterStats
   coef.tab <- setupBasicStats()
-  effect <- result[[col.effect]]
   coef.tab$Value <- effect
   coef.tab$Value.raw <- effect
   if (!is.null(effect.raw)) {

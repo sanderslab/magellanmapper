@@ -15,4 +15,9 @@ Imports:
   corrplot,
   optparse,
   tryCatchLog
+Suggests:
+  dplyr,
+  tidyr,
+  purrr,
+  rstatix
 RoxygenNote: 6.1.1

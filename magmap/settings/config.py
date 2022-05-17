@@ -267,7 +267,7 @@ class Cmaps(Enum):
 # processing type directly in module
 Plot2DTypes = Enum(
     "Plot2DTypes", (
-        "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
+        "BAR_PLOT", "BAR_PLOT_VOLS_STATS_EFFECTS", 
         "ROC_CURVE", "SCATTER_PLOT",
         "LINE_PLOT",  # generic line plot
     )

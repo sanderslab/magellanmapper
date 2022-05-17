@@ -1221,15 +1221,6 @@ def main(ax=None):
             prefix=config.prefix, save=False,
             col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
     
-    elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
-        # barplot for data frame from R stats from means/CIs
-        ax = plot_bars(
-            config.filename, data_cols=("original.mean", "smoothed.mean"), 
-            err_cols=("original.ci", "smoothed.ci"), 
-            legend_names=("Original", "Smoothed"), col_groups="RegionName", 
-            size=size, show=False, groups=config.groups, save=False,
-            prefix=config.prefix)
-    
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
         

@@ -21,7 +21,6 @@ from magmap.io import libmag
 from magmap.plot import plot_3d
 
 try:
-    from matplotlib.axes import Axes
     from matplotlib_scalebar import scalebar
 except ImportError as e:
     scalebar = None
@@ -768,17 +767,21 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
 
 
 def set_scinot(
-        ax: "Axes", lims: Sequence[int] = (-3, 4),
+        ax: "axes.Axes", lims: Sequence[int] = (-3, 4),
         lbls: Optional[Sequence[str]] = None,
         units: Optional[Sequence[str]] = None):
-    """Set scientific notation for tick labels and shift exponents from 
-    axes to their labels.
+    """Set axes tick scientific notation and shift exponents to their labels.
     
     Scientific notation in Matplotlib positions the exponent at the top 
     of the y-axis and right of the x-axis, which may be missed or overlap 
     with the title or other labels. This method sets scientific notation 
     along with axis labels and units and moves any exponent to the 
     unit labels. Units will be formatted with math text.
+    
+    In some cases, scientific notation is incompatible with the axes'
+    formatter and will be ignored. It can often be set up before the plot,
+    however, and this function can be called both before and after the plot
+    to set up the notation and later override any labeling set up by the plot.
     
     Args:
         ax: Axis object.
@@ -797,14 +800,19 @@ def set_scinot(
             any scientific notation exponent.
     
     """
-    # set scientific notation
-    ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
+    # set scientific notation for axes ticks
+    try:
+        ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
+    except AttributeError:
+        _logger.debug("Could not set up scientific notation, skipping")
+    
     if not lbls:
         lbls = (config.plot_labels[config.PlotLabels.Y_LABEL],
                 config.plot_labels[config.PlotLabels.X_LABEL])
     if not units:
         units = (config.plot_labels[config.PlotLabels.Y_UNIT],
                  config.plot_labels[config.PlotLabels.X_UNIT])
+    
     num_lbls = len(lbls)
     num_units = len(units)
     for i, axis in enumerate((ax.yaxis, ax.xaxis)):

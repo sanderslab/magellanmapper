@@ -4,12 +4,10 @@
 """Plot 2D views of imaging data and graphs."""
 
 import os
-import math
 from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
 from matplotlib import colors as mat_colors, gridspec, pylab, pyplot as plt
-import matplotlib.transforms as transforms
 import pandas as pd
 from skimage import exposure
 
@@ -297,16 +295,6 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     width = (1.0 - padding) / num_sets # width of each bar
     #print("x_labels: {}".format(x_labels))
     
-    if vspans is not None:
-        # show vertical spans alternating in white and black; assume 
-        # background is already white, so simply skip white shading
-        xs = vspans - padding / 2
-        num_xs = len(xs)
-        for i, x in enumerate(xs):
-            if i % 2 == 0: continue
-            end = xs[i + 1] if i < num_xs - 1 else num_groups
-            ax.axvspan(x, end, facecolor="k", alpha=0.2)
-            
     # show each list as a set of bar plots so that corresponding elements in 
     # each list will be grouped together as bar groups
     for i in range(num_sets):
@@ -324,44 +312,12 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     
     # show y-label with any unit in scientific notation
     plot_support.set_scinot(ax, lbls=(y_label,), units=(y_unit,))
-    # draw x-tick labels with smaller font for increasing number of labels
-    font_size = plt.rcParams["axes.titlesize"]
-    if libmag.is_number(font_size):
-        # scale font size of x-axis labels by a sigmoid function to rapidly 
-        # decrease size for larger numbers of labels so they don't overlap
-        font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
-    font_dict = {"fontsize": font_size}
-    # draw x-ticks based on number of bars per group and align to right 
-    # since center shifts the horiz middle of the label to the center; 
-    # rotation_mode in dict helps but still slightly off
     ax.set_xticks(indices + width * len(lists) / 2)
-    ax.set_xticklabels(
-        x_labels, rotation=rotation, horizontalalignment="right", 
-        fontdict=font_dict)
-    # translate to right since "right" alignment shift the right of labels 
-    # too far to the left of tick marks; shift less with more groups
-    offset = transforms.ScaledTranslation(
-        30 / np.cbrt(num_groups) / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
-    for lbl in ax.xaxis.get_majorticklabels():
-        lbl.set_transform(lbl.get_transform() + offset)
+    plot_support.scale_xticks(ax, rotation, x_labels)
     
-    if vspans is not None and vspan_lbls is not None:
-        # show labels for vertical spans
-        ylims = ax.get_ylim()
-        y_span = abs(ylims[1] - ylims[0])
-        y_top = max(ylims)
-        for i, x in enumerate(xs):
-            end = xs[i + 1] if i < num_xs - 1 else num_groups
-            x = (x + end) / 2
-            # position 4% down from top in data coordinates
-            y_frac = 0.04
-            if vspan_alt_y and i % 2 != 0:
-                # shift alternating labels further down to avoid overlap
-                y_frac += 0.03
-            y = y_top - y_span * y_frac
-            ax.text(
-                x, y, vspan_lbls[i], color="k", horizontalalignment="center")
-    
+    # further group x-vals into vertical spans
+    plot_support.add_vspans(ax, vspans, vspan_lbls, padding, vspan_alt_y)
+
     if legend_names:
         ax.legend(bars, legend_names, loc="best", fancybox=True, framealpha=0.5)
 
@@ -479,14 +435,8 @@ def plot_bars(
     vspans = None
     vspan_lbls = None
     if col_vspan is not None:
-        # further group bar groups by vertical spans with location based 
-        # on each change in value in col_vspan
-        # TODO: change .values to .to_numpy when Pandas req >= 0.24
-        vspan_vals = df[col_vspan].values
-        vspans = np.insert(
-            np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
-        vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
-                      for val in vspan_vals[vspans]]
+        # set up vertical spans to further group the bar groups 
+        vspans, vspan_lbls = plot_support.setup_vspans(df, col_vspan, vspan_fmt)
     
     if err_cols_abs is not None:
         # error bars with absolute vals take priority over relative vals

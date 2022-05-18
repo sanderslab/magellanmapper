@@ -4,14 +4,14 @@
 """
 
 from collections import OrderedDict
+import math
 import os
 import warnings
-from typing import List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Any, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
-from matplotlib import backend_bases
-from matplotlib import gridspec
-from matplotlib import pyplot as plt
+from matplotlib import backend_bases, gridspec, pyplot as plt
+import matplotlib.transforms as transforms
 from skimage import filters, transform
 
 from magmap.cv import cv_nd
@@ -27,8 +27,9 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 if TYPE_CHECKING:
-    from matplotlib import axes, colors, figure, image
+    from matplotlib import axes, colors, figure
     from magmap.gui import plot_editor
+    import pandas as pd
 
 _logger = config.logger.getChild(__name__)
 
@@ -841,6 +842,117 @@ def set_scinot(
             lbl = " ".join(unit_all)
         if lbl:
             axis.set_label_text(lbl)
+
+
+def scale_xticks(
+        ax: "axes.Axes", rotation: float,
+        x_labels: Optional[Sequence[Any]] = None):
+    """Draw x-tick labels with smaller font for increasing number of labels.
+    
+    Args:
+        ax: Matplotlib axes.
+        rotation: Label rotation angle.
+        x_labels: X-axis labels; defaults to None, in which case the current
+            labels will be used.
+
+    """
+    if x_labels is None:
+        # default to use existing labels
+        x_labels = ax.get_xticklabels()
+    
+    font_size = plt.rcParams["axes.titlesize"]
+    if libmag.is_number(font_size):
+        # scale font size of x-axis labels by a sigmoid function to rapidly 
+        # decrease size for larger numbers of labels so they don't overlap
+        font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
+    font_dict = {"fontsize": font_size}
+    
+    # draw x-ticks based on number of bars per group and align to right 
+    # since center shifts the horiz middle of the label to the center; 
+    # rotation_mode in dict helps but still slightly off
+    ax.set_xticklabels(
+        x_labels, rotation=rotation, horizontalalignment="right", 
+        fontdict=font_dict)
+    
+    # translate to right since "right" alignment shift the right of labels 
+    # too far to the left of tick marks; shift less with more groups
+    offset = transforms.ScaledTranslation(
+        30 / np.cbrt(len(x_labels)) / ax.figure.dpi, 0,
+        ax.figure.dpi_scale_trans)
+    for lbl in ax.xaxis.get_majorticklabels():
+        lbl.set_transform(lbl.get_transform() + offset)
+
+
+def setup_vspans(
+        df: "pd.DataFrame", col_vspan: str, vspan_fmt: str
+) -> Tuple[np.ndarray, Sequence[str]]:
+    """Set up vertical spans to group axis groups.
+    
+    Args:
+        df: Data frame.
+        col_vspan: Column in ``df``, assumed to be ordered by group.
+            Changes in value denote the start of the next vertical span.
+        vspan_fmt: String formatter for span labels.
+
+    Returns:
+        Tuple of a vertical span array of starting indices and a
+        sequence of span labels.
+
+    """
+    # further group bar groups by vertical spans with location based 
+    # on each change in value in col_vspan
+    # TODO: change .values to .to_numpy when Pandas req >= 0.24
+    vspan_vals = df[col_vspan].values
+    vspans = np.insert(
+        np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
+    vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
+                  for val in vspan_vals[vspans]]
+    return vspans, vspan_lbls
+
+
+def add_vspans(
+        ax: "axes.Axes", vspans: np.ndarray,
+        vspan_lbls: Optional[Sequence[str]] = None, padding: float = 1,
+        vspan_alt_y: bool = False):
+    """Add vertical spans to group x-values.
+    
+    Args:
+        ax: Matplotlib axes.
+        vspans: Sequence of vertical span x-vals in data units.
+        vspan_lbls: Sequence of span labels; defaults to None.
+        padding: Padding around each span; defaults to 1.
+        vspan_alt_y: True to alternate the height of labels; defaults to False.
+
+    """
+    # set up span x-val indices
+    num_groups = len(ax.get_xticklabels())
+    xs = vspans - padding / 2
+    num_xs = len(xs)
+    
+    if vspans is not None:
+        # show vertical spans alternating in white and black; assume 
+        # background is already white, so simply skip white shading
+        for i, x in enumerate(xs):
+            if i % 2 == 0: continue
+            end = xs[i + 1] if i < num_xs - 1 else num_groups
+            ax.axvspan(x, end, facecolor="k", alpha=0.2, zorder=0)
+
+    if vspan_lbls is not None:
+        # show labels for vertical spans
+        ylims = ax.get_ylim()
+        y_span = abs(ylims[1] - ylims[0])
+        y_top = max(ylims)
+        for i, x in enumerate(xs):
+            end = xs[i + 1] if i < num_xs - 1 else num_groups
+            x = (x + end) / 2
+            # position 4% down from top in data coordinates
+            y_frac = 0.04
+            if vspan_alt_y and i % 2 != 0:
+                # shift alternating labels further down to avoid overlap
+                y_frac += 0.03
+            y = y_top - y_span * y_frac
+            ax.text(
+                x, y, vspan_lbls[i], color="k", horizontalalignment="center")
 
 
 def get_plane_axis(plane, get_index=False):

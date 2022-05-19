@@ -916,6 +916,8 @@ def add_vspans(
         vspan_alt_y: bool = False):
     """Add vertical spans to group x-values.
     
+    Shifts legend away from span labels.
+    
     Args:
         ax: Matplotlib axes.
         vspans: Sequence of vertical span x-vals in data units.
@@ -953,6 +955,12 @@ def add_vspans(
             y = y_top - y_span * y_frac
             ax.text(
                 x, y, vspan_lbls[i], color="k", horizontalalignment="center")
+    
+    legend = ax.get_legend()
+    if legend:
+        # shift legend away from span labels
+        legend.loc = "best"
+        legend.set_bbox_to_anchor((0, 0, 1, 0.9))
 
 
 def get_plane_axis(plane, get_index=False):

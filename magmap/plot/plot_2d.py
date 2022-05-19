@@ -314,12 +314,13 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     plot_support.set_scinot(ax, lbls=(y_label,), units=(y_unit,))
     ax.set_xticks(indices + width * len(lists) / 2)
     plot_support.scale_xticks(ax, rotation, x_labels)
-    
-    # further group x-vals into vertical spans
-    plot_support.add_vspans(ax, vspans, vspan_lbls, padding, vspan_alt_y)
 
     if legend_names:
-        ax.legend(bars, legend_names, loc="best", fancybox=True, framealpha=0.5)
+        # set legend names for the bars
+        ax.legend(bars, legend_names, framealpha=0.5)
+
+    # further group x-vals into vertical spans
+    plot_support.add_vspans(ax, vspans, vspan_lbls, padding, vspan_alt_y)
 
 
 def plot_bars(

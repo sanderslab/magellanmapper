@@ -316,6 +316,7 @@ class PlotLabels(Enum):
     CONDITION = auto()  # condition
     #: Column indicating grouping for vertical span.
     VSPAN_COL = auto()
+    VSPAN_FORMAT = auto()
     #: Background color as a Matplotlib or RGBA string.
     BACKGROUND = auto()
 

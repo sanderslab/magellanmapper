@@ -23,6 +23,12 @@ if TYPE_CHECKING:
 
 _logger = config.logger.getChild(__name__)
 
+try:
+    import seaborn as sns
+except ImportError:
+    _logger.debug("Seborn is not installed, will ignore it")
+    sns = None
+
 
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
                   title=None):
@@ -341,8 +347,8 @@ def plot_bars(
 ) -> Tuple["axes.Axes", str]:
     """Plot grouped bars from Pandas data frame.
     
-    Each data frame row represents a group, and each chosen data column 
-    will be plotted as a separate bar within each group.
+    Takes a data frame in wide format. Each row represents a group, and each
+    chosen data column will be plotted as a separate bar within each group.
     
     Args:
         path_to_df: Path from which to read saved Pandas data frame.
@@ -401,6 +407,8 @@ def plot_bars(
         Plot axes and save path without extension.
     
     """
+    # TODO: consider converting from df in wide to melted format 
+    
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
@@ -973,6 +981,106 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
         legend_loc="lower right", **kwargs)
 
 
+def plot_swarm(
+        df: pd.DataFrame, x_cols: Union[str, Sequence[str]],
+        y_cols: Union[str, Sequence[str]],
+        x_order: Optional[Sequence[str]] = None,
+        group_col: Optional[str] = None,
+        x_label: Optional[str] = None, y_label: Optional[str] = None,
+        x_unit: Optional[str] = None, y_unit: Optional[str] = None,
+        legend_names: Optional[Sequence[str]] = None,
+        col_vspan: Optional[str] = None, vspan_fmt: Optional[str] = None,
+        size=None, ax=None, **kwargs) -> "axes.Axes":
+    """Generate a swarm/jitter plot in Seaborn.
+    
+    Supports x-axis scaling and vertical spans.
+    
+    Args:
+        df: Data frame, assumed to be in melted format.
+        x_cols: Column for x-values, typically categorical.
+        y_cols: Column for y-values, typically continuous.
+        x_order: Order of values in ``x_cols``, given as the values in
+            which to reorder the data frame. Defaults to None.
+        group_col: Column for groups plotted across x-vals and shown in
+            the legend. Defaults to None.
+        x_label: Label for the x-axis; defaults to None.
+        y_label: Label for the y-axis; defaults to None.
+        x_unit: Unit for the x-axis; defaults to None.
+        y_unit: Unit for the y-axis; defaults to None.
+        legend_names: Legend names. Defaults to None to use those from
+            ``group_col``
+        col_vspan: Column for delineating vertical span groups. Groups
+            are determined by contiguous values after reordering by ``x_order``.
+            Defaults to None.
+        vspan_fmt: Vertical span label string format; defaulst to None.
+        size: Figure size in ``width, height`` as inches; defaults to None.
+        ax: Matplotlib axes; defaults to None.
+        **kwargs: Additional arguments, passed to :meth:`decorate_plot`.
+
+    Returns:
+        Matplotlib axes with the plot.
+    
+    Raises:
+        `ImportError` if Seaborn is not available.
+
+    """
+    
+    if sns is None:
+        raise ImportError("Seaborn is required for swarm plots, please install")
+    
+    df_vspan = df
+    if x_order is not None:
+        # reorder so vals in x_cols match the order of vals in x_order;
+        # copy view to prevent SettingsWithCopy warning
+        col = "Grouped"
+        df_vspan = df.loc[df[x_cols].isin(x_order), ].copy(deep=False)
+        df_vspan[col] = pd.Categorical(
+            df_vspan[x_cols], categories=x_order, ordered=True)
+        df_vspan = df_vspan.sort_values(by=col)
+        df_vspan = df_vspan.drop_duplicates(subset=x_cols)
+    
+    if ax is None:
+        # setup fig
+        fig, gs = plot_support.setup_fig(1, 1, size)
+        ax = fig.add_subplot(gs[0, 0])
+    
+    # convert to scientific notation if appropriate before plot since the
+    # plot's formatter may otherwise be incompatible
+    plot_support.set_scinot(ax, lbls=(y_label, x_label), units=(y_unit, x_unit))
+    
+    # plot in seaborn
+    ax = sns.swarmplot(
+        x=x_cols, y=y_cols, hue=group_col, hue_order=legend_names,
+        order=x_order, data=df, ax=ax)
+    
+    # scale x-axis ticks and rotate labels
+    plot_support.scale_xticks(ax, 45)
+    
+    legend = ax.get_legend()
+    if legend:
+        # make legend translucent in case it overlaps points and remove
+        # legend title
+        legend.get_frame().set(alpha=0.5)
+        legend.set_title(None)
+
+    if col_vspan is not None:
+        # add vertical spans
+        vspans, vspan_lbls = plot_support.setup_vspans(
+            df_vspan, col_vspan, vspan_fmt)
+        plot_support.add_vspans(ax, vspans, vspan_lbls, 1, True)
+    
+    # add additional decorations
+    ax = decorate_plot(
+        ax, xlabel=x_label, ylabel=y_label, xunit=x_unit, yunit=y_unit,
+        **kwargs)
+    
+    if x_label is None:
+        # remove x-label if None
+        ax.set_xlabel(x_label)
+   
+    return ax
+
+
 def plot_histogram(df, path, col_x, ax=None, size=None, save=True, suffix=None,
                    show=False, **kwargs):
     """Geneate a histogram plot.
@@ -1178,11 +1286,15 @@ def main(ax=None):
     x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
     x_lbl = config.plot_labels[config.PlotLabels.X_LABEL]
     y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
+    x_unit = config.plot_labels[config.PlotLabels.X_UNIT]
     y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
     legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
     hline = config.plot_labels[config.PlotLabels.HLINE]
     col_vspan = config.plot_labels[config.PlotLabels.VSPAN_COL]
     vspan_fmt = config.plot_labels[config.PlotLabels.VSPAN_FORMAT]
+    
+    # base output path for tasks that defer saving to post_plot
+    base_out_path = None
     
     # perform 2D plot task, deferring save until the post-processing step
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
@@ -1275,11 +1387,19 @@ def main(ax=None):
             fig_size=size, show=config.show, suffix=config.suffix,
             alpha=config.alphas[0], scale_x=scale_x, scale_y=scale_y,
             ax=ax, save=False)
+
+    elif plot_2d_type is config.Plot2DTypes.SWARM_PLOT:
+        # swarm/jitter plot
+        ax = plot_swarm(
+            pd.read_csv(config.filename), x_cols, data_cols, config.groups,
+            group_col, x_lbl, y_lbl, x_unit, y_unit, legend_names, col_vspan,
+            vspan_fmt, size, title=title)
+        base_out_path = "swarm"
     
     if ax is not None:
         # perform plot post-processing tasks, including file save unless
         # savefig is None
-        post_plot(ax, libmag.make_out_path(), config.savefig, config.show)
+        post_plot(ax, libmag.make_out_path(base_out_path), config.savefig, config.show)
     
     return ax
 

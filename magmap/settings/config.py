@@ -264,14 +264,17 @@ class Cmaps(Enum):
     CMAP_RDBK_NAME = "Red_black"
 
 
-# processing type directly in module
-Plot2DTypes = Enum(
-    "Plot2DTypes", (
-        "BAR_PLOT", "BAR_PLOT_VOLS_STATS_EFFECTS", 
-        "ROC_CURVE", "SCATTER_PLOT",
-        "LINE_PLOT",  # generic line plot
-    )
-)
+class Plot2DTypes(Enum):
+    """2D plot tasks."""
+    BAR_PLOT = auto()
+    BAR_PLOT_VOLS_STATS = auto()
+    BAR_PLOT_VOLS_STATS_EFFECTS = auto()
+    ROC_CURVE = auto()
+    SCATTER_PLOT = auto()
+    LINE_PLOT = auto()
+    SWARM_PLOT = auto()
+    
+
 plot_2d_type = None
 
 

@@ -5,7 +5,7 @@
 
 import os
 import math
-from typing import Callable, Optional, Sequence, TYPE_CHECKING, Union
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
 from matplotlib import colors as mat_colors, gridspec, pylab, pyplot as plt
@@ -366,11 +366,22 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
         ax.legend(bars, legend_names, loc="best", fancybox=True, framealpha=0.5)
 
 
-def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
-              col_groups=None, groups=None, y_label=None, y_unit=None, 
-              size=None, show=True, col_vspan=None, vspan_fmt=None,
-              col_wt=None, df=None, x_tick_labels=None, rotation=None,
-              save=True, hline=None, ax=None, suffix=None, **kwargs):
+def plot_bars(
+        path_to_df: str, data_cols: Optional[Sequence[str]] = None,
+        err_cols: Optional[Sequence[str]] = None,
+        legend_names: Optional[Sequence[str]] = None, 
+        col_groups: Optional[Sequence[str]] = None,
+        groups: Optional[Sequence[str]] = None, y_label: Optional[str] = None,
+        y_unit: Optional[str] = None, size: Optional[Sequence[float]] = None,
+        show: bool = True, col_vspan: Optional[str] = None,
+        vspan_fmt: Optional[str] = None, col_wt: Optional[str] = None,
+        df: Optional[pd.DataFrame] = None,
+        x_tick_labels: Optional[Sequence[str]] = None,
+        rotation: Optional[float] = None, save: bool = True,
+        hline: Optional[str] = None, ax: Optional["axes.Axes"] = None,
+        suffix: Optional[str] = None,
+        err_cols_abs: Optional[Optional[str]] = None, **kwargs
+) -> Tuple["axes.Axes", str]:
     """Plot grouped bars from Pandas data frame.
     
     Each data frame row represents a group, and each chosen data column 
@@ -383,10 +394,11 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         data_cols: Sequence of names of columns to plot as separate sets 
             of bars, where each row is part of a separate group. Defaults 
             to None, which will plot all columns except ``col_groups``.
-        err_cols: Sequence of column names with relative error values 
-            corresponding to ``data_cols``. Defaults to None, in which 
-            case matching columns with "_err" as suffix will be used for 
-            error bars if present.
+        err_cols: Sequence of column names corresponding to ``data_cols``.
+            Values should be relative to the data points. Each column can be
+            a sequence of two columns, given as ``lower, upper`` values. 
+            Defaults to None, in which case matching columns with "_err" as
+            suffix will be used for error bars if present.
         legend_names: Sequence of names for each set of bars. 
             Defaults to None, which will use ``data_cols`` for names. 
             Use "" to not display a legend.
@@ -414,21 +426,22 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             value; defaults to None.
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
-        x_tick_labels (List[str]): Sequence of labels for each bar group 
+        x_tick_labels: Sequence of labels for each bar group 
             along the x-axis; defaults to None to use ``groups`` instead. 
         rotation: Degrees of x-tick label rotation; defaults to None.
-        save (bool): True to save the plot; defaults to True.
-        hline (str): One of :attr:`config.STR_FN` for a function to apply
+        save: True to save the plot; defaults to True.
+        hline: One of :attr:`config.STR_FN` for a function to apply
             to each list in ``lists`` for a horizontal line to be drawn
             at this y-value; defaults to None.
-        ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
+        ax: Matplotlib axes; defaults to None.
         suffix: String to append to output path before extension;
             defaults to None to ignore.
-        kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
+        err_cols_abs: Column(s) for error bars as absolute values. Defaults
+            to None. Takes precdence over ``err_cols``.
+        kwargs: Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
-        :obj:`matplotlib.image.Axes`, str: Plot axes and save path without
-        extension.
+        Plot axes and save path without extension.
     
     """
     # load data frame from CSV and setup figure
@@ -475,6 +488,10 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
                       for val in vspan_vals[vspans]]
     
+    if err_cols_abs is not None:
+        # error bars with absolute vals take priority over relative vals
+        err_cols = err_cols_abs
+    
     if err_cols is None:
         # default to columns corresponding to data cols with suffix appended 
         # if those columns exist
@@ -500,13 +517,20 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     for i, (col, col_err) in enumerate(zip(data_cols, err_cols)):
         # each column gives a set of bars, where each bar will be in a 
         # separate bar group
-        lists.append(df[col] * wts)
+        df_col = df[col] * wts
+        lists.append(df_col)
         errs_dfs = None
         if libmag.is_seq(col_err):
             # asymmetric error bars
             errs_dfs = [df[e] * wts for e in col_err]
         elif col_err is not None:
             errs_dfs = df[col_err] * wts
+        
+        if err_cols_abs is not None:
+            # convert absolute to Matplotlib's required values, which are
+            # relative to the data points and positive
+            errs_dfs = [np.abs(np.subtract(df_col, e)) for e in errs_dfs]
+        
         errs.append(errs_dfs)
         bar_colors.append("C{}".format(i))
 
@@ -1194,6 +1218,7 @@ def main(ax=None):
     annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]
     group_col = config.plot_labels[config.PlotLabels.GROUP_COL]
     err_col = config.plot_labels[config.PlotLabels.ERR_COL]
+    err_col_abs = config.plot_labels[config.PlotLabels.ERR_COL_ABS]
     col_wt = config.plot_labels[config.PlotLabels.WT_COL]
     marker = config.plot_labels[config.PlotLabels.MARKER]
     scale_x = config.plot_labels[config.PlotLabels.X_SCALE]
@@ -1219,13 +1244,28 @@ def main(ax=None):
             size=size, show=False, groups=config.groups,
             col_vspan=col_vspan, vspan_fmt="L{}",
             prefix=config.prefix, save=False,
-            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45, err_cols_abs=err_col_abs)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
         
-        # setup labels
+        # TODO: use melted df to avoid giving multiple data cols and err
+        # cols for each data col
+        
+        # set up labels
         if y_lbl is None: y_lbl = "Effect size"
+        if data_cols is None: data_cols = "vals.effect"
+        
+        # set up error bar columns
+        args = {}
+        if err_col_abs is not None:
+            # prioritize error bars with absolute values
+            args["err_cols_abs"] = (err_col_abs,)
+        else:
+            # default to values relative to the data points
+            if err_col is None:
+                err_col = ("vals.ci.low", "vals.ci.hi")
+            args["err_cols"] = (err_col,)
         
         # assume stat is just before the extension in the filename, and 
         # determine weighting column based on stat
@@ -1235,13 +1275,12 @@ def main(ax=None):
         
         # generate bar plot
         ax = plot_bars(
-            config.filename, data_cols=("vals.effect",), 
-            err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
+            config.filename, data_cols=(data_cols,), 
             legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, save=False,
             size=size, show=False, groups=config.groups, 
             prefix=config.prefix, col_vspan=col_vspan, vspan_fmt="L{}", 
-            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45, **args)
 
     elif plot_2d_type is config.Plot2DTypes.LINE_PLOT:
         # generic line plot

@@ -296,7 +296,10 @@ class PlotLabels(Enum):
     GROUP_COL = auto()  # data frame group column
     WT_COL = auto()  # weight column
     ID_COL = auto()  # ID column
-    ERR_COL = auto()  # error column(s)
+    #: Error column(s) with values relative to the data points.
+    ERR_COL = auto()
+    #: Error column(s) with absolute.
+    ERR_COL_ABS = auto()
     ANNOT_COL = auto()  # annotation column for each point
     ZOOM_SHIFT = auto()  # shift plot offset when zooming into ROI
     HLINE = auto()  # horizontal line, usually fn for each group

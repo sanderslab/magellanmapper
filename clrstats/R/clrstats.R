@@ -204,6 +204,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   effect <- NULL
   effect.raw <- NULL
   tryCatchLog::tryCatchLog({
+  ci <- NULL
     if (model == kModel[5] | model == kModel[7]) {
       # Student's t-test
       result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
@@ -224,6 +225,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
       print(eff)
       # print(effectsize::interpret_cohens_d(eff))
       effect <- eff$Cohens_d
+      ci <- c(eff$CI_low, eff$CI_high)
       
       # get raw effect; get diff if multiple vals
       effect.raw <- result[["estimate"]]
@@ -275,13 +277,21 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     # store raw effect if it was standardized; otherwise, leave same as effect
     coef.tab$Value.raw <- effect.raw
   }
+  
   if (is.element("conf.int", names(result))) {
-    # convert confidence intervals from absolute vals to relative, positive
-    # vals for Matplotlib
-    ci <- result$conf.int
-    coef.tab$CI.low <- coef.tab$Value.raw - ci[1]
-    coef.tab$CI.hi <- ci[2] - coef.tab$Value.raw
+    # store confidence intervals from result as both standardized and raw CIs
+    ci.raw <- result$conf.int
+    coef.tab$CI.low.raw <- ci.raw[1]
+    coef.tab$CI.hi.raw <- ci.raw[2]
+    coef.tab$CI.low <- coef.tab$CI.low.raw
+    coef.tab$CI.hi <- coef.tab$CI.hi.raw
   }
+  if (!is.null(ci)) {
+    # store standardized confidence intervals
+    coef.tab$CI.low <- ci[[1]]
+    coef.tab$CI.hi <- ci[[2]]
+  }
+  
   coef.tab$P <- result$p.value
   coef.tab$N <- num.per.cond
   print(coef.tab)
@@ -295,7 +305,7 @@ setupBasicStats <- function() {
   #   Data frame with columns for basic statistics such as mean and 
   #   confidence intervals and a single empty row.
   
-  cols <- c("N", "Value", "Value.raw", "CI.low", "CI.hi", "P")
+  cols <- c("N", "Value", "CI.low", "CI.hi", "Value.raw", "CI.low.raw", "CI.hi.raw", "P")
   coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
   names(coef.tab) <- cols
   rownames(coef.tab) <- "vals"
@@ -599,7 +609,7 @@ filterStats <- function(stats, corr=NULL) {
   cols.orig <- cols # points to original vector if it is mutated
   offset <- length(cols)
   cols.suffixes <- c(
-    ".n", ".effect", ".effect.raw", ".ci.low", ".ci.hi", ".p", ".pcorr",
+    ".n", ".effect", ".ci.low", ".ci.hi", ".effect.raw", ".ci.low.raw", ".ci.hi.raw", ".p", ".pcorr",
     ".logp")
   for (interact in interactions) {
     for (suf in cols.suffixes) {

@@ -200,11 +200,10 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     }
   }
   
-  result <- NULL
   effect <- NULL
   effect.raw <- NULL
-  tryCatchLog::tryCatchLog({
   ci <- NULL
+  result <- tryCatchLog::tryCatchLog({
     if (model == kModel[5] | model == kModel[7]) {
       # Student's t-test
       result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
@@ -260,11 +259,15 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     } else {
       cat("Sorry, model", model, "not found\n")
     }
+    
+    # return result from try block
     print(result)
+    result
   }, error=function(e) {
     message("Unable to generate stat, skipping")
+    return(NULL)
   }, finally={
-  }, include.full.call.stack=FALSE, include.compact.call.stack = FALSE)
+  }, include.full.call.stack=FALSE, include.compact.call.stack=FALSE)
   
   # return if no stats
   if (is.null(result)) return(NULL)
@@ -416,7 +419,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   
   # find all regions
   regions <- unique(df$Region)
-  #regions <- c(15565) # TESTING: insert single region
+  # regions <- c(15565, 15566) # TESTING: select region(s)
   cols <- c("Region", "Stats", "Volume", "Nuclei")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols

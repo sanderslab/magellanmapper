@@ -16,8 +16,5 @@ Imports:
   optparse,
   tryCatchLog
 Suggests:
-  dplyr,
-  tidyr,
-  purrr,
-  rstatix
+  effectsize
 RoxygenNote: 6.1.1

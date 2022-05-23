@@ -209,11 +209,23 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
       result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
       
       # calculate Cohen's d for standardized effect
-      mat <- purrr::map_dfr(val.conds, ~dplyr::as_data_frame(t(.)))
-      df <- tidyr::gather(data.frame(t(mat)))
-      eff <- rstatix::cohens_d(df, value ~ key, paired=paired)
+      
+      # # convert lists of potentially different sizes to df in long format
+      # df <- stack(val.conds)
+      # print(df)
+      
+      # # effect size using rstatix; CI does not appear to be working
+      # eff <- rstatix::cohens_d(df, values ~ ind, paired=paired)
+      # print(eff)
+      
+      # effect size using effectsize
+      # eff <- effectsize::cohens_d(values ~ ind, data=df, paired=paired)
+      eff <- effectsize::cohens_d(val.conds[[2]], val.conds[[1]], paired=paired)
       print(eff)
-      effect <- -eff$effsize
+      # print(effectsize::interpret_cohens_d(eff))
+      effect <- eff$Cohens_d
+      
+      # get raw effect; get diff if multiple vals
       effect.raw <- result[["estimate"]]
       if (length(effect.raw) > 1) {
         effect.raw <- -diff(effect.raw)

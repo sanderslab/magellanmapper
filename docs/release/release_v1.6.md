@@ -70,15 +70,22 @@
 
 - Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
 - Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
+- New plot label sub-arguments (#135):
+  - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
+  - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
+  - `--plot_labels vspan_col=<col>`: column denoting vertical span groups
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 
 #### R stats and plots
 
+- Specify models with the `--model <stats.model>` CLI argument (#135)
+- Effect size confidence intervals are now absolute rather than relative values for clarity (#135)
 - Region IDs file is no longer required since volume stats output from the Python pipeline already includes this region metadata (#132)
+- Added the `diff.means` stats model to simply give the difference of means between conditions (#135) 
 - The `revpairedstats` profile is now `revconds` since it applies to reversing conditions in general, not just for paired stats (#132)
-- Added a `mann.whitney` profile for Mann-Whitney tests (#132)
 - Stats errors are caught rather than stopping the pipeline (#132)
+- Fixed t-test, which also provides Cohen's d as a standardized effect size through the `effectsize` package (#135)
 
 #### Code base and docs
 
@@ -93,5 +100,7 @@
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 
 #### R Dependency Changes
+
+- `effectsize` is a suggested dependency for Cohen's d, used in t-tests (#135)
 
 #### Server dependency Changes

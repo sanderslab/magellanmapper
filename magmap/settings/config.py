@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from magmap.atlas import labels_meta
     from magmap.cv import detector
     from magmap.io import np_io
+    from magmap.settings import prefs_prof
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -62,6 +63,15 @@ app_dir = pathlib.Path(__file__).resolve().parent.parent.parent
 user_app_dirs = AppDirs(APP_NAME, False)
 #: PurePath: Absolution path to main application icon.
 ICON_PATH = app_dir / "images" / "magmap.png"
+
+
+# PREFERENCES
+
+#: Preferences file path.
+PREFS_PATH: pathlib.Path = pathlib.Path(
+    user_app_dirs.user_data_dir) / "prefs.yaml"
+#: Preferences dictionary.
+prefs: Optional["prefs_prof.PrefsProfile"] = None
 
 
 # LOGGING

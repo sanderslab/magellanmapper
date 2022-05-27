@@ -10,10 +10,13 @@ from enum import Enum, auto
 import glob
 import os
 import pprint
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, TYPE_CHECKING, Union
 
 from magmap.io import yaml_io
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    import pathlib
 
 _logger = config.logger.getChild(__name__)
 
@@ -290,3 +293,15 @@ class SettingsDict(dict):
                         return False
         print("Block settings are identical")
         return True
+    
+    def save_settings(self, path: Union[str, "pathlib.Path"]) -> Dict:
+        """Save current settings to YAML file.
+        
+        Args:
+            path: Output path.
+
+        Returns:
+            Saved dictionary, including any modifications
+
+        """
+        return yaml_io.save_yaml(path, self, convert_enums=True)

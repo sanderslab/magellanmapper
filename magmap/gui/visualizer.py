@@ -2652,14 +2652,14 @@ class Visualization(HasTraits):
         atlas_ed.view_subimg(offset[::-1], shape[::-1])
 
     @staticmethod
-    def _get_save_path(default_path):
+    def _get_save_path(default_path: str) -> str:
         """Get a save path from the user through a file dialog.
         
         Args:
-            default_path (str): Default path to display in the dialog.
+            default_path: Default path to display in the dialog.
 
         Returns:
-            str: Chosen path.
+            Chosen path.
         
         Raises:
             FileNotFoundError: User canceled file selection.
@@ -2668,8 +2668,10 @@ class Visualization(HasTraits):
         # open a PyFace file dialog in save mode
         save_dialog = FileDialog(action="save as", default_path=default_path)
         if save_dialog.open() == OK:
-            # get user selected path
-            return save_dialog.path
+            # get user selected path and update preferences
+            path = save_dialog.path
+            config.prefs["fig_save_dir"] = os.path.dirname(path)
+            return path
         else:
             # user canceled file selection
             raise FileNotFoundError("User canceled file selection")
@@ -2679,17 +2681,25 @@ class Visualization(HasTraits):
         """Save the figure in the currently selected viewer."""
         path = None
         try:
+            # get the figure save directory from preferences
+            save_dir = config.prefs["fig_save_dir"]
+            
             if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
                 if self.roi_ed is not None:
                     # save screenshot of current ROI Editor
-                    path = self._get_save_path(self.roi_ed.get_save_path())
+                    path = os.path.join(save_dir, self.roi_ed.get_save_path())
+                    path = self._get_save_path(path)
                     self.roi_ed.save_fig(path)
+            
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
                 if self.atlas_eds:
                     # save screenshot of first Atlas Editor
                     # TODO: find active editor
-                    path = self._get_save_path(self.atlas_eds[0].get_save_path())
+                    path = os.path.join(
+                        save_dir, self.atlas_eds[0].get_save_path())
+                    path = self._get_save_path(path)
                     self.atlas_eds[0].save_fig(path)
+            
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
                 if config.filename:
                     # save 3D image with extension in config
@@ -2700,11 +2710,13 @@ class Visualization(HasTraits):
                     path = "{}.{}".format(naming.get_roi_path(
                         config.filename, self._curr_offset(),
                         self.roi_array[0].astype(int)), ext)
-                    path = self._get_save_path(path)
+                    path = self._get_save_path(os.path.join(save_dir, path))
                     plot_2d.plot_image(screenshot, path)
+            
             if not path:
                 # notify that no figure is active to save
                 self._roi_feedback = "Please open a figure to save"
+        
         except FileNotFoundError as e:
             # user canceled path selection
             print(e)

@@ -28,16 +28,19 @@ from enum import Enum
 import logging
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, \
+    Union
 
 import numpy as np
 
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
-from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, sqlite
+from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, \
+    sqlite
 from magmap.plot import colormaps, plot_2d
-from magmap.settings import atlas_prof, config, grid_search_prof, logs, roi_prof
+from magmap.settings import atlas_prof, config, grid_search_prof, logs, \
+    prefs_prof, roi_prof
 from magmap.stats import mlearn
 
 _logger = config.logger.getChild(__name__)
@@ -427,6 +430,10 @@ def process_cli_args():
     # redirect standard out/error to logging
     sys.stdout = logs.LogWriter(config.logger.info)
     sys.stderr = logs.LogWriter(config.logger.error)
+    
+    # load preferences file
+    config.prefs = prefs_prof.PrefsProfile()
+    config.prefs.add_profiles(str(config.PREFS_PATH))
     
     if args.version:
         # print version info and exit
@@ -1228,6 +1235,8 @@ def shutdown():
     importer.stop_jvm()
     if config.db is not None:
         config.db.conn.close()
+    if config.prefs is not None:
+        config.prefs.save_settings(config.PREFS_PATH)
     sys.exit()
 
     

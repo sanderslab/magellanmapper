@@ -3,23 +3,26 @@
 """YAML file format input/output."""
 
 from enum import Enum
-from typing import Dict
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, Union
 
 import yaml
 
 from magmap.io import libmag
 
+if TYPE_CHECKING:
+    import pathlib
 
-def _filter_dict(d, fn_parse_val):
+
+def _filter_dict(d: Dict, fn_parse_val: Callable[[Any], Any]) -> Dict:
     """Recursively filter keys and values within nested dictionaries
     
     Args:
-        d (dict): Dictionary to filter.
-        fn_parse_val (func): Function to apply to each value. Should call
+        d: Dictionary to filter.
+        fn_parse_val: Function to apply to each value. Should call
             this parent function if deep recursion is desired.
 
     Returns:
-        dict: Filtered dictionary.
+        Filtered dictionary.
 
     """
     out = {}
@@ -39,17 +42,19 @@ def _filter_dict(d, fn_parse_val):
     return out
 
 
-def load_yaml(path, enums=None):
+def load_yaml(
+        path: Union[str, "pathlib.Path"],
+        enums: Optional[Dict[str, Enum]] = None) -> List[Dict]:
     """Load a YAML file with support for multiple documents and Enums.
 
     Args:
-        path (str): Path to YAML file.
-        enums (dict): Dictionary mapping Enum names to Enum classes; defaults
+        path: Path to YAML file.
+        enums: Dictionary mapping Enum names to Enum classes; defaults
             to None. If a key or value in the YAML file matches an Enum name
             followed by a period, the corresponding Enum will be used.
 
     Returns:
-        List[dict]: Sequence of parsed dictionaries for each document within
+        Sequence of parsed dictionaries for each document within
         a YAML file.
     
     Raises:
@@ -87,8 +92,8 @@ def load_yaml(path, enums=None):
 
 
 def save_yaml(
-        path: str, data: Dict, use_primitives: bool = False,
-        convert_enums: bool = False) -> Dict:
+        path: Union[str, "pathlib.Path"], data: Dict,
+        use_primitives: bool = False, convert_enums: bool = False) -> Dict:
     """Save a dictionary to YAML file format.
     
     Args:

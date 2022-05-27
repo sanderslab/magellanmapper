@@ -391,6 +391,15 @@ def process_cli_args():
     # only parse recognized arguments to avoid error for unrecognized ones
     args, args_unknown = parser.parse_known_args()
 
+    # set up application directories
+    user_dir = config.user_app_dirs.user_data_dir
+    if not os.path.isdir(user_dir):
+        # make application data directory
+        if os.path.exists(user_dir):
+            # backup any non-directory file
+            libmag.backup_file(user_dir)
+        os.makedirs(user_dir)
+
     if args.verbose is not None:
         # verbose mode and logging setup
         config.verbose = True
@@ -702,15 +711,6 @@ def process_cli_args():
         print("Set to use themes to {}".format(theme_names))
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
-    
-    # set up application directories
-    user_dir = config.user_app_dirs.user_data_dir
-    if not os.path.isdir(user_dir):
-        # make application data directory
-        if os.path.exists(user_dir):
-            # backup any non-directory file
-            libmag.backup_file(user_dir)
-        os.makedirs(user_dir)
     
     if args.db:
         # set main database path to user arg

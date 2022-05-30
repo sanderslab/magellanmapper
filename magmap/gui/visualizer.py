@@ -843,6 +843,7 @@ class Visualization(HasTraits):
         HSplit(
             panel_options,
             panel_figs,
+            id=f"{__name__}.panel_split",
         ),
         # initial window width, which can be resized down to the minimum
         # widths of each panel in the HSplit

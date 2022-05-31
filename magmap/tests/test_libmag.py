@@ -76,7 +76,7 @@ class TestLibmag(unittest.TestCase):
         
     def test_splice_before(self):
         self.assertEqual(
-            libmag.splice_before("base", "file", "edit"), ("base",))
+            libmag.splice_before("base", "file", "edit"), "base")
         self.assertEqual(libmag.splice_before(
             "foo/bar/item.py", "item", "file"), "foo/bar/file_item.py")
         self.assertEqual(libmag.splice_before(

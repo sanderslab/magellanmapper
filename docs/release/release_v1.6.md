@@ -68,12 +68,13 @@
 
 #### Python stats and plots
 
+- Generate swarm plots in Seaborn (#137)
 - Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
 - Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
 - New plot label sub-arguments (#135):
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
-  - `--plot_labels vspan_col=<col>`: column denoting vertical span groups
+  - `--plot_labels vspan_col=<col> vspan_format=<str>`: column denoting vertical span groups and string format for them, respectively (#135, 137)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 
@@ -98,6 +99,7 @@
 - Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
+- Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
 
 #### R Dependency Changes
 

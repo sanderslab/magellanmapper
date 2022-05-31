@@ -858,21 +858,29 @@ class Visualization(HasTraits):
         # set ID to trigger saving TraitsUI preferences for window size/position
         id=f"{__name__}.{__qualname__}",
     )
-
+    
     def __init__(self):
         """Initialize GUI."""
         HasTraits.__init__(self)
         
+        # get saved preferences
+        prefs = config.prefs
+        
         # set up callback flags
         self._ignore_roi_offset_change = False
         
-        # default options setup
+        # set up ROI Editor option
         self._set_border(True)
-        self._circles_2d = [
-            roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
-        self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
-        self._styles_2d = [Styles2D.SQUARE.value]
+        self._circles_2d = [self.validate_pref(
+            prefs.roi_circles, roi_editor.ROIEditor.CircleStyles.CIRCLES.value,
+            roi_editor.ROIEditor.CircleStyles)]
+        self._planes_2d = [self.validate_pref(
+            prefs.roi_plane, self._DEFAULTS_PLANES_2D[0],
+            self._DEFAULTS_PLANES_2D)]
+        self._styles_2d = [self.validate_pref(
+            prefs.roi_styles, Styles2D.SQUARE.value, Styles2D)]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
+        
         self._check_list_3d = [
             Vis3dOptions.RAW.value, Vis3dOptions.SURFACE.value]
         if (config.roi_profile["vis_3d"].lower()
@@ -2549,6 +2557,11 @@ class Visualization(HasTraits):
         self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
+        
+        # store selected 2D options
+        config.prefs.roi_circles = self._circles_2d[0]
+        config.prefs.roi_plane = self._planes_2d[0]
+        config.prefs.roi_styles = self._styles_2d[0]
 
     def launch_atlas_editor(self):
         if config.image5d is None:

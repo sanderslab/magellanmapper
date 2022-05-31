@@ -9,6 +9,15 @@ from magmap.settings import profiles
 class PrefsProfile(profiles.SettingsDict):
     """Application preferences profile."""
     
+    #: ROI Editor circles style.
+    roi_circles: str = ""
+    
+    #: ROI Editor planes selection.
+    roi_plane: str = ""
+    
+    #: ROI Editor styles selection.
+    roi_styles: str = ""
+    
     #: Figure save directory path.
     fig_save_dir: str = ""
     

@@ -60,6 +60,7 @@ config = {
         "all": [
             "matplotlib_scalebar", 
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
+            "seaborn",  # for Seaborn-based plots
             *_EXTRAS_PANDAS,
             *_EXTRAS_IMPORT,  
             *_EXTRAS_AWS, 

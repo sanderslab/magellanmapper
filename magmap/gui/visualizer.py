@@ -958,6 +958,28 @@ class Visualization(HasTraits):
         # set up image
         self._setup_for_image()
 
+    @staticmethod
+    def validate_pref(val, default, choices):
+        """Validate a preference setting.
+        
+        Args:
+            val: Preference value to assign.
+            default: Default value if ``val`` is invalid.
+            choices: Valid preference values.
+
+        Returns:
+            ``val`` if a valid value, otherwise ``default``.
+
+        """
+        try:
+            if issubclass(choices, Enum):
+                choices = [e.value for e in choices]
+        except TypeError:
+            pass
+        if val not in choices:
+            val = default
+        return val
+
     def _init_channels(self):
         """Initialize channel check boxes for the currently loaded main image.
 

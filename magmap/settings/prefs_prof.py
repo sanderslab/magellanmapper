@@ -1,9 +1,17 @@
 """Preferences profile"""
 
+import dataclasses
+
 from magmap.settings import profiles
 
 
+@dataclasses.dataclass
 class PrefsProfile(profiles.SettingsDict):
+    """Application preferences profile."""
+    
+    #: Figure save directory path.
+    fig_save_dir: str = ""
+    
     def __init__(self, *args, **kwargs):
         """Initialize a preferences profile dictionary.
         
@@ -11,10 +19,4 @@ class PrefsProfile(profiles.SettingsDict):
             *args: 
             **kwargs: 
         """
-        super().__init__(self)
-        self[self.NAME_KEY] = self.DEFAULT_NAME
-        
-        self["fig_save_dir"] = ""
-        
-        # update with args
-        self.update(*args, **kwargs)
+        super().__init__(self, *args, **kwargs)

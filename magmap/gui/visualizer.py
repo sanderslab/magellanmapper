@@ -2671,7 +2671,7 @@ class Visualization(HasTraits):
         if save_dialog.open() == OK:
             # get user selected path and update preferences
             path = save_dialog.path
-            config.prefs["fig_save_dir"] = os.path.dirname(path)
+            config.prefs.fig_save_dir = os.path.dirname(path)
             return path
         else:
             # user canceled file selection
@@ -2683,7 +2683,7 @@ class Visualization(HasTraits):
         path = None
         try:
             # get the figure save directory from preferences
-            save_dir = config.prefs["fig_save_dir"]
+            save_dir = config.prefs.fig_save_dir
             
             if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
                 if self.roi_ed is not None:

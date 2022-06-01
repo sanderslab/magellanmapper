@@ -62,11 +62,10 @@ def grid_search(
             print("adding iterable setting {}".format(key2))
             iterable_keys.append(key2)
             
-    def grid_iterate(i, iterable_keys, grid_dict, name, parent_params):
+    def grid_iterate(i, grid_dict, name, parent_params):
         key = iterable_keys[i]
         name = key if name is None else name + "-" + key
         print("name: {}".format(name))
-        stats = []
         if i < len(iterable_keys) - 1:
             name += "("
             for j in grid_dict[key]:
@@ -82,7 +81,7 @@ def grid_search(
                 else:
                     name += " {}".format(j)
                 grid_iterate(
-                    i + 1, iterable_keys, grid_dict, name, parent_params)
+                    i + 1, grid_dict, name, parent_params)
         else:
             # process each value in parameter array
             stats = []
@@ -98,7 +97,7 @@ def grid_search(
             iterable_dict[name] = (
                 stats, last_param_vals, key, parent_params)
     
-    grid_iterate(0, iterable_keys, hyperparams, None, OrderedDict())
+    grid_iterate(0, hyperparams, None, OrderedDict())
     stats_dict["grid"] = iterable_dict
     
     # summary of each file collected together

@@ -92,10 +92,6 @@ class SettingsDict(dict):
         
         # update with args
         self.update(*args, **kwargs)
-
-        #: bool: add a modifier directly as a value rather than updating
-        # this dict's settings with the corresponding keys
-        self._add_mod_directly = False
     
     def __repr__(self):
         """Represent with dict items and data class attributes."""
@@ -219,30 +215,6 @@ class SettingsDict(dict):
                 mods = self.profiles[profile_name]
         return mods
     
-    def add_profile(
-            self, profile_name: str,
-            mods: Optional[Dict[Union[str, Enum], Union[Dict, str]]]):
-        """Add a profile dictionary into this dictionary.
-        
-        The profile can consist of a subset of keys in this dictionary that
-        will override the current values of the corresponding keys.
-        If both the original and new value are dictionaries for any given key,
-        the original dictionary will be updated with rather than overwritten
-        by the new value.
-
-        Args:
-            profile_name: Name of the modifier, which will be appended to
-                the name of the current settings.
-            mods: Dictionary with which to update this instance.
-        
-        """
-        self[self.NAME_KEY] += self.delimiter + profile_name
-        if self._add_mod_directly:
-            # add/replace the value at mod_name with the found value
-            self[profile_name] = mods
-        else:
-            self.modify_settings(mods)
-
     def add_profiles(self, names_str):
         """Add profiles by names and files.
         
@@ -264,7 +236,8 @@ class SettingsDict(dict):
             # profiles determines the precedence of settings
             mods = self.get_profile(profile)
             if mods:
-                self.add_profile(profile, mods)
+                self[self.NAME_KEY] += self.delimiter + profile
+                self.modify_settings(mods)
 
         if config.verbose:
             _logger.debug("settings for '%s':", self[self.NAME_KEY])

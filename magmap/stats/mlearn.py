@@ -5,6 +5,7 @@
 
 from collections import OrderedDict
 from enum import Enum
+from typing import Any, Callable, Sequence, Tuple
 
 import numpy as np
 
@@ -26,7 +27,9 @@ class GridSearchStats(Enum):
     FDR = "FDR"  # false discovery rate
 
 
-def grid_search(roc_dict, fnc, *fnc_args):
+def grid_search(
+        hyperparams: OrderedDict, fnc: Callable[[Any], Tuple[Any, Sequence]],
+        *fnc_args) -> OrderedDict:
     """Perform a grid search for hyperparameter optimization.
 
     A separate grid search will be performed for each item in ``roc_dict``.
@@ -34,76 +37,70 @@ def grid_search(roc_dict, fnc, *fnc_args):
     settings from the prior search.
 
     Args:
-        roc_dict (dict): Nested dictionary, where each sub-dictionary
-            contains sequences of the format:
+        hyperparams: Ordered dictionary with sequences of the format:
             ``(:class:`profiles.ROIProfile` parameter, (a, b, c, ...))``.
-        fnc (func): Function to call during the grid search, which must
+        fnc: Function to call during the grid search, which must
             return ``stats, summaries``.
         *fnc_args: Arguments to pass to ``fnc``.
 
     Returns:
-        :dict: Dictionary of stats suitable for parsing in
-        :meth:`parse_grid_stats`.
+        Dictionary of stats suitable for parsing in :meth:`parse_grid_stats`.
 
     """
     # gets the ROC settings
     settings = config.roi_profile
     stats_dict = OrderedDict()
     file_summaries = []
-    for key, hyperparams in roc_dict.items():
-        # perform grid search on hyperparameter dict
-        # TODO: consider whether to reset settings between grid searches
-        if not isinstance(hyperparams, dict):
-            continue
-        iterable_keys = []  # hyperparameters to iterate through
-        iterable_dict = OrderedDict() # group results
-        for key2, value2 in hyperparams.items():
-            if np.isscalar(value2):
-                # set scalar values rather than iterating and processing
-                settings[key2] = value2
-                print("changed {} to {}".format(key2, value2))
-            else:
-                print("adding iterable setting {}".format(key2))
-                iterable_keys.append(key2)
-                
-        def grid_iterate(i, iterable_keys, grid_dict, name, parent_params):
-            key = iterable_keys[i]
-            name = key if name is None else name + "-" + key
-            print("name: {}".format(name))
+    iterable_keys = []  # hyperparameters to iterate through
+    iterable_dict = OrderedDict()  # group results
+    for key2, value2 in hyperparams.items():
+        if np.isscalar(value2):
+            # set scalar values rather than iterating and processing
+            settings[key2] = value2
+            print("changed {} to {}".format(key2, value2))
+        else:
+            print("adding iterable setting {}".format(key2))
+            iterable_keys.append(key2)
+            
+    def grid_iterate(i, iterable_keys, grid_dict, name, parent_params):
+        key = iterable_keys[i]
+        name = key if name is None else name + "-" + key
+        print("name: {}".format(name))
+        stats = []
+        if i < len(iterable_keys) - 1:
+            name += "("
+            for j in grid_dict[key]:
+                settings[key] = j
+                # track parents and their values for given run
+                parent_params = parent_params.copy()
+                parent_params[key] = j
+                paren_i = name.rfind("(")
+                if paren_i != -1:
+                    name = name[:paren_i]
+                if libmag.is_number(j):
+                    name += "({:.3g})".format(j)
+                else:
+                    name += " {}".format(j)
+                grid_iterate(
+                    i + 1, iterable_keys, grid_dict, name, parent_params)
+        else:
+            # process each value in parameter array
             stats = []
-            if i < len(iterable_keys) - 1:
-                name += "("
-                for j in grid_dict[key]:
-                    settings[key] = j
-                    # track parents and their values for given run
-                    parent_params = parent_params.copy()
-                    parent_params[key] = j
-                    paren_i = name.rfind("(")
-                    if paren_i != -1:
-                        name = name[:paren_i]
-                    if libmag.is_number(j):
-                        name += "({:.3g})".format(j)
-                    else:
-                        name += " {}".format(j)
-                    grid_iterate(
-                        i + 1, iterable_keys, grid_dict, name, parent_params)
-            else:
-                # process each value in parameter array
-                stats = []
-                last_param_vals = grid_dict[key]
-                for param in last_param_vals:
-                    print("===============================================\n"
-                          "Grid search hyperparameters {} for {}"
-                          .format(name, libmag.format_num(param, 3)))
-                    settings[key] = param
-                    stat, summaries = fnc(*fnc_args)
-                    stats.append(stat)
-                    file_summaries.extend(summaries)
-                iterable_dict[name] = (
-                    stats, last_param_vals, key, parent_params)
-        
-        grid_iterate(0, iterable_keys, hyperparams, None, OrderedDict())
-        stats_dict[key] = iterable_dict
+            last_param_vals = grid_dict[key]
+            for param in last_param_vals:
+                print("===============================================\n"
+                      "Grid search hyperparameters {} for {}"
+                      .format(name, libmag.format_num(param, 3)))
+                settings[key] = param
+                stat, summaries = fnc(*fnc_args)
+                stats.append(stat)
+                file_summaries.extend(summaries)
+            iterable_dict[name] = (
+                stats, last_param_vals, key, parent_params)
+    
+    grid_iterate(0, iterable_keys, hyperparams, None, OrderedDict())
+    stats_dict["grid"] = iterable_dict
+    
     # summary of each file collected together
     for summary in file_summaries:
         print(summary)

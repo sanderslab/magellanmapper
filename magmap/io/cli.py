@@ -1086,7 +1086,7 @@ def _grid_search(series_list: List[int]):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            config.grid_search_profile, _detect_subimgs,
+            config.grid_search_profile.hyperparams, _detect_subimgs,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
         parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)

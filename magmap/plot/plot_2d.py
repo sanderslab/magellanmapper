@@ -700,7 +700,8 @@ def plot_scatter(
         col_y: Optional[Union[str, Sequence[str]]] = None,
         col_annot: Optional[str] = None,
         cols_group: Optional[Sequence[str]] = None,
-        names_group: Optional[Sequence[str]] = None,
+        names_group: Optional[Union[
+            Sequence[str], Callable[[str], str]]] = None,
         fig_size: Optional[Sequence[float]] = None, show: bool = True,
         suffix: Optional[str] = None, df: Optional[pd.DataFrame] = None,
         xy_line: bool = False, col_size: Optional[str] = None,
@@ -721,10 +722,10 @@ def plot_scatter(
             If not found, y-values are set to 0 if ``col_x`` is only one column.
         col_annot: Name of column with annotations for each point; defaults to
             None. Can be the name of the index column.
-        cols_group (Sequence[str]): Sequence of column names; defaults to None.
+        cols_group: Sequence of column names; defaults to None.
             Each unique combination in these columns specifies a group
             to plot separately.
-        names_group (Sequence[str]): Sequence of names to display;
+        names_group: Sequence of names to display;
             defaults to None, in which case a name based on ``cols_groups``
             will be used instead. Length should equal that of groups based
             on ``cols_group``.
@@ -744,22 +745,22 @@ def plot_scatter(
         annot_arri: Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
-        alpha (float): Point transparency value, from 0-1; defaults to None,
+        alpha: Point transparency value, from 0-1; defaults to None,
             in which case 1.0 will be used.
-        legend_loc (str): Legend location, which should be one of
+        legend_loc: Legend location, which should be one of
             :attr:``plt.legend.loc`` values; defaults to "best".
-        ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
-        save (bool): True to save the plot; defaults to True.
-        annot_thresh_fn (func): Function accepting ``x, y`` and returning
+        ax: Matplotlib axes; defaults to None.
+        save: True to save the plot; defaults to True.
+        annot_thresh_fn: Function accepting ``x, y`` and returning
             a boolean indicated whether to annotate the given point;
             defaults to False.
         colors: Color or sequence of colors for each point; defaults to None.
             If None, distinct colors are auto-generated for each pair of x-y
             column or for each group.
-        kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
+        kwargs: Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
-        :class:`matplotlib.image.Axes`: Matplotlib plot.
+        Matplotlib plot axes.
     
     """
     def get_ys(df_y, column):
@@ -862,6 +863,8 @@ def plot_scatter(
             colors = colormaps.discrete_colormap(
                 num_groups, prioritize_default="cn", seed=config.seed,
                 alpha=alpha) / 255
+        
+        names_group_is_fn = callable(names_group)
         for i, group in enumerate(groups):
             # plot all points in each group with same color
             df_group = df
@@ -871,14 +874,22 @@ def plot_scatter(
                 mask = df_groups == group
                 df_group = df.loc[mask]
                 if col_size is not None: sizes_plot = sizes_plot[mask]
-                if names_group is None:
-                    # make label from group names and values
-                    label = ", ".join(
-                        ["{} {}".format(name, libmag.format_num(val, 3))
-                         for name, val in zip(cols_group, group.split(","))])
+                
+                if names_group is None or names_group_is_fn:
+                    # make legend label from group names and values
+                    labels = []
+                    for name, val in zip(cols_group, group.split(",")):
+                        if names_group_is_fn:
+                            # format name by function
+                            name = names_group(name)
+                        labels.append(f"{name} {libmag.format_num(val, 3)}")
+                    label = ", ".join(labels)
+                
                 else:
                     # use given group name directly
                     label = names_group[i]
+            
+            # get x- and y-values and plot
             xs = df_group[col_x]
             ys = get_ys(df_group, col_y)
             plot()
@@ -934,29 +945,34 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
         xy_line=True, col_size=col_size, **kwargs)
 
 
-def plot_roc(df, show=True, annot_arri=None, **kwargs):
+def plot_roc(
+        df: pd.DataFrame, show: bool = True, annot_arri: Optional[int] = None,
+        **kwargs) -> "axes.Axes":
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
     Args:
-        df (:class:`pandas.DataFrame`): Data frame generated from
+        df: Data frame generated from
             :meth:``mlearn.parse_grid_stats``.
-        show (bool): True to display the plot in :meth:``plot_scatter``;
+        show: True to display the plot in :meth:``plot_scatter``;
             defaults to True.
-        annot_arri (int): Int as index or slice of indices of annotation value
+        annot_arri: Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
-        kwargs (Any): Extra arguments to :meth:`plot_support.plot_scatter`.
+        kwargs: Extra arguments to :meth:`plot_support.plot_scatter`.
     
     Returns:
-        :class:`matplotlib.image.Axes`: Matplotlib plot.
+        Matplotlib plot axes.
     
     """
+    def format_col(col):
+        # format column name for plot
+        return col[start+1:].replace("_", " ")
+    
     # names of hyperparameters for each group name, with hyperparameters 
     # identified by param prefix
     cols_group = [col for col in df
                   if col.startswith(mlearn.GridSearchStats.PARAM.value)]
     start = len(mlearn.GridSearchStats.PARAM.value)
-    names_group = [col[start+1:] for col in cols_group]
     
     # add extra arguments unless already set in kwargs
     libmag.add_missing_keys({
@@ -964,7 +980,7 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
         "ylabel": "Sensitivity",
         "xlim": (0, 1),
         "ylim": (0, 1),
-        "title": "Nuclei Detection ROC Over {}".format(names_group[-1]),
+        "title": f"ROC Over {format_col(cols_group[-1])}",
     }, kwargs)
     if "path" in kwargs:
         path = kwargs["path"]
@@ -977,7 +993,7 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
     return plot_scatter(
         path, mlearn.GridSearchStats.FDR.value,
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
-        names_group, df=df, show=show, annot_arri=annot_arri,
+        format_col, df=df, show=show, annot_arri=annot_arri,
         legend_loc="lower right", **kwargs)
 
 

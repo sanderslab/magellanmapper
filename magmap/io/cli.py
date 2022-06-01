@@ -1089,10 +1089,10 @@ def _grid_search(series_list: List[int]):
             config.grid_search_profile.hyperparams, _detect_subimgs,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
-        parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
-        for stats_df in stats_dfs:
-            # plot ROC curve
-            plot_2d.plot_roc(stats_df, config.show)
+        parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
+        
+        # plot ROC curve
+        plot_2d.plot_roc(stats_df, config.show)
 
 
 def process_file(

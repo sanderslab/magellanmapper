@@ -107,26 +107,31 @@ def saturate_roi(
     return roi_out
 
 
-def denoise_roi(roi, channel=None):
-    """Apply further saturation, denoising, unsharp filtering, and erosion
-    as image preprocessing for blob detection.
+def denoise_roi(
+        roi: np.ndarray, channel: Optional[Sequence[int]] = None) -> np.ndarray:
+    """Denoise and further preprocess an image.
+    
+    Applies saturation, denoising, unsharp filtering, and erosion as image
+    preprocessing for blob detection.
 
     Each step can be configured including turned off by
-    :attr:`config.process_settings`.
+    :attr:`magmap.settings.config.roi_profiles`.
     
     Args:
         roi: Region of interest as a 3D (z, y, x) array. Note that 4D arrays 
             with channels are not allowed as the Scikit-Image gaussian filter 
             only accepts specifically 3 channels, presumably for RGB.
-        channel (List[int]): Sequence of channel indices in ``roi`` to
+        channel: Sequence of channel indices in ``roi`` to
             saturate. Defaults to None to use all channels.
     
     Returns:
         Denoised region of interest.
+    
     """
     multichannel, channels = setup_channels(roi, channel, 3)
     roi_out = None
     for chl in channels:
+        # get single channel
         roi_show = roi[..., chl] if multichannel else roi
         settings = config.get_roi_profile(chl)
         # find gross density
@@ -145,10 +150,7 @@ def denoise_roi(roi, channel=None):
         unsharp_strength = settings["unsharp_strength"]
         if unsharp_strength:
             blur_size = 8
-            # turn off multichannel since assume operation on single channel at
-            # a time and to avoid treating as multichannel if 3D ROI happens to
-            # have x size of 3
-            blurred = filters.gaussian(denoised, blur_size, multichannel=False)
+            blurred = filters.gaussian(denoised, blur_size)
             high_pass = denoised - unsharp_strength * blurred
             denoised = denoised + high_pass
         

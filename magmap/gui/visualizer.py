@@ -1480,9 +1480,11 @@ class Visualization(HasTraits):
             self._atlas_label = ontology.get_label(
                 center[::-1], config.labels_img, config.labels_ref_lookup, 
                 config.labels_scaling, level, rounding=True)
-            if self._atlas_label is not None:
+            
+            if self._atlas_label is not None and self.scene_3d_shown:
                 title = ontology.get_label_name(self._atlas_label)
                 if title is not None:
+                    # update title in 3D viewer
                     self._mlab_title = self.scene.mlab.title(title)
     
     def _post_3d_display(self, title="clrbrain3d", show_orientation=True):

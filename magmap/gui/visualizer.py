@@ -62,7 +62,7 @@ from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
     vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
-from magmap.settings import config, profiles
+from magmap.settings import config, prefs_prof, profiles
 
 
 # logging instance
@@ -3225,8 +3225,11 @@ class Visualization(HasTraits):
     @on_trait_change("_profiles_reset_prefs_btn")
     def _reset_prefs(self):
         """Handle button to reset preferences."""
-        # trigger reset in handler
+        # trigger resetting TraitsUI prefs in handler
         self._profiles_reset_prefs = True
+        
+        # reset preferences profile
+        config.prefs = prefs_prof.PrefsProfile()
     
     @on_trait_change("_import_browser")
     def _add_import_file(self):

@@ -260,7 +260,7 @@ class LabelsRef:
                            f"file: {e}")
         return id_dict
 
-    def get_ref_lookup_as_df(self):
+    def get_ref_lookup_as_df(self) -> Optional[pd.DataFrame]:
         """Get the reference lookup dict as a data frame.
         
         Returns:
@@ -268,6 +268,10 @@ class LabelsRef:
             as-is if it is already a data frame.
 
         """
+        if self.ref_lookup is None:
+            # return immediately if no reference dict to convert
+            return None
+        
         if isinstance(self.ref_lookup, pd.DataFrame):
             # return existing data frame
             return self.ref_lookup

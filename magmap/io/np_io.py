@@ -235,6 +235,7 @@ def setup_images(
     config.labels_img_orig = None
     config.borders_img = None
     config.labels_meta = None
+    config.labels_ref = None
     
     # reset blobs
     config.blobs = None
@@ -430,18 +431,20 @@ def setup_images(
         labels_path_ref = config.labels_metadata.path_ref
         if labels_path_ref:
             path_labels_refs.append(labels_path_ref)
+        labels_ref = None
         for ref in path_labels_refs:
             if not ref: continue
             try:
                 # load labels reference file
-                ref_lookup = ontology.LabelsRef(ref).load().ref_lookup
-                if ref_lookup is not None:
-                    config.labels_ref_lookup = ref_lookup
+                labels_ref = ontology.LabelsRef(ref).load()
+                if labels_ref.ref_lookup is not None:
+                    config.labels_ref = labels_ref
                     _logger.debug("Loaded labels reference file from %s", ref)
                     break
             except (FileNotFoundError, KeyError):
                 pass
-        if path_labels_refs and config.labels_ref_lookup is None:
+        if path_labels_refs and (
+                labels_ref is None or labels_ref.ref_lookup is None):
             # warn if labels path given but none found
             _logger.warn(
                 "Unable to load labels reference file from '%s', skipping",

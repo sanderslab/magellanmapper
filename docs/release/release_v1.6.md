@@ -10,6 +10,7 @@
 
 #### GUI
 
+- More preferences are saved, such as the figure save location and ROI Editor layout (#138)
 - "Blend" option in the image adjustment panel to visualize alignment in overlaid images
 - Drag and remove loaded profiles in the Profiles tab table
 - "Help" buttons added to open the online documentation (#109)
@@ -55,6 +56,7 @@
 
 - Match-based colocalizations use larger processing blocks to avoid gaps (#120)
 - Voxel density maps no longer require a registered image (#125)
+- Grid search profiles are now layered on top of one another rather than applied in sequential runs for consistency with ROI and atlas profiles (#138)
 - Fixed 3D surface area measurement with Scikit-image >= v0.19
 
 #### I/O
@@ -91,12 +93,14 @@
 #### Code base and docs
 
 - Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)
+- Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
 
 ### Dependency Updates
 
 #### Python Dependency Changes
 
 - Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
+- The `dataclasses` backport is installed for Python < 3.7
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)

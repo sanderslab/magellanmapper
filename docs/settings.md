@@ -2,11 +2,11 @@
 
 MagellanMapper supports settings configuration at different levels of "permanence." Starting from the most transient to more enduring settings, these settings are:
 
-1. Graphical user interface (GUI) controls, configurable during runtime
+1. Graphical user interface (GUI) controls, configurable during runtime and saved as preferences
 1. Command-line arguments, set at launch time
 1. Profiles, groups of settings saved in a file and set at launch time or loaded through the GUI
 
-Additional data and settings such as blob detections are stored in the user application folder.
+Additional data such as blob detections are stored in a database.
 
 ## User Application Folder
 
@@ -19,7 +19,13 @@ Previously, the database (`magmap.db`) was stored in the application root folder
 
 ## GUI Parameters
 
-The ROI selector provides many options for displaying 2D and 3D regions of interest. Users can select these parameters through checkboxes, sliders, text input, or other controls. Currently these settings are reset with each program launch.
+The ROI selector provides many options for displaying 2D and 3D regions of interest. Users can select these parameters through checkboxes, sliders, text input, or other controls. GUI state is stored in two places:
+- TraitUI database: the GUI library maintains a database that stores a few settings such as window size and position
+- Preferences profile: some GUI settings are saved to `<user-app-dir>/prefs.yaml`
+
+In v1.6, we introduced preference saving by enabling the TraitsUI mechanism and adding a profile type for preferences, similar to ROI and atlas profiles. Currently, only a small subset of GUI controls are saved, and more will neeed to be added.
+
+To reset preferences, go to the "Profiles" tab and press the "Reset Preferences" button. It clears the TraitsUI database and resets the currently loaded preferences profile without otherwise altering the current state of the application. When the application is closed, preferences are resaved based on the current app state.
 
 ## Command-Line Arguments
 

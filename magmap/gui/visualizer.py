@@ -1469,8 +1469,9 @@ class Visualization(HasTraits):
         if self._mlab_title is not None:
             self._mlab_title.remove()
             self._mlab_title = None
-        if (config.labels_ref_lookup is not None and curr_offset is not None 
-            and curr_roi_size is not None):
+        if (config.labels_ref is not None and
+                config.labels_ref.ref_lookup is not None and
+                curr_offset is not None and curr_roi_size is not None):
             center = np.add(
                 curr_offset, 
                 np.around(np.divide(curr_roi_size, 2)).astype(np.int))
@@ -1478,7 +1479,7 @@ class Visualization(HasTraits):
             if level == self._structure_scale_high:
                 level = None
             self._atlas_label = ontology.get_label(
-                center[::-1], config.labels_img, config.labels_ref_lookup, 
+                center[::-1], config.labels_img, config.labels_ref.ref_lookup, 
                 config.labels_scaling, level, rounding=True)
             
             if self._atlas_label is not None and self.scene_3d_shown:
@@ -2837,6 +2838,10 @@ class Visualization(HasTraits):
             self._roi_feedback = "No labels image loaded to find region"
             return
 
+        if config.labels_ref is None or config.labels_ref.ref_lookup is None:
+            self._roi_feedback = "No labels reference loaded to find region"
+            return
+
         # user-given region can be a comma-delimited list of region IDs
         # in the labels reference dict
         region_id_split = self._region_id.split(",")
@@ -2863,7 +2868,7 @@ class Visualization(HasTraits):
             region_ids.append(region_id)
         incl_chil = RegionOptions.INCL_CHILDREN.value in self._region_options
         centroid, self._img_region, region_ids = ontology.get_region_middle(
-            config.labels_ref_lookup, region_ids, config.labels_img,
+            config.labels_ref.ref_lookup, region_ids, config.labels_img,
             config.labels_scaling, both_sides=both_sides,
             incl_children=incl_chil)
         if centroid is None:

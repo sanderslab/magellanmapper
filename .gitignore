@@ -8,6 +8,7 @@ __pycache__
 *.sif
 *.zip
 docs/_build
+docs/magmap*.rst
 stats/.*
 .Rproj.user
 build

@@ -138,6 +138,16 @@ class ImageSyncMixin:
         for plot_ed in self.plot_eds.values():
             plot_ed._show_crosslines = val
 
+    def set_labels_level(self, val: int):
+        """Set the labels level all Plot Editors.
+
+        Args:
+            val: Labels level.
+
+        """
+        for plot_ed in self.plot_eds.values():
+            plot_ed.labels_level = val
+
     def update_max_intens_proj(self, shape, display=False):
         """Update max intensity projection planes.
         

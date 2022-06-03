@@ -405,6 +405,31 @@ def setup_images(
     config.labels_metadata = labels_meta.LabelsMeta(
         f"{path}." if config.prefix else path).load()
     
+    # load labels reference file, prioritizing path given by user
+    # and falling back to any extension matching PATH_LABELS_REF
+    path_labels_refs = [config.load_labels]
+    labels_path_ref = config.labels_metadata.path_ref
+    if labels_path_ref:
+        path_labels_refs.append(labels_path_ref)
+    labels_ref = None
+    for ref in path_labels_refs:
+        if not ref: continue
+        try:
+            # load labels reference file
+            labels_ref = ontology.LabelsRef(ref).load()
+            if labels_ref.ref_lookup is not None:
+                config.labels_ref = labels_ref
+                _logger.debug("Loaded labels reference file from %s", ref)
+                break
+        except (FileNotFoundError, KeyError):
+            pass
+    if path_labels_refs and (
+            labels_ref is None or labels_ref.ref_lookup is None):
+        # warn if labels path given but none found
+        _logger.warn(
+            "Unable to load labels reference file from '%s', skipping",
+            path_labels_refs)
+
     if annotation_suffix is not None:
         try:
             # load labels image
@@ -424,31 +449,6 @@ def setup_images(
             # labels images
             config.labels_scaling = importer.calc_scaling(
                 config.image5d, config.labels_img)
-        
-        # load labels reference file, prioritizing path given by user
-        # and falling back to any extension matching PATH_LABELS_REF
-        path_labels_refs = [config.load_labels]
-        labels_path_ref = config.labels_metadata.path_ref
-        if labels_path_ref:
-            path_labels_refs.append(labels_path_ref)
-        labels_ref = None
-        for ref in path_labels_refs:
-            if not ref: continue
-            try:
-                # load labels reference file
-                labels_ref = ontology.LabelsRef(ref).load()
-                if labels_ref.ref_lookup is not None:
-                    config.labels_ref = labels_ref
-                    _logger.debug("Loaded labels reference file from %s", ref)
-                    break
-            except (FileNotFoundError, KeyError):
-                pass
-        if path_labels_refs and (
-                labels_ref is None or labels_ref.ref_lookup is None):
-            # warn if labels path given but none found
-            _logger.warn(
-                "Unable to load labels reference file from '%s', skipping",
-                path_labels_refs)
     
     if borders_suffix is not None:
         # load borders image, which can also be another labels image

@@ -1803,13 +1803,8 @@ class Visualization(HasTraits):
             self._main_img_name = self._main_img_names.selections[0]
             self._labels_img_name = labels_suffix
             
-            # get labels reference file path, prioritizing CLI arg, and
             # populate labels reference path field
-            lbls_ref = config.load_labels
-            if not lbls_ref and config.labels_metadata:
-                lbls_ref = config.labels_metadata.path_ref
-            if not lbls_ref:
-                lbls_ref = ""
+            lbls_ref = config.labels_ref.path_ref if config.labels_ref else ""
             self._labels_ref_path = lbls_ref
 
             # populate region names combo box

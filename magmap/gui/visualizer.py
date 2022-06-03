@@ -43,9 +43,9 @@ from pyface.api import FileDialog, OK
 from pyface.image_resource import ImageResource
 from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
     Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
-from traitsui.api import View, Item, HGroup, VGroup, Tabbed, RangeEditor, \
-    HSplit, TabularEditor, CheckListEditor, FileEditor, TextEditor, \
-    ArrayEditor, BooleanEditor
+from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
+    EnumEditor, FileEditor, HGroup, HSplit, Item, RangeEditor, TextEditor, \
+    VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -172,6 +172,7 @@ class RegionOptions(Enum):
     """Enumerations for region options."""
     BOTH_SIDES = "Both sides"
     INCL_CHILDREN = "Include children"
+    APPEND = "Append"
 
 
 class AtlasEditorOptions(Enum):
@@ -480,6 +481,8 @@ class Visualization(HasTraits):
     _structure_scale = Int  # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
+    _region_name = Str
+    _region_names = Instance(TraitsList)
     _region_id = Str
     _region_options = List
     
@@ -593,14 +596,18 @@ class Visualization(HasTraits):
                      high_name="_structure_scale_high",
                      mode="slider")),
         ),
+        Item("_region_name", label="Region",
+             editor=EnumEditor(
+                 name="object._region_names.selections",
+                 completion_mode="popup", evaluate=True)),
         HGroup(
-            Item("_region_id", label="Region",
+            Item("_region_id", label="IDs",
                  editor=TextEditor(
                      auto_set=False, enter_set=True, evaluate=str)),
             Item("_region_options", style="custom", show_label=False,
                  editor=CheckListEditor(
-                     values=[e.value for e in RegionOptions], cols=2,
-                     format_func=lambda x: x)),
+                     values=[e.value for e in RegionOptions],
+                     cols=len(RegionOptions), format_func=lambda x: x)),
         ),
         # give initial focus to text editor that does not trigger any events to
         # avoid inadvertent actions by the user when the window first displays;
@@ -888,7 +895,14 @@ class Visualization(HasTraits):
             # check "surface" if set in profile
             self._check_list_3d.append(Vis3dOptions.SURFACE.value)
         # self._structure_scale = self._structure_scale_high
+        
+        # set up atlas region names
+        self._region_names = TraitsList()
+        self._region_id_map = {}
+        self._region_options_prev = list(self._region_options)
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
+        
+        # set up blobs
         self.blobs = detector.Blobs()
         self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
 
@@ -1797,6 +1811,25 @@ class Visualization(HasTraits):
             if not lbls_ref:
                 lbls_ref = ""
             self._labels_ref_path = lbls_ref
+
+            # populate region names combo box
+            regions = []
+            regions_map = {}
+            if config.labels_ref:
+                df = config.labels_ref.get_ref_lookup_as_df()
+                if df is not None:
+                    # truncate names to preserve panel min width and add
+                    # abbreviations so each name is unique
+                    regions = df[config.ABAKeys.NAME.value].str.slice(
+                        stop=40) + " (" + df[config.ABAKeys.ACRONYM.value] + ")"
+                    regions = regions.to_list()
+                    
+                    # map region names to IDs since navigating to the region
+                    # will require the ID
+                    ids = df[config.ABAKeys.ABA_ID.value]
+                    regions_map = {r: i for r, i in zip(regions, ids)}
+            self._region_id_map = regions_map
+            self._region_names.selections = regions
 
         # set up image adjustment controls
         self._init_imgadj()
@@ -2824,6 +2857,35 @@ class Visualization(HasTraits):
                      else (0, 0, 0))
         self._update_mip(mip_shape)
     
+    @on_trait_change("_region_name")
+    def _region_name_changed(self):
+        """Handle changes to the region name combo box."""
+        ids = str(self._region_id_map[self._region_name])
+        if RegionOptions.APPEND.value in self._region_options:
+            # append the region ID
+            ids = f"{self._region_id},{ids}"
+        # remove preceding commas
+        self._region_id = ids.lstrip(",")
+    
+    @on_trait_change("_region_options")
+    def _region_options_changed(self):
+        """Handle changes to the region options check boxes."""
+        # boolean dicts of option settings and whether option changed
+        options = {e: e.value in self._region_options
+                   for e in RegionOptions}
+        changed = {e: options[e] != (e.value in self._region_options_prev)
+                   for e in options}
+        
+        if (changed[RegionOptions.APPEND] and
+                RegionOptions.APPEND.value not in self._region_options):
+            # trigger region ID change with current ID when unchecking append
+            region_id = self._region_id
+            self._region_id = ""
+            self._region_id = region_id
+        
+        # store current options
+        self._region_options_prev = list(self._region_options)
+    
     @on_trait_change("_region_id")
     def _region_id_changed(self):
         """Center the viewer on the region specified in the corresponding 
@@ -2834,6 +2896,11 @@ class Visualization(HasTraits):
         be ignored.
         """
         print("region ID: {}".format(self._region_id))
+        if RegionOptions.APPEND.value in self._region_options:
+            self._roi_feedback = (
+                "Add more regions, then uncheck \"Append\" to view them")
+            return
+        
         if config.labels_img is None:
             self._roi_feedback = "No labels image loaded to find region"
             return

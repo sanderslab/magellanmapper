@@ -478,9 +478,9 @@ class Visualization(HasTraits):
     
     # atlas labels
     _atlas_label = None
-    _structure_scale = Int  # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
+    _structure_scale = Int(_structure_scale_high)  # ontology structure levels
     _region_name = Str
     _region_names = Instance(TraitsList)
     _region_id = Str
@@ -1483,15 +1483,26 @@ class Visualization(HasTraits):
         if self._mlab_title is not None:
             self._mlab_title.remove()
             self._mlab_title = None
+        
+        level = self._structure_scale
+        if level == self._structure_scale_high:
+            # use drawn label rather than a specific level
+            level = None
+        
+        # set level in ROI and Atlas Editors
+        if self.roi_ed:
+            self.roi_ed.set_labels_level(level)
+        if self.atlas_eds:
+            for ed in self.atlas_eds:
+                ed.set_labels_level(level)
+        
         if (config.labels_ref is not None and
                 config.labels_ref.ref_lookup is not None and
                 curr_offset is not None and curr_roi_size is not None):
+            # get atlas label at ROI center
             center = np.add(
                 curr_offset, 
                 np.around(np.divide(curr_roi_size, 2)).astype(np.int))
-            level = self._structure_scale
-            if level == self._structure_scale_high:
-                level = None
             self._atlas_label = ontology.get_label(
                 center[::-1], config.labels_img, config.labels_ref.ref_lookup, 
                 config.labels_scaling, level, rounding=True)

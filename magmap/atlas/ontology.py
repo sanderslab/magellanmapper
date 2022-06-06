@@ -515,6 +515,41 @@ def labels_to_parent(labels_ref_lookup, level=None,
     return label_parents
 
 
+def make_labels_level(
+        labels_np: np.ndarray, ref: "LabelsRef", level: int) -> np.ndarray:
+    """
+    
+    Args:
+        labels_np: Labels image.
+        ref: Atlas labels reference.
+        level: Level at which ``labels_np`` will be remapped.
+
+    Returns:
+        The remapped ``labels_np``, which will be altered in-place.
+
+    """
+    ids = list(ref.ref_lookup.keys())
+    for key in ids:
+        # get keys from both sides of atlas
+        keys = [key, -1 * key]
+        for region in keys:
+            if region == 0: continue
+            # get ontological label
+            label = ref.ref_lookup[abs(region)]
+            label_level = label[NODE][config.ABAKeys.LEVEL.value]
+            
+            if label_level == level:
+                # get children (including parent first) at given level 
+                # and replace them with parent
+                label_ids = get_children_from_id(
+                    ref.ref_lookup, region)
+                labels_region = np.isin(labels_np, label_ids)
+                print("replacing labels within", region)
+                labels_np[labels_region] = region
+    
+    return labels_np
+
+
 def get_label_item(label, item_key, key=NODE):
     """Convenience function to get the item from the sub-label.
 

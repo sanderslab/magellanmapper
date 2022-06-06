@@ -18,7 +18,7 @@ from enum import auto, Enum
 import os
 import subprocess
 import sys
-from typing import Optional, Sequence
+from typing import Dict, Optional, Sequence, Tuple, Type
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -899,7 +899,7 @@ class Visualization(HasTraits):
         # set up atlas region names
         self._region_names = TraitsList()
         self._region_id_map = {}
-        self._region_options_prev = list(self._region_options)
+        self._region_options_prev: Dict[Enum, bool] = {}
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
         
         # set up blobs
@@ -955,7 +955,7 @@ class Visualization(HasTraits):
             AtlasEditorOptions.SHOW_LABELS.value,
             AtlasEditorOptions.SYNC_ROI.value,
             AtlasEditorOptions.CROSSHAIRS.value]
-        self._atlas_ed_options_prev = list(self._atlas_ed_options)
+        self._atlas_ed_options_prev: Dict[Enum, bool] = {}
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -2668,14 +2668,41 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
     
+    @staticmethod
+    def get_changed_options(
+            curr_options: Sequence[str], prev_options: Dict[Enum, bool],
+            enum_options: Type[Enum]
+    ) -> Tuple[Dict[Enum, bool], Dict[Enum, bool]]:
+        """Get dicts of the options and whether they have changed.
+
+        Args:
+            curr_options: Current options as a list of option names.
+            prev_options: Previous options as a dictionary of Enum options
+                to boolean values.
+            enum_options: Enumeration of options.
+
+        Returns:
+            Tuple of:
+            - ``options``: ``prev_options`` but for the current state.
+            - ``changed``: Dictionary with same keys as ``options`` but
+              values of whether the state changed compared to previously.
+
+        """
+        # option is true if it's present in the current options
+        options = {e: e.value in curr_options for e in enum_options}
+    
+        # option changed if it's value differs from previous options
+        changed = {e: e in prev_options and options[e] != prev_options[e]
+                   for e in options}
+        return options, changed
+
     @on_trait_change("_atlas_ed_options")
     def _atlas_ed_options_changed(self):
         """Respond to atlas editor option changes."""
-        # boolean dicts of option settings and whether option changed
-        options = {e: e.value in self._atlas_ed_options
-                   for e in AtlasEditorOptions}
-        changed = {e: options[e] != (e.value in self._atlas_ed_options_prev)
-                   for e in options}
+        # get boolean dicts of the options and whether they have changed
+        options, changed = self.get_changed_options(
+            self._atlas_ed_options, self._atlas_ed_options_prev,
+            AtlasEditorOptions)
         
         if self.roi_ed:
             if changed[AtlasEditorOptions.SHOW_LABELS]:
@@ -2709,7 +2736,7 @@ class Visualization(HasTraits):
             # otherwise, defer sync to tab selection handler
             self.sync_atlas_eds_coords(check_option=True)
         
-        self._atlas_ed_options_prev = list(self._atlas_ed_options)
+        self._atlas_ed_options_prev = options
     
     def _zoom_atlas_ed(self, atlas_ed, zoom):
         """Zoom the Atlas Editor into the ROI.
@@ -2876,21 +2903,18 @@ class Visualization(HasTraits):
     @on_trait_change("_region_options")
     def _region_options_changed(self):
         """Handle changes to the region options check boxes."""
-        # boolean dicts of option settings and whether option changed
-        options = {e: e.value in self._region_options
-                   for e in RegionOptions}
-        changed = {e: options[e] != (e.value in self._region_options_prev)
-                   for e in options}
+        # get dict of whether each option changed
+        options, changed = self.get_changed_options(
+            self._region_options, self._region_options_prev, RegionOptions)
         
-        if (changed[RegionOptions.APPEND] and
-                RegionOptions.APPEND.value not in self._region_options):
+        if changed[RegionOptions.APPEND] and not options[RegionOptions.APPEND]:
             # trigger region ID change with current ID when unchecking append
             region_id = self._region_id
             self._region_id = ""
             self._region_id = region_id
         
         # store current options
-        self._region_options_prev = list(self._region_options)
+        self._region_options_prev = options
     
     @on_trait_change("_region_id")
     def _region_id_changed(self):

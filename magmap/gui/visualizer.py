@@ -481,6 +481,9 @@ class Visualization(HasTraits):
     _structure_scale_low = -1
     _structure_scale_high = 20
     _structure_scale = Int(_structure_scale_high)  # ontology structure levels
+    _structure_remap_btn = Button(
+        "Remap",
+        tooltip="Remap atlas labels to this level")
     _region_name = Str
     _region_names = Instance(TraitsList)
     _region_id = Str
@@ -590,11 +593,12 @@ class Visualization(HasTraits):
             label="Viewer Options",
         ),
         HGroup(
-            Item("_structure_scale", label="Atlas ontology level",
+            Item("_structure_scale", label="Atlas level",
                  editor=RangeEditor(
                      low_name="_structure_scale_low",
                      high_name="_structure_scale_high",
                      mode="slider")),
+            Item("_structure_remap_btn", show_label=False),
         ),
         Item("_region_name", label="Region",
              editor=EnumEditor(
@@ -1484,12 +1488,8 @@ class Visualization(HasTraits):
             self._mlab_title.remove()
             self._mlab_title = None
         
-        level = self._structure_scale
-        if level == self._structure_scale_high:
-            # use drawn label rather than a specific level
-            level = None
-        
         # set level in ROI and Atlas Editors
+        level = self._structure_scale
         if self.roi_ed:
             self.roi_ed.set_labels_level(level)
         if self.atlas_eds:
@@ -2063,6 +2063,33 @@ class Visualization(HasTraits):
         curr_roi_size = self.roi_array[0].astype(int)
         self._update_structure_level(curr_offset, curr_roi_size)
 
+    @on_trait_change("_structure_remap_btn")
+    def _remap_structure(self):
+        """Remap atlas labels to the selected structure level."""
+        level = self.structure_scale
+        if (config.labels_img is None or config.labels_ref is None or
+                config.labels_ref.ref_lookup is None or level is None):
+            # skip if labels, reference, or level are not available
+            return
+        
+        # remap labels image and set in editors
+        labels_np = ontology.make_labels_level(
+            config.labels_img, config.labels_ref, level)
+        if self.roi_ed:
+            self.roi_ed.labels_img = labels_np
+        if self.atlas_eds:
+            for ed in self.atlas_eds:
+                ed.labels_img = labels_np
+    
+    @property
+    def structure_scale(self):
+        """Atlas level, where the highest value is None."""
+        level = self._structure_scale
+        if level == self._structure_scale_high:
+            # use drawn label rather than a specific level
+            level = None
+        return level
+        
     @on_trait_change("btn_redraw")
     def _redraw_fired(self):
         """Respond to redraw button presses."""

@@ -44,8 +44,8 @@ from pyface.image_resource import ImageResource
 from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
     Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
-    EnumEditor, FileEditor, HGroup, HSplit, Item, RangeEditor, TextEditor, \
-    VGroup, View, Tabbed, TabularEditor
+    EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
+    TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -58,8 +58,8 @@ import vtk
 import run
 from magmap.atlas import ontology
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
-from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
-    vis_handler
+from magmap.gui import atlas_editor, atlas_threads, import_threads, \
+    roi_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, prefs_prof, profiles
@@ -307,6 +307,8 @@ class Visualization(HasTraits):
     _rois_dict = None
     _rois = None
     _roi_feedback = Str()
+    _roi_prog_pct = Int(0)
+    _roi_prog_msg = Str()
     
     # Detect panel
     
@@ -618,6 +620,8 @@ class Visualization(HasTraits):
         # set width to any small val to get smallest size for the whole panel
         Item("_roi_feedback", style="custom", show_label=False, has_focus=True,
              width=100),
+        Item("_roi_prog_pct", show_label=False, editor=ProgressEditor(
+            min=0, max=100, message_name="_roi_prog_msg")),
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
@@ -922,7 +926,6 @@ class Visualization(HasTraits):
 
         # set up image import
         self._clear_import_files(False)
-        self._import_thread = None  # prevent prematurely destroying threads
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -980,6 +983,10 @@ class Visualization(HasTraits):
         self._main_img_names = TraitsList()
         self._labels_img_names = TraitsList()
         self._ignore_main_img_name_changes = False
+
+        # prevent prematurely destroying threads
+        self._import_thread = None
+        self._remap_level_thread = None
         
         # set up image
         self._setup_for_image()
@@ -2062,24 +2069,36 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         self._update_structure_level(curr_offset, curr_roi_size)
+    
+    def _update_prog(self, pct: int, msg: str):
+        """Update progress bar.
+        
+        Also updates the logger.
+        
+        Args:
+            pct: Percentage completed.
+            msg: Message.
 
+        """
+        self._roi_prog_pct = pct
+        self._roi_prog_msg = msg
+        _logger.info(msg)
+    
     @on_trait_change("_structure_remap_btn")
     def _remap_structure(self):
         """Remap atlas labels to the selected structure level."""
-        level = self.structure_scale
-        if (config.labels_img is None or config.labels_ref is None or
-                config.labels_ref.ref_lookup is None or level is None):
-            # skip if labels, reference, or level are not available
-            return
+        def remap_success(labels_np):
+            # update labels image in editors
+            if self.roi_ed:
+                self.roi_ed.labels_img = labels_np
+            if self.atlas_eds:
+                for ed in self.atlas_eds:
+                    ed.labels_img = labels_np
         
-        # remap labels image and set in editors
-        labels_np = ontology.make_labels_level(
-            config.labels_img, config.labels_ref, level)
-        if self.roi_ed:
-            self.roi_ed.labels_img = labels_np
-        if self.atlas_eds:
-            for ed in self.atlas_eds:
-                ed.labels_img = labels_np
+        # remap labels image in separate thread
+        self._remap_level_thread = atlas_threads.RemapLevelThread(
+            self.structure_scale, remap_success, self._update_prog)
+        self._remap_level_thread.start()
     
     @property
     def structure_scale(self):

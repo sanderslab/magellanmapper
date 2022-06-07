@@ -7,7 +7,7 @@ import os
 from collections import OrderedDict
 from enum import Enum
 import json
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -516,20 +516,24 @@ def labels_to_parent(labels_ref_lookup, level=None,
 
 
 def make_labels_level(
-        labels_np: np.ndarray, ref: "LabelsRef", level: int) -> np.ndarray:
+        labels_np: np.ndarray, ref: "LabelsRef", level: int,
+        fn_prog: Optional[Callable[[int, str], None]] = None) -> np.ndarray:
     """
     
     Args:
         labels_np: Labels image.
         ref: Atlas labels reference.
         level: Level at which ``labels_np`` will be remapped.
+        fn_prog: Function to update progress. Takes an integer as a progress
+            percentage and a string as a message. Defaults to None.
 
     Returns:
         The remapped ``labels_np``, which will be altered in-place.
 
     """
     ids = list(ref.ref_lookup.keys())
-    for key in ids:
+    nids = len(ids)
+    for i, key in enumerate(ids):
         # get keys from both sides of atlas
         keys = [key, -1 * key]
         for region in keys:
@@ -544,7 +548,11 @@ def make_labels_level(
                 label_ids = get_children_from_id(
                     ref.ref_lookup, region)
                 labels_region = np.isin(labels_np, label_ids)
-                print("replacing labels within", region)
+                if fn_prog is not None:
+                    # update progress
+                    fn_prog(
+                        int(i / nids * 100),
+                        f"Replacing labels within {region}")
                 labels_np[labels_region] = region
     
     return labels_np

@@ -1496,7 +1496,7 @@ class Visualization(HasTraits):
             for ed in self.atlas_eds:
                 ed.set_labels_level(level)
         
-        if (config.labels_ref is not None and
+        if (config.labels_img is not None and config.labels_ref is not None and
                 config.labels_ref.ref_lookup is not None and
                 curr_offset is not None and curr_roi_size is not None):
             # get atlas label at ROI center

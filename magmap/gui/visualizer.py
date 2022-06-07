@@ -3585,17 +3585,16 @@ class Visualization(HasTraits):
         """
         self._import_feedback += "{}\n".format(val)
 
-    def _update_roi_feedback(self, val, print_out=False):
+    def _update_roi_feedback(self, val: str, print_out: bool = False):
         """Update the ROI panel feedback text box.
 
         Args:
-            val (str): String to append as a new line.
-            print_out (bool): True to print to console as well; defaults
-                to False.
+            val: String to append as a new line.
+            print_out: True to print to log as well; defaults to False.
 
         """
         if print_out:
-            print(val)
+            _logger.info(val)
         self._roi_feedback += "{}\n".format(val)
 
 

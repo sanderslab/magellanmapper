@@ -323,16 +323,11 @@ def setup_images(
             if path_lower.endswith(sitk_io.EXTS_3D):
                 # load format supported by SimpleITK and prepend time axis;
                 # if 2D, convert to 3D
-                config.image5d = sitk_io.read_sitk_files(
-                    path, make_3d=True)[None]
-                config.img5d.img = config.image5d
-                config.img5d.path_img = path
-                config.img5d.img_io = config.LoadIO.SITK
+                img5d = sitk_io.read_sitk_files(path, make_3d=True)
             elif not import_only and path_lower.endswith((".tif", ".tiff")):
                 # load TIF file directly
-                _, meta = read_tif(path, config.img5d)
+                img5d, meta = read_tif(path)
                 config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
-                config.image5d = config.img5d.img
             else:
                 # load or import from MagellanMapper Numpy format
                 img5d = None
@@ -365,10 +360,10 @@ def setup_images(
                         img5d = importer.import_multiplane_images(
                             chls, prefix, import_md, series,
                             channel=config.channel)
-                if img5d is not None:
-                    # set loaded main image in config
-                    config.img5d = img5d
-                    config.image5d = config.img5d.img
+            if img5d is not None:
+                # set loaded main image in config
+                config.img5d = img5d
+                config.image5d = config.img5d.img
         except FileNotFoundError as e:
             _logger.exception(e)
             _logger.info("Could not load %s", path)
@@ -393,11 +388,9 @@ def setup_images(
     if path and atlas_suffix is not None:
         try:
             # will take the place of any previously loaded image5d
-            config.image5d = sitk_io.read_sitk_files(
-                path, atlas_suffix, make_3d=True)[None]
-            config.img5d.img = config.image5d
-            config.img5d.img_io = config.LoadIO.SITK
-            config.img5d.path_img = path
+            config.img5d = sitk_io.read_sitk_files(
+                path, atlas_suffix, make_3d=True)
+            config.image5d = config.img5d.img
         except FileNotFoundError as e:
             print(e)
     
@@ -434,8 +427,9 @@ def setup_images(
         try:
             # load labels image
             # TODO: need to support multichannel labels images
-            config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
+            img5d, config.labels_img_sitk = sitk_io.read_sitk_files(
                 path, annotation_suffix, True, True)
+            config.labels_img = img5d.img[0]
         except FileNotFoundError as e:
             print(e)
             if config.image5d is not None:
@@ -454,7 +448,7 @@ def setup_images(
         # load borders image, which can also be another labels image
         try:
             config.borders_img = sitk_io.read_sitk_files(
-                path, borders_suffix, make_3d=True)
+                path, borders_suffix, make_3d=True).img[0]
         except FileNotFoundError as e:
             print(e)
     

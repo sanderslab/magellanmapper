@@ -2356,7 +2356,8 @@ def main():
         if len(config.filenames) < 2:
             print("Please provide paths to 2 labels images")
             return
-        labels_imgs = [sitk_io.read_sitk_files(p) for p in config.filenames[:2]]
+        labels_imgs = [
+            sitk_io.read_sitk_files(p).img[0] for p in config.filenames[:2]]
         spacing = scaling
         if spacing is None and len(config.resolutions) > 0:
             # default to using loaded metadata

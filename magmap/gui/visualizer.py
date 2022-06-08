@@ -1472,6 +1472,10 @@ class Visualization(HasTraits):
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str
+        
+        if self.roi_ed:
+            # reset the ROI Editor's edit flag
+            self.roi_ed.edited = False
 
     def _btn_save_segments_fired(self):
         """Handler to save blobs to database when triggered by Trait."""
@@ -3158,9 +3162,11 @@ class Visualization(HasTraits):
         seg[3] = -1 * abs(seg[3])
         detector.Blobs.set_blob_confirmed(seg, -1)
     
-    def update_segment(self, segment_new, segment_old=None, remove=False):
-        """Update this class object's segments list with a new or updated 
-        segment.
+    def update_segment(
+            self, segment_new: np.ndarray,
+            segment_old: Optional[np.ndarray] = None, remove: bool = False
+    ) -> np.ndarray:
+        """Update segments/blobs list with a new or updated segment.
         
         Args:
             segment_new: Segment to either add or update, including 
@@ -3178,6 +3184,7 @@ class Visualization(HasTraits):
         
         Returns:
             The updated segment.
+        
         """
         seg = segment_new
         # remove all row selections to ensure that no more than one 
@@ -3224,6 +3231,11 @@ class Visualization(HasTraits):
         
         # scroll to first selected row
         self._segs_row_scroll = min(self.segs_selected)
+        
+        if self.roi_ed:
+            # flag ROI Editor as edited
+            self.roi_ed.edited = True
+        
         return seg
     
     @property

@@ -302,6 +302,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             if ed.edited:
                 # display save button as enabled if any editor has been edited
                 enable_btn(self.save_btn)
+                self.edited = True
         if update_atlas_eds and self.fn_refresh_atlas_eds is not None:
             # callback to synchronize other Atlas Editors
             self.fn_refresh_atlas_eds(self)
@@ -378,6 +379,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False
+        self.edited = False
         enable_btn(self.save_btn, False)
         print("Saved labels image at {}".format(datetime.datetime.now()))
     

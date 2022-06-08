@@ -39,7 +39,8 @@ except AttributeError:
     pass
 
 # import PyFace components after HiDPI adjustment
-from pyface.api import FileDialog, OK
+from pyface import confirmation_dialog
+from pyface.api import FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
 from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
     Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
@@ -2147,6 +2148,30 @@ class Visualization(HasTraits):
             clear (bool): True to clear the ROI and blobs; defaults to True.
         
         """
+        def confirm(ed, fn):
+            # prompt to save before redrawing if edited
+            if ed.edited:
+                response = confirmation_dialog.confirm(
+                    None, "Edits have not been saved. Save and redraw?",
+                    "Save before redraw?", True, YES)
+                if response == YES:
+                    fn()
+                elif response == CANCEL:
+                    return False
+            return True
+        
+        # check for need to save
+        cont = True
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
+            if self.roi_ed:
+                cont = confirm(self.roi_ed, self.save_segs)
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
+            if self.atlas_eds and self.atlas_eds[0].edited:
+                cont = confirm(self.atlas_eds[0], self.atlas_eds[0].save_atlas)
+        if not cont:
+            # user canceled
+            return
+
         # reload profiles if any profile files have changed and reset ROI
         cli.update_profiles()
         self._drawn_offset = self._curr_offset()

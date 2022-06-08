@@ -356,12 +356,12 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         except ValueError as e:
             print(e)
     
-    def save_atlas(self, event):
+    def save_atlas(self, event=None):
         """Save atlas labels using the registered image suffix given by
         :attr:`config.reg_suffixes[config.RegSuffixes.ANNOTATION]`.
         
         Args:
-            event: Button event, currently not used.
+            event: Button event, currently not used; defaults to None.
         
         """
         # only save if at least one editor has been edited

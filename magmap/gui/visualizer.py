@@ -911,9 +911,9 @@ class Visualization(HasTraits):
         if self._margin is None:
             self._margin = (5, 5, 3)  # x,y,z
         
-        # store ROI offset for currently drawn plot in case user previews a
-        # new ROI offset, which shifts the current offset sliders
-        self._drawn_offset = self._curr_offset()
+        #: ROI offset at which viewers were drawn. May differ from the
+        #: current state of the offset sliders.
+        self._drawn_offset: Sequence[int] = self._curr_offset()
 
         # setup interface for image
         self._ignore_filename = False  # ignore file update trigger
@@ -1727,9 +1727,8 @@ class Visualization(HasTraits):
             self.z_high, self.y_high, self.x_high = config.image5d.shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
-                self.x_offset = config.roi_offset[0]
-                self.y_offset = config.roi_offset[1]
-                self.z_offset = config.roi_offset[2]
+                self.x_offset, self.y_offset, self.z_offset = config.roi_offset
+                self._drawn_offset = self._curr_offset()
             self.roi_array = ([[100, 100, 12]] if config.roi_size is None
                               else [config.roi_size])
             

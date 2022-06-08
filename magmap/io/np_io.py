@@ -396,6 +396,7 @@ def setup_images(
                 path, atlas_suffix, make_3d=True)[None]
             config.img5d.img = config.image5d
             config.img5d.img_io = config.LoadIO.SITK
+            config.img5d.path_img = path
         except FileNotFoundError as e:
             print(e)
     

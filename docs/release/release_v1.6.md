@@ -15,9 +15,12 @@
 - Drag and remove loaded profiles in the Profiles tab table
 - "Help" buttons added to open the online documentation (#109)
 - Default confirmation labels can be set before detection (#115)
+- Resets the labels reference file path when reloading an image in the GUI (#139)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
 - Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 
+- Fixed error window when moving the atlas level slider before a 3D image has been rendered (#139)
+- Fixed saving blobs in an ROI using the first displayed ROI or after moving the sliders without redrawing (#139)
 
 #### CLI
 
@@ -65,6 +68,7 @@
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
 - Fixed re-importing an image after loading it (#117)
+- Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 
 #### Server pipelines
 

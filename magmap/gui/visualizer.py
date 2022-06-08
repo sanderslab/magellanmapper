@@ -1347,7 +1347,7 @@ class Visualization(HasTraits):
         print("segments", self.segments)
         segs_transposed = []
         segs_to_delete = []
-        offset = self._curr_offset()
+        offset = self._drawn_offset
         curr_roi_size = self.roi_array[0].astype(int)
         print("Preparing to insert segments to database with border widths {}"
               .format(self.border))
@@ -1405,7 +1405,7 @@ class Visualization(HasTraits):
         exp_id = config.db.select_or_insert_experiment(exp_name)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
-            np.add(self._drawn_offset, self.border).tolist(),
+            np.add(offset, self.border).tolist(),
             np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, segs_to_delete)

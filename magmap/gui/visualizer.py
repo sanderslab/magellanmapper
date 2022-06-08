@@ -2282,7 +2282,8 @@ class Visualization(HasTraits):
                 self.segs_cmap = get_atlas_cmap(
                     detector.Blobs.get_blob_abs_coords(
                         segs_all[self.segs_in_mask]))
-                if self.blobs.blob_matches is not None:
+                if (self.blobs.blob_matches is not None and
+                        self.blobs.blob_matches.coords is not None):
                     self.blobs.blob_matches.cmap = get_atlas_cmap(
                         np.add(self.blobs.blob_matches.coords, offset[::-1]))
             

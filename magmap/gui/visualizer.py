@@ -46,7 +46,7 @@ from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
     Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
     EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
-    TextEditor, VGroup, View, Tabbed, TabularEditor
+    StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -308,8 +308,6 @@ class Visualization(HasTraits):
     _rois_dict = None
     _rois = None
     _roi_feedback = Str()
-    _roi_prog_pct = Int(0)
-    _roi_prog_msg = Str()
     
     # Detect panel
     
@@ -500,7 +498,12 @@ class Visualization(HasTraits):
     _camera_pos = None
     _roi_ed_fig = Instance(figure.Figure, ())
     _atlas_ed_fig = Instance(figure.Figure, ())
+    
+    # Status bar
+    
     _status_bar_msg = Str()  # text for status bar
+    _prog_pct = Int(0)
+    _prog_msg = Str()
 
     # ROI selector panel
     panel_roi_selector = VGroup(
@@ -621,8 +624,12 @@ class Visualization(HasTraits):
         # set width to any small val to get smallest size for the whole panel
         Item("_roi_feedback", style="custom", show_label=False, has_focus=True,
              width=100),
-        Item("_roi_prog_pct", show_label=False, editor=ProgressEditor(
-            min=0, max=100, message_name="_roi_prog_msg")),
+        
+        # generate progress bar but give essentially no height since it will
+        # be moved to the status bar in the handler
+        Item("_prog_pct", show_label=False, height=-2,
+             editor=ProgressEditor(min=0, max=100)),
+        
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
@@ -868,7 +875,10 @@ class Visualization(HasTraits):
         height=600,
         handler=vis_handler.VisHandler(),
         title="MagellanMapper",
-        statusbar="_status_bar_msg",
+        statusbar=[
+            "_status_bar_msg",
+            # reduce width of progress message so it's next to the bar
+            StatusItem("_prog_msg", width=20)],
         resizable=True,
         icon=icon_img,
         # set ID to trigger saving TraitsUI preferences for window size/position
@@ -2085,8 +2095,8 @@ class Visualization(HasTraits):
             msg: Message.
 
         """
-        self._roi_prog_pct = pct
-        self._roi_prog_msg = msg
+        self._prog_pct = pct
+        self._prog_msg = msg
         _logger.info(msg)
     
     @on_trait_change("_structure_remap_btn")

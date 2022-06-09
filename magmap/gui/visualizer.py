@@ -2109,6 +2109,9 @@ class Visualization(HasTraits):
             if self.atlas_eds:
                 for ed in self.atlas_eds:
                     ed.labels_img = labels_np
+            
+            # redraw editor
+            self.redraw_selected_viewer()
         
         # remap labels image in separate thread
         self._remap_level_thread = atlas_threads.RemapLevelThread(
@@ -2162,7 +2165,7 @@ class Visualization(HasTraits):
             # prompt to save before redrawing if edited
             if ed.edited:
                 response = confirmation_dialog.confirm(
-                    None, "Edits have not been saved. Save and redraw?",
+                    None, "Edits have not been saved. Save before redrawing?",
                     "Save before redraw?", True, YES)
                 if response == YES:
                     fn()

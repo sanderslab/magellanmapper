@@ -42,6 +42,9 @@ tryCatchLog::tryCatchLog({
       parser, c("-m", "--meas"), type="character",
       help="Names of measurent columns on which to perform stats")
     parser <- optparse::add_option(
+      parser, "--model", type="character",
+      help="Name of stats model")
+    parser <- optparse::add_option(
       parser, "--prefix", type="character",
       help="Path prefix")
     args.parsed <- optparse::parse_args(parser)
@@ -51,7 +54,7 @@ tryCatchLog::tryCatchLog({
   # run main statistics
   print(args.parsed$meas)
   runStats(args.parsed$file, args.parsed$profiles, args.parsed$meas,
-           args.parsed$prefix, args.parsed$verbose)
+           args.parsed$prefix, args.parsed$verbose, model=args.parsed$model)
 }, finally={
   # return to original directory
   setwd(dir.start)

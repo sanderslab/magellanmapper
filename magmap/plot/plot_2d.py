@@ -4,12 +4,10 @@
 """Plot 2D views of imaging data and graphs."""
 
 import os
-import math
-from typing import Callable, Optional, Sequence, TYPE_CHECKING, Union
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
 from matplotlib import colors as mat_colors, gridspec, pylab, pyplot as plt
-import matplotlib.transforms as transforms
 import pandas as pd
 from skimage import exposure
 
@@ -24,6 +22,12 @@ if TYPE_CHECKING:
     from matplotlib import axes
 
 _logger = config.logger.getChild(__name__)
+
+try:
+    import seaborn as sns
+except ImportError:
+    _logger.debug("Seborn is not installed, will ignore it")
+    sns = None
 
 
 def _show_overlay(ax, img, plane_i, cmap, out_plane, aspect=1.0, alpha=1.0,
@@ -297,16 +301,6 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     width = (1.0 - padding) / num_sets # width of each bar
     #print("x_labels: {}".format(x_labels))
     
-    if vspans is not None:
-        # show vertical spans alternating in white and black; assume 
-        # background is already white, so simply skip white shading
-        xs = vspans - padding / 2
-        num_xs = len(xs)
-        for i, x in enumerate(xs):
-            if i % 2 == 0: continue
-            end = xs[i + 1] if i < num_xs - 1 else num_groups
-            ax.axvspan(x, end, facecolor="k", alpha=0.2)
-            
     # show each list as a set of bar plots so that corresponding elements in 
     # each list will be grouped together as bar groups
     for i in range(num_sets):
@@ -324,57 +318,37 @@ def _bar_plots(ax, lists, errs, legend_names, x_labels, colors, y_label,
     
     # show y-label with any unit in scientific notation
     plot_support.set_scinot(ax, lbls=(y_label,), units=(y_unit,))
-    # draw x-tick labels with smaller font for increasing number of labels
-    font_size = plt.rcParams["axes.titlesize"]
-    if libmag.is_number(font_size):
-        # scale font size of x-axis labels by a sigmoid function to rapidly 
-        # decrease size for larger numbers of labels so they don't overlap
-        font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
-    font_dict = {"fontsize": font_size}
-    # draw x-ticks based on number of bars per group and align to right 
-    # since center shifts the horiz middle of the label to the center; 
-    # rotation_mode in dict helps but still slightly off
     ax.set_xticks(indices + width * len(lists) / 2)
-    ax.set_xticklabels(
-        x_labels, rotation=rotation, horizontalalignment="right", 
-        fontdict=font_dict)
-    # translate to right since "right" alignment shift the right of labels 
-    # too far to the left of tick marks; shift less with more groups
-    offset = transforms.ScaledTranslation(
-        30 / np.cbrt(num_groups) / ax.figure.dpi, 0, ax.figure.dpi_scale_trans)
-    for lbl in ax.xaxis.get_majorticklabels():
-        lbl.set_transform(lbl.get_transform() + offset)
-    
-    if vspans is not None and vspan_lbls is not None:
-        # show labels for vertical spans
-        ylims = ax.get_ylim()
-        y_span = abs(ylims[1] - ylims[0])
-        y_top = max(ylims)
-        for i, x in enumerate(xs):
-            end = xs[i + 1] if i < num_xs - 1 else num_groups
-            x = (x + end) / 2
-            # position 4% down from top in data coordinates
-            y_frac = 0.04
-            if vspan_alt_y and i % 2 != 0:
-                # shift alternating labels further down to avoid overlap
-                y_frac += 0.03
-            y = y_top - y_span * y_frac
-            ax.text(
-                x, y, vspan_lbls[i], color="k", horizontalalignment="center")
-    
+    plot_support.scale_xticks(ax, rotation, x_labels)
+
     if legend_names:
-        ax.legend(bars, legend_names, loc="best", fancybox=True, framealpha=0.5)
+        # set legend names for the bars
+        ax.legend(bars, legend_names, framealpha=0.5)
+
+    # further group x-vals into vertical spans
+    plot_support.add_vspans(ax, vspans, vspan_lbls, padding, vspan_alt_y)
 
 
-def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None, 
-              col_groups=None, groups=None, y_label=None, y_unit=None, 
-              size=None, show=True, col_vspan=None, vspan_fmt=None,
-              col_wt=None, df=None, x_tick_labels=None, rotation=None,
-              save=True, hline=None, ax=None, suffix=None, **kwargs):
+def plot_bars(
+        path_to_df: str, data_cols: Optional[Sequence[str]] = None,
+        err_cols: Optional[Sequence[str]] = None,
+        legend_names: Optional[Sequence[str]] = None, 
+        col_groups: Optional[Sequence[str]] = None,
+        groups: Optional[Sequence[str]] = None, y_label: Optional[str] = None,
+        y_unit: Optional[str] = None, size: Optional[Sequence[float]] = None,
+        show: bool = True, col_vspan: Optional[str] = None,
+        vspan_fmt: Optional[str] = None, col_wt: Optional[str] = None,
+        df: Optional[pd.DataFrame] = None,
+        x_tick_labels: Optional[Sequence[str]] = None,
+        rotation: Optional[float] = None, save: bool = True,
+        hline: Optional[str] = None, ax: Optional["axes.Axes"] = None,
+        suffix: Optional[str] = None,
+        err_cols_abs: Optional[Optional[str]] = None, **kwargs
+) -> Tuple["axes.Axes", str]:
     """Plot grouped bars from Pandas data frame.
     
-    Each data frame row represents a group, and each chosen data column 
-    will be plotted as a separate bar within each group.
+    Takes a data frame in wide format. Each row represents a group, and each
+    chosen data column will be plotted as a separate bar within each group.
     
     Args:
         path_to_df: Path from which to read saved Pandas data frame.
@@ -383,10 +357,11 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
         data_cols: Sequence of names of columns to plot as separate sets 
             of bars, where each row is part of a separate group. Defaults 
             to None, which will plot all columns except ``col_groups``.
-        err_cols: Sequence of column names with relative error values 
-            corresponding to ``data_cols``. Defaults to None, in which 
-            case matching columns with "_err" as suffix will be used for 
-            error bars if present.
+        err_cols: Sequence of column names corresponding to ``data_cols``.
+            Values should be relative to the data points. Each column can be
+            a sequence of two columns, given as ``lower, upper`` values. 
+            Defaults to None, in which case matching columns with "_err" as
+            suffix will be used for error bars if present.
         legend_names: Sequence of names for each set of bars. 
             Defaults to None, which will use ``data_cols`` for names. 
             Use "" to not display a legend.
@@ -414,23 +389,26 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
             value; defaults to None.
         df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
-        x_tick_labels (List[str]): Sequence of labels for each bar group 
+        x_tick_labels: Sequence of labels for each bar group 
             along the x-axis; defaults to None to use ``groups`` instead. 
         rotation: Degrees of x-tick label rotation; defaults to None.
-        save (bool): True to save the plot; defaults to True.
-        hline (str): One of :attr:`config.STR_FN` for a function to apply
+        save: True to save the plot; defaults to True.
+        hline: One of :attr:`config.STR_FN` for a function to apply
             to each list in ``lists`` for a horizontal line to be drawn
             at this y-value; defaults to None.
-        ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
+        ax: Matplotlib axes; defaults to None.
         suffix: String to append to output path before extension;
             defaults to None to ignore.
-        kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
+        err_cols_abs: Column(s) for error bars as absolute values. Defaults
+            to None. Takes precdence over ``err_cols``.
+        kwargs: Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
-        :obj:`matplotlib.image.Axes`, str: Plot axes and save path without
-        extension.
+        Plot axes and save path without extension.
     
     """
+    # TODO: consider converting from df in wide to melted format 
+    
     # load data frame from CSV and setup figure
     if df is None:
         df = pd.read_csv(path_to_df)
@@ -466,14 +444,12 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     vspans = None
     vspan_lbls = None
     if col_vspan is not None:
-        # further group bar groups by vertical spans with location based 
-        # on each change in value in col_vspan
-        # TODO: change .values to .to_numpy when Pandas req >= 0.24
-        vspan_vals = df[col_vspan].values
-        vspans = np.insert(
-            np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
-        vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
-                      for val in vspan_vals[vspans]]
+        # set up vertical spans to further group the bar groups 
+        vspans, vspan_lbls = plot_support.setup_vspans(df, col_vspan, vspan_fmt)
+    
+    if err_cols_abs is not None:
+        # error bars with absolute vals take priority over relative vals
+        err_cols = err_cols_abs
     
     if err_cols is None:
         # default to columns corresponding to data cols with suffix appended 
@@ -500,13 +476,20 @@ def plot_bars(path_to_df, data_cols=None, err_cols=None, legend_names=None,
     for i, (col, col_err) in enumerate(zip(data_cols, err_cols)):
         # each column gives a set of bars, where each bar will be in a 
         # separate bar group
-        lists.append(df[col] * wts)
+        df_col = df[col] * wts
+        lists.append(df_col)
         errs_dfs = None
         if libmag.is_seq(col_err):
             # asymmetric error bars
             errs_dfs = [df[e] * wts for e in col_err]
         elif col_err is not None:
             errs_dfs = df[col_err] * wts
+        
+        if err_cols_abs is not None:
+            # convert absolute to Matplotlib's required values, which are
+            # relative to the data points and positive
+            errs_dfs = [np.abs(np.subtract(df_col, e)) for e in errs_dfs]
+        
         errs.append(errs_dfs)
         bar_colors.append("C{}".format(i))
 
@@ -717,7 +700,8 @@ def plot_scatter(
         col_y: Optional[Union[str, Sequence[str]]] = None,
         col_annot: Optional[str] = None,
         cols_group: Optional[Sequence[str]] = None,
-        names_group: Optional[Sequence[str]] = None,
+        names_group: Optional[Union[
+            Sequence[str], Callable[[str], str]]] = None,
         fig_size: Optional[Sequence[float]] = None, show: bool = True,
         suffix: Optional[str] = None, df: Optional[pd.DataFrame] = None,
         xy_line: bool = False, col_size: Optional[str] = None,
@@ -738,10 +722,10 @@ def plot_scatter(
             If not found, y-values are set to 0 if ``col_x`` is only one column.
         col_annot: Name of column with annotations for each point; defaults to
             None. Can be the name of the index column.
-        cols_group (Sequence[str]): Sequence of column names; defaults to None.
+        cols_group: Sequence of column names; defaults to None.
             Each unique combination in these columns specifies a group
             to plot separately.
-        names_group (Sequence[str]): Sequence of names to display;
+        names_group: Sequence of names to display;
             defaults to None, in which case a name based on ``cols_groups``
             will be used instead. Length should equal that of groups based
             on ``cols_group``.
@@ -761,22 +745,22 @@ def plot_scatter(
         annot_arri: Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
-        alpha (float): Point transparency value, from 0-1; defaults to None,
+        alpha: Point transparency value, from 0-1; defaults to None,
             in which case 1.0 will be used.
-        legend_loc (str): Legend location, which should be one of
+        legend_loc: Legend location, which should be one of
             :attr:``plt.legend.loc`` values; defaults to "best".
-        ax (:class:`matplotlib.image.Axes`): Matplotlib axes; defaults to None.
-        save (bool): True to save the plot; defaults to True.
-        annot_thresh_fn (func): Function accepting ``x, y`` and returning
+        ax: Matplotlib axes; defaults to None.
+        save: True to save the plot; defaults to True.
+        annot_thresh_fn: Function accepting ``x, y`` and returning
             a boolean indicated whether to annotate the given point;
             defaults to False.
         colors: Color or sequence of colors for each point; defaults to None.
             If None, distinct colors are auto-generated for each pair of x-y
             column or for each group.
-        kwargs (Any): Extra arguments to :meth:`plot_support.decorate_plot`.
+        kwargs: Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
-        :class:`matplotlib.image.Axes`: Matplotlib plot.
+        Matplotlib plot axes.
     
     """
     def get_ys(df_y, column):
@@ -879,6 +863,8 @@ def plot_scatter(
             colors = colormaps.discrete_colormap(
                 num_groups, prioritize_default="cn", seed=config.seed,
                 alpha=alpha) / 255
+        
+        names_group_is_fn = callable(names_group)
         for i, group in enumerate(groups):
             # plot all points in each group with same color
             df_group = df
@@ -888,14 +874,22 @@ def plot_scatter(
                 mask = df_groups == group
                 df_group = df.loc[mask]
                 if col_size is not None: sizes_plot = sizes_plot[mask]
-                if names_group is None:
-                    # make label from group names and values
-                    label = ", ".join(
-                        ["{} {}".format(name, libmag.format_num(val, 3))
-                         for name, val in zip(cols_group, group.split(","))])
+                
+                if names_group is None or names_group_is_fn:
+                    # make legend label from group names and values
+                    labels = []
+                    for name, val in zip(cols_group, group.split(",")):
+                        if names_group_is_fn:
+                            # format name by function
+                            name = names_group(name)
+                        labels.append(f"{name} {libmag.format_num(val, 3)}")
+                    label = ", ".join(labels)
+                
                 else:
                     # use given group name directly
                     label = names_group[i]
+            
+            # get x- and y-values and plot
             xs = df_group[col_x]
             ys = get_ys(df_group, col_y)
             plot()
@@ -951,29 +945,34 @@ def plot_probability(path, conds, metric_cols, col_size, **kwargs):
         xy_line=True, col_size=col_size, **kwargs)
 
 
-def plot_roc(df, show=True, annot_arri=None, **kwargs):
+def plot_roc(
+        df: pd.DataFrame, show: bool = True, annot_arri: Optional[int] = None,
+        **kwargs) -> "axes.Axes":
     """Plot ROC curve generated from :meth:``mlearn.grid_search``.
     
     Args:
-        df (:class:`pandas.DataFrame`): Data frame generated from
+        df: Data frame generated from
             :meth:``mlearn.parse_grid_stats``.
-        show (bool): True to display the plot in :meth:``plot_scatter``;
+        show: True to display the plot in :meth:``plot_scatter``;
             defaults to True.
-        annot_arri (int): Int as index or slice of indices of annotation value
+        annot_arri: Int as index or slice of indices of annotation value
             if the annotation is a string that can be converted into a
             Numpy array; defaults to None.
-        kwargs (Any): Extra arguments to :meth:`plot_support.plot_scatter`.
+        kwargs: Extra arguments to :meth:`plot_support.plot_scatter`.
     
     Returns:
-        :class:`matplotlib.image.Axes`: Matplotlib plot.
+        Matplotlib plot axes.
     
     """
+    def format_col(col):
+        # format column name for plot
+        return col[start+1:].replace("_", " ")
+    
     # names of hyperparameters for each group name, with hyperparameters 
     # identified by param prefix
     cols_group = [col for col in df
                   if col.startswith(mlearn.GridSearchStats.PARAM.value)]
     start = len(mlearn.GridSearchStats.PARAM.value)
-    names_group = [col[start+1:] for col in cols_group]
     
     # add extra arguments unless already set in kwargs
     libmag.add_missing_keys({
@@ -981,7 +980,7 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
         "ylabel": "Sensitivity",
         "xlim": (0, 1),
         "ylim": (0, 1),
-        "title": "Nuclei Detection ROC Over {}".format(names_group[-1]),
+        "title": f"ROC Over {format_col(cols_group[-1])}",
     }, kwargs)
     if "path" in kwargs:
         path = kwargs["path"]
@@ -994,8 +993,108 @@ def plot_roc(df, show=True, annot_arri=None, **kwargs):
     return plot_scatter(
         path, mlearn.GridSearchStats.FDR.value,
         mlearn.GridSearchStats.SENS.value, cols_group[-1], cols_group[:-1],
-        names_group, df=df, show=show, annot_arri=annot_arri,
+        format_col, df=df, show=show, annot_arri=annot_arri,
         legend_loc="lower right", **kwargs)
+
+
+def plot_swarm(
+        df: pd.DataFrame, x_cols: Union[str, Sequence[str]],
+        y_cols: Union[str, Sequence[str]],
+        x_order: Optional[Sequence[str]] = None,
+        group_col: Optional[str] = None,
+        x_label: Optional[str] = None, y_label: Optional[str] = None,
+        x_unit: Optional[str] = None, y_unit: Optional[str] = None,
+        legend_names: Optional[Sequence[str]] = None,
+        col_vspan: Optional[str] = None, vspan_fmt: Optional[str] = None,
+        size=None, ax=None, **kwargs) -> "axes.Axes":
+    """Generate a swarm/jitter plot in Seaborn.
+    
+    Supports x-axis scaling and vertical spans.
+    
+    Args:
+        df: Data frame, assumed to be in melted format.
+        x_cols: Column for x-values, typically categorical.
+        y_cols: Column for y-values, typically continuous.
+        x_order: Order of values in ``x_cols``, given as the values in
+            which to reorder the data frame. Defaults to None.
+        group_col: Column for groups plotted across x-vals and shown in
+            the legend. Defaults to None.
+        x_label: Label for the x-axis; defaults to None.
+        y_label: Label for the y-axis; defaults to None.
+        x_unit: Unit for the x-axis; defaults to None.
+        y_unit: Unit for the y-axis; defaults to None.
+        legend_names: Legend names. Defaults to None to use those from
+            ``group_col``
+        col_vspan: Column for delineating vertical span groups. Groups
+            are determined by contiguous values after reordering by ``x_order``.
+            Defaults to None.
+        vspan_fmt: Vertical span label string format; defaulst to None.
+        size: Figure size in ``width, height`` as inches; defaults to None.
+        ax: Matplotlib axes; defaults to None.
+        **kwargs: Additional arguments, passed to :meth:`decorate_plot`.
+
+    Returns:
+        Matplotlib axes with the plot.
+    
+    Raises:
+        `ImportError` if Seaborn is not available.
+
+    """
+    
+    if sns is None:
+        raise ImportError("Seaborn is required for swarm plots, please install")
+    
+    df_vspan = df
+    if x_order is not None:
+        # reorder so vals in x_cols match the order of vals in x_order;
+        # copy view to prevent SettingsWithCopy warning
+        col = "Grouped"
+        df_vspan = df.loc[df[x_cols].isin(x_order), ].copy(deep=False)
+        df_vspan[col] = pd.Categorical(
+            df_vspan[x_cols], categories=x_order, ordered=True)
+        df_vspan = df_vspan.sort_values(by=col)
+        df_vspan = df_vspan.drop_duplicates(subset=x_cols)
+    
+    if ax is None:
+        # setup fig
+        fig, gs = plot_support.setup_fig(1, 1, size)
+        ax = fig.add_subplot(gs[0, 0])
+    
+    # convert to scientific notation if appropriate before plot since the
+    # plot's formatter may otherwise be incompatible
+    plot_support.set_scinot(ax, lbls=(y_label, x_label), units=(y_unit, x_unit))
+    
+    # plot in seaborn
+    ax = sns.swarmplot(
+        x=x_cols, y=y_cols, hue=group_col, hue_order=legend_names,
+        order=x_order, data=df, ax=ax)
+    
+    # scale x-axis ticks and rotate labels
+    plot_support.scale_xticks(ax, 45)
+    
+    legend = ax.get_legend()
+    if legend:
+        # make legend translucent in case it overlaps points and remove
+        # legend title
+        legend.get_frame().set(alpha=0.5)
+        legend.set_title(None)
+
+    if col_vspan is not None:
+        # add vertical spans
+        vspans, vspan_lbls = plot_support.setup_vspans(
+            df_vspan, col_vspan, vspan_fmt)
+        plot_support.add_vspans(ax, vspans, vspan_lbls, 1, True)
+    
+    # add additional decorations
+    ax = decorate_plot(
+        ax, xlabel=x_label, ylabel=y_label, xunit=x_unit, yunit=y_unit,
+        **kwargs)
+    
+    if x_label is None:
+        # remove x-label if None
+        ax.set_xlabel(x_label)
+   
+    return ax
 
 
 def plot_histogram(df, path, col_x, ax=None, size=None, save=True, suffix=None,
@@ -1189,51 +1288,64 @@ def main(ax=None):
     size = config.plot_labels[config.PlotLabels.SIZE]
     plot_2d_type = libmag.get_enum(
         config.plot_2d_type, config.Plot2DTypes)
+    x_cols = config.plot_labels[config.PlotLabels.X_COL]
+    data_cols = config.plot_labels[config.PlotLabels.Y_COL]
     annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]
+    group_col = config.plot_labels[config.PlotLabels.GROUP_COL]
+    err_col = config.plot_labels[config.PlotLabels.ERR_COL]
+    err_col_abs = config.plot_labels[config.PlotLabels.ERR_COL_ABS]
+    col_wt = config.plot_labels[config.PlotLabels.WT_COL]
     marker = config.plot_labels[config.PlotLabels.MARKER]
     scale_x = config.plot_labels[config.PlotLabels.X_SCALE]
     scale_y = config.plot_labels[config.PlotLabels.Y_SCALE]
+    title = config.plot_labels[config.PlotLabels.TITLE]
+    x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
+    x_lbl = config.plot_labels[config.PlotLabels.X_LABEL]
+    y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
+    x_unit = config.plot_labels[config.PlotLabels.X_UNIT]
+    y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
+    legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
+    hline = config.plot_labels[config.PlotLabels.HLINE]
+    col_vspan = config.plot_labels[config.PlotLabels.VSPAN_COL]
+    vspan_fmt = config.plot_labels[config.PlotLabels.VSPAN_FORMAT]
+    
+    # base output path for tasks that defer saving to post_plot
+    base_out_path = None
     
     # perform 2D plot task, deferring save until the post-processing step
     if plot_2d_type is config.Plot2DTypes.BAR_PLOT:
         # generic barplot
-        title = config.plot_labels[config.PlotLabels.TITLE]
-        x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
-        data_cols = config.plot_labels[config.PlotLabels.Y_COL]
         if data_cols is not None and not libmag.is_seq(data_cols):
             data_cols = (data_cols, )
-        y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
-        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
-        col_wt = config.plot_labels[config.PlotLabels.WT_COL]
-        col_groups = config.plot_labels[config.PlotLabels.GROUP_COL]
-        legend_names = config.plot_labels[config.PlotLabels.LEGEND_NAMES]
-        hline = config.plot_labels[config.PlotLabels.HLINE]
         ax = plot_bars(
-            config.filename, data_cols=data_cols, 
-            legend_names=legend_names, col_groups=col_groups, title=title,
+            config.filename, data_cols=data_cols, err_cols=err_col,
+            legend_names=legend_names, col_groups=group_col, title=title,
             y_label=y_lbl, y_unit=y_unit, hline=hline,
-            size=size, show=False, groups=config.groups, 
+            size=size, show=False, groups=config.groups,
+            col_vspan=col_vspan, vspan_fmt=vspan_fmt,
             prefix=config.prefix, save=False,
-            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
-    
-    elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS:
-        # barplot for data frame from R stats from means/CIs
-        ax = plot_bars(
-            config.filename, data_cols=("original.mean", "smoothed.mean"), 
-            err_cols=("original.ci", "smoothed.ci"), 
-            legend_names=("Original", "Smoothed"), col_groups="RegionName", 
-            size=size, show=False, groups=config.groups, save=False,
-            prefix=config.prefix)
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45, err_cols_abs=err_col_abs)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
         
-        # setup labels
-        title = config.plot_labels[config.PlotLabels.TITLE]
-        x_tick_lbls = config.plot_labels[config.PlotLabels.X_TICK_LABELS]
-        y_lbl = config.plot_labels[config.PlotLabels.Y_LABEL]
-        y_unit = config.plot_labels[config.PlotLabels.Y_UNIT]
+        # TODO: use melted df to avoid giving multiple data cols and err
+        # cols for each data col
+        
+        # set up labels
         if y_lbl is None: y_lbl = "Effect size"
+        if data_cols is None: data_cols = "vals.effect"
+        
+        # set up error bar columns
+        args = {}
+        if err_col_abs is not None:
+            # prioritize error bars with absolute values
+            args["err_cols_abs"] = (err_col_abs,)
+        else:
+            # default to values relative to the data points
+            if err_col is None:
+                err_col = ("vals.ci.low", "vals.ci.hi")
+            args["err_cols"] = (err_col,)
         
         # assume stat is just before the extension in the filename, and 
         # determine weighting column based on stat
@@ -1243,25 +1355,19 @@ def main(ax=None):
         
         # generate bar plot
         ax = plot_bars(
-            config.filename, data_cols=("vals.effect",), 
-            err_cols=(("vals.ci.low", "vals.ci.hi"), ), 
+            config.filename, data_cols=(data_cols,), 
             legend_names="", col_groups="RegionName", title=title, 
             y_label=y_lbl, y_unit=y_unit, save=False,
             size=size, show=False, groups=config.groups, 
-            prefix=config.prefix, col_vspan="Level", vspan_fmt="L{}", 
-            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45)
+            prefix=config.prefix, col_vspan=col_vspan, vspan_fmt="L{}", 
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45, **args)
 
     elif plot_2d_type is config.Plot2DTypes.LINE_PLOT:
         # generic line plot
         
-        title = config.plot_labels[config.PlotLabels.TITLE]
-        x_cols = config.plot_labels[config.PlotLabels.X_COL]
-        data_cols = libmag.to_seq(
-            config.plot_labels[config.PlotLabels.Y_COL])
-        labels = (config.plot_labels[config.PlotLabels.Y_LABEL],
-                  config.plot_labels[config.PlotLabels.X_LABEL])
-        err_cols = libmag.to_seq(
-            config.plot_labels[config.PlotLabels.ERR_COL])
+        data_cols = libmag.to_seq(data_cols)
+        labels = (y_lbl, x_lbl)
+        err_cols = libmag.to_seq(err_col)
         ax = plot_lines(
             config.filename, x_col=x_cols, data_cols=data_cols,
             labels=labels, err_cols=err_cols, title=title, size=size,
@@ -1280,32 +1386,36 @@ def main(ax=None):
         # scatter plot
         
         # get data frame columns and corresponding labels
-        cols = (config.plot_labels[config.PlotLabels.Y_COL],
-                config.plot_labels[config.PlotLabels.X_COL])
-        labels = [config.plot_labels[config.PlotLabels.Y_LABEL],
-                  config.plot_labels[config.PlotLabels.X_LABEL]]
+        cols = (data_cols, x_cols)
+        labels = [y_lbl, x_lbl]
         for i, (col, label) in enumerate(zip(cols, labels)):
             # default to use data frame columns
             if not label: labels[i] = col
         
         # get group columns and title
-        cols_group = config.plot_labels[config.PlotLabels.GROUP_COL]
-        if cols_group and not libmag.is_seq(cols_group):
-            cols_group = [cols_group]
-        title = config.plot_labels[config.PlotLabels.TITLE]
+        if group_col and not libmag.is_seq(group_col):
+            group_col = [group_col]
         if not title: title = "{} Vs. {}".format(*labels)
         
         ax = plot_scatter(
             config.filename, cols[1], cols[0], annot_col,
-            cols_group=cols_group, labels=labels, title=title,
+            cols_group=group_col, labels=labels, title=title,
             fig_size=size, show=config.show, suffix=config.suffix,
             alpha=config.alphas[0], scale_x=scale_x, scale_y=scale_y,
             ax=ax, save=False)
+
+    elif plot_2d_type is config.Plot2DTypes.SWARM_PLOT:
+        # swarm/jitter plot
+        ax = plot_swarm(
+            pd.read_csv(config.filename), x_cols, data_cols, config.groups,
+            group_col, x_lbl, y_lbl, x_unit, y_unit, legend_names, col_vspan,
+            vspan_fmt, size, title=title)
+        base_out_path = "swarm"
     
     if ax is not None:
         # perform plot post-processing tasks, including file save unless
         # savefig is None
-        post_plot(ax, libmag.make_out_path(), config.savefig, config.show)
+        post_plot(ax, libmag.make_out_path(base_out_path), config.savefig, config.show)
     
     return ax
 

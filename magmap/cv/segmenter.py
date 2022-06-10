@@ -3,7 +3,6 @@
 """Segment regions based on blobs, labels, and underlying features.
 """
 
-from multiprocessing import sharedctypes
 from time import time
 from typing import Any, List, Optional, Tuple, Union
 
@@ -626,7 +625,7 @@ def watershed_distance(foreground, markers=None, num_peaks=np.inf,
         local_max = feature.peak_local_max(
             distance, indices=False, num_peaks=num_peaks)
         markers = measure.label(local_max)
-    watershed = morphology.watershed(
+    watershed = segmentation.watershed(
         -distance, markers, compactness=compactness, mask=mask)
     return watershed
 

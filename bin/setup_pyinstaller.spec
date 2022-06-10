@@ -52,8 +52,10 @@ a = Analysis(
             "javabridge",
         )],
         
-        # add egg-info folders required for these packages' entry points
+        # add egg-info folders required for these packages' entry points,
+        # including MagellanMapper for its version info
         *[packaging.get_pkg_egg(p) for p in (
+            "magellanmapper",
             "mayavi",
             "pyface",
             "traitsui",

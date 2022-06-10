@@ -7,6 +7,7 @@ view of orthogonal planes.
 """
 
 import textwrap
+from typing import List, Optional, TYPE_CHECKING
 
 from matplotlib import patches
 import numpy as np
@@ -18,27 +19,50 @@ from magmap.settings import config
 from magmap.atlas import ontology
 from magmap.plot import plot_support
 
+if TYPE_CHECKING:
+    from matplotlib import image
+
 
 class PlotAxImg:
-    """Axes image storage class to contain additional information for
-    display such as brightness and contrast.
+    """Axes image storage class.
+    
+    Tracks settings that may differ between the currently displayed image and
+    input values, such as ``None`` to specify auto-intensity and values for
+    brightness and contrast that are not stored in the image itself.
 
     Attributes:
-        ax_img (List[List[:obj:`matplotlib.image.AxesImage`]]): Nested list
-            of displayed axes image in the format:
-            ``[[AxesImage0_ch0, AxesImage0_ch1, ...], ...]``.
-        brightness (float): Brightness addend; defaults to 0.0.
-        contrast (float): Contrast factor; defaults to 1.0.
-        img (:obj:`np.ndarray`): The original underlying image data,
+        ax_img: Displayed Matplotlib image.
+        vmin: Specified vmin; defaults to None for auto-scaling. See
+            ``ax_img.norm.vmin`` for the output vmin.
+        vmax: Specified vmax; defaults to None for auto-scaling. See
+            ``ax_img.norm.vmax`` for the output vmax.
+        brightness: Brightness addend; defaults to 0.0.
+        contrast: Contrast factor; defaults to 1.0.
+        alpha: Opacity level; defaults to None.
+        alpha_blend: Opacity level of the first level in the area of blending
+            between two images; defaults to None.
+        img: The original underlying image data,
             copied to allow adjusting the array in ``ax_img`` while
             retaining the original data.
 
     """
-    def __init__(self, ax_img):
+    def __init__(
+            self, ax_img: "image.AxesImage", vmin: Optional[float] = None,
+            vmax: Optional[float] = None):
+        
+        # set from arguments
         self.ax_img = ax_img
-        self.brightness = 0.0
-        self.contrast = 1.0
-        self.img = np.copy(self.ax_img.get_array())
+        self.vmin = vmin
+        self.vmax = vmax
+        
+        # additional image attributes
+        self.brightness: float = 0.0
+        self.contrast: float = 1.0
+        self.alpha: Optional[float] = None
+        self.alpha_blend: Optional[float] = None
+        
+        # original underlying image data
+        self.img: np.ndarray = np.copy(self.ax_img.get_array())
 
 
 class PlotEditor:
@@ -168,6 +192,7 @@ class PlotEditor:
         self._editing = False
         self._show_labels = True  # show atlas labels on mouseover
         self._show_crosslines = False  # show crosslines to orthogonal views
+        self._colorbar = None  # colorbar for first main image
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -359,25 +384,35 @@ class PlotEditor:
 
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
-        # assume colorbar already shown if set and image previously displayed
-        colorbar = (config.roi_profile["colorbar"]
-                    and len(self.axes.images) < 1)
         self.axes.clear()
         self.hline = None
         self.vline = None
         
-        # prep 2D image from main image, assumed to be an intensity image
+        # prep 2D image from main image, assumed to be an intensity image,
+        # with settings for each channel within this main image
         imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
         self._channels = [config.channel]
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
+        alpha_blends = [None]
         shapes = [self._img3d_shapes[0][1:3]]
         vmaxs = [None]
         vmins = [None]
+        brightnesses = [None]
+        contrasts = [None]
         if self._plot_ax_imgs:
-            # use settings from previously displayed images if available
-            vmaxs[0] = [a.ax_img.norm.vmax for a in self._plot_ax_imgs[0]]
-            vmins[0] = [a.ax_img.norm.vmin for a in self._plot_ax_imgs[0]]
+            # use vmin/vmax from norm values in previously displayed images
+            # if available; None specifies auto-scaling
+            vmaxs[0] = [p.vmax if p.vmax is None else p.ax_img.norm.vmax
+                        for p in self._plot_ax_imgs[0]]
+            vmins[0] = [p.vmin if p.vmin is None else p.ax_img.norm.vmin
+                        for p in self._plot_ax_imgs[0]]
+            
+            # use opacity, brightness, anc contrast from prior images
+            alphas[0] = [p.alpha for p in self._plot_ax_imgs[0]]
+            alpha_blends[0] = [p.alpha_blend for p in self._plot_ax_imgs[0]]
+            brightnesses[0] = [p.brightness for p in self._plot_ax_imgs[0]]
+            contrasts[0] = [p.contrast for p in self._plot_ax_imgs[0]]
         
         if self.img3d_labels is not None:
             # prep labels with discrete colormap and prior alpha if available
@@ -387,6 +422,7 @@ class PlotEditor:
             alphas.append(
                 self._ax_img_labels.get_alpha() if self._ax_img_labels
                 else self.alpha)
+            alpha_blends.append(None)
             shapes.append(self._img3d_shapes[1][1:3])
             vmaxs.append(None)
             vmins.append(None)
@@ -403,7 +439,14 @@ class PlotEditor:
                 imgs2d.append(img_add)
                 self._channels.append([0])
                 cmaps.append(self.cmap_borders[channel])
-                alphas.append(libmag.get_if_within(config.alphas, 2 + i, 1))
+                
+                # get alpha for last corresponding borders plane if available
+                ax_img = libmag.get_if_within(self._plot_ax_imgs, 2 + i, None)
+                alpha = (ax_img[i].alpha if ax_img else
+                         libmag.get_if_within(config.alphas, 2 + i, 1))
+                alphas.append(alpha)
+                alpha_blends.append(None)
+                
                 shapes.append(self._img3d_shapes[2][1:3])
                 vmaxs.append(None)
                 vmins.append(None)
@@ -416,6 +459,7 @@ class PlotEditor:
                 self._channels.append([0])
                 cmaps.append(("Greys",))
                 alphas.append(0.4)
+                alpha_blends.append(None)
                 shapes.append(self._img3d_shapes[imgi][1:3])
                 vmaxs.append(None)
                 vmins.append(None)
@@ -426,9 +470,20 @@ class PlotEditor:
         # reasons
         ax_imgs = plot_support.overlay_images(
             self.axes, self.aspect, self.origin, imgs2d, self._channels, cmaps,
-            alphas, vmins, vmaxs, check_single=(self._ax_img_labels is None))
-        if colorbar:
-            self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
+            alphas, vmins, vmaxs, check_single=(self._ax_img_labels is None),
+            alpha_blends=alpha_blends)
+        
+        # add or update colorbar
+        colobar_prof = config.roi_profile["colorbar"]
+        if self._colorbar:
+            self._colorbar.update_normal(ax_imgs[0][0])
+        elif colobar_prof:
+            # store colorbar since it's tied to the artist, which will be
+            # replaced with the next display and cannot be further accessed
+            self._colorbar = self.axes.figure.colorbar(
+                ax_imgs[0][0], ax=self.axes, **colobar_prof)
+        
+        # display coordinates and label values for each image
         self.axes.format_coord = pixel_display.PixelDisplay(
             imgs2d, ax_imgs, shapes, cmap_labels=self.cmap_labels)
 
@@ -441,10 +496,29 @@ class PlotEditor:
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
-        # store displayed images
+        # store displayed images in the PlotAxImg container class and update
+        # displayed brightness/contrast
         if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
-        self._plot_ax_imgs = [
-            [PlotAxImg(img) for img in imgs] for imgs in ax_imgs]
+        self._plot_ax_imgs = []
+        for i, imgs in enumerate(ax_imgs):
+            plot_ax_imgs = []
+            for j, img in enumerate(imgs):
+                plot_ax_img = PlotAxImg(img)
+                if i == 0:
+                    # specified vmin/vmax, in contrast to the AxesImages's
+                    # norm, which holds the values used for the displayed image
+                    plot_ax_img.vmin = libmag.get_if_within(vmins[i], j)
+                    plot_ax_img.vmax = libmag.get_if_within(vmaxs[i], j)
+                    
+                    # set brightness/contrast
+                    self.change_brightness_contrast(
+                        plot_ax_img, libmag.get_if_within(brightnesses[i], j),
+                        libmag.get_if_within(contrasts[i], j))
+                plot_ax_img.alpha = libmag.get_if_within(alphas[i], j)
+                plot_ax_img.alpha_blend = libmag.get_if_within(
+                    alpha_blends[i], j)
+                plot_ax_imgs.append(plot_ax_img)
+            self._plot_ax_imgs.append(plot_ax_imgs)
         
         if self.xlim is not None and self.ylim is not None:
             # restore pan/zoom view
@@ -600,29 +674,77 @@ class PlotEditor:
         """
         return self.get_plot_ax_img(
             self._plot_ax_imgs, imgi, self._channels, chl)
-    
+
     @staticmethod
-    def update_plot_ax_img_display(plot_ax_img, minimum=np.nan, maximum=np.nan,
-                                   brightness=None, contrast=None, alpha=None):
+    def change_brightness_contrast(
+            plot_ax_img: PlotAxImg, brightness: Optional[float],
+            contrast: Optional[float]):
+        """Change image brightness and contrast.
+        
+        All changes are made relative to the original image, so both
+        brightness and contrast should be given together. For example, if
+        brightness is changed, and later contrast is changed, the contrast
+        change will wipe out the brightness change unless the brightness
+        value is given again.
+        
+        Args:
+            plot_ax_img: Axes image storage instance.
+            brightness: Brightness value, centered on 0. Can be None to
+                ignore brightness changes.
+            contrast: Contrast value, centered on 1. Can be None to
+                ignore contrast changes.
+
+        """
+        # get the array for the currently displayed image, which adjusts
+        # dynamically to array changes
+        data = plot_ax_img.ax_img.get_array()
+        info = libmag.get_dtype_info(data)
+        img = plot_ax_img.img
+        
+        if brightness is not None:
+            # shift original image array by brightness
+            img = np.clip(plot_ax_img.img + brightness, info.min, info.max)
+            data[:] = img
+            plot_ax_img.brightness = brightness
+        
+        if contrast is not None:
+            # stretch original image array by contrast
+            img = np.clip(img * contrast, info.min, info.max)
+            data[:] = img
+            plot_ax_img.contrast = contrast
+
+    @staticmethod
+    def update_plot_ax_img_display(
+            plot_ax_img: PlotAxImg, minimum: float = np.nan,
+            maximum: float = np.nan, brightness: Optional[float] = None,
+            contrast: Optional[float] = None, alpha: Optional[float] = None,
+            **kwargs) -> Optional[PlotAxImg]:
         """Update plotted image display settings.
 
         Args:
-            plot_ax_img (:obj:`PlotAxImg`): Plotted image.
-            minimum (float): Vmin; can be None for auto setting; defaults
+            plot_ax_img: Plotted image.
+            minimum: Vmin; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            maximum (float): Vmax; can be None for auto setting; defaults
+            maximum: Vmax; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            brightness (float): Brightness addend; defaults to None.
-            contrast (float): Contrast multiplier; defaults to None.
-            alpha (float): Opacity value; defalts to None.
+            brightness: Brightness addend; defaults to None.
+            contrast: Contrast multiplier; defaults to None.
+            alpha: Opacity value; defalts to None.
+            **kwargs: Extra arguments, currently ignored.
         
         Returns:
-            :obj:`PlotAxImg`: The updated axes image plot.
+            The updated axes image plot.
 
         """
         if not plot_ax_img:
             return None
         if minimum is not np.nan or maximum is not np.nan:
+            # store the specified intensity limits
+            if minimum is not np.nan:
+                plot_ax_img.vmin = minimum
+            if maximum is not np.nan:
+                plot_ax_img.vmax = maximum
+            
             # set vmin and vmax; use norm rather than get_clim since norm
             # holds the actual limits
             clim = [minimum, maximum]
@@ -649,44 +771,85 @@ class PlotEditor:
                 else:
                     norm.vmax = norm.vmin
         if brightness is not None or contrast is not None:
-            data = plot_ax_img.ax_img.get_array()
-            info = libmag.get_dtype_info(data)
-            if brightness is not None:
-                # shift original image array by brightness
-                data[:] = np.clip(
-                    plot_ax_img.img + brightness, info.min, info.max)
-            if contrast is not None:
-                # stretch original image array by contrast
-                data[:] = np.clip(
-                    plot_ax_img.img * contrast, info.min, info.max)
+            # adjust brightness and contrast together
+            PlotEditor.change_brightness_contrast(
+                plot_ax_img, brightness, contrast)
         if alpha is not None:
             # adjust opacity
             plot_ax_img.ax_img.set_alpha(alpha)
         return plot_ax_img
 
-    def update_img_display(self, imgi, chl=None, minimum=np.nan,
-                           maximum=np.nan, brightness=None, contrast=None,
-                           alpha=None):
+    def update_alpha_blend(
+            self, imgi: int, alpha_blend: float) -> List[PlotAxImg]:
+        """Update alpha blending between two images.
+
+        Args:
+            imgi: Index of image group. The first two images in this group
+                will be blended.
+            alpha_blend: Alpha opacity level for the blending.
+
+        Returns:
+            List of the updated axes image storage instances.
+
+        """
+        # get the first two channels in the image group
+        plot_ax_imgs = [self.get_displayed_img(imgi, c) for c in (0, 1)]
+        if None in plot_ax_imgs:
+            return plot_ax_imgs
+        
+        # blend the images
+        alpha1, alpha2 = plot_support.alpha_blend_intersection(
+            plot_ax_imgs[0].img, plot_ax_imgs[1].img, alpha_blend)
+        plot_ax_imgs[0].ax_img.set_alpha(alpha1)
+        plot_ax_imgs[1].ax_img.set_alpha(alpha2)
+        
+        # store the alpha blend level while retaining the original stored alpha
+        for p in plot_ax_imgs: p.alpha_blend = alpha_blend
+        return plot_ax_imgs
+
+    def update_img_display(
+            self, imgi: int, chl: Optional[int] = None, minimum: float = np.nan,
+            maximum: float = np.nan, brightness: Optional[float] = None,
+            contrast: Optional[float] = None, alpha: Optional[float] = None,
+            alpha_blend: Optional[float] = None) -> PlotAxImg:
         """Update dislayed image settings.
 
         Args:
-            imgi (int): Index of image.
-            chl (int): Index of channel; defaults to None.
-            minimum (float): Vmin; can be None for auto setting; defaults
+            imgi: Index of image group.
+            chl: Index of channel within the group; defaults to None.
+            minimum: Vmin; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            maximum (float): Vmax; can be None for auto setting; defaults
+            maximum: Vmax; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            brightness (float): Brightness addend; defaults to None.
-            contrast (float): Contrast multiplier; defaults to None.
-            alpha (float): Opacity value; defalts to None.
+            brightness: Brightness addend; defaults to None.
+            contrast: Contrast multiplier; defaults to None.
+            alpha: Opacity value; defaults to None.
+            alpha_blend: Opacity blending value; defaults to None. False
+                turns off alpha blending, resetting the images to their
+                stored alpha values.
         
         Returns:
-            :obj:`PlotAxImg`: The updated axes image plot.
+            The updated axes image plot.
 
         """
-        plot_ax_img = self.get_displayed_img(imgi, chl)
-        plot_ax_img = self.update_plot_ax_img_display(
-            plot_ax_img, minimum, maximum, brightness, contrast, alpha)
+        if alpha_blend is False:
+            # turn off alpha blending, assumed to be applied to first 2
+            # images, and reset them to stored alpha values
+            for c in (0, 1):
+                plot_ax_img = self.get_displayed_img(imgi, c)
+                if plot_ax_img is not None:
+                    plot_ax_img.alpha_blend = None
+                    plot_ax_img = self.update_img_display(
+                        imgi, c, minimum, maximum, brightness, contrast,
+                        plot_ax_img.alpha)
+        elif alpha_blend:
+            # alpha blend the images
+            plot_ax_img = self.update_alpha_blend(imgi, alpha_blend)[0]
+        else:
+            # update the selected image
+            plot_ax_img = self.get_displayed_img(imgi, chl)
+            plot_ax_img = self.update_plot_ax_img_display(
+                plot_ax_img, minimum, maximum, brightness, contrast, alpha)
         self.axes.figure.canvas.draw_idle()
         return plot_ax_img
     

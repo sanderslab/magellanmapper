@@ -7,8 +7,8 @@ import unittest
 
 from magmap.io import libmag
 
+
 class TestLibmag(unittest.TestCase):
-    
     
     def test_insert_before_ext(self):
         self.assertEqual(libmag.insert_before_ext(
@@ -19,18 +19,21 @@ class TestLibmag(unittest.TestCase):
             "foo/bar/item", "totest", "_"), "foo/bar/item_totest")
             
     def test_splitext(self):
-        self.assertEqual(libmag.splitext("foo/bar/item.py"), ("foo/bar/item", ".py"))
+        self.assertEqual(
+            libmag.splitext("foo/bar/item.py"), ("foo/bar/item", ".py"))
         self.assertEqual(libmag.splitext("item.py"), ("item", ".py"))
         self.assertEqual(libmag.splitext("foo/bar/item"), ("foo/bar/item", ""))
-        self.assertEqual(libmag.splitext("foo/bar/item.file.ext"), (
-            "foo/bar/item.file", ".ext"))
+        self.assertEqual(
+            libmag.splitext("foo/bar/item.file.ext"),
+            ("foo/bar/item.file", ".ext"))
         self.assertEqual(libmag.splitext("foo/bar/item.file.py"), (
-        "foo/bar/item.file", ".py"))
+            "foo/bar/item.file", ".py"))
         
     def test_match_ext(self):
-        self.assertEqual(libmag.match_ext(
-            "foo1/bar1/item1.ext1", "foo2/bar2/item2.ext2"), "foo2/bar2/item2.ext1")
-        # if there is no extension in the path to match, it will retain its own extension
+        self.assertEqual(
+            libmag.match_ext("foo1/bar1/item1.ext1", "foo2/bar2/item2.ext2"),
+            "foo2/bar2/item2.ext1")
+        # if there is no extension in the path to match, it will retain its own
         self.assertEqual(libmag.match_ext(
             "foo1/bar1/item1", "foo2/bar2/item2.ext2"), "foo2/bar2/item2.ext2")
         self.assertEqual(libmag.match_ext(
@@ -45,8 +48,10 @@ class TestLibmag(unittest.TestCase):
             "foo2/bar2/item2.file2.ext1"))
             
     def test_get_filename_without_ext(self):
-        self.assertEqual(libmag.get_filename_without_ext("foo/bar/item.py"), "item")
-        self.assertEqual(libmag.get_filename_without_ext("foo/bar/item"), "item")
+        self.assertEqual(
+            libmag.get_filename_without_ext("foo/bar/item.py"), "item")
+        self.assertEqual(
+            libmag.get_filename_without_ext("foo/bar/item"), "item")
         self.assertEqual(libmag.get_filename_without_ext(
             "foo/bar/item.file.py"), "item.file")
         self.assertEqual(libmag.get_filename_without_ext("item.py"), "item")
@@ -70,19 +75,21 @@ class TestLibmag(unittest.TestCase):
         self.assertEqual(libmag.series_as_str("123456789"), "123456789")
         
     def test_splice_before(self):
-        self.assertEqual(libmag.splice_before("base", "file", "edit"), ("base"))
+        self.assertEqual(
+            libmag.splice_before("base", "file", "edit"), "base")
         self.assertEqual(libmag.splice_before(
-        "foo/bar/item.py", "item", "file"), "foo/bar/file_item.py")
+            "foo/bar/item.py", "item", "file"), "foo/bar/file_item.py")
         self.assertEqual(libmag.splice_before(
-        "foo/bar/item.py", "edit", "file"), "foo/bar/item_file.py")
+            "foo/bar/item.py", "edit", "file"), "foo/bar/item_file.py")
         self.assertEqual(libmag.splice_before(
-        "foo/bar/item.py", "item", "file", "/"), "foo/bar/file/item.py")
+            "foo/bar/item.py", "item", "file", "/"), "foo/bar/file/item.py")
         
     def test_str_to_disp(self):
         self.assertEqual(libmag.str_to_disp("this_is_a_test"), "this is a test")
         self.assertEqual(libmag.str_to_disp(
-        "       this is a test         "), "this is a test")
-        self.assertEqual(libmag.str_to_disp("    this_is a_test    "), "this is a test")
+            "       this is a test         "), "this is a test")
+        self.assertEqual(
+            libmag.str_to_disp("    this_is a_test    "), "this is a test")
         
     def test_get_int(self):
         self.assertEqual(libmag.get_int("5"), 5)

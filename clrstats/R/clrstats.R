@@ -20,7 +20,8 @@ kStatTypes <- c(
 # statistical models
 kModel <- c(
   "logit", "linregr", "gee", "logit.ord", "ttest",
-  "wilcoxon", "ttest.paired", "wilcoxon.paired", "fligner", "basic")
+  "wilcoxon", "ttest.paired", "wilcoxon.paired", "fligner", "basic",
+  "diff.mean")
 
 # measurements, which correspond to columns in main data frame
 kMeas <- c(
@@ -190,7 +191,7 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
   val.conds <- list()
   num.per.cond <- NULL
   for (i in seq_along(conditions.unique)) {
-    val.conds[[i]] <- vals[conditions == conditions.unique[i]]
+    val.conds[[paste0("cond", i)]] <- vals[conditions == conditions.unique[i]]
     num.per.cond <- length(val.conds[[i]])
     if (is.element(model, kModel[c(5, 7)]) & num.per.cond <= 1) {
       # T-tests requires >= 2 values
@@ -199,52 +200,101 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
     }
   }
   
-  result <- NULL
-  col.effect <- "estimate"
+  effect <- NULL
   effect.raw <- NULL
-  if (model == kModel[5] | model == kModel[7]) {
-    # Student's t-test
-    result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
-
-  } else if (model == kModel[6] | model == kModel[8]) {
-    # Wilcoxon test (Mann-Whitney if not paired)
-    result <- wilcox.test(
-      val.conds[[2]], val.conds[[1]], paired=paired, conf.int=TRUE)
-
-    # calculate the standardized effect size, given as z / sqrt(N),
-    # where N = number of pairs
-    eff <- result[[col.effect]]
-    effect.raw <- eff
-    result[col.effect] <- rcompanion::wilcoxonZ(
-      val.conds[[2]], val.conds[[1]], paired=paired) / sqrt(num.per.cond)
-    cat("Wilcoxon estimate: ", eff, ", standardized effect: ",
-        result[[col.effect]], "\n", sep="")
-
-  } else if (model == kModel[9]) {
-    # Fligner-Killen test of variance
-    result <- fligner.test(vals, conditions)
-    col.effect <- "statistic"
-
-  } else {
-    cat("Sorry, model", model, "not found\n")
-  }
-  print(result)
+  ci <- NULL
+  result <- tryCatchLog::tryCatchLog({
+    if (model == kModel[5] | model == kModel[7]) {
+      # Student's t-test
+      result <- t.test(val.conds[[2]], val.conds[[1]], paired=paired)
+      
+      # calculate Cohen's d for standardized effect
+      
+      # # convert lists of potentially different sizes to df in long format
+      # df <- stack(val.conds)
+      # print(df)
+      
+      # # effect size using rstatix; CI does not appear to be working
+      # eff <- rstatix::cohens_d(df, values ~ ind, paired=paired)
+      # print(eff)
+      
+      # effect size using effectsize
+      # eff <- effectsize::cohens_d(values ~ ind, data=df, paired=paired)
+      eff <- effectsize::cohens_d(val.conds[[2]], val.conds[[1]], paired=paired)
+      print(eff)
+      # print(effectsize::interpret_cohens_d(eff))
+      effect <- eff$Cohens_d
+      ci <- c(eff$CI_low, eff$CI_high)
+      
+      # get raw effect; get diff if multiple vals
+      effect.raw <- result[["estimate"]]
+      if (length(effect.raw) > 1) {
+        effect.raw <- -diff(effect.raw)
+      }
+  
+    } else if (model == kModel[6] | model == kModel[8]) {
+      # Wilcoxon test (Mann-Whitney if not paired)
+      result <- wilcox.test(
+        val.conds[[2]], val.conds[[1]], paired=paired, conf.int=TRUE)
+  
+      # replace the main effect with a standardized effect size, given as
+      # z / sqrt(N), where N = number of pairs
+      effect.raw <- result[["estimate"]]
+      effect <- rcompanion::wilcoxonZ(
+        val.conds[[2]], val.conds[[1]], paired=paired) / sqrt(num.per.cond)
+      cat("Wilcoxon estimate: ", effect.raw, ", standardized effect: ",
+          effect, "\n", sep="")
+  
+    } else if (model == kModel[9]) {
+      # Fligner-Killen test of variance
+      result <- fligner.test(vals, conditions)
+      effect <- result[["statistic"]]
+  
+    } else if (model == kModel[11]) {
+      # difference of means
+      effect <- mean(
+        val.conds[[2]], na.rm=TRUE) - mean(val.conds[[1]], na.rm=TRUE)
+      result <- list(estimate=effect, p.value=NA)
+  
+    } else {
+      cat("Sorry, model", model, "not found\n")
+    }
+    
+    # return result from try block
+    print(result)
+    result
+  }, error=function(e) {
+    message("Unable to generate stat, skipping")
+    return(NULL)
+  }, finally={
+  }, include.full.call.stack=FALSE, include.compact.call.stack=FALSE)
+  
+  # return if no stats
+  if (is.null(result)) return(NULL)
   
   # basic stats data frame in format for filterStats
   coef.tab <- setupBasicStats()
-  effect <- result[[col.effect]]
   coef.tab$Value <- effect
   coef.tab$Value.raw <- effect
   if (!is.null(effect.raw)) {
     # store raw effect if it was standardized; otherwise, leave same as effect
     coef.tab$Value.raw <- effect.raw
   }
-  # get relative confidence intervals as pos vals
+  
   if (is.element("conf.int", names(result))) {
-    ci <- result$conf.int
-    coef.tab$CI.low <- effect - ci[1]
-    coef.tab$CI.hi <- ci[2] - effect
+    # store confidence intervals from result as both standardized and raw CIs
+    ci.raw <- result$conf.int
+    coef.tab$CI.low.raw <- ci.raw[1]
+    coef.tab$CI.hi.raw <- ci.raw[2]
+    coef.tab$CI.low <- coef.tab$CI.low.raw
+    coef.tab$CI.hi <- coef.tab$CI.hi.raw
   }
+  if (!is.null(ci)) {
+    # store standardized confidence intervals
+    coef.tab$CI.low <- ci[[1]]
+    coef.tab$CI.hi <- ci[[2]]
+  }
+  
   coef.tab$P <- result$p.value
   coef.tab$N <- num.per.cond
   print(coef.tab)
@@ -258,7 +308,7 @@ setupBasicStats <- function() {
   #   Data frame with columns for basic statistics such as mean and 
   #   confidence intervals and a single empty row.
   
-  cols <- c("N", "Value", "Value.raw", "CI.low", "CI.hi", "P")
+  cols <- c("N", "Value", "CI.low", "CI.hi", "Value.raw", "CI.low.raw", "CI.hi.raw", "P")
   coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
   names(coef.tab) <- cols
   rownames(coef.tab) <- "vals"
@@ -354,9 +404,10 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   #   group.col: Name of group column; defaults to NULL, which uses "Condition"
   #     for means models and "Geno" otherwise.
   
+  mean_model_inds <- c(5:9, 11)
   if (is.null(group.col)) {
     # set up default group column name
-    if (is.element(model, kModel[5:9])) {
+    if (is.element(model, kModel[mean_model_inds])) {
       # means models default to splitting by condition
       group.col <- "Condition"
     } else {
@@ -368,7 +419,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
   
   # find all regions
   regions <- unique(df$Region)
-  #regions <- c(15565) # TESTING: insert single region
+  # regions <- c(15565, 15566) # TESTING: select region(s)
   cols <- c("Region", "Stats", "Volume", "Nuclei")
   stats <- data.frame(matrix(nrow=length(regions), ncol=length(cols)))
   names(stats) <- cols
@@ -402,7 +453,7 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         df.region.nonnan <- df.region.nonnan[nonnan, ]
         if (is.null(df.region.nonnan)) next
       }
-      if (is.element(model, kModel[5:9])) {
+      if (is.element(model, kModel[mean_model_inds])) {
         # filter for means tests, which compare groups specified in group.col
         # TODO: reconsider aggregating sides but need way to properly
         # average variations in a weighted manner
@@ -425,11 +476,11 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       # apply stats and store in stats data frame, using list to allow 
       # arbitrary size and storing mean volume as well
       coef.tab <- NULL
-      if (is.element(model, kModel[5:9])) {
+      if (is.element(model, kModel[mean_model_inds])) {
         # means tests
         coef.tab <- meansModel(
           vals, df.region.nonnan[[group.col]], model, paired, 
-          config.env$ReversePairedStats)
+          config.env$ReverseConditions)
         
       } else if (model == kModel[10]) {
         # basic stats
@@ -561,7 +612,7 @@ filterStats <- function(stats, corr=NULL) {
   cols.orig <- cols # points to original vector if it is mutated
   offset <- length(cols)
   cols.suffixes <- c(
-    ".n", ".effect", ".effect.raw", ".ci.low", ".ci.hi", ".p", ".pcorr",
+    ".n", ".effect", ".ci.low", ".ci.hi", ".effect.raw", ".ci.low.raw", ".ci.hi.raw", ".p", ".pcorr",
     ".logp")
   for (interact in interactions) {
     for (suf in cols.suffixes) {
@@ -615,26 +666,24 @@ filterStats <- function(stats, corr=NULL) {
   return(filtered)
 }
 
-calcVolStats <- function(path.in, path.out, meas, model, region.ids, 
-                         split.by.side=TRUE, corr=NULL) {
-  # Calculate volumetric stats from the given CSV file.
-  #
-  # Args:
-  #   path.in: Path from which to load CSV to calculate stats, assumed to be 
-  #     generated by \code{magmap.stats.regions_to_pandas} Python function.
-  #   path.out: Path to output CSV file.
-  #   meas: Column from which to generate stats, which should be one of 
-  #     \code{\link{kMeas}}.
-  #   model: Model type to use for stats, which should be one of 
-  #     \code{\link{kModel}}.
-  #   split.by.side: True to plot separate sub-scatter plots for each 
-  #     region by side; defaults to True.
-  #
-  # Returns:
-  #   Filtered data frame from \code{\link{filterStats}}.
+#' Calculate volumetric stats from the given CSV file.
+#'
+#' @param df Volume stats data frame, assumed to be generated by
+#'   \code{magmap.stats.regions_to_pandas} Python function.
+#' @param path.out Path to output CSV file.
+#' @param meas Column from which to generate stats, which should be one of 
+#'   [kMeas].
+#' @param model Model type to use for stats, which should be one of 
+#'   [kModel].
+#' @param region.ids Data frame of region IDs to merge by the "Region"
+#'   column. Defaults to NULL, in which case region data will be merged
+#'   from `df` if available.
+#' @param split.by.side True to plot separate sub-scatter plots for each 
+#'   region by side; defaults to True.
+#' @return Filtered data frame from [filterStats].
+calcVolStats <- function(
+    df, path.out, meas, model, region.ids=NULL, split.by.side=TRUE, corr=NULL) {
   
-  # load CSV file output by MagellanMapper Python stats module
-  df <- read.csv(path.in)
   if (!is.element(meas, names(df))) {
     cat(paste(meas, "not found in data frame", "\n"))
     return(NULL)
@@ -648,9 +697,11 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
     df$Region[region.all] <- 15564
   }
   
-  if (all(c("Region", "RegionName") %in% colnames(df))) {
-    # get regions and names from main df
-    region.ids <- unique(df[c("Region", "RegionName")])
+  if (is.null(region.ids)) {
+    # get regions columns from main df
+    cols <- c("Region", "RegionName", "RegionAbbr", "Level")
+    cols <- cols[cols %in% colnames(df)]
+    region.ids <- unique(df[cols])
   } else {
     # merge in region names based on matching IDs
     df <- merge(df, region.ids, by="Region", all.x=TRUE)
@@ -669,10 +720,16 @@ calcVolStats <- function(path.in, path.out, meas, model, region.ids,
     message("No stats were generated. Please check input file, regions,",
             "and stats settings.\n")
   } else {
-    stats.filtered <- merge(region.ids, stats.filtered, by="Region", all.y=TRUE)
+    if (!is.null(region.ids)) {
+      # merge in regions table
+      stats.filtered <- merge(
+        region.ids, stats.filtered, by="Region", all.y=TRUE)
+    }
     print(stats.filtered)
+    message("Writing stats to: ", path.out)
     write.csv(stats.filtered, path.out)
   }
+  
   return(stats.filtered)
 }
 
@@ -753,7 +810,7 @@ setupConfig <- function(name=NULL) {
     config.env$JitterPlotSave <- TRUE
     config.env$JitterLabels <- FALSE
     config.env$Axes.In.Range <- FALSE
-    config.env$ReversePairedStats <- FALSE
+    config.env$ReverseConditions <- FALSE
     config.env$SummaryStats <- kSummaryStats[2]
     config.env$GroupCol <- NULL
     config.env$Sort.Groups <- TRUE
@@ -924,9 +981,9 @@ setupConfig <- function(name=NULL) {
     # square plots
     config.env$PlotSize <- c(7, 7)
     
-  } else if (name == "revpairedstats") {
+  } else if (name == "revconds") {
     # reverse the order of conditions in paired stats
-    config.env$ReversePairedStats <- TRUE
+    config.env$ReverseConditions <- TRUE
     
   } else {
     loaded <- FALSE
@@ -938,7 +995,7 @@ setupConfig <- function(name=NULL) {
 }
 
 runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
-                     verbose=NULL, stat.type=NULL) {
+                     verbose=NULL, stat.type=NULL, model=NULL) {
   # Load data and run full stats.
   #
   # Args:
@@ -951,6 +1008,8 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
   #   verbose: True to show verbose debugging information; defaults to NULL.
   #   stat.type: One of kStatTypes specifying stat processing typest. 
   #     Defaults to NULL to use kStatTypes[1].
+  #   model: Statistical model to use, which should be one of `kModel`.
+  #     Defaults to NULL to use the model in [config.env].
 
   if (is.null(stat.type)) {
     message("Running general stats")
@@ -988,6 +1047,11 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
   }
   cat("Measurements:", paste(measurements.split), "\n")
 
+  if (!is.null(model)) {
+    config.env$Model <- model
+    message("Set stats model to: ", config.env$Model)
+  }
+
   if (!is.null(prefix)) {
     # set path prefix
     config.env$Prefix <- prefix
@@ -1010,10 +1074,18 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
     if (config.env$Model == kModel[2]) {
       stat <- "genos"
     }
-    region.ids <- read.csv(kRegionIDsPath)
+    region.ids <- NULL
+    if (file.exists(kRegionIDsPath)) {
+      region.ids <- read.csv(kRegionIDsPath)
+    }
     
     # reset graphics to ensure consistent layout
     while (!is.null(dev.list())) dev.off()
+    
+    # load CSV file output by MagellanMapper Python stats module
+    message("Loading volume stats CSV: ", path)
+    df <- read.csv(path)
+    print(df)
     
     for (meas in measurements.split) {
       print(paste("Calculating stats for", meas))
@@ -1030,13 +1102,13 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
       } else {
         # calculate stats
         stats <- calcVolStats(
-          path, path.out, meas, config.env$Model, region.ids,
+          df, path.out, meas, config.env$Model, region.ids,
           split.by.side=config.env$Split.By.Side, corr=config.env$P.Corr)
       }
       
       if (!is.null(stats) & config.env$PlotVolcano) {
         # plot effects and p's
-        volcanoPlot(stats, meas, stat, c(NA, 1.3, 0.2), config.env$VolcanoLogX, 
+        volcanoPlot(stats, meas, stat, c(NA, 1.3, NA), config.env$VolcanoLogX, 
                     config.env$VolcanoLabels, config.env$PlotSize, 
                     meas.names=kMeasNames)
         volcanoPlot(stats, meas, "sidesR", c(25, 2.5, 0.2), 

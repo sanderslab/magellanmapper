@@ -395,8 +395,8 @@ def register(
         fixed_file: str, moving_img_path: str, show_imgs: bool = True,
         write_imgs: bool = True, name_prefix: Optional[str] = None,
         new_atlas: bool = False,
-        transformix: Optional[sitk.TransformixImageFilter] = None
-) -> sitk.TransformixImageFilter:
+        transformix: Optional["sitk.TransformixImageFilter"] = None
+) -> "sitk.TransformixImageFilter":
     """Register an atlas to a sample image using the SimpleElastix library.
     
     Loads the images, applies any transformations to the moving image, and
@@ -1407,10 +1407,12 @@ def volumes_by_id(
     ref_not_spec = labels_ref.ref_lookup is None
     df_regions = None
     
-    # mapping to convert region column names
+    # region columns to keep and mapping to convert column names
     region_col_conv = {
         config.ABAKeys.ABA_ID.value: config.AtlasMetrics.REGION.value,
         config.ABAKeys.NAME.value: config.AtlasMetrics.REGION_NAME.value,
+        config.ABAKeys.LEVEL.value: config.AtlasMetrics.LEVEL.value,
+        config.ABAKeys.ACRONYM.value: config.AtlasMetrics.REGION_ABBR.value,
     }
     
     dfs = []
@@ -1433,9 +1435,12 @@ def volumes_by_id(
                 labels_ref_path, labels_ref_exp.ref_lookup, max_level,
                 combine_sides, label_ids_exp)
             
-            # extract region names into a separate data frame
-            df_regions = labels_ref_exp.get_ref_lookup_as_df()[
-                [config.ABAKeys.ABA_ID.value, config.ABAKeys.NAME.value]]
+            # extract region names into a separate data frame with selected,
+            # renamed columns
+            df_regions = labels_ref_exp.get_ref_lookup_as_df()
+            cols = [c for c in region_col_conv.keys()
+                    if c in df_regions.columns]
+            df_regions = df_regions[cols]
             df_regions = df_regions.rename(region_col_conv, axis=1)
         
         # load data frame if available
@@ -1504,10 +1509,13 @@ def volumes_by_id(
                 print(e)
                 libmag.warn("will ignore label markers")
             
-            # load heat map of nuclei per voxel if available
+            # load heat map of nuclei per voxel if available; use density
+            # suffix if provided
+            density_suffix = config.reg_suffixes[config.RegSuffixes.DENSITY]
+            if not density_suffix:
+                density_suffix = config.RegNames.IMG_HEAT_MAP.value
             try:
-                heat_map = sitk_io.load_registered_img(
-                    mod_path, config.RegNames.IMG_HEAT_MAP.value)
+                heat_map = sitk_io.load_registered_img(mod_path, density_suffix)
             except FileNotFoundError as e:
                 print(e)
                 libmag.warn("will ignore nuclei stats")

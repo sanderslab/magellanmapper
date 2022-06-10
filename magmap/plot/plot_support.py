@@ -4,15 +4,15 @@
 """
 
 from collections import OrderedDict
+import math
 import os
 import warnings
-from typing import Sequence, TYPE_CHECKING, Tuple
+from typing import Any, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
-from matplotlib import backend_bases
-from matplotlib import gridspec
-from matplotlib import pyplot as plt
-from skimage import transform
+from matplotlib import backend_bases, gridspec, pyplot as plt
+import matplotlib.transforms as transforms
+from skimage import filters, transform
 
 from magmap.cv import cv_nd
 from magmap.plot import colormaps
@@ -27,7 +27,9 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 if TYPE_CHECKING:
-    from matplotlib import figure
+    from matplotlib import axes, colors, figure
+    from magmap.gui import plot_editor
+    import pandas as pd
 
 _logger = config.logger.getChild(__name__)
 
@@ -68,30 +70,38 @@ class ImageSyncMixin:
             return tuple(self.plot_eds.values())[0].get_displayed_img(imgi, chl)
         return None
 
-    def update_imgs_display(self, imgi, chl=None, minimum=np.nan,
-                            maximum=np.nan, brightness=None, contrast=None,
-                            alpha=None):
+    def update_imgs_display(
+            self, imgi: int,
+            chl: Optional[int] = None,
+            minimum: Optional[float] = np.nan,
+            maximum: Optional[float] = np.nan,
+            brightness: Optional[float] = None,
+            contrast: Optional[float] = None,
+            alpha: Optional[float] = None,
+            alpha_blend: Optional[float] = None) -> "plot_editor.PlotAxImg":
         """Update dislayed image settings in all Plot Editors.
 
         Args:
-            imgi (int): Index of image.
-            chl (int): Index of channel; defaults to None.
-            minimum (float): Vmin; can be None for auto setting; defaults
+            imgi: Index of image group.
+            chl: Index of channel; defaults to None.
+            minimum: Vmin; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            maximum (float): Vmax; can be None for auto setting; defaults
+            maximum: Vmax; can be None for auto setting; defaults
                 to ``np.nan`` to ignore.
-            brightness (float): Brightness addend; defaults to None.
-            contrast (float): Contrast multiplier; defaults to None.
-            alpha (float): Opacity value; defalts to None.
+            brightness: Brightness addend; defaults to None.
+            contrast: Contrast multiplier; defaults to None.
+            alpha: Opacity value; defalts to None.
+            alpha_blend: Opacity blending value; defaults to None.
         
         Returns:
-            :obj:`magmap.plot_editor.PlotAxImg`: The updated axes image plot.
+            The updated axes image plot.
 
         """
         plot_ax_img = None
         for ed in self.plot_eds.values():
             plot_ax_img = ed.update_img_display(
-                imgi, chl, minimum, maximum, brightness, contrast, alpha)
+                imgi, chl, minimum, maximum, brightness, contrast, alpha,
+                alpha_blend)
         return plot_ax_img
     
     def save_fig(self, path):
@@ -147,9 +157,21 @@ class ImageSyncMixin:
                 if display: ed.update_coord()
 
 
-def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
-                        vmin=None, vmax=None, origin=None, interpolation=None,
-                        norms=None, nan_color=None, ignore_invis=False):
+def imshow_multichannel(
+        ax: "axes.Axes",
+        img2d: np.ndarray,
+        channel: Optional[Union[int, Sequence[int]]],
+        cmaps: Sequence[Union[str, "colors.Colormap"]],
+        aspect: Union[str, float],
+        alpha: Optional[Union[float, Sequence[float]]] = None,
+        vmin: Optional[Union[float, Sequence[float]]] = None,
+        vmax: Optional[Union[float, Sequence[float]]] = None,
+        origin: Optional[str] = None,
+        interpolation: Optional[str] = None,
+        norms: Sequence["colors.Normalize"] = None,
+        nan_color: Optional[str] = None,
+        ignore_invis: bool = False,
+        alpha_blend: Optional[float] = None) -> List["axes.Axes"]:
     """Show multichannel 2D image with channels overlaid over one another.
 
     Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
@@ -166,20 +188,21 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
         cmaps: List of colormaps corresponding to each channel. Colormaps 
             can be the names of specific maps in :mod:``config``.
         aspect: Aspect ratio.
-        alpha (float, List[float]): Transparency level for all channels or 
+        alpha: Transparency level for all channels or 
             sequence of levels for each channel. If any value is 0, the
             corresponding image will not be output. Defaults to None to use 1.
-        vmin (float, List[float]): Scalar or sequence of vmin levels for
+        vmin: Scalar or sequence of vmin levels for
             all channels; defaults to None.
-        vmax (float, List[float]): Scalar or sequence of vmax levels for
+        vmax: Scalar or sequence of vmax levels for
             all channels; defaults to None.
         origin: Image origin; defaults to None.
         interpolation: Type of interpolation; defaults to None.
         norms: List of normalizations, which should correspond to ``cmaps``.
-        nan_color (str): String of color to use for NaN values; defaults to
+        nan_color: String of color to use for NaN values; defaults to
             None to leave these pixels empty.
-        ignore_invis (bool): True to give None instead of an ``AxesImage``
+        ignore_invis: True to give None instead of an ``AxesImage``
             object that would be invisible; defaults to False.
+        alpha_blend: Opacity blending value; defaults to None.
     
     Returns:
         List of ``AxesImage`` objects.
@@ -190,10 +213,17 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
     num_chls = len(channels)
     if alpha is None:
         alpha = 1
-    if num_chls > 1 and not libmag.is_seq(alpha):
-        # if alphas not explicitly set per channel, make all channels more
-        # translucent at a fixed value that is higher with more channels
-        alpha /= np.sqrt(num_chls + 1)
+    if num_chls > 1:
+        alpha_bl = libmag.get_if_within(alpha_blend, 0)
+        if alpha_bl is not None:
+            # alpha blend first two images
+            alpha1, alpha2 = alpha_blend_intersection(
+                img2d[..., 0], img2d[..., 1], alpha_bl)
+            alpha = np.stack((alpha1, alpha2))
+        elif not libmag.is_seq(alpha):
+            # if alphas not explicitly set per channel, make all channels more
+            # translucent at a fixed value that is higher with more channels
+            alpha /= np.sqrt(num_chls + 1)
 
     # transform image based on config parameters
     rotate = config.transform[config.Transforms.ROTATE]
@@ -234,12 +264,33 @@ def imshow_multichannel(ax, img2d, channel, cmaps, aspect, alpha=None,
             # to avoid repeated inversions with repeated calls
             ax.invert_yaxis()
     
+    bgd = config.plot_labels[config.PlotLabels.BACKGROUND]
+    if bgd:
+        # change the background color
+        ax.set_facecolor(bgd)
+    
     return img
 
 
-def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
-                   vmins=None, vmaxs=None, ignore_invis=False,
-                   check_single=False):
+def overlay_images(
+        ax: "axes.Axes",
+        aspect: Union[str, float],
+        origin: str,
+        imgs2d: Sequence[np.ndarray],
+        channels: Optional[List[List[int]]],
+        cmaps: Sequence[Union[
+            str, "colors.Colormap", colormaps.DiscreteColormap]],
+        alphas: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None,
+        vmins: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None,
+        vmaxs: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None,
+        ignore_invis: bool = False,
+        check_single: bool = False,
+        alpha_blends: Optional[Union[
+            float, Sequence[Union[float, Sequence[float]]]]] = None
+) -> Optional[List[List["axes.Axes"]]]:
     """Show multiple, overlaid images.
     
     Wrapper function calling :meth:`imshow_multichannel` for multiple 
@@ -251,9 +302,9 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         ax: Axes.
         aspect: Aspect ratio.
         origin: Image origin.
-        imgs2d (List[:obj:`np.ndarray`]): Sequence of 2D images to display,
+        imgs2d: Sequence of 2D images to display,
             where the first image may be 2D+channel.
-        channels (List[List[int]): A nested list of channels to display for
+        channels: A nested list of channels to display for
             each image, or None to use :attr:``config.channel`` for the
             first image and 0 for all subsequent images.
         cmaps: Either a single colormap for all images or a list of 
@@ -272,13 +323,15 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         vmaxs: A list of vmaxs for each image; defaults to None to use 
             :attr:``config.vmax_overview`` for the first image and None 
             for all others.
-        ignore_invis (bool): True to avoid creating ``AxesImage`` objects
+        ignore_invis : True to avoid creating ``AxesImage`` objects
             for images that would be invisible; defaults to False.
-        check_single (bool): True to check for images with a single unique
+        check_single: True to check for images with a single unique
             value displayed with a :class:`colormaps.DiscreteColormap`, which
             will not update for unclear reasons. If found, the final value
             will be incremented by one as a workaround to allow updates.
             Defaults to False.
+        alpha_blends: Opacity blending values for each image in ``imgs2d``;
+            defaults to None.
     
     Returns:
         Nested list containing a list of ``AxesImage`` objects 
@@ -303,6 +356,8 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
     if alphas is None:
         # start with config alphas and pad the remaining values
         alphas = libmag.pad_seq(config.alphas, num_imgs2d, 0.9)
+    if alpha_blends is None:
+        alpha_blends = [None] * num_imgs2d
 
     for i in range(num_imgs2d):
         # generate a multichannel display image for each 2D image
@@ -323,6 +378,7 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
             norm = [cmap.norm]
             cmap = [cmap]
         alpha = alphas[i]
+        alpha_blend = alpha_blends[i]
         vmin = vmins[i]
         vmax = vmaxs[i]
         if i == 0:
@@ -361,9 +417,48 @@ def overlay_images(ax, aspect, origin, imgs2d, channels, cmaps, alphas=None,
         ax_img = imshow_multichannel(
             ax, img, channels[i], cmap, aspect, alpha, vmin, vmax, origin,
             interpolation="nearest", norms=norm, nan_color=nan_color,
-            ignore_invis=ignore_invis)
+            ignore_invis=ignore_invis, alpha_blend=alpha_blend)
         ax_imgs.append(ax_img)
     return ax_imgs
+
+
+def alpha_blend_intersection(
+        img1: np.ndarray, img2: np.ndarray, alpha: float = 0.5,
+        mask1: Optional[np.ndarray] = None,
+        mask2: Optional[np.ndarray] = None) -> Tuple[np.ndarray, np.ndarray]:
+    """Alpha blend the intersecting foreground of two images.
+    
+    Adjust the opacity to blend the parts of images that overlap while
+    retaining full opacity for their non-overlapping parts to increase
+    contrast and highlight potential misalignments.
+    
+    Args:
+        img1: First image.
+        img2: Second image.
+        alpha: Alpha level from 0-1 for the first image to use for its
+            intersecting area; the second image will use ``1 - alpha``.            
+        mask1: Foreground mask for ``img1``; defaults to None, in which case
+            the foreground will be segmented using Otsu's method.
+        mask2: Same for ``img2``; defaults to None.
+
+    Returns:
+        The foreground masks with alpha blending for the intersection area.
+
+    """
+    # default to getting foreground by Otsu's method
+    if mask1 is None:
+        mask1 = img1 > filters.threshold_otsu(img1)
+    if mask2 is None:
+        mask2 = img2 > filters.threshold_otsu(img2)
+    
+    # alpha blend the intersecting area while leaving the non-overlapping
+    # foreground at full opacity and background at full transparency 
+    intersection = np.logical_and(mask1, mask2)
+    mask1 = mask1.astype(float)
+    mask2 = mask2.astype(float)
+    mask1[intersection] = alpha
+    mask2[intersection] = 1 - alpha
+    return mask1, mask2
 
 
 def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
@@ -672,9 +767,11 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
     ax.set_title(title)
 
 
-def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
-    """Set scientific notation for tick labels and shift exponents from 
-    axes to their labels.
+def set_scinot(
+        ax: "axes.Axes", lims: Sequence[int] = (-3, 4),
+        lbls: Optional[Sequence[str]] = None,
+        units: Optional[Sequence[str]] = None):
+    """Set axes tick scientific notation and shift exponents to their labels.
     
     Scientific notation in Matplotlib positions the exponent at the top 
     of the y-axis and right of the x-axis, which may be missed or overlap 
@@ -682,31 +779,41 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
     along with axis labels and units and moves any exponent to the 
     unit labels. Units will be formatted with math text.
     
+    In some cases, scientific notation is incompatible with the axes'
+    formatter and will be ignored. It can often be set up before the plot,
+    however, and this function can be called both before and after the plot
+    to set up the notation and later override any labeling set up by the plot.
+    
     Args:
-        ax (:class:`matplotlib.image.Axes`): Axis object.
-        lims (Sequence[int]): Scientific notation limits as a sequence of lower
+        ax: Axis object.
+        lims: Scientific notation limits as a sequence of lower
             and upper bounds outside of which scientific notation will
             be used for each applicable axis. Defaults to ``(-2, 4)``.
-        lbls (Sequence[str]): Sequence of axis labels given in the order
+        lbls: Sequence of axis labels given in the order
             ``(y-axis, x-axis)``. Defaults to None, which causes the
             corresponding value from :attr:`config.plot_labels` to be used
             if available. A None element prevents the label main text from
             displaying and will show the unit without parentheses if available.
-        units (Sequence[str]): Sequence of units given in the order
+        units: Sequence of units given in the order
             ``(y-axis, x-axis)``. Defaults to None, which causes the
             corresponding value from :attr:`config.plot_labels` to be used
             if available. A None element prevents unit display other than
             any scientific notation exponent.
     
     """
-    # set scientific notation
-    ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
+    # set scientific notation for axes ticks
+    try:
+        ax.ticklabel_format(style="sci", scilimits=lims, useMathText=True)
+    except AttributeError:
+        _logger.debug("Could not set up scientific notation, skipping")
+    
     if not lbls:
         lbls = (config.plot_labels[config.PlotLabels.Y_LABEL],
                 config.plot_labels[config.PlotLabels.X_LABEL])
     if not units:
         units = (config.plot_labels[config.PlotLabels.Y_UNIT],
                  config.plot_labels[config.PlotLabels.X_UNIT])
+    
     num_lbls = len(lbls)
     num_units = len(units)
     for i, axis in enumerate((ax.yaxis, ax.xaxis)):
@@ -735,6 +842,125 @@ def set_scinot(ax, lims=(-3, 4), lbls=None, units=None):
             lbl = " ".join(unit_all)
         if lbl:
             axis.set_label_text(lbl)
+
+
+def scale_xticks(
+        ax: "axes.Axes", rotation: float,
+        x_labels: Optional[Sequence[Any]] = None):
+    """Draw x-tick labels with smaller font for increasing number of labels.
+    
+    Args:
+        ax: Matplotlib axes.
+        rotation: Label rotation angle.
+        x_labels: X-axis labels; defaults to None, in which case the current
+            labels will be used.
+
+    """
+    if x_labels is None:
+        # default to use existing labels
+        x_labels = ax.get_xticklabels()
+    
+    font_size = plt.rcParams["axes.titlesize"]
+    if libmag.is_number(font_size):
+        # scale font size of x-axis labels by a sigmoid function to rapidly 
+        # decrease size for larger numbers of labels so they don't overlap
+        font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
+    font_dict = {"fontsize": font_size}
+    
+    # draw x-ticks based on number of bars per group and align to right 
+    # since center shifts the horiz middle of the label to the center; 
+    # rotation_mode in dict helps but still slightly off
+    ax.set_xticklabels(
+        x_labels, rotation=rotation, horizontalalignment="right", 
+        fontdict=font_dict)
+    
+    # translate to right since "right" alignment shift the right of labels 
+    # too far to the left of tick marks; shift less with more groups
+    offset = transforms.ScaledTranslation(
+        30 / np.cbrt(len(x_labels)) / ax.figure.dpi, 0,
+        ax.figure.dpi_scale_trans)
+    for lbl in ax.xaxis.get_majorticklabels():
+        lbl.set_transform(lbl.get_transform() + offset)
+
+
+def setup_vspans(
+        df: "pd.DataFrame", col_vspan: str, vspan_fmt: str
+) -> Tuple[np.ndarray, Sequence[str]]:
+    """Set up vertical spans to group axis groups.
+    
+    Args:
+        df: Data frame.
+        col_vspan: Column in ``df``, assumed to be ordered by group.
+            Changes in value denote the start of the next vertical span.
+        vspan_fmt: String formatter for span labels.
+
+    Returns:
+        Tuple of a vertical span array of starting indices and a
+        sequence of span labels.
+
+    """
+    # further group bar groups by vertical spans with location based 
+    # on each change in value in col_vspan
+    # TODO: change .values to .to_numpy when Pandas req >= 0.24
+    vspan_vals = df[col_vspan].values
+    vspans = np.insert(
+        np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
+    vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
+                  for val in vspan_vals[vspans]]
+    return vspans, vspan_lbls
+
+
+def add_vspans(
+        ax: "axes.Axes", vspans: np.ndarray,
+        vspan_lbls: Optional[Sequence[str]] = None, padding: float = 1,
+        vspan_alt_y: bool = False):
+    """Add vertical spans to group x-values.
+    
+    Shifts legend away from span labels.
+    
+    Args:
+        ax: Matplotlib axes.
+        vspans: Sequence of vertical span x-vals in data units.
+        vspan_lbls: Sequence of span labels; defaults to None.
+        padding: Padding around each span; defaults to 1.
+        vspan_alt_y: True to alternate the height of labels; defaults to False.
+
+    """
+    # set up span x-val indices
+    num_groups = len(ax.get_xticklabels())
+    xs = vspans - padding / 2
+    num_xs = len(xs)
+    
+    if vspans is not None:
+        # show vertical spans alternating in white and black; assume 
+        # background is already white, so simply skip white shading
+        for i, x in enumerate(xs):
+            if i % 2 == 0: continue
+            end = xs[i + 1] if i < num_xs - 1 else num_groups
+            ax.axvspan(x, end, facecolor="k", alpha=0.2, zorder=0)
+
+    if vspan_lbls is not None:
+        # show labels for vertical spans
+        ylims = ax.get_ylim()
+        y_span = abs(ylims[1] - ylims[0])
+        y_top = max(ylims)
+        for i, x in enumerate(xs):
+            end = xs[i + 1] if i < num_xs - 1 else num_groups
+            x = (x + end) / 2
+            # position 4% down from top in data coordinates
+            y_frac = 0.04
+            if vspan_alt_y and i % 2 != 0:
+                # shift alternating labels further down to avoid overlap
+                y_frac += 0.03
+            y = y_top - y_span * y_frac
+            ax.text(
+                x, y, vspan_lbls[i], color="k", horizontalalignment="center")
+    
+    legend = ax.get_legend()
+    if legend:
+        # shift legend away from span labels
+        legend.loc = "best"
+        legend.set_bbox_to_anchor((0, 0, 1, 0.9))
 
 
 def get_plane_axis(plane, get_index=False):
@@ -841,13 +1067,13 @@ def save_fig(path, ext=None, modifier="", fig=None):
 
 
 def setup_fig(
-        nrows: int, ncols: int, size: Sequence[float] = None
+        nrows: int = 1, ncols: int = 1, size: Sequence[float] = None
 ) -> Tuple["figure.Figure", "gridspec.GridSpec"]:
     """Setup a figure and associated :class:`gridspec.GridSpec`.
     
     Args:
-        nrows: Number of rows.
-        ncols: Number of columns.
+        nrows: Number of rows; defaults to 1.
+        ncols: Number of columns; defaults to 1.
         size: Sequence of figure size in ``(width, height)`` in inches;
             defaults to None.
 

@@ -7,7 +7,7 @@ Intended to be higher-level, relatively atlas-agnostic measurements.
 
 from enum import Enum
 from time import time
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -768,7 +768,7 @@ def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None,
         vols_phys = np.multiply(vols_phys, physical_mult)
     if unit_factor is not None:
         # further conversion to given unit size
-        unit_factor_vol = unit_factor ** 3
+        unit_factor_vol = unit_factor ** len(spacing)
         vols_phys = np.divide(vols_phys, unit_factor_vol)
     if unit_factor is not None:
         # convert metrics not extracted from data frame
@@ -1173,8 +1173,11 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
     return df
 
 
-def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False, 
-                       reverse=False, col_wt=None):
+def map_meas_to_labels(
+        labels_img: np.ndarray, df: pd.DataFrame, meas: str,
+        fn_avg: Callable[[Sequence], float], skip_nans: bool = False, 
+        reverse: bool = False, col_wt: Optional[str] = None
+) -> Optional[np.ndarray]:
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -1197,7 +1200,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
             allows giving a neutral value instead.
         reverse: Reverse the order of sorted conditions when generating 
             stats by ``fn_avg`` to compare conditions; defaults to False.
-        col_wt (str): Name of column to use for weighting, where the 
+        col_wt: Name of column to use for weighting, where the 
             magnitude of ``meas`` will be adjusted as fractions of the max 
             value in this weighting column for labels found in ``labels_img``; 
             defaults to None.
@@ -1206,6 +1209,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         A map of averages for the given measurement as an image of the 
         same shape as ``labels_img`` of float data type, or None if no 
         values for ``meas`` are found.
+    
     """
     if meas not in df or np.all(np.isnan(df[meas])):
         # ensure that measurement column is present with non-NaNs
@@ -1221,13 +1225,13 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
     df = df.loc[df["Region"].isin(regions)].copy()
     
     df_cond = None
-    conds = None
-    if "Condition" in df:
+    conds = config.plot_labels[config.PlotLabels.CONDITION]
+    if conds is None and "Condition" in df:
         # get and sort conditions
         df_cond = df["Condition"]
         conds = sorted(np.unique(df_cond), reverse=reverse)
 
-    if col_wt is not None:
+    if col_wt is not None and len(df) > 0:
         # weight given column for the first condition and normalizing it to
         # its maximum value, or use the whole column if no conditions exist
         print("weighting stats by", col_wt)

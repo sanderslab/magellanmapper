@@ -25,7 +25,7 @@ matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import figure
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
+from PyQt5 import Qt, QtWidgets, QtCore
 
 # adjust for HiDPI screens before QGuiApplication is created, necessary
 # on Windows and Linux (not needed but no apparent affect on MacOS)
@@ -63,14 +63,14 @@ from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
     vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
-from magmap.settings import config, profiles
+from magmap.settings import config, prefs_prof, profiles
 
 if TYPE_CHECKING:
     from bg_atlasapi import BrainGlobeAtlas
 
 
-#: str: default ROI name.
-_ROI_DEFAULT = "None selected"
+# logging instance
+_logger = config.logger.getChild(__name__)
 
 
 def main():
@@ -110,11 +110,6 @@ class _MPLFigureEditor(Editor):
 class MPLFigureEditor(BasicEditorFactory):
     """Custom TraitsUI editor for a Matplotlib figure."""
     klass = _MPLFigureEditor
-
-
-class ListSelections(HasTraits):
-    """Traits-enabled list of ROIs."""
-    selections = List([_ROI_DEFAULT])
 
 
 class SegmentsArrayAdapter(TabularAdapter):
@@ -274,6 +269,9 @@ class Visualization(HasTraits):
             :class:`vis_handler.StaleFlags.IMAGE`.
     
     """
+    #: default ROI name.
+    _ROI_DEFAULT: str = "None selected"
+
     # File selection
 
     _filename = File  # file browser
@@ -292,7 +290,8 @@ class Visualization(HasTraits):
     _labels_img_name = Str
     _labels_img_names = Instance(TraitsList)
     
-    _labels_ref_path = File  # labels ontology reference path
+    _labels_ref_path = Str  # labels ontology reference path
+    _labels_ref_btn = Button("Browse")  # button to select ref file
     _reload_btn = Button("Reload")  # button to reload images
     
     # ROI selection
@@ -314,8 +313,9 @@ class Visualization(HasTraits):
 
     btn_redraw = Button("Redraw")
     _btn_save_fig = Button("Save Figure")
+    _roi_btn_help = Button("Help")
     roi = None  # combine with roi_array?
-    _rois_selections = Instance(ListSelections)
+    _rois_selections = Instance(TraitsList)
     rois_check_list = Str
     _rois_dict = None
     _rois = None
@@ -325,6 +325,12 @@ class Visualization(HasTraits):
     
     btn_detect = Button("Detect")
     btn_save_segments = Button("Save Blobs")
+    _segs_chls_names = Instance(TraitsList)  # blob detection channels
+    _segs_chls = List  # selected channels, 0-based
+    _segs_labels = List(  # blob label selector
+        ["-1"],
+        tooltip="All blob labels will be set to this value when running Detect",
+    )
     _segs_visible = List  # blob visibility options
     _colocalize = List  # blob co-localization options
     _blob_color_style = List  # blob coloring
@@ -332,14 +338,22 @@ class Visualization(HasTraits):
     _segs_moved = []  # orig seg of moved blobs to track for deletion
     _scale_detections_low = 0.0
     _scale_detections_high = Float  # needs to be trait to dynamically update
-    scale_detections = Float
-    segs_pts = None
+    scale_detections = Float(
+        tooltip="Change the size of blobs in the 3D viewer"
+    )
+    # for blob mask slider
+    _segs_mask_low = 1
+    _segs_mask_high = Int(1)
+    _segs_mask = Int(
+        1, tooltip="Change the fraction of blobs shown in the 3D viewer"
+    )
     segs_selected = List  # indices
+    _segs_row_scroll = Int()  # row index to scroll the table
     # multi-select to allow updating with a list, but segment updater keeps
     # selections to single when updating them
     segs_table = TabularEditor(
         adapter=SegmentsArrayAdapter(), multi_select=True, 
-        selected_row="segs_selected")
+        selected_row="segs_selected", scroll_to_row="_segs_row_scroll")
     segs_in_mask = None  # boolean mask for segments in the ROI
     segs_cmap = None
     segs_feedback = Str("Segments output")
@@ -355,14 +369,23 @@ class Visualization(HasTraits):
     )
     _profiles_table = TabularEditor(
         adapter=ProfilesArrayAdapter(), editable=True, auto_resize_rows=True,
-        stretch_last_section=False)
+        stretch_last_section=False, drag_move=True)
     _profiles = List  # profiles table list
-    _profiles_add_btn = Button("Add")
-    _profiles_load_btn = Button("Rescan")
+    _profiles_add_btn = Button(
+        "Add",
+        tooltip="Click to add the selected profile for the checked channels.\n"
+                "Press Backspace/Delete key to remove the selected table row.\n"
+                "Drag rows to rearrange the order of loaded profiles."
+    )
+    _profiles_load_btn = Button(
+        "Rescan",
+        tooltip="Rescan the 'profiles' folder for YAML files"
+    )
     _profiles_preview = Str  # preview the selected profile
     _profiles_combined = Str  # combined profiles for selected category
     _profiles_ver = Str
     _profiles_reset_prefs_btn = Button("Reset preferences")
+    _profiles_btn_help = Button("Help")
     _profiles_reset_prefs = Bool  # trigger resetting prefs in handler
 
     # Image adjustment panel
@@ -384,6 +407,11 @@ class Visualization(HasTraits):
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float
+    _imgadj_alpha_blend = Float(0.5)
+    _imgadj_alpha_blend_check = Bool(
+        tooltip="Blend the overlapping parts of imags to shown alignment.\n"
+                "Applied to the first two channels of the main image."
+    )
 
     # Image import panel
 
@@ -450,11 +478,11 @@ class Visualization(HasTraits):
                 "Panes: show back and top panes\n"
                 "Shadows: show blob shadows as circles")
     _check_list_2d = List(
-        tooltip="Filtered: show filtered image after detection\n"
-                "Border: margin around ROIs\n"
-                "Seg: segment blobs\n"
-                "Grid: overlay a grid\n"
-                "MIP: maximum intensity projection")
+        tooltip="Filtered: show filtered image after detection in ROI planes\n"
+                "Border: margin around ROI planes\n"
+                "Seg: segment blobs during detection in ROI planes\n"
+                "Grid: overlay a grid in ROI planes\n"
+                "MIP: maximum intensity projection in overview images")
     _DEFAULTS_2D = [
         "Filtered", "Border", "Seg", "Grid", "MIP"]
     _planes_2d = List
@@ -519,8 +547,8 @@ class Visualization(HasTraits):
                      editor=CheckListEditor(
                          name="object._labels_img_names.selections",
                          format_func=lambda x: x)),
-                Item("_labels_ref_path", label="Reference", style="simple",
-                     editor=FileEditor(entries=10, allow_dir=False)),
+                Item("_labels_ref_path", label="Reference", style="simple"),
+                Item("_labels_ref_btn", show_label=False),
             ),
             label="Registered Images",
         ),
@@ -607,6 +635,7 @@ class Visualization(HasTraits):
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
+            Item("_roi_btn_help", show_label=False),
         ),
         label="ROI",
     )
@@ -615,7 +644,17 @@ class Visualization(HasTraits):
     panel_detect = VGroup(
         HGroup(
             Item("btn_detect", show_label=False),
+            Item("_segs_chls", label="Chl", style="custom",
+                 editor=CheckListEditor(
+                     name="object._segs_chls_names.selections", cols=8)),
+        ),
+        HGroup(
             Item("btn_save_segments", show_label=False),
+            Item("_segs_labels", label="Change labels to",
+                 editor=CheckListEditor(
+                     values=[str(c) for c in
+                             roi_editor.DraggableCircle.BLOB_COLORS.keys()],
+                     format_func=lambda x: x)),
         ),
         HGroup(
             Item("_segs_visible", style="custom", show_label=False,
@@ -632,10 +671,15 @@ class Visualization(HasTraits):
                      values=[e.value for e in BlobColorStyles],
                      format_func=lambda x: x)),
         ),
-        Item("scale_detections",
+        Item("scale_detections", label="Scale 3D blobs",
              editor=RangeEditor(
                  low_name="_scale_detections_low",
                  high_name="_scale_detections_high",
+                 mode="slider", format="%.3g")),
+        Item("_segs_mask", label="3D blobs mask size",
+             editor=RangeEditor(
+                 low_name="_segs_mask_low",
+                 high_name="_segs_mask_high",
                  mode="slider")),
         VGroup(
             Item("_segments", editor=segs_table, show_label=False),
@@ -689,7 +733,10 @@ class Visualization(HasTraits):
                 Item("_profiles_ver", style="readonly",
                      label="MagellanMapper version:"),
             ),
-            Item("_profiles_reset_prefs_btn", show_label=False),
+            HGroup(
+                Item("_profiles_reset_prefs_btn", show_label=False),
+                Item("_profiles_btn_help", show_label=False),
+            ),
             label="Settings",
         ),
         label="Profiles",
@@ -717,14 +764,28 @@ class Visualization(HasTraits):
                      mode="slider", format="%.4g")),
             Item("_imgadj_max_auto", label="Auto", editor=BooleanEditor()),
         ),
-        Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
-                 low_name="_imgadj_brightness_low",
-                 high_name="_imgadj_brightness_high", mode="slider",
-                 format="%.4g")),
-        Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
-                 low=0.0, high=2.0, mode="slider", format="%.3g")),
-        Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
+        HGroup(
+            Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
+                     low_name="_imgadj_brightness_low",
+                     high_name="_imgadj_brightness_high", mode="slider",
+                     format="%.4g"))
+        ),
+        HGroup(
+            Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
+                     low=0.0, high=2.0, mode="slider", format="%.3g")),
+        ),
+        HGroup(
+            Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g")),
+        ),
+        
+        HGroup(
+            # alpha blending controls
+            Item("_imgadj_alpha_blend_check", label="Blend"),
+            Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
+                 low=0.0, high=1.0, mode="slider", format="%.3g"),
+                 enabled_when="_imgadj_alpha_blend_check"),
+        ),
         label="Adjust Image",
     )
     
@@ -822,6 +883,7 @@ class Visualization(HasTraits):
         HSplit(
             panel_options,
             panel_figs,
+            id=f"{__name__}.panel_split",
         ),
         # initial window width, which can be resized down to the minimum
         # widths of each panel in the HSplit
@@ -836,21 +898,29 @@ class Visualization(HasTraits):
         # set ID to trigger saving TraitsUI preferences for window size/position
         id=f"{__name__}.{__qualname__}",
     )
-
+    
     def __init__(self):
         """Initialize GUI."""
         HasTraits.__init__(self)
         
+        # get saved preferences
+        prefs = config.prefs
+        
         # set up callback flags
         self._ignore_roi_offset_change = False
         
-        # default options setup
+        # set up ROI Editor option
         self._set_border(True)
-        self._circles_2d = [
-            roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
-        self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
-        self._styles_2d = [Styles2D.SQUARE.value]
+        self._circles_2d = [self.validate_pref(
+            prefs.roi_circles, roi_editor.ROIEditor.CircleStyles.CIRCLES.value,
+            roi_editor.ROIEditor.CircleStyles)]
+        self._planes_2d = [self.validate_pref(
+            prefs.roi_plane, self._DEFAULTS_PLANES_2D[0],
+            self._DEFAULTS_PLANES_2D)]
+        self._styles_2d = [self.validate_pref(
+            prefs.roi_styles, Styles2D.SQUARE.value, Styles2D)]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
+        
         self._check_list_3d = [
             Vis3dOptions.RAW.value, Vis3dOptions.SURFACE.value]
         if (config.roi_profile["vis_3d"].lower()
@@ -865,6 +935,7 @@ class Visualization(HasTraits):
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
         self._update_profiles_names()
+        self._ignore_profiles_update = True
         self._init_profiles()
         
         # set up settings controls
@@ -884,9 +955,9 @@ class Visualization(HasTraits):
         if self._margin is None:
             self._margin = (5, 5, 3)  # x,y,z
         
-        # store ROI offset for currently drawn plot in case user previews a
-        # new ROI offset, which shifts the current offset sliders
-        self._drawn_offset = self._curr_offset()
+        #: ROI offset at which viewers were drawn. May differ from the
+        #: current state of the offset sliders.
+        self._drawn_offset: Sequence[int] = self._curr_offset()
 
         # setup interface for image
         self._ignore_filename = False  # ignore file update trigger
@@ -939,6 +1010,28 @@ class Visualization(HasTraits):
         # set up image
         self._setup_for_image()
 
+    @staticmethod
+    def validate_pref(val, default, choices):
+        """Validate a preference setting.
+        
+        Args:
+            val: Preference value to assign.
+            default: Default value if ``val`` is invalid.
+            choices: Valid preference values.
+
+        Returns:
+            ``val`` if a valid value, otherwise ``default``.
+
+        """
+        try:
+            if issubclass(choices, Enum):
+                choices = [e.value for e in choices]
+        except TypeError:
+            pass
+        if val not in choices:
+            val = default
+        return val
+
     def _init_channels(self):
         """Initialize channel check boxes for the currently loaded main image.
 
@@ -946,10 +1039,21 @@ class Visualization(HasTraits):
         # reset channel check boxes, storing selected channels beforehand
         chls_pre = list(self._channel)
         self._channel_names = TraitsList()
+        self._segs_chls_names = TraitsList()
         # 1 channel if no separate channel dimension
         num_chls = (1 if config.image5d is None or config.image5d.ndim < 5
                     else config.image5d.shape[4])
         self._channel_names.selections = [str(i) for i in range(num_chls)]
+
+        if config.blobs is not None and config.blobs.blobs is not None:
+            # set detection channels to those in loaded blobs
+            self._segs_chls_names.selections = [
+                str(n) for n in np.unique(detector.Blobs.get_blobs_channel(
+                    config.blobs.blobs).astype(int))]
+        else:
+            # add detection channel selectors for all image channels
+            self._segs_chls_names.selections = list(
+                self._channel_names.selections)
         
         # pre-select channels for both main and profiles selector
         if not chls_pre and config.channel:
@@ -959,6 +1063,9 @@ class Visualization(HasTraits):
         else:
             # select all channels
             self._channel = self._channel_names.selections
+        
+        # select detection and profile channels to match main channels
+        self._segs_chls = list(self._channel)
         self._profiles_chls = self._channel
 
     def _init_imgadj(self):
@@ -1049,27 +1156,28 @@ class Visualization(HasTraits):
                 ed = self.atlas_eds[0]
         if ed is None: return
 
-        # get the display settings from the viewer
+        # get the first displayed image from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
         plot_ax_img = ed.get_img_display_settings(
-                imgi, chl=int(self._imgadj_chls))
+            imgi, chl=int(self._imgadj_chls))
         if plot_ax_img is None: return
-        norm = plot_ax_img.ax_img.norm
+        
+        # populate controls with intensity settings
         self._imgadj_brightness = plot_ax_img.brightness
         self._imgadj_contrast = plot_ax_img.contrast
-        self._imgadj_alpha = plot_ax_img.ax_img.get_alpha()
+        self._imgadj_alpha = plot_ax_img.alpha
+
+        # populate intensity limits, auto-scaling, and current val (if not auto)
         self._adapt_imgadj_limits(plot_ax_img)
-        
-        # populate controls with display settings
-        if norm.vmin is None:
+        if plot_ax_img.vmin is None:
             self._imgadj_min_auto = True
         else:
-            self._imgadj_min = norm.vmin
+            self._imgadj_min = plot_ax_img.ax_img.norm.vmin
             self._imgadj_min_auto = False
-        if norm.vmax is None:
+        if plot_ax_img.vmax is None:
             self._imgadj_max_auto = True
         else:
-            self._imgadj_max = norm.vmax
+            self._imgadj_max = plot_ax_img.ax_img.norm.vmax
             self._imgadj_max_auto = False
     
     def _adapt_imgadj_limits(self, plot_ax_img):
@@ -1115,18 +1223,20 @@ class Visualization(HasTraits):
     def _set_inten_min_to_curr(self, plot_ax_img):
         # set min intensity to current image value
         if plot_ax_img is not None:
-            self._imgadj_min_ignore_update = True
             vmin = plot_ax_img.ax_img.norm.vmin
             self._adapt_imgadj_limits(plot_ax_img)
-            self._imgadj_min = vmin
+            if self._imgadj_min != vmin:
+                self._imgadj_min_ignore_update = True
+                self._imgadj_min = vmin
 
     def _set_inten_max_to_curr(self, plot_ax_img):
         # set max intensity to current image value
         if plot_ax_img is not None:
-            self._imgadj_max_ignore_update = True
             vmax = plot_ax_img.ax_img.norm.vmax
             self._adapt_imgadj_limits(plot_ax_img)
-            self._imgadj_max = vmax
+            if self._imgadj_max != vmax:
+                self._imgadj_max_ignore_update = True
+                self._imgadj_max = vmax
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):
@@ -1164,15 +1274,34 @@ class Visualization(HasTraits):
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):
-        self._adjust_displayed_imgs(brightness=self._imgadj_brightness)
+        # include contrast to restore its value while adjusting the original img
+        self._adjust_displayed_imgs(
+            brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_contrast")
     def _adjust_img_contrast(self):
-        self._adjust_displayed_imgs(contrast=self._imgadj_contrast)
+        # include brightness to restore its value while adjusting the orig img
+        self._adjust_displayed_imgs(
+            brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):
         self._adjust_displayed_imgs(alpha=self._imgadj_alpha)
+
+    @on_trait_change("_imgadj_alpha_blend")
+    def _adjust_img_alpha_blend(self):
+        """Adjust the alpha blending."""
+        self._adjust_displayed_imgs(alpha_blend=self._imgadj_alpha_blend)
+
+    @on_trait_change("_imgadj_alpha_blend_check")
+    def _adjust_img_alpha_blend_check(self):
+        """Toggle alpha bledning."""
+        if self._imgadj_alpha_blend_check:
+            # turn on alpha blending
+            self._adjust_img_alpha_blend()
+        else:
+            # turn off alpha blending and reset alpha values
+            self._adjust_displayed_imgs(alpha_blend=False)
 
     def _adjust_displayed_imgs(self, **kwargs):
         """Adjust image display settings for the currently selected viewer.
@@ -1236,8 +1365,8 @@ class Visualization(HasTraits):
         """
         seg_str = seg[0:3].astype(int).astype(str).tolist()
         seg_str.append(str(round(seg[3], 3)))
-        seg_str.append(str(int(detector.get_blob_confirmed(seg))))
-        seg_str.append(str(int(detector.get_blob_channel(seg))))
+        seg_str.append(str(int(detector.Blobs.get_blob_confirmed(seg))))
+        seg_str.append(str(int(detector.Blobs.get_blobs_channel(seg))))
         return ", ".join(seg_str)
     
     def _append_roi(self, roi, rois_dict):
@@ -1262,7 +1391,7 @@ class Visualization(HasTraits):
         print("segments", self.segments)
         segs_transposed = []
         segs_to_delete = []
-        offset = self._curr_offset()
+        offset = self._drawn_offset
         curr_roi_size = self.roi_array[0].astype(int)
         print("Preparing to insert segments to database with border widths {}"
               .format(self.border))
@@ -1271,7 +1400,7 @@ class Visualization(HasTraits):
             for i in range(len(self.segments)):
                 seg = self.segments[i]
                 # uses absolute coordinates from end of seg
-                seg_db = detector.blob_for_db(seg)
+                seg_db = detector.Blobs.blob_for_db(seg)
                 if seg[4] == -1 and seg[3] < config.POS_THRESH:
                     # attempts to delete user added segments, where radius
                     # assumed to be < 0, that are no longer selected
@@ -1300,7 +1429,7 @@ class Visualization(HasTraits):
             # unverified blobs are those with default confirmation setting 
             # and radius > 0, where radii < 0 would indicate a user-added circle
             unverified = np.logical_and(
-                detector.get_blob_confirmed(segs_transposed_np) == -1, 
+                detector.Blobs.get_blob_confirmed(segs_transposed_np) == -1, 
                 np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH))
         if np.any(unverified):
             # show missing verifications
@@ -1320,7 +1449,7 @@ class Visualization(HasTraits):
         exp_id = config.db.select_or_insert_experiment(exp_name)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
-            np.add(self._drawn_offset, self.border).tolist(),
+            np.add(offset, self.border).tolist(),
             np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, segs_to_delete)
@@ -1328,7 +1457,8 @@ class Visualization(HasTraits):
         # delete the original entry of blobs that moved since replacement
         # is based on coordinates, so moved blobs wouldn't be replaced
         for i in range(len(self._segs_moved)):
-            self._segs_moved[i] = detector.blob_for_db(self._segs_moved[i])
+            self._segs_moved[i] = detector.Blobs.blob_for_db(
+                self._segs_moved[i])
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, self._segs_moved)
         self._segs_moved = []
@@ -1340,7 +1470,7 @@ class Visualization(HasTraits):
         # insert blob matches
         if self.blobs.blob_matches is not None:
             self.blobs.blob_matches.update_blobs(
-                detector.shift_blob_rel_coords, offset[::-1])
+                detector.Blobs.shift_blob_rel_coords, offset[::-1])
             config.db.insert_blob_matches(roi_id, self.blobs.blob_matches)
         
         # add ROI to selection dropdown
@@ -1371,7 +1501,6 @@ class Visualization(HasTraits):
         """
         self.segments = None
         self.blobs = detector.Blobs()
-        self.segs_pts = None
         self.segs_in_mask = None
         self.labels = None
         # window with circles may still be open but would lose segments 
@@ -1395,9 +1524,11 @@ class Visualization(HasTraits):
             self._atlas_label = ontology.get_label(
                 center[::-1], config.labels_img, config.labels_ref_lookup, 
                 config.labels_scaling, level, rounding=True)
-            if self._atlas_label is not None:
+            
+            if self._atlas_label is not None and self.scene_3d_shown:
                 title = ontology.get_label_name(self._atlas_label)
                 if title is not None:
+                    # update title in 3D viewer
                     self._mlab_title = self.scene.mlab.title(title)
     
     def _post_3d_display(self, title="clrbrain3d", show_orientation=True):
@@ -1428,7 +1559,8 @@ class Visualization(HasTraits):
                 # GUI to turn them back on
                 self.show_orientation_axes(self.flipz)
         # updates the GUI here even though it doesn't elsewhere for some reason
-        self.rois_check_list = _ROI_DEFAULT
+        if self._rois_selections.selections:
+            self.rois_check_list = self._rois_selections.selections[0]
         self._img_region = None
         #print("reset selected ROI to {}".format(self.rois_check_list))
     
@@ -1522,6 +1654,10 @@ class Visualization(HasTraits):
         if feedback:
             self._update_roi_feedback(" ".join(feedback), print_out=True)
         self.stale_viewers[vis_handler.ViewerTabs.MAYAVI] = None
+        
+        if Vis3dOptions.CLEAR.value in self._check_list_3d:
+            # after clearing the scene, re-orient camera to the new surface
+            self.orient_camera()
     
     def show_label_3d(self, label_id):
         """Show 3D region of main image corresponding to label ID.
@@ -1635,9 +1771,8 @@ class Visualization(HasTraits):
             self.z_high, self.y_high, self.x_high = config.image5d.shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
-                self.x_offset = config.roi_offset[0]
-                self.y_offset = config.roi_offset[1]
-                self.z_offset = config.roi_offset[2]
+                self.x_offset, self.y_offset, self.z_offset = config.roi_offset
+                self._drawn_offset = self._curr_offset()
             self.roi_array = ([[100, 100, 12]] if config.roi_size is None
                               else [config.roi_size])
             
@@ -1697,29 +1832,31 @@ class Visualization(HasTraits):
             self._main_img_name = self._main_img_names.selections[0]
             self._labels_img_name = labels_suffix
             
-            # get labels reference file path, prioritizing CLI arg
+            # get labels reference file path, prioritizing CLI arg, and
+            # populate labels reference path field
             lbls_ref = config.load_labels
             if not lbls_ref and config.labels_metadata:
                 lbls_ref = config.labels_metadata.path_ref
-            if lbls_ref:
-                # populate labels reference path field
-                self._labels_ref_path = lbls_ref
+            if not lbls_ref:
+                lbls_ref = ""
+            self._labels_ref_path = lbls_ref
 
         # set up image adjustment controls
         self._init_imgadj()
         
         # set up selector for loading past saved ROIs
-        self._rois_dict = {_ROI_DEFAULT: None}
+        self._rois_dict = {self._ROI_DEFAULT: None}
         img5d = config.img5d
         if config.db is not None and img5d and img5d.path_img is not None:
             self._rois = config.db.get_rois(sqlite.get_exp_name(
                 img5d.path_img))
-        self._rois_selections = ListSelections()
+        self._rois_selections = TraitsList()
         if self._rois is not None and len(self._rois) > 0:
             for roi in self._rois:
                 self._append_roi(roi, self._rois_dict)
         self._rois_selections.selections = list(self._rois_dict.keys())
-        self.rois_check_list = _ROI_DEFAULT
+        if self._rois_selections.selections:
+            self.rois_check_list = self._rois_selections.selections[0]
 
     def update_filename(
             self, filename: str, ignore: bool = False, reset: bool = True):
@@ -1823,11 +1960,11 @@ class Visualization(HasTraits):
         # skip first element, which serves as a dropdown box label
         atlas_suffixes = self._main_img_names.selections[1:]
         if atlas_suffixes:
-            if len(atlas_suffixes) == 1:
+            atlas_paths = [self._reg_img_names.get(s) for s in atlas_suffixes]
+            if len(atlas_paths) == 1:
                 # reduce to str if only one element
-                atlas_suffixes = atlas_suffixes[0]
-            reg_suffixes[config.RegSuffixes.ATLAS] = self._reg_img_names.get(
-                atlas_suffixes)
+                atlas_paths = atlas_paths[0]
+            reg_suffixes[config.RegSuffixes.ATLAS] = atlas_paths
         
         if self._labels_img_names.selections.index(self._labels_img_name) != 0:
             # add if not the empty first selection
@@ -1843,18 +1980,25 @@ class Visualization(HasTraits):
         # re-setup image
         self.update_filename(self._filename, reset=False)
     
+    @on_trait_change("_labels_ref_btn")
+    def _labels_ref_path_updated(self):
+        """Open a Pyface file dialog with path set to current image directory.
+        """
+        open_dialog = FileDialog(
+            action="open", default_path=os.path.dirname(self._filename))
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._labels_ref_path = open_dialog.path
+    
     @on_trait_change("_channel")
     def update_channel(self):
-        """Update the selected channel, resetting the current state to 
-        prevent displaying the old channel.
+        """Update the selected channel and image adjustment controls.
         """
         if not self._channel:
             # resetting channel names triggers channel update as empty array
             return
         config.channel = sorted([int(n) for n in self._channel])
         self._setup_imgadj_channels()
-        self.rois_check_list = _ROI_DEFAULT
-        self._reset_segments()
         print("Changed channel to {}".format(config.channel))
     
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
@@ -1931,6 +2075,28 @@ class Visualization(HasTraits):
         """Respond to redraw button presses."""
         self.redraw_selected_viewer()
     
+    @staticmethod
+    def _open_help_docs(suffix: str = ""):
+        """Open help documentation in the default web browser.
+        
+        Args:
+            suffix: Name of page within the main documentation; defaults to
+                an empty string to open the docs homepage.
+
+        """
+        Qt.QDesktopServices.openUrl(QtCore.QUrl(
+            f"{config.DocsURLs.DOCS_URL.value}/{suffix}"))
+    
+    @on_trait_change("_roi_btn_help")
+    def _help_roi(self):
+        """Respond to ROI panel help button presses."""
+        self._open_help_docs(config.DocsURLs.DOCS_URL_VIEWER.value)
+
+    @on_trait_change("_profiles_btn_help")
+    def _help_profiles(self):
+        """Respond to profiles panel help button presses."""
+        self._open_help_docs(config.DocsURLs.DOCS_URL_SETTINGS.value)
+    
     def redraw_selected_viewer(self, clear=True):
         """Redraw the selected viewer.
         
@@ -1944,6 +2110,8 @@ class Visualization(HasTraits):
         if clear:
             self.roi = None
             self._reset_segments()
+            if self._rois_selections.selections:
+                self.rois_check_list = self._rois_selections.selections[0]
 
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
@@ -2017,6 +2185,9 @@ class Visualization(HasTraits):
         self.blobs.blob_matches = blob_matches
         cli.update_profiles()
         
+        # get selected channels for blob detection
+        chls = sorted([int(n) for n in self._segs_chls])
+        
         # process ROI in prep for showing filtered 2D view and segmenting
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         offset = self._curr_offset()
@@ -2024,8 +2195,8 @@ class Visualization(HasTraits):
         self.roi = plot_3d.prepare_roi(config.image5d, offset, roi_size)
         if not libmag.is_binary(self.roi):
             self.roi = plot_3d.saturate_roi(
-                self.roi, channel=config.channel)
-            self.roi = plot_3d.denoise_roi(self.roi, config.channel)
+                self.roi, channel=chls)
+            self.roi = plot_3d.denoise_roi(self.roi, chls)
         else:
             libmag.printv(
                 "binary image detected, will not preprocess")
@@ -2040,7 +2211,7 @@ class Visualization(HasTraits):
             if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
-            segs_all = detector.detect_blobs(roi, config.channel)
+            segs_all = detector.detect_blobs(roi, chls)
             
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # match blobs between two channels
@@ -2050,7 +2221,7 @@ class Visualization(HasTraits):
                 matches = colocalizer.colocalize_blobs_match(
                     segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
                     np.zeros(3, dtype=int))
-                if matches:
+                if matches and len(matches) > 0:
                     # TODO: include all channel combos
                     self.blobs.blob_matches = matches[tuple(matches.keys())[0]]
         else:
@@ -2063,45 +2234,66 @@ class Visualization(HasTraits):
             
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
-            segs_all = detector.format_blobs(segs_all)
-            segs_all, mask_chl = detector.blobs_in_channel(
-                segs_all, config.channel, return_mask=True)
+            segs_all = detector.Blobs.format_blobs(segs_all)
+            segs_all, mask_chl = detector.Blobs.blobs_in_channel(
+                segs_all, chls, return_mask=True)
+            
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # get blob matches from whole-image match colocalization,
-                # shifting blobs to relative coordinates
-                matches = colocalizer.select_matches(
-                    config.db, config.channel, offset[::-1], roi_size[::-1])
+                # scaling the ROI to original blob space since blob matches
+                # are not scaled during loading
+                roi = [np.divide(a, config.blobs.scaling[:3])
+                       for a in (offset[::-1], roi_size[::-1])]
+                matches = colocalizer.select_matches(config.db, chls, *roi)
+                
                 # TODO: include all channel combos
-                if matches is not None:
+                if matches is not None and len(matches) > 0:
+                    # shift blobs to relative coordinates
                     matches = matches[tuple(matches.keys())[0]]
-                    shift = [n * -1 for n in offset[::-1]]
-                    matches.update_blobs(detector.shift_blob_rel_coords, shift)
-                self.blobs.blob_matches = matches
-                print("loaded blob matches:\n", self.blobs.blob_matches)
+                    shift = [n * -1 for n in roi[0]]
+                    matches.update_blobs(
+                        detector.Blobs.shift_blob_rel_coords, shift)
+                    matches.update_blobs(
+                        detector.Blobs.multiply_blob_rel_coords,
+                        config.blobs.scaling[:3])
+                    matches.get_mean_coords()
+                    self.blobs.blob_matches = matches
+                _logger.debug(
+                    f"Loaded blob matches:\n{self.blobs.blob_matches}")
+            
             elif (ColocalizeOptions.INTENSITY.value in self._colocalize
                   and config.blobs.colocalizations is not None
                   and segs is None):
                 # get corresponding blob co-localizations unless showing
                 # blobs from database, which do not have colocs
                 colocs = config.blobs.colocalizations[mask][mask_chl]
-        print("segs_all:\n{}".format(segs_all))
+        _logger.debug(
+            f"All blobs:\n{segs_all}\nTotal blobs: "
+            f"{0 if segs_all is None else len(segs_all)}")
         
         if segs is not None:
             # segs are typically loaded from DB for a sub-ROI within the
             # current ROI, so fill in the padding area from segs_all
+            # TODO: remove since blobs from different sources may be confusing?
             _, segs_in_mask = detector.get_blobs_in_roi(
                 segs_all, np.zeros(3), 
                 roi_size, np.multiply(self.border, -1))
             segs_outside = segs_all[np.logical_not(segs_in_mask)]
             print("segs_outside:\n{}".format(segs_outside))
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
-            segs = detector.format_blobs(segs)
-            segs = detector.blobs_in_channel(segs, config.channel)
+            segs = detector.Blobs.format_blobs(segs)
+            segs = detector.Blobs.blobs_in_channel(segs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
         if segs_all is not None:
+            # set confirmation flag to user-selected label for any
+            # un-annotated blob
+            confirmed = detector.Blobs.get_blob_confirmed(segs_all)
+            confirmed[confirmed == -1] = self._segs_labels[0]
+            detector.Blobs.set_blob_confirmed(segs_all, confirmed)
+            
             # convert segments to visualizer table format and plot
-            self.segments = detector.shift_blob_abs_coords(
+            self.segments = detector.Blobs.shift_blob_abs_coords(
                 segs_all, offset[::-1])
             self.blobs.blobs = self.segments
             if colocs is not None:
@@ -2121,21 +2313,34 @@ class Visualization(HasTraits):
             elif (self._blob_color_style[0]
                     is BlobColorStyles.ATLAS_LABELS.value
                     and config.labels_img is not None):
-                # same colors as corresponding atlas labels
-                blob_ids = ontology.get_label_ids_from_position(
-                    segs_all[self.segs_in_mask, :3].astype(np.int),
-                    config.labels_img)
-                self.segs_cmap = config.cmap_labels(
-                    config.cmap_labels.convert_img_labels(blob_ids))
-                self.segs_cmap[:, :3] *= 255
-                self.segs_cmap[:, 3] *= alpha
+                
+                def get_atlas_cmap(coords):
+                    # get colors of corresponding atlas labels
+                    if coords is None: return None
+                    blob_ids = ontology.get_label_ids_from_position(
+                        coords.astype(np.int), config.labels_img)
+                    atlas_cmap = config.cmap_labels(
+                        config.cmap_labels.convert_img_labels(blob_ids))
+                    atlas_cmap[:, :3] *= 255
+                    atlas_cmap[:, 3] *= alpha
+                    return atlas_cmap
+                
+                # set up colormaps for blobs and blob matches
+                self.segs_cmap = get_atlas_cmap(
+                    detector.Blobs.get_blob_abs_coords(
+                        segs_all[self.segs_in_mask]))
+                if (self.blobs.blob_matches is not None and
+                        self.blobs.blob_matches.coords is not None):
+                    self.blobs.blob_matches.cmap = get_atlas_cmap(
+                        np.add(self.blobs.blob_matches.coords, offset[::-1]))
+            
             else:
                 # default to color by channel
+                chls = detector.Blobs.get_blobs_channel(
+                    segs_all[self.segs_in_mask]).astype(np.int)
                 cmap = colormaps.discrete_colormap(
-                    np_io.get_num_channels(config.image5d), alpha, True,
-                    config.seed)
-                self.segs_cmap = cmap[detector.get_blobs_channel(
-                    segs_all[self.segs_in_mask]).astype(np.int)]
+                    max(chls) + 1, alpha, True, config.seed)
+                self.segs_cmap = cmap[chls]
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
@@ -2143,10 +2348,10 @@ class Visualization(HasTraits):
             '''
             # could get initial segmentation from r-w
             walker = segmenter.segment_rw(
-                self.roi, config.channel, erosion=1)
+                self.roi, chls, erosion=1)
             '''
             self.labels = segmenter.segment_ws(
-                self.roi, config.channel, None, blobs)
+                self.roi, chls, None, blobs)
             '''
             # 3D-seeded random-walker with high beta to limit walking 
             # into background, also removing objects smaller than the 
@@ -2157,7 +2362,7 @@ class Visualization(HasTraits):
                 / np.mean(plot_3d.calc_isotropic_factor(1)))
             print("min size threshold for r-w: {}".format(min_size))
             self.labels = segmenter.segment_rw(
-                self.roi, config.channel, beta=100000, 
+                self.roi, chls, beta=100000, 
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
@@ -2188,14 +2393,18 @@ class Visualization(HasTraits):
         # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
         show_shadows = Vis3dOptions.SHADOWS.value in self._check_list_3d
-        self.segs_pts, scale = self._vis3d.show_blobs(
-            self.segments, self.segs_in_mask, self.segs_cmap,
+        scale, mask_size = self._vis3d.show_blobs(
+            self.blobs, self.segs_in_mask, self.segs_cmap,
             self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
         
-        # reduce number of digits to make the slider more compact
-        scale = float(libmag.format_num(scale, 4))
-        self._scale_detections_high = scale * 2
+        # set the max scaling based on the starting value
+        self._scale_detections_high = scale * 5
         self.scale_detections = scale
+        
+        # set the blob mask size
+        self._segs_mask_high = mask_size * 5
+        print("mask size", mask_size)
+        self._segs_mask = mask_size
 
     @on_trait_change("_colocalize")
     def _colocalize_blobs(self):
@@ -2225,9 +2434,17 @@ class Visualization(HasTraits):
     def update_scale_detections(self):
         """Updates the glyph scale factor.
         """
-        if self.segs_pts is not None:
-            self.segs_pts.glyph.glyph.scale_factor = self.scale_detections
-    
+        for glyph in (self._vis3d.blobs3d_in, self._vis3d.matches3d):
+            if glyph is not None:
+                glyph.glyph.glyph.scale_factor = self.scale_detections
+
+    @on_trait_change("_segs_mask")
+    def _segs_mask_changed(self):
+        """Update the glyph mask for fraction of blobs to show."""
+        for glyph in (self._vis3d.blobs3d_in, self._vis3d.matches3d):
+            if glyph is not None:
+                glyph.glyph.mask_points.on_ratio = self._segs_mask
+
     def _roi_ed_close_listener(self, evt):
         """Handle ROI Editor close events.
 
@@ -2390,6 +2607,11 @@ class Visualization(HasTraits):
         self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
+        
+        # store selected 2D options
+        config.prefs.roi_circles = self._circles_2d[0]
+        config.prefs.roi_plane = self._planes_2d[0]
+        config.prefs.roi_styles = self._styles_2d[0]
 
     def launch_atlas_editor(self):
         if config.image5d is None:
@@ -2516,14 +2738,14 @@ class Visualization(HasTraits):
         atlas_ed.view_subimg(offset[::-1], shape[::-1])
 
     @staticmethod
-    def _get_save_path(default_path):
+    def _get_save_path(default_path: str) -> str:
         """Get a save path from the user through a file dialog.
         
         Args:
-            default_path (str): Default path to display in the dialog.
+            default_path: Default path to display in the dialog.
 
         Returns:
-            str: Chosen path.
+            Chosen path.
         
         Raises:
             FileNotFoundError: User canceled file selection.
@@ -2532,8 +2754,10 @@ class Visualization(HasTraits):
         # open a PyFace file dialog in save mode
         save_dialog = FileDialog(action="save as", default_path=default_path)
         if save_dialog.open() == OK:
-            # get user selected path
-            return save_dialog.path
+            # get user selected path and update preferences
+            path = save_dialog.path
+            config.prefs.fig_save_dir = os.path.dirname(path)
+            return path
         else:
             # user canceled file selection
             raise FileNotFoundError("User canceled file selection")
@@ -2543,17 +2767,25 @@ class Visualization(HasTraits):
         """Save the figure in the currently selected viewer."""
         path = None
         try:
+            # get the figure save directory from preferences
+            save_dir = config.prefs.fig_save_dir
+            
             if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
                 if self.roi_ed is not None:
                     # save screenshot of current ROI Editor
-                    path = self._get_save_path(self.roi_ed.get_save_path())
+                    path = os.path.join(save_dir, self.roi_ed.get_save_path())
+                    path = self._get_save_path(path)
                     self.roi_ed.save_fig(path)
+            
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
                 if self.atlas_eds:
                     # save screenshot of first Atlas Editor
                     # TODO: find active editor
-                    path = self._get_save_path(self.atlas_eds[0].get_save_path())
+                    path = os.path.join(
+                        save_dir, self.atlas_eds[0].get_save_path())
+                    path = self._get_save_path(path)
                     self.atlas_eds[0].save_fig(path)
+            
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
                 if config.filename:
                     # save 3D image with extension in config
@@ -2564,11 +2796,13 @@ class Visualization(HasTraits):
                     path = "{}.{}".format(naming.get_roi_path(
                         config.filename, self._curr_offset(),
                         self.roi_array[0].astype(int)), ext)
-                    path = self._get_save_path(path)
+                    path = self._get_save_path(os.path.join(save_dir, path))
                     plot_2d.plot_image(screenshot, path)
+            
             if not path:
                 # notify that no figure is active to save
                 self._roi_feedback = "Please open a figure to save"
+        
         except FileNotFoundError as e:
             # user canceled path selection
             print(e)
@@ -2577,7 +2811,7 @@ class Visualization(HasTraits):
     def load_roi(self):
         """Load an ROI from database, including all blobs."""
         print("got {}".format(self.rois_check_list))
-        if self.rois_check_list not in ("", _ROI_DEFAULT):
+        if self.rois_check_list not in ("", self._ROI_DEFAULT):
             # get chosen ROI to reconstruct original ROI size and offset 
             # including border
             roi = self._rois_dict[self.rois_check_list]
@@ -2597,14 +2831,14 @@ class Visualization(HasTraits):
             blobs = config.db.select_blobs_by_roi(roi_id)[0]
             if len(blobs) > 0:
                 # change to single-channel if all blobs are from same channel
-                chls = np.unique(detector.get_blobs_channel(blobs))
+                chls = np.unique(detector.Blobs.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
             
             # get matches between blobs, such as verifications
             blob_matches = config.db.select_blob_matches(roi_id)
             blob_matches.update_blobs(
-                detector.shift_blob_rel_coords,
+                detector.Blobs.shift_blob_rel_coords,
                 [n * -1 for n in config.roi_offset[::-1]])
             
             # display blobs
@@ -2626,7 +2860,8 @@ class Visualization(HasTraits):
             # any change to border flag resets ROI selection and segments
             print("changed Border flag")
             self._border_on = border_checked
-            self.rois_check_list = _ROI_DEFAULT
+            if self._rois_selections.selections:
+                self.rois_check_list = self._rois_selections.selections[0]
             self._reset_segments()
         
         # immediately update in Atlas Editors, where None uses the default max
@@ -2747,6 +2982,9 @@ class Visualization(HasTraits):
         self._ignore_roi_offset_change = True
         self.z_offset, self.y_offset, self.x_offset = offset
         self._ignore_roi_offset_change = False
+        
+        # update intensity limits, etc for the current image
+        self.update_imgadj_for_img()
     
     def get_roi_size(self):
         """Get the current ROI size.
@@ -2817,7 +3055,7 @@ class Visualization(HasTraits):
     
     def _flag_seg_for_deletion(self, seg):
         seg[3] = -1 * abs(seg[3])
-        detector.set_blob_confirmed(seg, -1)
+        detector.Blobs.set_blob_confirmed(seg, -1)
     
     def update_segment(self, segment_new, segment_old=None, remove=False):
         """Update this class object's segments list with a new or updated 
@@ -2859,7 +3097,7 @@ class Visualization(HasTraits):
             # TODO: consider requiring new seg to already have abs coord updated
             self._segs_moved.append(segment_old)
             diff = np.subtract(seg[:3], segment_old[:3])
-            detector.shift_blob_abs_coords(seg, diff)
+            detector.Blobs.shift_blob_abs_coords(seg, diff)
             segi = self._get_vis_segments_index(segment_old)
             if segi == -1:
                 # try to find old blob from deleted blobs
@@ -2882,6 +3120,9 @@ class Visualization(HasTraits):
                 self.segments = np.concatenate((self.segments, segs))
             self.segs_selected.append(len(self.segments) - 1)
             print("added segment to table: {}".format(seg))
+        
+        # scroll to first selected row
+        self._segs_row_scroll = min(self.segs_selected)
         return seg
     
     @property
@@ -2962,18 +3203,27 @@ class Visualization(HasTraits):
     @on_trait_change("_profiles_add_btn")
     def _add_profile(self):
         """Add the chosen profile to the profiles table."""
-        # construct profile from selected options
         for chl in self._profiles_chls:
+            # get profile name for selected channel and add to table,
+            # deferring profile load until gathering all profiles
             prof = [self._profiles_cats[0], self._profiles_name, chl]
-            print("profile to add", prof)
+            _logger.debug("Profile to add: %s", prof)
+            self._ignore_profiles_update = True
             self._profiles.append(prof)
-
-        print("profiles from table:\n", self._profiles)
-        if not self._profiles:
-            # no profiles in the table to load
+        
+        # load profiles based on final selections
+        self._refresh_profiles()
+    
+    @on_trait_change("_profiles[]")
+    def _refresh_profiles(self):
+        """Refresh the loaded profiles based on the profiles table."""
+        if self._ignore_profiles_update or not self._profiles:
+            # no profiles in the table to load or set to ignore
+            self._ignore_profiles_update = False
             return
         
         # convert to Numpy array for fancy indexing
+        _logger.debug("Profiles from table:\n%s", self._profiles)
         profs = np.array(self._profiles)
 
         # load ROI profiles to the given channel
@@ -3025,8 +3275,11 @@ class Visualization(HasTraits):
     @on_trait_change("_profiles_reset_prefs_btn")
     def _reset_prefs(self):
         """Handle button to reset preferences."""
-        # trigger reset in handler
+        # trigger resetting TraitsUI prefs in handler
         self._profiles_reset_prefs = True
+        
+        # reset preferences profile
+        config.prefs = prefs_prof.PrefsProfile()
     
     @on_trait_change("_import_browser")
     def _add_import_file(self):

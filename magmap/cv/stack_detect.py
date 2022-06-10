@@ -5,10 +5,10 @@
 Detect blobs within a stack that has been chunked to allow parallel 
 processing.
 """
-
 from enum import Enum
 import os
 from time import time
+from typing import NamedTuple, Sequence, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -17,6 +17,9 @@ from magmap.cv import chunking, colocalizer, detector, verifier
 from magmap.io import cli, df_io, importer, libmag, naming
 from magmap.plot import plot_3d
 from magmap.settings import config, roi_prof
+
+if TYPE_CHECKING:
+    from magmap.settings import profiles
 
 _logger = config.logger.getChild(__name__)
 
@@ -157,8 +160,8 @@ class StackDetector(object):
             # absolute positioning, using the latter set to store shifted 
             # coordinates based on duplicates and the former for initial 
             # positions to check for multiple duplicates
-            detector.shift_blob_rel_coords(segments, offset)
-            detector.shift_blob_abs_coords(segments, offset)
+            detector.Blobs.shift_blob_rel_coords(segments, offset)
+            detector.Blobs.shift_blob_abs_coords(segments, offset)
             #print("segs after:\n{}".format(segments))
         return coord, segments
     
@@ -242,28 +245,42 @@ class StackDetector(object):
         return seg_rois
 
 
-def setup_blocks(settings, shape):
-    """Set up blocks for block processing, where each block is a chunk of
-    a larger image processed sequentially or in parallel to optimize
-    resource usage.
+class Blocks(NamedTuple):
+    """Block processing chunk tuples."""
+    #: Object array of tuples containing slices of each block.
+    sub_roi_slices: np.ndarray
+    # Similar Numpy array but with tuples of offsets.
+    sub_rois_offsets: np.ndarray
+    #: Int array of max shape for each sub-block used for denoising.
+    denoise_max_shape: np.ndarray
+    #: List of ints for border pixels to exclude in ``z, y, x``.
+    exclude_border: Sequence[int]
+    #: match tolerance as a Numpy float array in ``z, y, x``.
+    tol: np.ndarray
+    #: Float array of overlapping pixels in ``z, y, x``.
+    overlap_base: np.ndarray
+    #: Similar overlap array but modified by the border exclusion.
+    overlap: np.ndarray
+    #: Similar overlap array but for padding beyond the overlap.
+    overlap_padding: np.ndarray
+    #: Max pixels for each side in ``z, y, x`` order.
+    max_pixels: np.ndarray
+
+
+def setup_blocks(
+        settings: "profiles.SettingsDict", shape: Sequence[int]) -> Blocks:
+    """Set up blocks for block processing
+    
+    Each block is a chunk of a larger image processed sequentially or in
+    parallel to optimize resource usage.
     
     Args:
-        settings (:obj:`magmap.settings.profiles.SettingsDict`): Settings
-            dictionary that defines that the blocks.
-        shape (List[int]): Shape of full image in z,y,x.
+        settings: Settings dictionary that defines that the blocks.
+        shape: Shape of full image in ``z, y, x``.
 
     Returns:
-        :obj:`np.ndarray`, :obj:`np.ndarray`, :obj:`np.ndarray`, List[int],
-        :obj:`np.ndarray`, :obj:`np.ndarray`, :obj:`np.ndarray`,
-        :obj:`np.ndarray`: Numpy object array of tuples containing slices
-        of each block; similar Numpy array but with tuples of offsets;
-        Numpy int array of max shape for each sub-block used for denoising;
-        List of ints for border pixels to exclude in z,y,x;
-        match tolerance as a Numpy float array in z,y,x;
-        Numpy float array of overlapping pixels in z,y,x;
-        similar overlap array but modified by the border exclusion; and
-        similar overlap array but for padding beyond the overlap.
-
+        A named tuple of the block parameters.
+        
     """
     scaling_factor = detector.calc_scaling_factor()
     print("microsope scaling factor based on resolutions: {}"
@@ -301,8 +318,9 @@ def setup_blocks(settings, shape):
           .format(denoise_max_shape, max_pixels))
     sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
         shape, max_pixels, overlap)
-    return sub_roi_slices, sub_rois_offsets, denoise_max_shape, \
-        exclude_border, tol, overlap_base, overlap, overlap_padding
+    return Blocks(
+        sub_roi_slices, sub_rois_offsets, denoise_max_shape,
+        exclude_border, tol, overlap_base, overlap, overlap_padding, max_pixels)
 
 
 def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
@@ -361,23 +379,21 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     time_detection_start = time()
     settings = config.get_roi_profile(channels[0])
     print("Profile for block settings:", settings[settings.NAME_KEY])
-    sub_roi_slices, sub_rois_offsets, denoise_max_shape, exclude_border, \
-        tol, overlap_base, overlap, overlap_padding = setup_blocks(
-            settings, roi.shape)
+    blocks = setup_blocks(settings, roi.shape)
     
     # TODO: option to distribute groups of sub-ROIs to different servers 
     # for blob detection
     seg_rois = StackDetector.detect_blobs_sub_rois(
-        roi, sub_roi_slices, sub_rois_offsets, denoise_max_shape,
-        exclude_border, coloc, channels)
+        roi, blocks.sub_roi_slices, blocks.sub_rois_offsets,
+        blocks.denoise_max_shape, blocks.exclude_border, coloc, channels)
     detection_time = time() - time_detection_start
     print("blob detection time (s):", detection_time)
     
     # prune blobs in overlapping portions of sub-ROIs
     time_pruning_start = time()
     segments_all, df_pruning = StackPruner.prune_blobs_mp(
-        roi, seg_rois, overlap, tol, sub_roi_slices, sub_rois_offsets, channels,
-        overlap_padding)
+        roi, seg_rois, blocks.overlap, blocks.tol, blocks.sub_roi_slices,
+        blocks.sub_rois_offsets, channels, blocks.overlap_padding)
     pruning_time = time() - time_pruning_start
     print("blob pruning time (s):", pruning_time)
     #print("maxes:", np.amax(segments_all, axis=0))
@@ -419,11 +435,11 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     colocs = None
     if segments_all is not None:
         # remove the duplicated elements that were used for pruning
-        detector.replace_rel_with_abs_blob_coords(segments_all)
+        detector.Blobs.replace_rel_with_abs_blob_coords(segments_all)
         if coloc:
             colocs = segments_all[:, 10:10+num_chls_roi].astype(np.uint8)
         # remove absolute coordinate and any co-localization columns
-        segments_all = detector.remove_abs_blob_coords(segments_all)
+        segments_all = detector.Blobs.remove_abs_blob_coords(segments_all, True)
         
         # compare detected blobs with truth blobs
         # TODO: assumes ground truth is relative to any ROI offset,
@@ -431,7 +447,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         if verify:
             stats_detection, fdbk = verifier.verify_stack(
                 filename_base, subimg_path_base, settings, segments_all,
-                channels, overlap_base)
+                channels, blocks.overlap_base)
     
     if config.save_subimg:
         subimg_base_path = libmag.combine_paths(
@@ -468,7 +484,7 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         print("\nNo blobs detected")
     else:
         print("\nTotal blobs found:", len(segments_all))
-        detector.show_blobs_per_channel(segments_all)
+        detector.Blobs.show_blobs_per_channel(segments_all)
     print("\nTotal detection processing times (s):")
     path_times = "stack_detection_times.csv" if save_dfs else None
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
@@ -535,8 +551,11 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         blobs_all.blobs = libmag.combine_arrs(
             [b.blobs for b in detection_out["blobs"]
              if b.blobs is not None])
-        print("\nTotal blobs found across channels:", len(blobs_all.blobs))
-        detector.show_blobs_per_channel(blobs_all.blobs)
+        if blobs_all.blobs is None:
+            print("\nNo blobs found across channels")
+        else:
+            print("\nTotal blobs found across channels:", len(blobs_all.blobs))
+            detector.Blobs.show_blobs_per_channel(blobs_all.blobs)
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
              if b.colocalizations is not None])
@@ -656,7 +675,7 @@ class StackPruner(object):
         for i in channels:
             # prune blobs from each channel separately to avoid pruning based on 
             # co-localized channel signals
-            blobs = detector.blobs_in_channel(blobs_merged, i)
+            blobs = detector.Blobs.blobs_in_channel(blobs_merged, i)
             for axis in range(3):
                 # prune planes with all the overlapping regions within a given axis,
                 # skipping if this axis has no overlapping sub-regions

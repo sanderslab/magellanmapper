@@ -14,12 +14,12 @@ from enum import Enum
 import math
 import pprint
 from time import time
-from typing import Dict, Optional
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from skimage.feature import blob_log
 
-from magmap.cv import cv_nd
+from magmap.cv import colocalizer, cv_nd
 from magmap.io import libmag, np_io
 from magmap.plot import plot_3d
 from magmap.settings import config
@@ -35,39 +35,40 @@ CONFIRMATION: Dict[int, str] = {
 # pixel number multiplier by scaling for max overlapping pixels per ROI
 OVERLAP_FACTOR: int = 5
 
+_logger = config.logger.getChild(__name__)
+
 
 class Blobs:
     """Blob storage class.
     
     Attributes:
-        BLOBS_NP_VER (int): Current blobs Numpy archive version number.
-        blobs (:obj:`np.ndarray`): 2D Numpy array of blobs in the format
+        blobs: 2D Numpy array of blobs in the format
             ``[[z, y, x, radius, ...], ...]``; defaults to None.
-        blob_matches (:obj:`magmap.io.sqlite.BlobMatch`): Sequence of blob
-            matches; defaults to None.
-        colocalizations (:obj:`np.ndarray`): 2D Numpy array of same length
+        blob_matches: Sequence of blob matches; defaults to None.
+        colocalizations: 2D Numpy array of same length
             as ``blobs`` with a column for each channel, where 0 = no
             signal and 1 = signal at the corresponding blob's location
             in the given and channel; defaults to None.
-        path (str): Path from which blobs were loaded; defaults to None.
-        ver (int): Version number; defaults to :const:`BLOBS_NP_VER`.
-        roi_offset (Sequence[int]): Offset in ``z,y,x`` from ROI in which
-            blobs were detected.
-        roi_size (Sequence[int]): Size in ``z,y,x`` from ROI in which
-            blobs were detected.
-        resolutions (Sequence[int]): Physical unit resolution sizes in
-            ``[[z,y,x], ...]``; defaults to None.
-        basename (str): Archive name, typically the filename without extension
+        path: Path from which blobs were loaded; defaults to None.
+        ver: Version number; defaults to :const:`BLOBS_NP_VER`.
+        roi_offset: Offset in ``z,y,x`` from ROI in which blobs were detected.
+        roi_size: Size in ``z,y,x`` from ROI in which blobs were detected.
+        resolutions: Physical unit resolution sizes in ``[[z,y,x], ...]``;
+            defaults to None.
+        basename: Archive name, typically the filename without extension
             of the image file in which blobs were detected; defaults to None.
+        scaling: Scaling factor from the blobs' space to the main image's
+            space, in ``z,y,x``; defaults to ``[1, 1, 1]``.
     
     """
 
-    # blobs Numpy archive versions:
-    # 0: initial version
-    # 1: added resolutions, basename, offset, roi_size fields
-    # 2: added archive version number
-    # 3: added colocs
-    BLOBS_NP_VER = 3
+    #: Current blobs Numpy archive version number.
+    #: 0: initial version
+    #: 1: added resolutions, basename, offset, roi_size fields
+    #: 2: added archive version number
+    #: 3: added colocs
+    #: 4: added "columns" for column names
+    BLOBS_NP_VER: int = 4
     
     class Keys(Enum):
         """Numpy archive metadata keys as enumerations."""
@@ -78,58 +79,106 @@ class Blobs:
         BASENAME = "basename"
         ROI_OFFSET = "offset"
         ROI_SIZE = "roi_size"
-
-    def __init__(self, blobs=None, blob_matches=None, colocalizations=None,
-                 path=None):
+        COLS = "columns"
+    
+    class Cols(Enum):
+        """Blob column names."""
+        Z = "z"
+        Y = "y"
+        X = "x"
+        RADIUS = "radius"
+        CONFIRMED = "confirmed"
+        TRUTH = "truth"
+        CHANNEL = "channel"
+        ABS_Z = "abs_z"
+        ABS_Y = "abs_y"
+        ABS_X = "abs_x"
+    
+    #: Dictionary of column types to column indices in :attr:`blobs`.
+    col_inds: Dict["Cols", int] = {c: i for i, c in enumerate(Cols)}
+    
+    def __init__(
+            self,
+            blobs: Optional[np.ndarray] = None,
+            blob_matches: Optional["colocalizer.BlobMatch"] = None,
+            colocalizations: Optional[np.ndarray] = None,
+            path: str = None):
         """Initialize blobs storage object."""
         self.blobs = blobs
         self.blob_matches = blob_matches
         self.colocalizations = colocalizations
         self.path = path
         
-        self.ver = self.BLOBS_NP_VER
-        self.roi_offset = None
-        self.roi_size = None
-        self.resolutions = None
-        self.basename = None
+        # additional attributes
+        self.ver: int = self.BLOBS_NP_VER
+        self.roi_offset: Optional[Sequence[int]] = None
+        self.roi_size: Optional[Sequence[int]] = None
+        self.resolutions: Optional[Sequence[float]] = None
+        self.basename: Optional[str] = None
+        self.scaling: np.ndarray = np.ones(3)
+        
+        # blobs have first 6 columns by default
+        self.cols: Sequence[str] = [c.value for c in self.Cols][:6]
 
-    def load_blobs(self, path=None):
+    def load_blobs(self, path: str = None) -> "Blobs":
         """Load blobs from an archive.
 
         Also loads associated metadata from the archive.
 
         Args:
-            path (str): Path to set :attr:`path`; defaults to None to use
+            path: Path to set :attr:`path`; defaults to None to use
                 the existing path.
 
         Returns:
-            :class:`Blobs`: Blobs object.
+            Blobs object.
 
         """
         # load blobs and display counts
         if path is not None:
             self.path = path
-        print("Loading blobs from", self.path)
+        _logger.info("Loading blobs from: %s", self.path)
+        
         with np.load(self.path) as archive:
             info = np_io.read_np_archive(archive)
+            
+            if config.verbose:
+                _logger.debug(
+                    "Blobs archive metadata:\n%s", pprint.pformat(info))
 
             if self.Keys.VER.value in info:
                 # load archive version number
                 self.basename = info[self.Keys.VER.value]
+            
+            if self.Keys.COLS.value in info:
+                # load column indices into class attribute
+                # TODO: convert to instance attribute after moving all blob
+                # functions into this class
+                self.cols = info[self.Keys.COLS.value]
+                Blobs.col_inds = {c: None for c in self.Cols}
+                for i, col in enumerate(self.cols):
+                    try:
+                        Blobs.col_inds[self.Cols(col)] = i
+                    except ValueError:
+                        _logger.warn(
+                            "%s is not a valid Blobs column, skipping", col)
+                _logger.debug(
+                    "Loaded column indices:\n%s",
+                    pprint.pformat(Blobs.col_inds))
 
             if self.Keys.BLOBS.value in info:
                 # load blobs as a Numpy array
                 self.blobs = info[self.Keys.BLOBS.value]
-                print("Loaded {} blobs".format(len(self.blobs)))
+                _logger.info("Loaded %s blobs", len(self.blobs))
                 if config.verbose:
-                    show_blobs_per_channel(self.blobs)
+                    self.show_blobs_per_channel(self.blobs)
             
             if self.Keys.COLOCS.value in info:
                 # load intensity-based colocalizations
                 self.colocalizations = info[self.Keys.COLOCS.value]
                 if self.colocalizations is not None:
-                    print("Loaded blob co-localizations for {} channels"
-                          .format(self.colocalizations.shape[1]))
+                    _logger.info(
+                        "Loaded blob co-localizations for %s channels",
+                        self.colocalizations.shape[1])
             
             if self.Keys.RESOLUTIONS.value in info:
                 # load resolutions of image from which blobs were detected
@@ -147,8 +196,6 @@ class Blobs:
                 # load size of ROI from which blobs were detected
                 self.roi_size = info[self.Keys.ROI_SIZE.value]
             
-            if config.verbose:
-                pprint.pprint(info)
         return self
 
     def save_archive(self, to_add=None, update=False):
@@ -174,6 +221,7 @@ class Blobs:
                 Blobs.Keys.ROI_OFFSET.value: self.roi_offset,
                 Blobs.Keys.ROI_SIZE.value: self.roi_size,
                 Blobs.Keys.COLOCS.value: self.colocalizations,
+                Blobs.Keys.COLS.value: self.cols,
             }
         else:
             blobs_arc = to_add
@@ -187,11 +235,435 @@ class Blobs:
         with open(self.path, "wb") as archive:
             # save as uncompressed zip Numpy archive file
             np.savez(archive, **blobs_arc)
-            print("Saved blobs archive to:", self.path)
+            _logger.info("Saved blobs archive to: %s", self.path)
         
         if config.verbose:
             pprint.pprint(blobs_arc)
         return blobs_arc
+    
+    @classmethod
+    def format_blobs(
+            cls, blobs: np.ndarray,
+            channel: Optional[Union[int, Sequence[int]]] = None) -> np.ndarray:
+        """Format blobs with the full set of fields.
+         
+
+        Blobs in MagellanMapper can be assumed to start with ``z, y, x, radius``
+        but should use this class's functions to manipulate other fields to 
+        ensure that the correct columns are accessed. This function adds
+        these fields: ``confirmation, truth, channel, abs z, abs y, abs x``.
+
+        "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
+
+        "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where 
+        a "matched" truth blob is one that has a detected blob within a given 
+        tolerance.
+
+        Args:
+            blobs: Numpy 2D array in ``[[z, y, x, radius, ...], ...]`` format.
+            channel: Channel to set. Defaults to None, in which case the channel 
+                will not be updated.
+
+        Returns:
+            Blobs array formatted as 
+            ``[[z, y, x, radius, confirmation, truth, channel, 
+              abs_z, abs_y, abs_x], ...]``.
+        
+        """
+        # target num of cols minus current cols
+        shape = blobs.shape
+        extra_cols = len(cls.Cols) - shape[1]
+        extras = np.ones((shape[0], extra_cols)) * -1
+        blobs = np.concatenate((blobs, extras), axis=1)
+        
+        # copy relative to absolute coords
+        blobs[:, cls._get_abs_inds()] = blobs[:, cls._get_rel_inds()]
+        
+        if channel is not None:
+            # update channel
+            cls.set_blob_channel(blobs, channel)
+        
+        return blobs
+
+    @classmethod
+    def get_blob_col(
+            cls, blob: np.ndarray, col: int) -> Union[int, float, np.ndarray]:
+        """Get the value for the given column of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            col: Column index in ``blob``.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        if blob.ndim > 1:
+            return blob[..., col]
+        return blob[col]
+    
+    @classmethod
+    def get_blob_confirmed(
+            cls, blob: np.ndarray) -> Union[int, float, np.ndarray]:
+        """Get the confirmed value for blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CONFIRMED])
+    
+    @classmethod
+    def get_blob_truth(cls, blob: np.ndarray) -> Union[int, float, np.ndarray]:
+        """Get the truth value for blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.TRUTH])
+
+    @classmethod
+    def get_blobs_channel(cls, blob: np.ndarray) -> np.ndarray:
+        """Get the channel value for blob or blobs.
+        
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+
+        Returns:
+            Single value if ``blob`` is a single blob or array of values if
+            it is an array of blobs.
+
+        """
+        # get the channel index from the class attribute of indices
+        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL])
+    
+    @classmethod
+    def _get_rel_inds(cls) -> List[int]:
+        """Get relative coordinate indices."""
+        return [
+            cls.col_inds[cls.Cols.Z],
+            cls.col_inds[cls.Cols.Y],
+            cls.col_inds[cls.Cols.X]
+        ]
+
+    @classmethod
+    def _get_abs_inds(cls) -> List[int]:
+        """Get absolute coordinate indices."""
+        return [
+            cls.col_inds[cls.Cols.ABS_Z],
+            cls.col_inds[cls.Cols.ABS_Y],
+            cls.col_inds[cls.Cols.ABS_X]
+        ]
+    
+    @classmethod
+    def get_blob_abs_coords(cls, blobs: np.ndarray) -> np.ndarray:
+        """Get blob absolute coordinates.
+        
+        Args:
+            blobs: 2D array of blobs.
+
+        Returns:
+            2D array of absolute coordinates.
+
+        """
+        return blobs[:, cls._get_abs_inds()]
+
+    @classmethod
+    def set_blob_col(
+            cls, blob: np.ndarray, col: int, val: Union[int, np.ndarray]
+    ) -> np.ndarray:
+        """Set the value for the given column of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            col: Column index in ``blob``.
+            val: New value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        if blob.ndim > 1:
+            blob[..., col] = val
+        else:
+            blob[col] = val
+        return blob
+    
+    @classmethod
+    def set_blob_confirmed(
+            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+        """Set the confirmed flag of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            val: Confirmed value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CONFIRMED], val)
+    
+    @classmethod
+    def set_blob_truth(
+            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+        """Set the truth flag of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            val: Truth value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.TRUTH], val)
+    
+    @classmethod
+    def set_blob_channel(
+            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+        """Set the channel of a blob or blobs.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            val: Channel value. If ``blob`` is 2D, can be an array the length
+                of ``blob``.
+
+        Returns:
+            ``blob`` after modifications.
+
+        """
+        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
+    
+    @classmethod
+    def set_blob_abs_coords(cls, blobs: np.ndarray, coords: np.ndarray) -> np.ndarray:
+        """Set blob absolute coordinates.
+        
+        Args:
+            blobs: 2D array of blobs.
+            coords: 2D array of absolute coordinates in the same order of
+                coordinates as in ``blobs``.
+
+        Returns:
+            Modified ``blobs``.
+
+        """
+        blobs[:, cls._get_abs_inds()] = coords
+        return blobs
+    
+    @classmethod
+    def shift_blobs(
+            cls, blob: np.ndarray, cols: Union[int, Sequence[int]],
+            fn: Callable,
+            vals: Union[int, float, Sequence[Union[int, float]]],
+            to_int: bool = False
+    ) -> np.ndarray:
+        """Shift blob columns with a function.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            cols: Column(s) to modify.
+            fn: Function that takes a subset of ``blob`` and ``vals``.
+            vals: Values by which to shift the corresponding elements of
+                ``blob``.
+            to_int: True to convert the shifted elements to int; defaults
+                to False.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        if blob is not None:
+            # shift elements in the given columns with the provided function
+            is_1d = blob.ndim == 1
+            sub = blob[cols] if is_1d else blob[..., cols]
+            sub = fn(sub, vals)
+            
+            if to_int:
+                # convert shifted values to ints
+                sub = sub.astype(np.int)
+            
+            # replace values
+            if is_1d:
+                blob[cols] = sub
+            else:
+                blob[..., cols] = sub
+        
+        return blob
+
+    @classmethod
+    def shift_blob_rel_coords(
+            cls, blob: np.ndarray, offset: Sequence[int]) -> np.ndarray:
+        """Shift blob relative coordinates by offset.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            offset: Sequence of coordinates by which to shift
+                the corresponding elements of ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(blob, cls._get_rel_inds(), np.add, offset)
+    
+    @classmethod
+    def shift_blob_abs_coords(
+            cls, blob: np.ndarray, offset: Sequence[int]) -> np.ndarray:
+        """Shift blob absolute coordinates by offset.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            offset: Sequence of coordinates by which to shift
+                the corresponding elements of ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(blob, cls._get_abs_inds(), np.add, offset)
+    
+    @classmethod
+    def multiply_blob_rel_coords(
+            cls, blob: np.ndarray,
+            factor: Union[int, float, Sequence[Union[int, float]]]
+    ) -> np.ndarray:
+        """Multiply blob relative coordinates.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            factor: Factor by which to shift the corresponding elements of
+                ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(
+            blob, cls._get_rel_inds(), np.multiply, factor, True)
+    
+    @classmethod
+    def multiply_blob_abs_coords(
+            cls, blob: np.ndarray, factor: Union[int, float]) -> np.ndarray:
+        """Multiply blob absolute coordinates.
+
+        Args:
+            blob: 1D blob array or 2D array of blobs.
+            factor: Factor by which to shift the corresponding elements of
+                ``blob``.
+
+        Returns:
+            ``blob`` shifted in-place.
+
+        """
+        return cls.shift_blobs(
+            blob, cls._get_abs_inds(), np.multiply, factor, True)
+
+    @classmethod
+    def remove_abs_blob_coords(
+            cls, blobs: np.ndarray, remove_extra: bool = False) -> np.ndarray:
+        """Remove blob absolute coordinate columns.
+        
+        Args:
+            blobs: 2D array of blobs.
+            remove_extra: True to also remove any extra columns not in
+                :attr:`cols_inds`; defaults to False.
+
+        Returns:
+            ``blob`` modified in-place.
+
+        """
+        inds = cls.col_inds.values() if remove_extra else slice(blobs.shape[1])
+        return blobs[:, [i for i in inds if i not in cls._get_abs_inds()]]
+    
+    @classmethod
+    def replace_rel_with_abs_blob_coords(cls, blobs: np.ndarray) -> np.ndarray:
+        """Replace relative with absolute coordinates.
+        
+        Args:
+            blobs: 2D array of blobs.
+
+        Returns:
+            ``blob`` modified in-place.
+
+        """
+        blobs[:, cls._get_rel_inds()] = blobs[:, cls._get_abs_inds()]
+        return blobs
+
+    @classmethod
+    def blobs_in_channel(
+            cls, blobs: np.ndarray, channel: Union[int, np.ndarray],
+            return_mask: bool = False
+    ) -> Union[np.ndarray, Tuple[np.ndarray, np.ndarray]]:
+        """Get blobs in the given channels.
+
+        Args:
+            blobs: 1D blob array or 2D array of blobs.
+            channel: Sequence of channels to include.
+            return_mask: True to return the mask of blobs in ``channel``.
+
+        Returns:
+            A view of the blobs in the channel, or all  blobs if ``channel``
+            is None. If ``return_mask`` is True, also return the mask of
+            blobs in the given channels.
+
+        """
+        blobs_chl = blobs
+        mask = None
+        if channel is not None:
+            mask = np.isin(cls.get_blobs_channel(blobs), channel)
+            blobs_chl = blobs[mask]
+        if return_mask:
+            return blobs_chl, mask
+        return blobs_chl
+    
+    @classmethod
+    def show_blobs_per_channel(cls, blobs: np.ndarray):
+        """Show the number of blobs in each channel.
+
+        Args:
+            blobs: 1D blob array or 2D array of blobs.
+        """
+        channels = np.unique(cls.get_blobs_channel(blobs))
+        for channel in channels:
+            num_blobs = len(cls.blobs_in_channel(blobs, channel))
+            _logger.info("- blobs in channel %s: %s", int(channel), num_blobs)
+    
+    @classmethod
+    def blob_for_db(cls, blob: np.ndarray) -> np.ndarray:
+        """Convert blob to absolute coordinates.
+         
+        Changes the blob format from that used within this module 
+        to that used in :module:`sqlite`, where coordinates are absolute 
+        rather than relative to the offset.
+
+        Args:
+            blob: Single blob.
+
+        Returns:
+            Blob in ``abs_z, abs_y, abs_x, rad, confirmed, truth, channel``
+            format.
+        """
+        inds = [
+            cls.col_inds[cls.Cols.RADIUS],
+            cls.col_inds[cls.Cols.CONFIRMED],
+            cls.col_inds[cls.Cols.TRUTH],
+            cls.col_inds[cls.Cols.CHANNEL],
+        ]
+        return np.array([*blob[cls._get_abs_inds()], *blob[inds]])
 
 
 def calc_scaling_factor():
@@ -258,19 +730,21 @@ def show_blob_surroundings(blobs, roi, padding=1):
     np.set_printoptions()
 
 
-def detect_blobs(roi, channel, exclude_border=None):
+def detect_blobs(
+        roi: np.ndarray, channel: Sequence[int],
+        exclude_border: Optional[Sequence[int]] = None) -> Optional[np.ndarray]:
     """Detects objects using 3D blob detection technique.
     
     Args:
         roi: Region of interest to segment.
-        channel (Sequence[int]): Sequence of channels to select, which can
+        channel: Sequence of channels to select, which can
             be None to indicate all channels.
         exclude_border: Sequence of border pixels in x,y,z to exclude;
             defaults to None.
     
     Returns:
-        Array of detected blobs, each given as 
-            (z, row, column, radius, confirmation).
+        Array of detected blobs, each given as
+        ``z, row, column, radius, confirmation``.
     """
     time_start = time()
     shape = roi.shape
@@ -312,7 +786,7 @@ def detect_blobs(roi, channel, exclude_border=None):
             libmag.printv("no blobs detected")
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-        blobs = format_blobs(blobs_log, chl)
+        blobs = Blobs.format_blobs(blobs_log, chl)
         #print(blobs)
         blobs_all.append(blobs)
     if not blobs_all:
@@ -322,246 +796,15 @@ def detect_blobs(roi, channel, exclude_border=None):
         # if detected on isotropic ROI, need to reposition blob coordinates 
         # for original, non-isotropic ROI
         isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
-        blobs_all = multiply_blob_rel_coords(blobs_all, 1 / isotropic_factor)
-        blobs_all = multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
+        blobs_all = Blobs.multiply_blob_rel_coords(
+            blobs_all, 1 / isotropic_factor)
+        blobs_all = Blobs.multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
     
     if exclude_border is not None:
         # exclude blobs from the border in x,y,z
         blobs_all = get_blobs_interior(blobs_all, shape, *exclude_border)
     
     return blobs_all
-
-
-def format_blobs(blobs, channel=None):
-    """Format blobs with additional fields for confirmation, truth, and 
-    channel, abs z, abs y, abs x values.
-    
-    Blobs in MagellanMapper can be assumed to start with (z, y, x, radius) but should 
-    use ``detector`` functions to manipulate other fields of blob arrays to 
-    ensure that the correct columns are accessed.
-    
-    "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
-    
-    "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where 
-    a "matched" truth blob is one that has a detected blob within a given 
-    tolerance.
-    
-    Args:
-        blobs: Numpy 2D array in [[z, y, x, radius, ...], ...] format.
-        channel: Channel to set. Defaults to None, in which case the channel 
-            will not be updated.
-    
-    Returns:
-        Blobs array formatted as 
-        [[z, y, x, radius, confirmation, truth, channel, 
-          abs_z, abs_y, abs_x], ...].
-    """
-    # target num of cols minus current cols
-    shape = blobs.shape
-    extra_cols = 10 - shape[1]
-    #print("extra_cols: {}".format(extra_cols))
-    extras = np.ones((shape[0], extra_cols)) * -1
-    blobs = np.concatenate((blobs, extras), axis=1)
-    # copy relative coords to abs coords
-    blobs[:, -3:] = blobs[:, :3]
-    channel_dim = 6
-    if channel is not None:
-        # update channel if given
-        blobs[:, channel_dim] = channel
-    elif shape[1] <= channel_dim:
-        # if original shape of each blob was 6 or less as was the case 
-        # prior to v.0.6.0, need to update channel with default value
-        blobs[:, channel_dim] = 0
-    return blobs
-
-
-def remove_abs_blob_coords(blobs):
-    return blobs[:, :7]
-
-
-def get_blob_abs_coords(blobs):
-    return blobs[:, 7:10]
-
-
-def set_blob_abs_coords(blobs, coords):
-    blobs[:, 7:10] = coords
-    return blobs
-
-
-def shift_blob_rel_coords(blob, offset):
-    """Shift blob relative coordinates by offset.
-    
-    Args:
-        blob (List): Either a sequence starting with blob coordinates,
-            typically in ``z, y, x, ...``, or a sequence of blobs.
-        offset (List[int]): Sequence of coordinates by which to shift
-            the corresponding elements from the start of ``blob``.
-
-    Returns:
-        List: The shifted blob or sequence of blobs.
-
-    """
-    if blob.ndim > 1:
-        blob[..., :len(offset)] += offset
-    else:
-        blob[:len(offset)] += offset
-    return blob
-
-
-def shift_blob_abs_coords(blobs, offset):
-    blobs[..., 7:7+len(offset)] += offset
-    return blobs
-
-
-def multiply_blob_rel_coords(blobs, factor):
-    if blobs is not None:
-        rel_coords = blobs[..., :3] * factor
-        blobs[..., :3] = rel_coords.astype(np.int)
-    return blobs
-
-
-def multiply_blob_abs_coords(blobs, factor):
-    if blobs is not None:
-        abs_slice = slice(7, 7 + len(factor))
-        abs_coords = blobs[..., abs_slice] * factor
-        blobs[..., abs_slice] = abs_coords.astype(np.int)
-    return blobs
-
-
-def get_blob_confirmed(blob):
-    if blob.ndim > 1:
-        return blob[..., 4]
-    return blob[4]
-
-
-def set_blob_col(blob, col, val):
-    """Set the value for the given column of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        col (int): Column index in ``blob``.
-        val (int): Truth value.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    if blob.ndim > 1:
-        blob[..., col] = val
-    else:
-        blob[col] = val
-    return blob
-
-
-def set_blob_confirmed(blob, val):
-    """Set the confirmed flag of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        val (int): Confirmed flag.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    return set_blob_col(blob, 4, val)
-
-
-def get_blob_truth(blob):
-    """Get the truth flag of a blob or blobs.
-    
-    Args:
-        blob (:obj:`np.ndarray`): 1D blob array or 2D array of blobs.
-
-    Returns:
-        int or :obj:`np.ndarray`: The truth flag of the blob as an int
-        for a single blob or array of truth flags for an array of blobs. 
-
-    """
-    if blob.ndim > 1:
-        return blob[..., 5]
-    return blob[5]
-
-
-def set_blob_truth(blob, val):
-    """Set the truth flag of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        val (int): Truth value.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    return set_blob_col(blob, 5, val)
-
-
-def get_blob_channel(blob):
-    return blob[6]
-
-
-def get_blobs_channel(blobs):
-    return blobs[:, 6]
-
-
-def set_blob_channel(blob, val):
-    """Set the channel of a blob or blobs.
-
-    Args:
-        blob (:class:`numpy.ndarray`): 1D blob array or 2D array of blobs.
-        val (int): Channel value.
-    
-    Returns:
-        :class:`numpy.ndarray`: ``blob`` after modifications.
-
-    """
-    return set_blob_col(blob, 6, val)
-
-
-def replace_rel_with_abs_blob_coords(blobs):
-    blobs[:, :3] = blobs[:, 7:10]
-    return blobs
-
-
-def blobs_in_channel(blobs, channel, return_mask=False):
-    """Get blobs in the given channels
-    
-    Args:
-        blobs (:obj:`np.ndarray`): Blobs in the format,
-            ``[[z, y, x, r, c, ...], ...]``.
-        channel (List[int]): Sequence of channels to include.
-        return_mask (bool): True to return the mask of blobs in ``channel``.
-
-    Returns:
-        :obj:`np.ndarray`: A view of the blobs in the channel, or all
-        blobs if ``channel`` is None.
-
-    """
-    blobs_chl = blobs
-    mask = None
-    if channel is not None:
-        mask = np.isin(get_blobs_channel(blobs), channel)
-        blobs_chl = blobs[mask]
-    if return_mask:
-        return blobs_chl, mask
-    return blobs_chl
-
-
-def blob_for_db(blob):
-    """Convert segment output from the format used within this module 
-    to that used in :module:`sqlite`, where coordinates are absolute 
-    rather than relative to the offset.
-    
-    Args:
-        seg: Segment in 
-            (z, y, x, rad, confirmed, truth, channel, abs_z, abs_y, abs_x) 
-            format.
-    
-    Returns:
-        Segment in (abs_z, abs_y, abs_x, rad, confirmed, truth, channel) format.
-    """
-    return np.array([*blob[-3:], *blob[3:7]])
 
 
 def remove_duplicate_blobs(blobs, region):
@@ -679,9 +922,9 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     # allow detection of duplicates that occur in multiple ROI pairs
     abs_between = np.around(
         np.divide(
-            np.add(get_blob_abs_coords(blobs_master[match_master]), 
-                   get_blob_abs_coords(blobs[match_check])), 2))
-    blobs_master[match_master] = set_blob_abs_coords(
+            np.add(Blobs.get_blob_abs_coords(blobs_master[match_master]), 
+                   Blobs.get_blob_abs_coords(blobs[match_check])), 2))
+    blobs_master[match_master] = Blobs.set_blob_abs_coords(
         blobs_master[match_master], abs_between)
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master
@@ -792,9 +1035,10 @@ def remove_close_blobs_within_sorted_array(blobs, tol):
                     # may lead to further pruning
                     abs_between = np.around(
                         np.divide(
-                            np.add(get_blob_abs_coords(blobs_all[i, None]), 
-                                   get_blob_abs_coords(blob[None])), 2))
-                    set_blob_abs_coords(blobs_all[i, None], abs_between)
+                            np.add(
+                                Blobs.get_blob_abs_coords(blobs_all[i, None]), 
+                                Blobs.get_blob_abs_coords(blob[None])), 2))
+                    Blobs.set_blob_abs_coords(blobs_all[i, None], abs_between)
                     #print("updated blob:", blobs_all[i])
                     #print("removed blob:", blob)
                     break
@@ -865,18 +1109,6 @@ def get_blobs_interior(blobs, shape, pad_start, pad_end):
             blobs[:, 1] < shape[1] - pad_end[1],
             blobs[:, 2] >= pad_start[2], 
             blobs[:, 2] < shape[2] - pad_end[2]], axis=0)]
-
-
-def show_blobs_per_channel(blobs):
-    """Show the number of blobs in each channel.
-    
-    Args:
-        blobs: Blobs as 2D array of [n, [z, row, column, radius, ...]].
-    """
-    channels = np.unique(get_blobs_channel(blobs))
-    for channel in channels:
-        num_blobs = len(blobs_in_channel(blobs, channel))
-        print("- blobs in channel {}: {}".format(int(channel), num_blobs))
 
 
 def _test_blob_duplicates():

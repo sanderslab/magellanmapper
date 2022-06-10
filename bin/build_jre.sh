@@ -51,5 +51,5 @@ backup_file "$output_dir"
 
 # build JRE with modules required for Bioformats package
 build_jre \
-  "${VIRTUAL_ENV}/lib/python3.6/site-packages/bioformats/jars/loci_tools.jar" \
+  "${VIRTUAL_ENV}/lib/python3.6/site-packages/bioformats/jars/bioformats_package.jar" \
   "$output_dir"

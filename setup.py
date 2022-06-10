@@ -21,7 +21,7 @@ _EXTRAS_PANDAS = [
 _EXTRAS_AWS = ["boto3", "awscli"]
 
 # optional dependencies to build API documentation
-_EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints"]
+_EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 
 # installation configuration
 config = {
@@ -30,7 +30,7 @@ config = {
     "author": "David Young",
     "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "packages": setuptools.find_packages(),
     "scripts": [], 
     "python_requires": ">=3.6",
@@ -38,7 +38,7 @@ config = {
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
-        "vtk <= 9.0.1",  # Mayavi 4.7.3 install hangs with VTK > 9.0.1
+        "vtk",
         "mayavi", 
         "pandas", 
         "PyQt5",
@@ -50,6 +50,9 @@ config = {
         "appdirs",
         # part of stdlib in Python >= 3.8
         "importlib-metadata >= 1.0 ; python_version < '3.8'",
+        "tifffile",
+        # part of stdlib in Python >= 3.7
+        "dataclasses ; python_version < '3.7'",
         # BrainGlobe dependencies for access to cloud-hosted atlases
         "bg-atlasapi",
     ], 
@@ -61,6 +64,7 @@ config = {
         "all": [
             "matplotlib_scalebar", 
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
+            "seaborn",  # for Seaborn-based plots
             *_EXTRAS_PANDAS,
             *_EXTRAS_IMPORT,  
             *_EXTRAS_AWS, 

@@ -98,7 +98,8 @@ def update_log_level(logger, level):
     return logger
 
 
-def add_file_handler(logger, path, backups=5):
+def add_file_handler(
+        logger: logging.Logger, path: str, backups: int = 5) -> pathlib.Path:
     """Add a rotating log file handler with a new log file.
     
     Rotates the file each time this function is called for the given number
@@ -107,17 +108,18 @@ def add_file_handler(logger, path, backups=5):
     creating a log filed named with an incremented number (eg ``out1.log``).
     
     Args:
-        logger (:class:`logging.Logger`): Logger to update.
-        path (str): Path to log. Increments to ``path<n>.<ext>`` if the
+        logger: Logger to update.
+        path: Path to log. Increments to ``path<n>.<ext>`` if the
             file at ``path`` cannot be rotated.
-        backups (int): Number of backups to maintain; defaults to 5.
+        backups: Number of backups to maintain; defaults to 5.
 
     Returns:
-        :class:`logging.Logger`: The logger for chained calls.
+        The log output path.
 
     """
     # check if log file already exists
     pathl = pathlib.Path(path)
+    path_log = pathl
     roll = pathl.is_file()
     
     # create a rotations file handler to manage number of backups while
@@ -129,8 +131,8 @@ def add_file_handler(logger, path, backups=5):
         try:
             # if the existing file at path cannot be rotated, increment the
             # filename to create a new series of rotating log files
-            path_log = (pathl if i == 0 else
-                        f"{pathl.parent / pathl.stem}{i}{pathl.suffix}")
+            path_log = pathl if i == 0 else pathlib.Path(
+                f"{pathl.parent / pathl.stem}{i}{pathl.suffix}")
             logger.debug(f"Trying logger path: {path_log}")
             handler_file = handlers.RotatingFileHandler(
                 path_log, backupCount=backups)
@@ -150,4 +152,4 @@ def add_file_handler(logger, path, backups=5):
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler_file)
     
-    return logger
+    return path_log

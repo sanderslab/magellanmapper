@@ -31,12 +31,12 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--theme` | `<theme1> [theme2] ...` | User interface themes; see `config.Themes`. | v1.1.4 | v1.1.4
 `--truth_db` | `[mode=<mode>] [path=<path>]` | Truth database; see `config.TruthDBModes` for available modes. | v1.0.0 | v1.0.0
 `--labels` | `[path_ref="""] [level=0] [ID=0] [orig_colors=1] [symmetric_colors=1] [binary=<backround>,<foreground>] [translate_labels=<path>"] [translate_children=0]` | Atlas label settings; see `config.AtlasLabels`. <ul><li>`path_ref`: Path to the labels reference file. Should have at least these columns: `Region` or `id` for region IDs, and `RegionName` or `name` for corresponding names. Atlases generated in >=v1.5.0 with this flag will copy this file into the atlas directory so that this argument is not needed when loading the atlas and images registered to it.</li> <li>`level`: Ontology level. Structures in sub-levels will be grouped at this level for volume stats. | v1.0.0 | v1.0.0
-`--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0]` | Image transformations; see `config.Transforms`. | v1.0.0 | v1.0.0
+`--transform` | `[rotate=0] [flip_vert=0] [flip_horiz=0] [rescale=0] [interpolation=1]` | Image transformations; see `config.Transforms`. <ul><li>`interpolation`: Interpolation order `n` for the main (intensity) image, where `n` is passed to the `order` argument in Scikit-image's [`transform.resize`](https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.resize) function | v1.0.0 | v1.6.0
 `--reg_suffixes` | `[atlas=atlasVolume.mhd] [annotation=annotation.mhd] [borders=<path>]` | Suffixes of registered images to load; see `config.RegSuffixes` for suffixes used throughout the package. Atlases and regenerated and registered with output paths based on the path given by `--img` or `--prefix`. For example:<ul><li>"Base" path (from `--img` or `--prefix`): `/home/me/my_image`</li><li>Intensity/histology/"atlas" image: `/home/me/my_image_atlasVolume.nii.gz`</li><li>Annotation/labels image: `/home/me/my_image_annotation.nii.gz`</li><li>Other registered images, eg atlas edges: `/home/me/my_image_atlasEdge.nii.gz`</li></ul>To load intensity and annotations image: `./run.py --img /home/me/my_image --reg_suffixes atlasVolume.nii.gz annotation.nii.gz`. <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Suffixes can be also given as an absolute path, such as a labels image not registered to the main image.</li></ul> | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--plot_labels` | `[title=<title>] ...` | Plot labels; see `config.PlotLabels` for available parameters. | v1.0.0 | v1.0.0
 `--set_meta` | `[resolutions=<x,y,z>] [magnification=<n>] [zoom=<n>] [shape=<c,x,y,z,...>] [dtype=<data-type>]` | Metadata to set when importing an image; see `config.MetaKeys`. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
-`--plane` | `<xy|xz|yz>` | Transpose to the given planar orientation | v1.0.0 | v1.0.0
-`--show` | `<0|1>` | Show images after generating them in atlas pipelines. `0` to not show, `1` to show. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
+`--plane` | `<xy\|xz\|yz>` | Transpose to the given planar orientation | v1.0.0 | v1.0.0
+`--show` | `<0\|1>` | Show images after generating them in atlas pipelines. `0` to not show, `1` to show. | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
 `--alphas` | `<n,...>` | Alpha (opacity) levels for the main image; can give as a comma-delimited for multiple channels (eg `0.5,0.3`) | v1.0.0 | v1.0.0
 `--vmin` | `<n,...>` | Minimum intensity levels; can give as a comma-delimited for multiple channels (eg `0.1,0.2`) | v1.0.0 | v1.0.0
 `--vmax` | `<n,...>` | Maximum intensity levels; can give as a comma-delimited for multiple channels (eg `0.1,0.2`) | v1.0.0 | v1.0.0
@@ -48,12 +48,19 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--groups` | `[group1] [group2] ...` | Group ID corresponding to each image in `--img`. | v1.0.0 | v1.0.0
 `--verbose`, `-v` | `[level=<n>] [path=<path>]` | Verbose output. `level` can range from `1` (`DEBUG`) to 5 (`CRITICAL`); defaults to debug if `level` is not set, or info if `-v` is not given. `path` is the output log path. | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 
+## Changes in MagellanMapper v1.6
+
+Old | New | Version | Purpose of Change |
+--- | --- | --- | ---
+`--transform ...` | `--transform [interpolation=n] ...` | v1.6.0 | Interpolation order can be specified when exporting the main image.
+
 ## Changes in MagellanMapper v1.5
 
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
 `--prefix <path>` | `--prefix <path1> [path2] ...` | v1.5.0 | Multiple prefixes can be given
 `--proc <task>` | `--proc <task1>=[sub-task1,...] [task2] ...` | v1.5.0 | Multiple processing tasks can be given as well as sub-tasks
+None | `--proc export_tif` | v1.5.0 | Export NPY files to TIF format.
 Specified in ROI profiles | `--proc preprocess=[rotate,saturate,...]` | v1.5.0 | Pre-processing tasks are integrated as sub-processing tasks; see `config.PreProcessKeys` for task names
 `--reg_suffixes [atlas=<suffix1>] ... [fixed_mask=<suffix2>] [moving_mask=<suffix3>]` | Unchanged | v1.5.0 | Suffixes can now be given as an absolute path to load directly from the path, eg a labels image not registered to the main image. Image masks for registration can also be given as `fixed_mask` and `moving_mask`.
 `--suffix <path>` | `--suffix <path1> [path2] ...` | v1.5.0 | Multiple suffixes can be given

@@ -3,11 +3,12 @@
 """Shared functions with the MagellanMapper package.
 """
 
+from functools import lru_cache
 import os
 import pathlib
 import shutil
 import sys
-from typing import Optional, Union
+from typing import Callable, Optional, Sequence, Union
 import warnings
 
 if sys.version_info >= (3, 8):
@@ -186,15 +187,16 @@ def combine_arrs(arrs, filter_none=True, fn=None, **kwargs):
         return fn(arrs, **kwargs)
 
 
-def insert_before_ext(name, insert, sep=""):
+def insert_before_ext(
+        name: Union[str, pathlib.Path], insert: str, sep: str = "") -> str:
     """Merge two paths by splicing in ``insert`` just before the extention 
     in ``name``.
     
     Args:
-        name (str): Path; if no dot is present in the basename, simply
+        name: Path; if no dot is present in the basename, simply
             merge the string components.
-        insert (str): String to insert before the extension in ``name``.
-        sep (str): Separator between ``name`` and ``insert``; defaults to an
+        insert: String to insert before the extension in ``name``.
+        sep: Separator between ``name`` and ``insert``; defaults to an
            empty string.
     
     Returns:
@@ -203,6 +205,7 @@ def insert_before_ext(name, insert, sep=""):
     See Also:
         :func:``combine_paths`` to use the extension from ``insert``.
     """
+    name = str(name)
     if os.path.basename(name).find(".") == -1:
         # no extension in basename, so simply combine
         return name + sep + insert
@@ -270,7 +273,7 @@ def get_filename_without_ext(path: str) -> str:
 
 def combine_paths(
         base_path: str, suffix: str, sep: str = "_", ext: str = None,
-        check_dir: bool = False):
+        check_dir: bool = False, keep_ext: bool = False):
     """Merge two paths by appending ``suffix``, replacing the extention 
     in ``base_path``.
     
@@ -285,6 +288,7 @@ def combine_paths(
             the extension in ``suffix``.
         check_dir: True to check if ``base_path`` is an existing directory,
             in which case it is simply joined to ``suffix``; defaults to False.
+        keep_ext: True to keep the `base_path` extension; defaults to False.
     
     Returns:
         Merged path.
@@ -299,8 +303,12 @@ def combine_paths(
         # unnecessary to split out ext and adding sep
         path = os.path.join(base_path, suffix)
     else:
-        path = splitext(base_path)[0] + sep + suffix
-    if ext: path = "{}.{}".format(splitext(path)[0], ext)
+        # remove the extension if flagged and combine with separator and suffix
+        path = base_path if keep_ext else splitext(base_path)[0]
+        path = path + sep + suffix
+    if ext:
+        # replace extension from suffix with given ext
+        path = f"{splitext(path)[0]}.{ext}"
     return path
 
 
@@ -447,6 +455,20 @@ def warn(msg, category=UserWarning, stacklevel=2):
 
     """
     warnings.warn(msg, category, stacklevel=stacklevel)
+
+
+@lru_cache(10)
+def log_once(fn_log: Callable[[str], None], msg: str):
+    """Log a message only once.
+    
+    Args:
+        fn_log: Log function.
+        msg: Message
+
+    """
+    # use cache to ignore repeated calls
+    # TODO: check appropriate maxsize
+    fn_log(msg)
 
 
 def series_as_str(series):
@@ -781,7 +803,9 @@ def compact_float(n, max_decimals=None):
     return compact
 
 
-def backup_file(path, modifier="", i=None):
+def backup_file(
+        path: Union[str, pathlib.Path], modifier: str = "",
+        i: Optional[int] = None):
     """Backup a file to the next given available path with an index number 
     before the extension.
     
@@ -1198,18 +1222,28 @@ def get_git_commit(repo_dir: str) -> Optional[str]:
 def get_version(git: bool = False) -> str:
     """Get package version from installed metadata.
     
+    The version string is based on the version at time of installation,
+    which is only updated when reinstalling the package.
+    
     Args:
         git: True to add a short hash of the current Git commit.
 
     Returns:
         The version string. If ``git`` is True, the current Git commit
-        is appended as ``<ver>-<short-hash>``.
+        is appended as ``<ver>-<short-hash>``. If package metadata is not
+        available, the version is given as "n/a".
 
     """
-    # get version from installed metadata; note that this version may differ
-    # from the imported version:
-    # https://packaging.python.org/guides/single-sourcing-package-version/
-    ver = metadata.version(config.APP_NAME.lower())
+    try:
+        # get version from installed metadata; note that this version may differ
+        # from the imported version:
+        # https://packaging.python.org/guides/single-sourcing-package-version/
+        ver = metadata.version(config.APP_NAME.lower())
+    except metadata.PackageNotFoundError as e:
+        # fall back to N/A version
+        _logger.exception(e)
+        ver = "n/a"
+    
     if git:
         git_commit = get_git_commit(
             str(pathlib.Path(__file__).parent.parent.parent))

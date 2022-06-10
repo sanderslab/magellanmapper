@@ -197,7 +197,7 @@ class DraggableCircle:
         if (event.mouseevent.key in ("control", "shift", "alt")
                 or event.artist != self.circle):
             return
-        #print("color: {}".format(self.facecolori))
+        #print("color: {}".format(self._facecolori))
         if event.mouseevent.key == "x":
             # "cut" segment
             self.picked.append((self, self.CUT))
@@ -234,7 +234,9 @@ class DraggableCircle:
             self.segment[4] = i
             self.fn_update_seg(self.segment, seg_old)
             print("picked segment: {}".format(self.segment))
-        self.circle.figure.canvas.draw()
+        if self.circle.figure:
+            # redraw if figure is still attached
+            self.circle.figure.canvas.draw()
 
     def disconnect(self):
         """Disconnect event listeners.
@@ -741,33 +743,35 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 # for some reason becomes none if previous event was
                 # ctrl combo and this event is control
                 pass
+            
             elif event.key == "control" or event.key.startswith("ctrl"):
+                # add a circle
                 blob_channel = None
                 if channel:
+                    # default to using the first selected channel
                     blob_channel = channel[0]
-                    num_chls = len(channel)
-                    if num_chls > 1:
-                        chl_matches = re.search(regex_key_chl, event.key)
-                        if chl_matches:
-                            # ctrl+n to specify the n-th channel
-                            chl = int(chl_matches[0])
-                            if chl < num_chls:
-                                blob_channel = channel[chl]
-                            else:
-                                print("selected channel index {} not within"
-                                      " range up to index {}"
-                                      .format(chl, num_chls - 1))
-                                return
+                    chl_matches = re.search(regex_key_chl, event.key)
+                    if chl_matches:
+                        # ctrl+n to specify channel n
+                        chl = int(chl_matches[0])
+                        if chl in channel:
+                            blob_channel = chl
+                        else:
+                            self.fn_status_bar(
+                                f"Selected channel, {chl}, must be in "
+                                f"{channel}")
+                            return
                 try:
+                    # add the circle patch
                     axi = subplots.index(inax)
                     if (axi != -1 and self._z_planes_padding <= axi
                             < z_planes - self._z_planes_padding):
                         blob = np.array([[axi - self._z_planes_padding,
                                          event.ydata.astype(int),
                                          event.xdata.astype(int), -5]])
-                        blob = detector.format_blobs(blob, blob_channel)
-                        detector.shift_blob_abs_coords(blob, offset[::-1])
-                        detector.set_blob_confirmed(blob, 1)
+                        blob = detector.Blobs.format_blobs(blob, blob_channel)
+                        detector.Blobs.shift_blob_abs_coords(blob, offset[::-1])
+                        detector.Blobs.set_blob_confirmed(blob, 1)
                         blob = fn_update_seg(blob[0])
                         # adds a circle to denote the new segment
                         patch = self._plot_circle(
@@ -777,7 +781,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     print(e)
                     print("not on a plot to select a point")
                 fig.canvas.draw_idle()
+            
             elif event.key == "v":
+                # paste a circle
                 _circle_last_picked_len = len(self._circle_last_picked)
                 if _circle_last_picked_len < 1:
                     print("No previously picked circle to paste")
@@ -797,7 +803,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     seg_new = fn_update_seg(seg_new, seg_old)
                 else:
                     print("Pasting a copied in segment")
-                    detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
+                    detector.Blobs.shift_blob_abs_coords(seg_new, (dz, 0, 0))
                     seg_new = fn_update_seg(seg_new)
                 self._plot_circle(
                     inax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
@@ -1280,7 +1286,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                             # adjusting rel and abs z coords to the given plane
                             z_diff = z_relative - seg[0]
                             seg[0] = z_relative
-                            detector.shift_blob_abs_coords(
+                            detector.Blobs.shift_blob_abs_coords(
                                 segments_z[i], (z_diff, 0, 0))
                             segments_z[i] = fn_update_seg(seg)
                 else:
@@ -1288,7 +1294,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     segments_z = segs_in[segs_in[:, 0] == z_relative]
                     if segs_out_z is not None:
                         segs_out_z_confirmed = segs_out_z[
-                            detector.get_blob_confirmed(segs_out_z) == 1]
+                            detector.Blobs.get_blob_confirmed(segs_out_z) == 1]
                         if len(segs_out_z_confirmed) > 0:
                             # include confirmed blobs; TODO: show contextual
                             # circles in adjacent planes?
@@ -1380,9 +1386,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
         Returns:
             The DraggableCircle object.
         """
-        channel = detector.get_blob_channel(segment)
+        channel = detector.Blobs.get_blobs_channel(segment)
         facecolor = DraggableCircle.BLOB_COLORS[
-            detector.get_blob_confirmed(segment)]
+            detector.Blobs.get_blob_confirmed(segment)]
         if linestyle is None:
             linestyle = self._BLOB_LINESTYLES[channel]
         circle = patches.Circle(
@@ -1447,7 +1453,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                         blob[2], blob[1],
                         ",".join([str(c) for c in np.where(coloc > 0)[0]]),
                         color="C{}".format(
-                            int(detector.get_blob_channel(blob))),
+                            int(detector.Blobs.get_blobs_channel(blob))),
                         alpha=0.8, horizontalalignment="center",
                         verticalalignment="center"))
         self.fig.canvas.draw_idle()

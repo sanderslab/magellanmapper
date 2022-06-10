@@ -4,6 +4,7 @@
 
 Prepare volumetric image stacks for plotting.
 """
+from typing import Optional, Sequence
 
 import numpy as np
 from skimage import draw
@@ -47,23 +48,25 @@ def setup_channels(roi, channel, dim_channel):
     return multichannel, channels
 
 
-def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
-                 channel=None):
+def saturate_roi(
+        roi: np.ndarray, clip_vmin: float = -1, clip_vmax: float = -1,
+        max_thresh_factor: float = -1, channel: Optional[Sequence[int]] = None
+) -> np.ndarray:
     """Saturates an image, clipping extreme values and stretching remaining
     values to fit the full range.
     
     Args:
-        roi (:obj:`np.ndarray`): Region of interest.
-        clip_vmin (float): Percent for lower clipping. Defaults to -1
+        roi: Region of interest.
+        clip_vmin: Percent for lower clipping. Defaults to -1
             to use each channel's profile setting.
-        clip_vmax (float): Percent for upper clipping. Defaults to -1
+        clip_vmax: Percent for upper clipping. Defaults to -1
             to use each channel's profile setting.
-        max_thresh_factor (float): Multiplier of :attr:`config.near_max`
+        max_thresh_factor: Multiplier of :attr:`config.near_max`
             for ROI's scaled maximum value. If the max data range value
             adjusted through``clip_vmax``is below this product, this max
             value will be set to this product. Defaults to -1 to use each
             channel's profile setting.
-        channel (List[int]): Sequence of channel indices in ``roi`` to
+        channel: Sequence of channel indices in ``roi`` to
             saturate. Defaults to None to use all channels.
     
     Returns:
@@ -85,11 +88,14 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
         # enhance contrast and normalize to 0-1 scale, adjusting the near max
         # value derived globally from image5d for the chl
         vmin, vmax = np.percentile(roi_show, (clip_vmin_prof, clip_vmax_prof))
-        max_thresh = config.near_max[chl] * max_thresh_factor_prof
-        if vmax < max_thresh:
-            vmax = max_thresh
-        saturated = np.clip(roi_show, vmin, vmax)
-        saturated = (saturated - vmin) / (vmax - vmin)
+        if vmin == vmax:
+            saturated = roi_show
+        else:
+            max_thresh = config.near_max[chl] * max_thresh_factor_prof
+            if vmax < max_thresh:
+                vmax = max_thresh
+            saturated = np.clip(roi_show, vmin, vmax)
+            saturated = (saturated - vmin) / (vmax - vmin)
         
         # insert into output array
         if multichannel:
@@ -101,26 +107,31 @@ def saturate_roi(roi, clip_vmin=-1, clip_vmax=-1, max_thresh_factor=-1,
     return roi_out
 
 
-def denoise_roi(roi, channel=None):
-    """Apply further saturation, denoising, unsharp filtering, and erosion
-    as image preprocessing for blob detection.
+def denoise_roi(
+        roi: np.ndarray, channel: Optional[Sequence[int]] = None) -> np.ndarray:
+    """Denoise and further preprocess an image.
+    
+    Applies saturation, denoising, unsharp filtering, and erosion as image
+    preprocessing for blob detection.
 
     Each step can be configured including turned off by
-    :attr:`config.process_settings`.
+    :attr:`magmap.settings.config.roi_profiles`.
     
     Args:
         roi: Region of interest as a 3D (z, y, x) array. Note that 4D arrays 
             with channels are not allowed as the Scikit-Image gaussian filter 
             only accepts specifically 3 channels, presumably for RGB.
-        channel (List[int]): Sequence of channel indices in ``roi`` to
+        channel: Sequence of channel indices in ``roi`` to
             saturate. Defaults to None to use all channels.
     
     Returns:
         Denoised region of interest.
+    
     """
     multichannel, channels = setup_channels(roi, channel, 3)
     roi_out = None
     for chl in channels:
+        # get single channel
         roi_show = roi[..., chl] if multichannel else roi
         settings = config.get_roi_profile(chl)
         # find gross density
@@ -139,10 +150,7 @@ def denoise_roi(roi, channel=None):
         unsharp_strength = settings["unsharp_strength"]
         if unsharp_strength:
             blur_size = 8
-            # turn off multichannel since assume operation on single channel at
-            # a time and to avoid treating as multichannel if 3D ROI happens to
-            # have x size of 3
-            blurred = filters.gaussian(denoised, blur_size, multichannel=False)
+            blurred = filters.gaussian(denoised, blur_size)
             high_pass = denoised - unsharp_strength * blurred
             denoised = denoised + high_pass
         

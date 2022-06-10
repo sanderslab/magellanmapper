@@ -28,7 +28,11 @@ import numpy as np
 from magmap.settings import logs
 
 if TYPE_CHECKING:
+    import SimpleITK as sitk
     from magmap.atlas import labels_meta
+    from magmap.cv import detector
+    from magmap.io import np_io
+    from magmap.settings import prefs_prof
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -36,6 +40,18 @@ APP_NAME = "MagellanMapper"
 URI_SCHEME = "magmap"
 #: str: Reverse Domain Name System identifier.
 DNS_REVERSE = f"io.github.sanderslab.{APP_NAME}"
+
+
+class DocsURLs(Enum):
+    """URLs to online documentation."""
+    #: Docs base URL.
+    DOCS_URL = "https://magellanmapper.readthedocs.io/en/latest"
+    #: Viewer doc suffix.
+    DOCS_URL_VIEWER = "viewers.html"
+    #: Settings doc URL.
+    DOCS_URL_SETTINGS = "settings.html"
+
+
 #: float: Threshold for positive values for float comparison.
 POS_THRESH = 0.001
 #: int: Number of CPUs for multiprocessing tasks; defaults to None to
@@ -47,6 +63,15 @@ app_dir = pathlib.Path(__file__).resolve().parent.parent.parent
 user_app_dirs = AppDirs(APP_NAME, False)
 #: PurePath: Absolution path to main application icon.
 ICON_PATH = app_dir / "images" / "magmap.png"
+
+
+# PREFERENCES
+
+#: Preferences file path.
+PREFS_PATH: pathlib.Path = pathlib.Path(
+    user_app_dirs.user_data_dir) / "prefs.yaml"
+#: Preferences dictionary.
+prefs: Optional["prefs_prof.PrefsProfile"] = None
 
 
 # LOGGING
@@ -64,6 +89,9 @@ verbose = False
 
 #: :class:`logging.Logger`: Root logger for the application.
 logger = logs.setup_logger()
+
+#: Path to log file.
+log_path: Optional[pathlib.Path] = None
 
 
 # IMAGE FILES
@@ -108,11 +136,11 @@ subimg_sizes = None
 
 image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
-#: :obj:`magmap.io.np_io.Image5d`: Image5d object.
-img5d = None
+#: Image5d object.
+img5d: Optional["np_io.Image5d"] = None
 
-#: obj:`magmap.cv.detector.Blobs`: Blobs object.
-blobs = None
+#: Blobs object.
+blobs: Optional["detector.Blobs"] = None
 
 #: :obj:`np.ndarray`: 2D array of shapes per time point in
 # ``[n_time_point, n_shape]`` format in case image5d is not available
@@ -125,6 +153,7 @@ class LoadIO(Enum):
     NP = auto()
     SITK = auto()
     BRAIN_GLOBE = auto()
+    TIFFFILE = auto()
 
 
 #: :obj:`LoadIO`: I/O source for image5d array.
@@ -183,16 +212,20 @@ cmap_labels = None
 
 # MICROSCOPY
 
-# metadata keys for command-line parsing
-MetaKeys = Enum(
-    "MetaKeys", (
-        "RESOLUTIONS",  # image resolutions in x,y,z
-        "MAGNIFICATION",  # objective magnification
-        "ZOOM",  # objective zoom
-        "SHAPE",  # output image shape
-        "DTYPE",  # data type as a string
-    )
-)
+class MetaKeys(Enum):
+    """Metadata keys for command-line parsing."""
+    #: Image resolutions in XYZ.
+    RESOLUTIONS = auto()
+    #: Objective magnification.
+    MAGNIFICATION = auto()
+    #: Objective zoom.
+    ZOOM = auto()
+    #: Image shape.
+    SHAPE = auto()
+    #: Data type as a string.
+    DTYPE = auto()
+
+
 #: Dictionary of metadata for image import.
 meta_dict: Dict[MetaKeys, Any] = dict.fromkeys(MetaKeys, None)
 
@@ -226,11 +259,12 @@ class ProcessTypes(Enum):
     EXPORT_PLANES = auto()  # export a 3D+ image to individual planes
     EXPORT_PLANES_CHANNELS = auto()  # also export channels to separate files
     EXPORT_RAW = auto()  # export an array as a raw data file
+    EXPORT_TIF = auto()  # export an array as TIF files for each channel
     PREPROCESS = auto()  # pre-process whole image
 
 
-#: dict[Enum, Any]: Processing tasks.
-proc_type = dict.fromkeys(ProcessTypes, None)
+#: Processing tasks.
+proc_type: Dict[ProcessTypes, Any] = dict.fromkeys(ProcessTypes, None)
 
 # 2D PLOTTING
 
@@ -241,19 +275,22 @@ class Cmaps(Enum):
     CMAP_RDBK_NAME = "Red_black"
 
 
-# processing type directly in module
-Plot2DTypes = Enum(
-    "Plot2DTypes", (
-        "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
-        "ROC_CURVE", "SCATTER_PLOT",
-        "LINE_PLOT",  # generic line plot
-    )
-)
+class Plot2DTypes(Enum):
+    """2D plot tasks."""
+    BAR_PLOT = auto()
+    BAR_PLOT_VOLS_STATS = auto()
+    BAR_PLOT_VOLS_STATS_EFFECTS = auto()
+    ROC_CURVE = auto()
+    SCATTER_PLOT = auto()
+    LINE_PLOT = auto()
+    SWARM_PLOT = auto()
+    
+
 plot_2d_type = None
 
 
-# plot label keys for command-line parsing
 class PlotLabels(Enum):
+    """Plot label keys for command-line sub-arguments."""
     TITLE = auto()  # figure title
     X_LABEL = auto()  # axis labels
     Y_LABEL = auto()
@@ -273,7 +310,10 @@ class PlotLabels(Enum):
     GROUP_COL = auto()  # data frame group column
     WT_COL = auto()  # weight column
     ID_COL = auto()  # ID column
-    ERR_COL = auto()  # error column(s)
+    #: Error column(s) with values relative to the data points.
+    ERR_COL = auto()
+    #: Error column(s) with absolute.
+    ERR_COL_ABS = auto()
     ANNOT_COL = auto()  # annotation column for each point
     ZOOM_SHIFT = auto()  # shift plot offset when zooming into ROI
     HLINE = auto()  # horizontal line, usually fn for each group
@@ -284,9 +324,15 @@ class PlotLabels(Enum):
     MARKER = auto()  # Matplotlib marker style
     DROP_DUPS = auto()  # drop duplicates
     DPI = auto()  # dots per inch
-    NAN_COLOR = auto()  # color for NaN values (Matplotlib or RGBA string)
+    #: # Color for NaN values as a Matplotlib or RGBA string.
+    NAN_COLOR = auto()
     TEXT_POS = auto()  # text (annotation) position in x,y
     CONDITION = auto()  # condition
+    #: Column indicating grouping for vertical span.
+    VSPAN_COL = auto()
+    VSPAN_FORMAT = auto()
+    #: Background color as a Matplotlib or RGBA string.
+    BACKGROUND = auto()
 
 
 #: dict[Any]: Plot labels set from command-line.
@@ -294,15 +340,22 @@ plot_labels = dict.fromkeys(PlotLabels, None)
 plot_labels[PlotLabels.SCALE_BAR] = True
 plot_labels[PlotLabels.DPI] = 150.0
 
-# image transformation keys for command-line parsing
-Transforms = Enum(
-    "Transforms", (
-        "ROTATE",  # num of times to rotate by 90 deg
-        "FLIP_VERT",  # 1 to invert top to bottom
-        "FLIP_HORIZ",  # 1 to invert left to right
-        "RESCALE",  # rescaling factor for an image shape
-    )
-)
+
+class Transforms(Enum):
+    """Image transformation keys for command-line parsing."""
+    #: Rotate by 90 deg the number of specified times.
+    ROTATE = auto()
+    #: Flip the image vertically if 1, no flip if 0.
+    FLIP_VERT = auto()
+    #: Flip the image horizontally if 1, no flip if 0.
+    FLIP_HORIZ = auto()
+    #: Rescale the image by the given factor.
+    RESCALE = auto()
+    #: Interpolate using the given order, which corresponds to
+    #: :meth:`skimage.transform.resize`.
+    INTERPOLATION = auto()
+
+
 transform = dict.fromkeys(Transforms, None)
 
 
@@ -502,7 +555,7 @@ load_labels: Optional[str] = None
 #: Numpy array of a labels image file, typically corresponding to ``img5d``.
 labels_img: Optional = None
 #: Labels image as a SimpleITK Image instance.
-labels_img_sitk: Optional[np.ndarray] = None
+labels_img_sitk: Optional["sitk.Image"] = None
 #: Original labels image, before any processing.
 labels_img_orig: Optional[np.ndarray] = None
 #: Scaling factors from ``labels_img`` to ``img5d``. 
@@ -520,17 +573,25 @@ GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100  # labels multiplier for sub-segmentations
 REGION_ALL = "all"
 
-# registered image suffix keys for command-line parsing
-RegSuffixes = Enum(
-    "RegSuffixes", [
-        "ATLAS",  # intensity image
-        "ANNOTATION",  # labels image
-        "BORDERS",  # label borders image
-        "FIXED_MASK",  # registration fixed image mask
-        "MOVING_MASK",  # registration moving image mask
-    ]
-)
-reg_suffixes = dict.fromkeys(RegSuffixes, None)
+
+class RegSuffixes(Enum):
+    """Registered image suffix type keys for command-line parsing."""
+    #: Intensity image.
+    ATLAS = auto()
+    #: Labels image.
+    ANNOTATION = auto()
+    #: Borders image.
+    BORDERS = auto()
+    #: Fixed mask for image registration.
+    FIXED_MASK = auto()
+    #: Moving mask for image registration
+    MOVING_MASK = auto()
+    #: Density image.
+    DENSITY = auto()
+
+
+#: Dictionary of registered suffix names for each suffix type.
+reg_suffixes: Dict[RegSuffixes, str] = dict.fromkeys(RegSuffixes, None)
 
 
 class ABAKeys(Enum):

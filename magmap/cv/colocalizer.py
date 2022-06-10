@@ -4,6 +4,7 @@
 
 from enum import Enum
 import multiprocessing as mp
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 import numpy as np
@@ -13,13 +14,18 @@ from magmap.cv import chunking, detector, stack_detect, verifier
 from magmap.io import cli, df_io, libmag, sqlite
 from magmap.settings import config
 
+_logger = config.logger.getChild(__name__)
+
 
 class BlobMatch:
     """Blob match storage class as a wrapper for a data frame of matches.
 
     Attributes:
-        df (:class:`pandas.DataFrame`): Data frame of matches with column
-            names given by :class:`BlobMatch.Cols`.
+        df: Data frame of matches with column names given by
+            :class:`BlobMatch.Cols`; defaults to None.
+        coords: Blob match coordinates, typically the mean coordinates of
+            each blob pair; defaults to None.
+        cmap: Colormap for each match; defaults to None.
 
     """
     
@@ -54,14 +60,16 @@ class BlobMatch:
             df (:class:`pandas.DataFrame`): Pandas data frame to set in
                 place of any other arguments; defaults to None.
         """
+        self.df: Optional[pd.DataFrame] = None
+        self.coords: Optional[np.ndarray] = None
+        self.cmap: Optional[np.ndarray] = None
+        
         if df is not None:
             # set data frame directly and ignore any other arguments
             self.df = df
             return
         if matches is None:
-            # set data frame to None and return since any other arguments
-            # must correspond to matches
-            self.df = None
+            # return since any other arguments must correspond to matches
             return
         
         matches_dict = {}
@@ -89,29 +97,31 @@ class BlobMatch:
         """Format the underlying data frame."""
         if self.df is None:
             return "Empty blob matches"
-        return df_io.print_data_frame(self.df, show=False)
+        return df_io.print_data_frame(self.df, show=False, max_rows=10)
     
-    def get_blobs(self, n):
+    def get_blobs(self, n: int) -> Optional[np.ndarray]:
         """Get blobs as a numpy array.
 
         Args:
-            n (int): 1 for blob1, otherwise blob 2.
+            n: 1 for blob1, otherwise blob 2.
 
         Returns:
-            :class:`numpy.ndarray`: Numpy array of the given blob type, or
+            Numpy array of the given blob type, or
             None if the :attr:`df` is None or the blob column does not exist.
 
         """
         col = BlobMatch.Cols.BLOB1 if n == 1 else BlobMatch.Cols.BLOB2
         if self.df is None or col.value not in self.df:
             return None
-        return np.vstack(self.df[col.value])
+        df = self.df[col.value]
+        if len(df) == 0:
+            return None
+        return np.vstack(df)
     
-    def get_blobs_all(self):
+    def get_blobs_all(self) -> Optional[List[np.ndarray]]:
         """Get all blobs in the blob matches.
         
         Returns:
-            tuple[:class:`numpy.ndarray`, :class:`numpy.ndarray`]:
             Tuple of ``(blobs1, blobs2)``, or None if either are None.
 
         """
@@ -137,6 +147,19 @@ class BlobMatch:
             blobs = self.get_blobs(i + 1)
             if blobs is not None:
                 self.df[col.value] = fn(blobs, *args).tolist()
+    
+    def get_mean_coords(self):
+        """Get mean value of each pair of matched blobs.
+        
+        Returns:
+            ``[n, 3]`` array of ``n`` blob pairs, also set to :attr:`coords`.
+
+        """
+        blobs = self.get_blobs_all()
+        if any([b is None for b in blobs]):
+            return None
+        self.coords = np.mean([b[:, :3] for b in blobs], axis=0)
+        return self.coords
 
 
 class StackColocalizer(object):
@@ -177,6 +200,9 @@ class StackColocalizer(object):
         if setup_cli:
             # reload command-line parameters
             cli.process_cli_args()
+        _logger.debug(
+            "Match-based colocalizing blobs in ROI at offset %s, size %s",
+            offset, shape)
         matches = colocalize_blobs_match(blobs, offset[::-1], shape[::-1], tol)
         return coord, matches
     
@@ -194,13 +220,20 @@ class StackColocalizer(object):
             and values are blob match objects. 
 
         """
-        print("Colocalizing blobs based on matching blobs in each pair of "
-              "channels")
-        # set up ROI blocks from which to select blobs in each block
-        sub_roi_slices, sub_rois_offsets, _, _, _, overlap_base, _, _ \
-            = stack_detect.setup_blocks(config.roi_profile, shape)
+        _logger.info(
+            "Colocalizing blobs based on matching blobs in each pair of "
+            "channels")
+        # scale match tolerance based on block processing ROI size
+        blocks = stack_detect.setup_blocks(config.roi_profile, shape)
         match_tol = np.multiply(
-            overlap_base, config.roi_profile["verify_tol_factor"])
+            blocks.overlap_base, config.roi_profile["verify_tol_factor"])
+        
+        # re-split stack with ROI size adjusted to the inner padding plus
+        # the raw overlap size
+        inner_pad = verifier.setup_match_blobs_roi(match_tol)[2]
+        inner_pad = np.add(inner_pad, blocks.overlap_base)
+        sub_roi_slices, sub_rois_offsets = chunking.stack_splitter(
+            shape, blocks.max_pixels, inner_pad[::-1])
         
         is_fork = chunking.is_fork()
         if is_fork:
@@ -238,8 +271,9 @@ class StackColocalizer(object):
             for key, val in matches.items():
                 matches_all.setdefault(key, []).append(val.df)
                 count += len(val.df)
-            print("adding {} matches from block at {} of {}"
-                  .format(count, coord, np.add(sub_roi_slices.shape, -1)))
+            _logger.info(
+                "Adding %s matches from block at %s of %s",
+                count, coord, np.add(sub_roi_slices.shape, -1))
         
         pool.close()
         pool.join()
@@ -247,36 +281,41 @@ class StackColocalizer(object):
         # prune duplicates by taking matches with shortest distance
         for key in matches_all.keys():
             matches_all[key] = pd.concat(matches_all[key])
-            for blobi in (BlobMatch.Cols.BLOB1, BlobMatch.Cols.BLOB2):
-                # convert blob column to ndarray to extract coords by column
-                matches = matches_all[key]
-                matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
-                    np.vstack(matches[blobi.value])[:, :3], axis=0,
-                    return_index=True, return_inverse=True, return_counts=True)
-                if np.sum(matches_cts > 1) > 0:
-                    # prune if at least one blob has been matched to multiple
-                    # other blobs
-                    singles = matches.iloc[matches_i[matches_cts == 1]]
-                    dups = []
-                    for i, ct in enumerate(matches_cts):
-                        # include non-duplicates to retain index
-                        if ct <= 1: continue
-                        # get indices in orig matches at given unique array
-                        # index and take match with lowest dist
-                        matches_mult = matches.loc[matches_inv == i]
-                        dists = matches_mult[BlobMatch.Cols.DIST.value]
-                        min_dist = np.amin(dists)
-                        num_matches = len(matches_mult)
-                        if config.verbose and num_matches > 1:
-                            print("pruning from", num_matches,
-                                  "matches of dist:", dists)
-                        matches_mult = matches_mult.loc[dists == min_dist]
-                        # take first in case of any ties
-                        dups.append(matches_mult.iloc[[0]])
-                    matches_all[key] = pd.concat((singles, pd.concat(dups)))
-            print("Colocalization matches for channels {}: {}"
-                  .format(key, len(matches_all[key])))
-            libmag.printv(print(matches_all[key]))
+            if matches_all[key].size > 0:
+                for blobi in (BlobMatch.Cols.BLOB1, BlobMatch.Cols.BLOB2):
+                    # convert blob column to ndarray to extract coords by column
+                    matches = matches_all[key]
+                    matches_uniq, matches_i, matches_inv, matches_cts = np.unique(
+                        np.vstack(matches[blobi.value])[:, :3], axis=0,
+                        return_index=True, return_inverse=True,
+                        return_counts=True)
+                    if np.sum(matches_cts > 1) > 0:
+                        # prune if at least one blob has been matched to
+                        # multiple other blobs
+                        singles = matches.iloc[matches_i[matches_cts == 1]]
+                        dups = []
+                        for i, ct in enumerate(matches_cts):
+                            # include non-duplicates to retain index
+                            if ct <= 1: continue
+                            # get indices in orig matches at given unique array
+                            # index and take match with lowest dist
+                            matches_mult = matches.loc[matches_inv == i]
+                            dists = matches_mult[BlobMatch.Cols.DIST.value]
+                            min_dist = np.amin(dists)
+                            num_matches = len(matches_mult)
+                            if num_matches > 1:
+                                _logger.debug(
+                                    "Pruning from %s matches of dist: %s",
+                                    num_matches, dists)
+                            matches_mult = matches_mult.loc[dists == min_dist]
+                            # take first in case of any ties
+                            dups.append(matches_mult.iloc[[0]])
+                        matches_all[key] = pd.concat((singles, pd.concat(dups)))
+                _logger.info(
+                    "Colocalization matches for channels %s: %s",
+                    key, len(matches_all[key]))
+            _logger.debug(
+                "Blob matches for %s after pruning:\n%s", key, matches_all[key])
             # store data frame in BlobMatch object
             matches_all[key] = BlobMatch(df=matches_all[key])
         
@@ -322,7 +361,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
     # surrounds, but ROI is not available for them
     blobs_roi, blobs_roi_mask = detector.get_blobs_in_roi(
         blobs, (0, 0, 0), roi.shape[:3], reverse=False)
-    blobs_chl = detector.get_blobs_channel(blobs_roi)
+    blobs_chl = detector.Blobs.get_blobs_channel(blobs_roi)
     blobs_range_chls = []
     
     # get labeled masks of blobs for each channel and threshold intensities
@@ -351,7 +390,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
             roi_mask = roi if np.sum(mask_blobs) < 1 else roi[mask_blobs, chl]
             threshs.append(np.percentile(roi_mask, thresh))
 
-    channels = np.unique(detector.get_blobs_channel(blobs_roi)).astype(int)
+    channels = np.unique(detector.Blobs.get_blobs_channel(blobs_roi)).astype(int)
     colocs_roi = np.zeros((blobs_roi.shape[0], roi.shape[3]), dtype=np.uint8)
     for chl in channels:
         # get labeled mask of blobs in the given channel
@@ -364,8 +403,10 @@ def colocalize_blobs(roi, blobs, thresh=None):
                 mask_blob = mask == blobi
                 blob_avg = np.mean(roi[mask_blob, chl_other])
                 if config.verbose:
-                    print(blobi, detector.get_blob_channel(blobs_roi[blobi]),
-                          blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
+                    print(
+                        blobi, detector.Blobs.get_blobs_channel(
+                            blobs_roi[blobi]),
+                        blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
                 if blob_avg >= threshs[chl_other]:
                     # intensities in another channel around blob's position
                     # is above that channel's threshold
@@ -376,45 +417,47 @@ def colocalize_blobs(roi, blobs, thresh=None):
     colocs[blobs_roi_mask] = colocs_roi
     if config.verbose:
         for i, (blob, coloc) in enumerate(zip(blobs_roi, colocs)):
-            print(i, detector.get_blob_channel(blob), blob[:3], coloc)
+            print(i, detector.Blobs.get_blobs_channel(blob), blob[:3], coloc)
     return colocs
 
 
-def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
+def colocalize_blobs_match(
+        blobs: np.ndarray, offset: Sequence[int], size: Sequence[int],
+        tol: Sequence[float], inner_padding: Optional[Sequence[int]] = None
+) -> Optional[Dict[Tuple[int, int], "BlobMatch"]]:
     """Co-localize blobs in separate channels but the same ROI by finding
     optimal blob matches.
 
     Args:
-        blobs (:obj:`np.ndarray`): Blobs from separate channels.
-        offset (List[int]): ROI offset given as x,y,z.
-        size (List[int]): ROI shape given as x,y,z.
-        tol (List[float]): Tolerances for matching given as x,y,z
-        inner_padding (List[int]): ROI padding given as x,y,z; defaults
+        blobs: Blobs from separate channels.
+        offset: ROI offset given as x,y,z.
+        size: ROI shape given as x,y,z.
+        tol: Tolerances for matching given as x,y,z
+        inner_padding: ROI padding given as x,y,z; defaults
             to None to use the padding based on ``tol``.
 
     Returns:
-        dict[tuple[int, int], :class:`BlobMatch`]:
         Dictionary where keys are tuples of the two channels compared and
-        values are blob matches objects.
+        values are blob matches objects, or None if ``blobs`` is None.
 
     """
     if blobs is None:
         return None
     thresh, scaling, inner_pad, resize, blobs = verifier.setup_match_blobs_roi(
-        blobs, tol)
+        tol, blobs)
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}
-    channels = np.unique(detector.get_blobs_channel(blobs)).astype(int)
+    channels = np.unique(detector.Blobs.get_blobs_channel(blobs)).astype(int)
     for chl in channels:
         # pair channels
-        blobs_chl = detector.blobs_in_channel(blobs, chl)
+        blobs_chl = detector.Blobs.blobs_in_channel(blobs, chl)
         for chl_other in channels:
             # prevent duplicates by skipping other channels below given channel
             if chl >= chl_other: continue
             # find colocalizations between blobs from one channel to blobs
             # in another channel
-            blobs_chl_other = detector.blobs_in_channel(blobs, chl_other)
+            blobs_chl_other = detector.Blobs.blobs_in_channel(blobs, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
                 size_inner, matches = verifier.match_blobs_roi(
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
@@ -422,20 +465,22 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
             
             # reset truth and confirmation blob flags in matches
             chl_combo = (chl, chl_other)
-            matches.update_blobs(detector.set_blob_truth, -1)
-            matches.update_blobs(detector.set_blob_confirmed, -1)
+            matches.update_blobs(detector.Blobs.set_blob_truth, -1)
+            matches.update_blobs(detector.Blobs.set_blob_confirmed, -1)
             matches_chls[chl_combo] = matches
     return matches_chls
 
 
-def _get_roi_id(db, offset, shape, exp_name=None):
+def _get_roi_id(
+        db: "sqlite.ClrDB", offset: Sequence[int], shape: Sequence[int],
+        exp_name: Optional[str] = None) -> int:
     """Get database ROI ID for the given ROI position within the main image5d.
     
     Args:
-        db (:obj:`sqlite.ClrDB`): Database object.
-        offset (List[int]): ROI offset in z,y,x.
-        shape (List[int]): ROI shape in z,y,x.
-        exp_name (str): Name of experiment; defaults to None to attempt
+        db: Database object.
+        offset: ROI offset in z,y,x.
+        shape: ROI shape in z,y,x.
+        exp_name: Name of experiment; defaults to None to attempt
             discovery through any image loaded to :attr:`config.img5d`.
 
     Returns:
@@ -445,8 +490,7 @@ def _get_roi_id(db, offset, shape, exp_name=None):
     if exp_name is None:
         exp_name = sqlite.get_exp_name(
             config.img5d.path_img if config.img5d else None)
-    exp_id = sqlite.select_or_insert_experiment(
-        db.conn, db.cur, exp_name, None)
+    exp_id = db.select_or_insert_experiment(exp_name, None)
     roi_id = sqlite.select_or_insert_roi(
         db.conn, db.cur, exp_id, config.series, offset, shape)[0]
     return roi_id
@@ -495,33 +539,31 @@ def select_matches(db, channels, offset=None, shape=None, exp_name=None):
         of blob matches. None if no blob matches are found.
 
     """
-    # get ROI for whole image
+    # get ROI for whole image, where whole-image matches are stored
     roi_id = _get_roi_id(db, (0, 0, 0), (0, 0, 0), exp_name)
-    if offset is not None and shape is not None:
-        # get blob from matches within ROI
-        blobs, blob_ids = db.select_blobs_by_position(
-            roi_id, offset[::-1], shape[::-1])
-    else:
-        # get blobs from matches within the whole image
-        blobs, blob_ids = db.select_blobs_by_roi(roi_id)
-    if blobs is None or len(blobs) == 0:
-        print("No blob matches found")
+    blob_matches = db.select_blob_matches(roi_id, offset, shape)
+    if blob_matches.df is None or len(blob_matches.df) == 0:
+        _logger.info("No blob matches found")
         return None
     
-    blob_ids = np.array(blob_ids)
     matches = {}
     for chl in channels:
         # pair channels
         for chl_other in channels:
             if chl >= chl_other: continue
-            # select matches for blobs in the given first channel of the pair
-            # of channels, assuming chls were paired this way during insertion
-            chl_matches = db.select_blob_matches_by_blob_id(
-                roi_id, 1,
-                blob_ids[detector.get_blobs_channel(blobs) == chl])
+            # select matches for blobs in the first channel of the channel pair,
+            # assuming chls were paired this way during insertion
+            blobs1 = blob_matches.get_blobs(1)
+            if blobs1 is None: continue
+            chl_matches = BlobMatch(df=blob_matches.df.loc[
+                detector.Blobs.get_blobs_channel(blobs1) == chl])
+            
+            # also extract only blob1's paired to blob2's in the 2nd channel 
             blobs2 = chl_matches.get_blobs(2)
-            if blobs2 is not None:
-                chl_matches = chl_matches.df.loc[detector.get_blobs_channel(
-                    blobs2) == chl_other]
-                matches[(chl, chl_other)] = BlobMatch(df=chl_matches)
+            if blobs2 is None: continue
+            chl_matches.df = chl_matches.df.loc[
+                detector.Blobs.get_blobs_channel(blobs2) == chl_other]
+            
+            # store the matches with chl1-chl2 as key
+            matches[(chl, chl_other)] = chl_matches
     return matches

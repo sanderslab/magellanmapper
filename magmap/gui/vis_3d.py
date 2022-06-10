@@ -2,29 +2,35 @@
 
 import math
 from time import time
+from typing import Any, Callable, List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 import numpy as np
 from skimage import filters, restoration, transform
 
-from magmap.cv import segmenter
+from magmap.cv import colocalizer, segmenter
 from magmap.io import libmag
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    from magmap.cv import detector
+    from mayavi.modules.glyph import Glyph
+    from mayavi.tools.mlab_scene_model import MlabSceneModel
 
 
 class Vis3D:
     """3D visualization object for handling Mayavi/VTK tasks.
     
     Attributes:
-        scene (:class:`mayavi.tools.mlab_scene_model.MlabSceneModel`):
-            Mayavi scene.
-        fn_update_coords (func): Callback to update coordinates; defaults to
+        scene: Mayavi scene.
+        fn_update_coords: Callback to update coordinates; defaults to
             None.
-        surfaces (list): List of Mayavi surfaces for each displayed channel;
+        surfaces: List of Mayavi surfaces for each displayed channel;
             defaults to None.
-        blobs (list[:class:`mayavi.modules.glyph.Glyph`]): List of Mayavi
-            glyphs, where each glyph typically contains many 3D points
-            representing blob positions; defaults to None.
+        blobs3d: List of Mayavi glyphs, where each glyph typically contains
+            many 3D points representing blob positions; defaults to None.
+        blobs3d_in: Mayavi glyphs of blobs inside the ROI; defaults to None.
+        matches3d: Mayavi glyphs of blob matches; defaults to None.
     
     """
     #: float: Maximum number of points to show.
@@ -38,14 +44,16 @@ class Vis3D:
                 Mayavi scene.
         
         """
-        self.scene = scene
+        self.scene: "MlabSceneModel" = scene
         
         # callbacks
-        self.fn_update_coords = None
+        self.fn_update_coords: Optional[Callable[[np.ndarray], None]] = None
         
         # generated Mayavi objects
-        self.surfaces = None
-        self.blobs = None
+        self.surfaces: Optional[List] = None
+        self.blobs3d_in: Optional["Glyph"] = None
+        self.matches3d: Optional["Glyph"] = None
+        self.blobs3d: Optional[List["Glyph"]] = None
 
     def update_img_display(self, minimum=None, maximum=None, brightness=None,
                            contrast=None, alpha=None):
@@ -342,43 +350,63 @@ class Vis3D:
         pts_shadows.module_manager.scalar_lut_manager.lut.table = cmap
         return pts_shadows
 
-    def show_blobs(self, segments, segs_in_mask, cmap, roi_offset, roi_size,
-                   show_shadows=False, flipz=None):
+    def show_blobs(
+            self,
+            blobs: "detector.Blobs",
+            segs_in_mask: np.ndarray,
+            cmap: np.ndarray,
+            roi_offset: Sequence[int], roi_size: Sequence[int],
+            show_shadows: bool = False, flipz: bool = None
+    ) -> Tuple[float, float]:
         """Show 3D blobs as points.
 
         Args:
-            segments: Labels from 3D blob detection method.
+            blobs: Detected blobs. Blob matches will also be displayed.
             segs_in_mask: Boolean mask for segments within the ROI; all other 
                 segments are assumed to be from padding and border regions 
                 surrounding the ROI.
-            cmap (:class:`numpy.ndaarry`): Colormap as a 2D Numpy array in the
+            cmap: Colormap as a 2D Numpy array in the
                 format  ``[[R, G, B, alpha], ...]``.
-            roi_offset (Sequence[int]): Region of interest offset in ``z,y,x``.
-            roi_size (Sequence[int]): Region of interest size in ``z,y,x``.
+            roi_offset: Region of interest offset in ``z,y,x``.
+            roi_size: Region of interest size in ``z,y,x``.
                 Used to show the ROI outline.
             show_shadows: True if shadows of blobs should be depicted on planes 
                 behind the blobs; defaults to False.
-            flipz (bool): True to invert blobs along the z-axis to match
+            flipz: True to invert blobs along the z-axis to match
                 the handedness of Matplotlib with z progressing upward;
                 defaults to False.
 
         Returns:
-            A 3-element tuple containing ``pts_in``, the 3D points within the 
-            ROI; ``cmap'', the random colormap generated with a color for each 
-            blob, and ``scale``, the current size of the points.
+            Tuple of:
+            - ``scale``: the current size of glyphs
+            - ``mask``: the mask size for glyphs, the denominator for the
+              fraction of glyphs displayed
+        
         """
+        segments = blobs.blobs
         if segments.shape[0] <= 0:
-            return None, 0
+            return 0, 0
         if roi_offset is None:
             roi_offset = np.zeros(3, dtype=np.int)
-        if self.blobs:
-            for blob in self.blobs:
+        if self.blobs3d:
+            for blob in self.blobs3d:
                 # remove existing blob glyphs from the pipeline
                 blob.remove()
+        self.blobs3d_in = None
+        self.matches3d = None
+        self.blobs3d = []
+        
         settings = config.roi_profile
         # copy blobs with duplicate columns to access original values for
         # the coordinates callback when a blob is selected
         segs = np.concatenate((segments[:, :4], segments[:, :4]), axis=1)
+        
+        matches = None
+        matches_cmap = None
+        if blobs.blob_matches is not None:
+            # set up match-based colocalizations
+            matches = blobs.blob_matches.coords
+            matches_cmap = blobs.blob_matches.cmap
         
         isotropic = plot_3d.get_isotropic_vis(settings)
         if flipz:
@@ -390,11 +418,16 @@ class Vis3D:
             roi_size = np.copy(roi_size)
             roi_size[0] *= -1
             segs[:, :3] = np.add(segs[:, :3], roi_offset)
+            if matches is not None:
+                matches[:, 0] *= -1
+                matches[:, :3] = np.add(matches[:, :3], roi_offset)
         if isotropic is not None:
             # adjust position based on isotropic factor
             roi_offset = np.multiply(roi_offset, isotropic)
             roi_size = np.multiply(roi_size[:3], isotropic)
             segs[:, :3] = np.multiply(segs[:, :3], isotropic)
+            if matches is not None:
+                matches[:, :3] = np.multiply(matches[:, :3], isotropic)
     
         radii = segs[:, 3]
         scale = 5 if radii is None else np.mean(np.mean(radii) + np.amax(radii))
@@ -428,31 +461,44 @@ class Vis3D:
         points_len = len(segs)
         mask = math.ceil(points_len / self._MASK_DIVIDEND)
         print("points: {}, mask: {}".format(points_len, mask))
-        pts_in = None
-        self.blobs = []
         if len(segs_in) > 0:
             # each Glyph contains multiple 3D points, one for each blob
-            pts_in = self.scene.mlab.points3d(
+            self.blobs3d_in = self.scene.mlab.points3d(
                 segs_in[:, 2], segs_in[:, 1],
                 segs_in[:, 0], cmap_indices,
                 mask_points=mask, scale_mode="none", scale_factor=scale,
                 resolution=50)
-            pts_in.module_manager.scalar_lut_manager.lut.table = cmap
-            self.blobs.append(pts_in)
+            self.blobs3d_in.module_manager.scalar_lut_manager.lut.table = cmap
+            self.blobs3d.append(self.blobs3d_in)
         
         # show blobs within padding or border region as black and more
         # transparent
         segs_out_mask = np.logical_not(segs_in_mask)
         if np.sum(segs_out_mask) > 0:
-            self.blobs.append(self.scene.mlab.points3d(
+            self.blobs3d.append(self.scene.mlab.points3d(
                 segs[segs_out_mask, 2], segs[segs_out_mask, 1],
                 segs[segs_out_mask, 0], color=(0, 0, 0),
                 mask_points=mask, scale_mode="none", scale_factor=scale / 2,
                 resolution=50, opacity=0.2))
         
+        # blob match display
+        if matches is not None:
+            # default to yellow
+            color = (0.5, 0.5, 0) if matches_cmap is None else None
+            self.matches3d = self.scene.mlab.points3d(
+                matches[:, 2], matches[:, 1], matches[:, 0],
+                np.arange(len(matches)),
+                color=color, opacity=0.5, mask_points=mask,
+                scale_mode="none", scale_factor=scale,
+                resolution=50, mode="cube")
+            if matches_cmap is not None:
+                self.matches3d.module_manager.scalar_lut_manager.lut.table = \
+                    matches_cmap
+            self.blobs3d.append(self.matches3d)
+
         def pick_callback(pick):
             # handle picking blobs/glyphs
-            if pick.actor in pts_in.actor.actors:
+            if pick.actor in self.blobs3d_in.actor.actors:
                 # get the blob corresponding to the picked glyph actor
                 blobi = pick.point_id // glyph_points.shape[0]
             else:
@@ -481,12 +527,12 @@ class Vis3D:
         # blobs within 20% of the longest ROI edge to be picked if present
         outline = self.show_roi_outline(roi_offset, roi_size)
         print(outline)
-        glyph_points = pts_in.glyph.glyph_source.glyph_source.output.points.\
-            to_array()
+        glyph_points = self.blobs3d_in.glyph.glyph_source.glyph_source.\
+            output.points.to_array()
         max_dist = max(roi_size) * 0.2
         self.scene.mlab.gcf().on_mouse_pick(pick_callback)
         
-        return pts_in, scale
+        return scale, mask
 
     def _shadow_img2d(self, img2d, shape, axis):
         """Shows a plane along the given axis as a shadow parallel to

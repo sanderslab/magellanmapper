@@ -18,6 +18,8 @@ from magmap.settings import config
 from magmap.io import cli
 from magmap.io import libmag
 
+_logger = config.logger.getChild(__name__)
+
 
 #: dict[:class:`config.DFTasks`, func]: Dictionary of data frame tasks
 # and function to apply.
@@ -537,28 +539,35 @@ def pivot_with_conditions(df, index, columns, values, aggfunc="first"):
     return df_lines, cols
 
 
-def print_data_frame(df, sep=" ", index=False, header=True, show=True):
+def print_data_frame(
+        df: pd.DataFrame, sep: str = " ", index: bool = False,
+        header: bool = True, show: bool = True, **kwargs) -> str:
     """Print formatted data frame.
     
     Args:
-        df (:obj:`pd.DataFrame`): Data frame to print.
-        sep (str): Separator for columns. True or " " to print the data 
+        df: Data frame to print.
+        sep: Separator for columns. True or " " to print the data 
             frame with a space-separated table, or can provide an 
             alternate separator. Defaults to " ".
-        index (bool): True to show index; defaults to False.
-        header (bool): True to show header; defaulst to True.
-        show (bool): True to print the formatted data frame; defaults to True.
+        index: True to show index; defaults to False.
+        header: True to show header; defaulst to True.
+        show: True to print the formatted data frame; defaults to True.
+        **kwargs: Additional arguments to :meth:`pandas.DataFrame.to_string`
+            or :meth:`pandas.DataFrame.to_csv`.
     
     Returns:
-        str: The formatted data frame.
+        The formatted data frame.
     
     """
     if sep is True or sep == " ":
-        df_str = df.to_string(index=index, header=header, na_rep="NaN")
+        df_str = df.to_string(
+            index=index, header=header, na_rep="NaN", **kwargs)
     else:
-        df_str = df.to_csv(sep=sep, index=index, header=header, na_rep="NaN")
+        df_str = df.to_csv(
+            sep=sep, index=index, header=header, na_rep="NaN", **kwargs)
     if show:
-        print(df_str)
+        # show on a new line to align headers with columns in logger
+        print(f"\n{df_str}")
     return df_str
 
 
@@ -646,15 +655,21 @@ def data_frames_to_csv(
         libmag.backup_file(path)
     combined = data_frames
     if not isinstance(data_frames, pd.DataFrame):
+        # combine data frames
         combined = pd.concat(combined)
     if sort_cols is not None:
+        # sort column
         combined = combined.sort_values(sort_cols)
-    combined.to_csv(path, index=index, na_rep="NaN")
+    if path:
+        # save to file
+        combined.to_csv(path, index=index, na_rep="NaN")
     if show is not None:
+        # print to console
         print_data_frame(combined, show)
     if path:
-        print("exported volume data per sample to CSV file: \"{}\""
-              .format(path))
+        # show the exported data path
+        _logger.info(
+            "Exported volume data per sample to CSV file: \"%s\"", path)
     return combined
 
 

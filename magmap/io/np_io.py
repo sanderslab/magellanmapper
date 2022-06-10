@@ -3,9 +3,11 @@
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import os
-from typing import Optional, Sequence, Tuple, TYPE_CHECKING
+import pathlib
+from typing import Any, Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
 import numpy as np
+import tifffile
 
 from magmap.atlas import labels_meta, ontology, transformer
 from magmap.cv import detector
@@ -23,24 +25,32 @@ class Image5d:
     """Main image storage.
     
     Attributes:
-        img (:obj:`np.ndarray`): 5D Numpy array in the format ``t,z,y,x,c``;
+        img: 5D Numpy array in the format ``t,z,y,x,c``; defaults to None.
+        path_img: Path from which ``img`` was loaded; defaults to None.
+        path_meta: Path from which metadata for ``img`` was loaded;
             defaults to None.
-        path_img (str): Path from which ``img`` was loaded; defaults to None.
-        path_meta (str): Path from which metadata for ``img`` was loaded;
-            defaults to None.
-        img_io (enum): I/O source for image5d array; defaults to None.
-        subimg_offset (Sequence[int]): Sub-image offset in ``z,y,x``.
-        subimg_size (Sequence[int]): Sub-image size in ``z,y,x``.
+        img_io: I/O source for image5d array; defaults to None.
+        subimg_offset: Sub-image offset in ``z,y,x``; defaults to None.
+        subimg_size: Sub-image size in ``z,y,x``; defaults to None.
+        meta: Image metadata dictionary; defaults to None.
     
     """
-    def __init__(self, img=None, path_img=None, path_meta=None, img_io=None):
+    def __init__(
+            self, img: Optional[np.ndarray] = None,
+            path_img: Optional[str] = None,
+            path_meta: Optional[str] = None,
+            img_io: Optional[config.LoadIO] = None):
         """Construct an Image5d object."""
+        # attributes assignable from args
         self.img = img
         self.path_img = path_img
         self.path_meta = path_meta
         self.img_io = img_io
-        self.subimg_offset = None
-        self.subimg_size = None
+        
+        # additional attributes
+        self.subimg_offset: Optional[Sequence[int]] = None
+        self.subimg_size: Optional[Sequence[int]] = None
+        self.meta: Optional[Dict[Union[str, config.MetaKeys], Any]] = None
 
 
 def img_to_blobs_path(path):
@@ -72,7 +82,8 @@ def find_scaling(
     """Find scaling between two images.
     
     Scaling can be computed to translate blob coordinates into another
-    space, such as a heat map for a downsampled image.
+    space, such as a downsampled image. These compressed coordinates can be
+    used to generate a heat map of blobs.
     
     Args:
         img_path: Base path to image.
@@ -92,28 +103,39 @@ def find_scaling(
         of the full-sized image found based on ``img_path``.
 
     """
-    # get scaling and resolutions from blob space to that of a down/upsampled
-    # image space
+    # path to image, which may have been resized
     img_path_transposed = transformer.get_transposed_image_path(
         img_path, scale, load_size)
     scaling = None
     res = None
     if scale is not None or load_size is not None:
         # retrieve scaling from a rescaled/resized image
-        _, img_info = importer.read_file(
-            img_path_transposed, config.series, return_info=True)
+        img_info = importer.read_file(img_path_transposed, config.series).meta
         scaling = img_info["scaling"]
         res = np.multiply(config.resolutions[0], scaling)
-        print("retrieved scaling from resized image:", scaling)
-        print("rescaled resolution for full-scale image:", res)
+        _logger.info("Retrieved scaling from resized image: %s", scaling)
+        _logger.info("Rescaled resolution for full-scale image: %s", res)
+    
     elif scaled_shape is not None:
-        # fall back to scaling based on comparison to original image
+        # scale by comparing to original image
         img5d = importer.read_file(img_path_transposed, config.series)
-        scaling = importer.calc_scaling(
-            img5d.img, None, scaled_shape=scaled_shape)
-        res = config.resolutions[0]
-        print("using scaling compared to full image:", scaling)
-        print("resolution from full-scale image:", res)
+        img5d_shape = None
+        if img5d.img is not None:
+            # get the shape from the original image
+            img5d_shape = img5d.img.shape
+        elif img5d.meta is not None:
+            # get the shape from the original image's metadata
+            img5d_shape = img5d.meta[config.MetaKeys.SHAPE][1:4]
+        
+        if img5d_shape is not None:
+            # find the scaling factor using the original and resized image's
+            # shapes 
+            scaling = importer.calc_scaling(
+                None, None, img5d_shape, scaled_shape)
+            res = config.resolutions[0]
+            _logger.info("Using scaling compared to full image: %s", scaling)
+            _logger.info("Resolution from full-scale image: %s", res)
+    
     return scaling, res
 
 
@@ -152,11 +174,14 @@ def _check_np_none(val):
 
 
 def setup_images(
-        path: str, series: Optional[int] = None,
+        path: str,
+        series: Optional[int] = None,
         offset: Optional[Sequence[int]] = None,
         size: Optional[Sequence[int]] = None,
-        proc_type: Optional[config.ProcessTypes] = None,
-        allow_import: bool =True, bg_atlas: Optional["BrainGlobeAtlas"] = None):
+        proc_type: Optional["config.ProcessTypes"] = None,
+        allow_import: bool = True,
+        fallback_main_img: bool = True,
+        bg_atlas: Optional["BrainGlobeAtlas"] = None):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -169,10 +194,11 @@ def setup_images(
         series: Image series number; defaults to None.
         offset: Sub-image offset given in z,y,x; defaults to None.
         size: Sub-image shape given in z,y,x; defaults to None.
-        proc_type: Processing type, which should be a one of
-            :class:`config.ProcessTypes`.
+        proc_type: Processing type.
         allow_import: True to allow importing the image if it
             cannot be loaded; defaults to True.
+        fallback_main_img: True to fall back to loading a registered image
+            if possible if the main image could not be loaded; defaults to True.
         bg_atlas: BrainGlobe atlas; defaults to None. If provided, the
             images and labels reference will be extracted from the atlas
             instead of loaded from ``path``.
@@ -281,7 +307,7 @@ def setup_images(
                         img_to_blobs_path(filename_base))
                     blobs.blobs, _ = detector.get_blobs_in_roi(
                         blobs.blobs, offset, size, reverse=False)
-                    detector.shift_blob_rel_coords(
+                    detector.Blobs.shift_blob_rel_coords(
                         blobs.blobs, np.multiply(offset, -1))
             else:
                 # load full image blobs
@@ -298,6 +324,8 @@ def setup_images(
         # load or import the main image stack
         print("Loading main image")
         try:
+            path_lower = path.lower()
+            import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
             if bg_atlas:
                 # extract image from BrainGlobeAtlas object
                 config.image5d = bg_atlas.reference[None]
@@ -306,22 +334,29 @@ def setup_images(
                 config.img5d.img_io = config.LoadIO.BRAIN_GLOBE
                 config.resolutions = np.array([bg_atlas.resolution])
             
-            elif path.endswith(sitk_io.EXTS_3D):
-                # attempt to format supported by SimpleITK and prepend time axis
-                config.image5d = sitk_io.read_sitk_files(path)[None]
+            elif path_lower.endswith(sitk_io.EXTS_3D):
+                # load format supported by SimpleITK and prepend time axis;
+                # if 2D, convert to 3D
+                config.image5d = sitk_io.read_sitk_files(
+                    path, make_3d=True)[None]
                 config.img5d.img = config.image5d
                 config.img5d.path_img = path
                 config.img5d.img_io = config.LoadIO.SITK
             
+            elif not import_only and path_lower.endswith((".tif", ".tiff")):
+                # load TIF file directly
+                _, meta = read_tif(path, config.img5d)
+                config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
+                config.image5d = config.img5d.img
+                
             else:
                 # load or import from MagellanMapper Numpy format
-                import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
                 img5d = None
                 if not import_only:
                     # load previously imported image
                     img5d = importer.read_file(path, series)
-                if allow_import:
-                    # re-import over existing image or import new image
+                if allow_import and (img5d is None or img5d.img is None):
+                    # import image; will re-import over any existing image file 
                     if os.path.isdir(path) and all(
                             [r is None for r in config.reg_suffixes.values()]):
                         # import directory of single plane images to single
@@ -335,7 +370,7 @@ def setup_images(
                                 importer.DEFAULT_IMG_STACK_NAME)
                         img5d = importer.import_planes_to_stack(
                             chls, prefix, import_md)
-                    elif import_only or img5d is None:
+                    elif import_only:
                         # import multi-plane image
                         chls, import_path = importer.setup_import_multipage(
                             path)
@@ -351,9 +386,8 @@ def setup_images(
                     config.img5d = img5d
                     config.image5d = config.img5d.img
         except FileNotFoundError as e:
-            print(e)
-            print("Could not load {}, will fall back to any associated "
-                  "registered image".format(path))
+            _logger.exception(e)
+            _logger.info("Could not load %s", path)
     
     if config.metadatas and config.metadatas[0]:
         # assign metadata from alternate file if given to supersede settings
@@ -363,11 +397,12 @@ def setup_images(
         importer.assign_metadata(config.metadatas[0])
     
     # main image is currently required since many parameters depend on it
-    if atlas_suffix is None and config.image5d is None:
+    if fallback_main_img and atlas_suffix is None and config.image5d is None:
         # fallback to atlas if main image not already loaded
         atlas_suffix = config.RegNames.IMG_ATLAS.value
-        print("main image is not set, falling back to registered "
-              "image with suffix", atlas_suffix)
+        _logger.info(
+            "Main image is not set, falling back to registered image with "
+            "suffix %s", atlas_suffix)
     # use prefix to get images registered to a different image, eg a
     # downsampled version, or a different version of registered images
     path = config.prefix if config.prefix else path
@@ -375,14 +410,16 @@ def setup_images(
         try:
             # will take the place of any previously loaded image5d
             config.image5d = sitk_io.read_sitk_files(
-                path, reg_names=atlas_suffix)[None]
+                path, atlas_suffix, make_3d=True)[None]
             config.img5d.img = config.image5d
             config.img5d.img_io = config.LoadIO.SITK
+            config.img5d.path_img = path
         except FileNotFoundError as e:
             print(e)
     
     # load metadata related to the labels image
-    config.labels_metadata = labels_meta.LabelsMeta(path).load()
+    config.labels_metadata = labels_meta.LabelsMeta(
+        f"{path}." if config.prefix else path).load()
     
     if annotation_suffix is not None or bg_atlas:
         if bg_atlas:
@@ -396,13 +433,12 @@ def setup_images(
             try:
                 # load labels image
                 # TODO: need to support multichannel labels images
-                config.labels_img, config.labels_img_sitk = \
-                    sitk_io.read_sitk_files(
-                        path, reg_names=annotation_suffix, return_sitk=True)
+                config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
+                    path, annotation_suffix, True, True)
             except FileNotFoundError as e:
                 print(e)
                 if config.image5d is not None:
-                    # create a blank labels images for custom annotation; cmap
+                    # create a blank labels images for custom annotation; colormap
                     # can be generated for the original labels loaded below
                     config.labels_img = np.zeros(
                         config.image5d.shape[1:4], dtype=int)
@@ -440,7 +476,7 @@ def setup_images(
         # load borders image, which can also be another labels image
         try:
             config.borders_img = sitk_io.read_sitk_files(
-                path, reg_names=borders_suffix)
+                path, borders_suffix, make_3d=True)
         except FileNotFoundError as e:
             print(e)
     
@@ -491,10 +527,13 @@ def setup_images(
             and config.img5d.img is not None and blobs.roi_size is not None):
         # scale blob coordinates to main image if shapes differ
         scaling = np.divide(config.img5d.img.shape[1:4], blobs.roi_size)
+        # scale radius by mean of other dimensions' scaling
+        scaling = np.append(scaling, np.mean(scaling))
         if not np.all(scaling == 1):
-            print("Scaling blobs to main image by factor:", scaling)
-            blobs.blobs[:, :3] = ontology.scale_coords(
-                blobs.blobs[:, :3], scaling)
+            _logger.debug("Scaling blobs to main image by factor: %s", scaling)
+            blobs.blobs[:, :4] = ontology.scale_coords(
+                blobs.blobs[:, :4], scaling)
+        blobs.scaling = scaling
 
 
 def get_num_channels(image5d):
@@ -527,3 +566,92 @@ def write_raw_file(arr, path):
     out_file[:] = arr[:]
     del out_file  # flushes to disk
     print("Finished writing", path)
+
+
+def read_tif(
+        path: str, img5d: Image5d = None
+) -> Tuple[Image5d, Dict[config.MetaKeys, Any]]:
+    """Read TIF files with Tifffile with lazy access through memory mapping.
+    
+    Args:
+        path: Path to file.
+        img5d: Image5d storage class; defaults to None.
+
+    Returns:
+        Image5d storage instance and dictionary of extracted metadata.
+
+    """
+    if img5d is None:
+        # set up a new storage instance
+        img5d = Image5d()
+    
+    # extract metadata
+    tif = tifffile.TiffFile(path)
+    md = dict.fromkeys(config.MetaKeys)
+    axes = tif.series[0].axes
+    if tif.ome_metadata:
+        # read OME-XML metadata
+        names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
+        res = np.array(md[config.MetaKeys.RESOLUTIONS])
+        print(tif.ome_metadata)
+    else:
+        # parse resolutions
+        res = np.ones((1, 3))
+        if tif.imagej_metadata and "spacing" in tif.imagej_metadata:
+            # ImageJ format holds z-resolution as spacing
+            res[0, 0] = tif.imagej_metadata["spacing"]
+        for i, name in enumerate(("YResolution", "XResolution")):
+            # parse x/y-resolution from standard TIF metadata
+            axis_res = tif.pages[0].tags[name].value
+            if axis_res and len(axis_res) > 1 and axis_res[0]:
+                res[0, i + 1] = axis_res[1] / axis_res[0]
+    md[config.MetaKeys.RESOLUTIONS] = res
+    
+    # load TIFF by memory mapping
+    tif_memmap = tifffile.memmap(path)
+    ndim = len(tif_memmap.shape)
+    if ndim < 4 or ndim == 4 and "c" in axes.lower():
+        # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
+        tif_memmap = np.expand_dims(tif_memmap, axis=0)
+    
+    # add image to Image5d instance
+    img5d.img = tif_memmap
+    img5d.path_img = path
+    img5d.img_io = config.LoadIO.TIFFFILE
+    
+    return img5d, md
+
+
+def write_tif(
+        image5d: np.ndarray, path: Union[str, pathlib.Path], **kwargs: Any):
+    """Write a NumPy array to TIF files.
+    
+    Each channel will be exported to a separate file.
+    
+    Args:
+        image5d: NumPy array in ``t, z, y, x, c`` dimension order.
+        path: Base output path. If ``image5d`` has multiple channels, they
+            will be exported to files with ``_ch_<n>`` appended just before
+            the extension.
+        kwargs: Arguments passed to :meth:`tifffile.imwrite`.
+
+    """
+    nchls = get_num_channels(image5d)
+    for i in range(nchls):
+        # export the given channel to a separate file, adding the channel to
+        # the filename if multiple channels exist
+        img_chl = image5d if image5d.ndim <= 4 else image5d[..., i]
+        out_path = pathlib.Path(libmag.make_out_path(
+            f"{path}{f'_ch_{i}' if nchls > 1 else ''}.tif",
+            combine_prefix=True)).resolve()
+        pathlib.Path.mkdir(out_path.parent.resolve(), exist_ok=True)
+        libmag.backup_file(out_path)
+        
+        if "imagej" in kwargs and kwargs["imagej"]:
+            # ImageJ format assumes dimension order of TZCYXS
+            img_chl = img_chl[:, :, np.newaxis]
+        
+        # write to TIF
+        _logger.info(
+            "Exporting image of shape %s to '%s'", img_chl.shape, out_path)
+        tifffile.imwrite(out_path, img_chl, photometric="minisblack", **kwargs)

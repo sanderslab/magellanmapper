@@ -9,7 +9,8 @@ import os
 import glob
 import datetime
 import sqlite3
-from typing import List, Optional, Tuple
+from time import time
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -25,6 +26,8 @@ DB_VERSION = 4
 
 _COLS_BLOBS = "roi_id, z, y, x, radius, confirmed, truth, channel"
 _COLS_BLOB_MATCHES = "roi_id, blob1, blob2, dist"
+
+_logger = config.logger.getChild(__name__)
 
 
 def _create_db(path):
@@ -371,7 +374,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
         blob_entry.extend(blob)
         #print("blob type:\n{}".format(blob.dtype))
         blobs_list.append(blob_entry)
-        if detector.get_blob_confirmed(blob) == 1:
+        if detector.Blobs.get_blob_confirmed(blob) == 1:
             confirmed += 1
     #print(match_elements(_COLS_BLOBS, ", ", "?"))
     cur.executemany("INSERT OR REPLACE INTO blobs ({}) VALUES ({})"
@@ -396,7 +399,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
     """
     deleted = 0
     for blob in blobs:
-        blob_entry = [roi_id, *blob[:3], detector.get_blob_channel(blob)]
+        blob_entry = [roi_id, *blob[:3], detector.Blobs.get_blobs_channel(blob)]
         print("attempting to delete blob {}".format(blob))
         cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
                     "AND x = ? AND channel = ?", blob_entry)
@@ -487,9 +490,38 @@ def get_roi_size(roi):
     return (roi["size_x"], roi["size_y"], roi["size_z"])
 
 
-def match_elements(src, delim, repeat):
+def match_elements(src: str, delim: str, repeat: str) -> str:
+    """Repeat a value to match the same number of delimited string elements.
+    
+    Args:
+        src: Delimited string.
+        delim: Delimiter.
+        repeat: String to repeat for each delimited element.
+
+    Returns:
+        String with ``repeat`` repeated a number of times equal to the
+        number of ``delim``-delimited elements in ``src``.
+
+    """
     src_split = src.split(delim)
     return delim.join([repeat] * len(src_split))
+
+
+def _specify_table_cols(src, delim, table):
+    """Add a prefix and alias for columns from a table.
+    
+    Args:
+        src: Delimted string.
+        delim: Delimiter.
+        table: Table name.
+
+    Returns:
+        String with ``table`` added to column names as ``<table>.<col>``
+        and an alias based on the table, ``<table>_<col>``.
+
+    """
+    src_split = src.split(delim)
+    return delim.join([f"{table}.{s} {table}_{s}" for s in src_split])
 
 
 def _merge_dbs(db_paths, db_merged=None):
@@ -846,7 +878,7 @@ class ClrDB:
             return (self.select_blob(roi_id, blob)[1] if blob_id is None
                     else blob_id)
         
-        if matches is None: return None
+        if matches is None or matches.df is None: return None
         ids = []
         for _, match in matches.df.iterrows():
             blob1_id = get_blob_id(
@@ -879,6 +911,9 @@ class ClrDB:
 
         Returns:
             :class:`magmap.cv.colocalizer.BlobMatch`: Blob match object.
+        
+        Deprecated: 1.6.0
+            Use :meth:`select_blob_matches` instead.
 
         """
         # build list of blob matches, which contain matching blobs and their
@@ -898,54 +933,153 @@ class ClrDB:
             blob_matches = colocalizer.BlobMatch()
         return blob_matches
     
-    def select_blob_matches(self, roi_id):
+    def select_blob_matches(
+            self, roi_id: int, offset: Optional[Sequence[int]] = None,
+            shape: Optional[Sequence[int]] = None) -> "colocalizer.BlobMatch":
         """Select blob matches for the given ROI.
         
         Args:
-            roi_id (int): ROI ID.
+            roi_id: ROI ID.
+            offset: ROI offset in ``z,y,x``; defaults to None.
+            shape: ROI shape in ``z,y,x``; defaults to None.
 
         Returns:
-            List[:obj:`BlobMatch`]: List of blob matches.
+            Blob matches.
 
         """
-        self.cur.execute(
-            "SELECT {}, id FROM blob_matches WHERE roi_id = ?"
-            .format(_COLS_BLOB_MATCHES), (roi_id,))
-        return self._parse_blob_matches(self.cur.fetchall())
+        _logger.debug("Selecting blob matches for ROI ID: %s", roi_id)
+        start = time()
+        
+        # set up columns for each table
+        cols_matches = _specify_table_cols(
+            _COLS_BLOB_MATCHES + ', id', ', ', 'bm')
+        cols_blobs = _COLS_BLOBS + ", id"
+        cols_blobs1 = _specify_table_cols(cols_blobs, ', ', 'b1')
+        cols_blobs2 = _specify_table_cols(cols_blobs, ', ', 'b2')
+        
+        # set up select statement
+        stmnt = (
+            f"SELECT {cols_matches}, "
+            f"{cols_blobs1}, "
+            f"{cols_blobs2} "
+            f"FROM blob_matches bm "
+            f"INNER JOIN blobs b1 ON bm.blob1 = b1.id "
+            f"INNER JOIN blobs b2 ON bm.blob2 = b2.id "
+            f"WHERE bm.roi_id = ?")
+        args = [roi_id, ]
+        
+        if offset is not None and shape is not None:
+            # add ROI parameters
+            bounds = zip(offset, np.add(offset, shape))
+            bounds = [str(b) for bound in bounds for b in bound]
+            stmnt += (
+                " AND b1.z >= ? AND b1.z < ?"
+                "AND b1.y >= ? AND b1.y < ? AND b1.x >= ? AND b1.x < ?"
+                "AND b2.z >= ? AND b2.z < ?"
+                "AND b2.y >= ? AND b2.y < ? AND b2.x >= ? AND b2.x < ?")
+            args.extend(bounds)
+            args.extend(bounds)
+        
+        # execute query
+        self.cur.execute(stmnt, args)
+        rows = self.cur.fetchall()
+        
+        df_matches = None
+        if len(rows) > 0:
+            # convert to data frame to access by named columns
+            df = df_io.dict_to_data_frame(rows, records_cols=rows[0].keys())
+            
+            def get_cols(col_full):
+                # extract column aliases
+                return [c.split(" ")[1] for c in col_full.split(", ")]
+            
+            # extract columns for blob matches
+            df_matches = df[get_cols(cols_matches)]
+            df_matches = df_matches.rename(columns={
+                "bm_blob1": colocalizer.BlobMatch.Cols.BLOB1_ID.value,
+                "bm_blob2": colocalizer.BlobMatch.Cols.BLOB2_ID.value,
+                "bm_id": colocalizer.BlobMatch.Cols.MATCH_ID.value,
+                "bm_roi_id": colocalizer.BlobMatch.Cols.ROI_ID.value,
+                "bm_dist": colocalizer.BlobMatch.Cols.DIST.value,
+            })
+            
+            # merge each set of blob columns into a single column of blob lists
+            cols_dict = {
+                colocalizer.BlobMatch.Cols.BLOB1.value: cols_blobs1,
+                colocalizer.BlobMatch.Cols.BLOB2.value: cols_blobs2,
+            }
+            for col, cols in cols_dict.items():
+                cols = get_cols(cols)[1:]
+                df_matches[col] = df[cols].to_numpy().tolist()
+            
+        blob_matches = colocalizer.BlobMatch(df=df_matches)
+        _logger.debug("Finished selecting blob matches in %s s", time() - start)
+        return blob_matches
 
-    def select_blob_matches_by_blob_id(self, row_id, blobn, blob_ids):
+    def select_blob_matches_by_blob_id(
+            self,
+            row_id: int,
+            blobn: int,
+            blob_ids: Sequence[int],
+            max_params: int = 100000
+    ) -> "colocalizer.BlobMatch":
         """Select blob matches corresponding to the given blob IDs in the
         given blob column.
 
         Args:
-            row_id (int): Row ID.
-            blobn (int): 1 or 2 to indicate the first or second blob column,
+            row_id: Row ID.
+            blobn: 1 or 2 to indicate the first or second blob column,
                 respectively.
-            blob_ids (List[int]): Blob IDs.
+            blob_ids: Blob IDs.
+            max_params: Maximum number of parameters for the `SELECT`
+                statements; defaults to 100000. The max is determined by
+                `SQLITE_MAX_VARIABLE_NUMBER` set at the sqlite3 compile
+                time. If this number is exceeded, this function is called
+                recursively with half the given `max_params`.
 
         Returns:
-            :class:`magmap.cv.colocalizer.BlobMatch`: Blob match object,
-            which is empty if not matches are found.
+            Blob match object, which is empty if not matches are found.
+        
+        Raises:
+            :meth:`sqlit3.OperationalError`: if the maximum number of
+            parameters is < 1.
+        
+        Deprecated: 1.6.0
+            Use :meth:`select_blob_matches` instead.
 
         """
+        if max_params < 1:
+            raise sqlite3.OperationalError(
+                "Could not determine number of parameters for selecting blob "
+                "matches")
+        
         matches = []
         if isinstance(blob_ids, np.ndarray):
             blob_ids = blob_ids.tolist()
-        max_params = 990  # max params of 999 in sqlite < v3.32.0
-        for i in range(len(blob_ids) // max_params + 1):
-            # select blob matches by block to avoid exceeding sqlite parameter
-            # limit
-            ids = blob_ids[i*max_params:(i+1)*max_params]
-            ids.insert(0, row_id)
-            self.cur.execute(
-                "SELECT {}, id FROM blob_matches WHERE roi_id = ?"
-                "AND blob{} IN ({})"
-                .format(_COLS_BLOB_MATCHES, blobn,
-                        ",".join("?" * (len(ids) - 1))),
-                ids)
-            df = self._parse_blob_matches(self.cur.fetchall()).df
-            if df is not None:
-                matches.append(df)
+        try:
+            # select matches by block to avoid exceeding sqlite parameter limit
+            nblocks = len(blob_ids) // max_params + 1
+            for i in range(nblocks):
+                _logger.info(
+                    "Selecting blob matches block %s of %s", i, nblocks - 1)
+                ids = blob_ids[i*max_params:(i+1)*max_params]
+                ids.insert(0, row_id)
+                self.cur.execute(
+                    f"SELECT {_COLS_BLOB_MATCHES}, id FROM blob_matches "
+                    f"WHERE roi_id = ? AND blob{blobn} "
+                    f"IN ({','.join('?' * (len(ids) - 1))})",
+                    ids)
+                df = self._parse_blob_matches(self.cur.fetchall()).df
+                if df is not None:
+                    matches.append(df)
+        except sqlite3.OperationalError:
+            # call recursively with halved number of parameters
+            _logger.debug(
+                "Exceeded max sqlite query parameters; trying with smaller "
+                "number")
+            return self.select_blob_matches_by_blob_id(
+                row_id, blobn, blob_ids, max_params // 2)
+        
         if len(matches) > 0:
             return colocalizer.BlobMatch(df=df_io.data_frames_to_csv(matches))
         return colocalizer.BlobMatch()

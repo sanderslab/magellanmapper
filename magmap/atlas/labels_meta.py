@@ -14,7 +14,7 @@ class LabelsMeta:
     
     Attributes:
         prefix: Path prefix for saving metadata and locating the reference
-            file path.
+            file path. Any extension will be removed. Defaults to None.
         save_path: Path to save this metadata.
         path_ref: Path to labels reference file.
         region_ids_orig: Sequence of original label IDs.

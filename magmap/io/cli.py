@@ -28,16 +28,19 @@ from enum import Enum
 import logging
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, \
+    Union
 
 import numpy as np
 
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
-from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, sqlite
+from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, \
+    sqlite
 from magmap.plot import colormaps, plot_2d
-from magmap.settings import atlas_prof, config, grid_search_prof, logs, roi_prof
+from magmap.settings import atlas_prof, config, grid_search_prof, logs, \
+    prefs_prof, roi_prof
 from magmap.stats import mlearn
 
 _logger = config.logger.getChild(__name__)
@@ -391,6 +394,15 @@ def process_cli_args():
     # only parse recognized arguments to avoid error for unrecognized ones
     args, args_unknown = parser.parse_known_args()
 
+    # set up application directories
+    user_dir = config.user_app_dirs.user_data_dir
+    if not os.path.isdir(user_dir):
+        # make application data directory
+        if os.path.exists(user_dir):
+            # backup any non-directory file
+            libmag.backup_file(user_dir)
+        os.makedirs(user_dir)
+
     if args.verbose is not None:
         # verbose mode and logging setup
         config.verbose = True
@@ -413,11 +425,15 @@ def process_cli_args():
             log_path = os.path.join(
                 config.user_app_dirs.user_data_dir, "out.log")
         # log to file
-        logs.add_file_handler(config.logger, log_path)
+        config.log_path = logs.add_file_handler(config.logger, log_path)
     
     # redirect standard out/error to logging
     sys.stdout = logs.LogWriter(config.logger.info)
     sys.stderr = logs.LogWriter(config.logger.error)
+    
+    # load preferences file
+    config.prefs = prefs_prof.PrefsProfile()
+    config.prefs.add_profiles(str(config.PREFS_PATH))
     
     if args.version:
         # print version info and exit
@@ -703,15 +719,6 @@ def process_cli_args():
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
     
-    # set up application directories
-    user_dir = config.user_app_dirs.user_data_dir
-    if not os.path.isdir(user_dir):
-        # make application data directory
-        if os.path.exists(user_dir):
-            # backup any non-directory file
-            libmag.backup_file(user_dir)
-        os.makedirs(user_dir)
-    
     if args.db:
         # set main database path to user arg
         config.db_path = args.db
@@ -737,6 +744,60 @@ def process_cli_args():
         _logger.info(
             f"The following command-line arguments were unrecognized and "
             f"ignored: {args_unknown}")
+
+
+def process_proc_tasks(
+        path: Optional[str] = None,
+        series_list: Optional[Sequence[int]] = None
+) -> Optional[Dict[config.ProcessTypes, Any]]:
+    """Apply processing tasks.
+    
+    Args:
+        path: Base path to main image file; defaults to None, in which case
+            :attr:`config.filename` will be used.
+        series_list: 
+
+    Returns:
+
+    """
+    if path is None:
+        path = config.filename
+    if not path:
+        print("No image filename set for processing files, skipping")
+        return None
+    if series_list is None:
+        series_list = config.series_list
+    
+    # filter out unset tasks
+    proc_tasks = {k: v for k, v in config.proc_type.items() if v}
+    for series in series_list:
+        # process files for each series, typically a tile within a
+        # microscopy image set or a single whole image
+        filename, offset, size, reg_suffixes = \
+            importer.deconstruct_img_name(path)
+        set_subimg, _ = importer.parse_deconstructed_name(
+            filename, offset, size, reg_suffixes)
+        if not set_subimg:
+            # sub-image parameters set in filename takes precedence for
+            # the loaded image, but fall back to user-supplied args
+            offset = (config.subimg_offsets[0] if config.subimg_offsets
+                      else None)
+            size = (config.subimg_sizes[0] if config.subimg_sizes
+                    else None)
+        if proc_tasks:
+            for proc_task, proc_val in proc_tasks.items():
+                # set up image for the given task
+                np_io.setup_images(
+                    filename, series, offset, size, proc_task,
+                    fallback_main_img=False)
+                process_file(
+                    filename, proc_task, proc_val, series, offset, size,
+                    config.roi_offsets[0] if config.roi_offsets else None,
+                    config.roi_sizes[0] if config.roi_sizes else None)
+        else:
+            # set up image without a task specified, eg for display
+            np_io.setup_images(filename, series, offset, size)
+    return proc_tasks
     
 
 def process_tasks():
@@ -765,38 +826,7 @@ def process_tasks():
         aws.main()
     else:
         # processing tasks
-        
-        # filter out unset tasks
-        proc_tasks = {k: v for k, v in config.proc_type.items() if v}
-        if config.filename:
-            for series in config.series_list:
-                # process files for each series, typically a tile within a
-                # microscopy image set or a single whole image
-                filename, offset, size, reg_suffixes = \
-                    importer.deconstruct_img_name(config.filename)
-                set_subimg, _ = importer.parse_deconstructed_name(
-                    filename, offset, size, reg_suffixes)
-                if not set_subimg:
-                    # sub-image parameters set in filename takes precedence for
-                    # the loaded image, but fall back to user-supplied args
-                    offset = (config.subimg_offsets[0] if config.subimg_offsets
-                              else None)
-                    size = (config.subimg_sizes[0] if config.subimg_sizes
-                            else None)
-                if proc_tasks:
-                    for proc_task, proc_val in proc_tasks.items():
-                        # set up image for the given task
-                        np_io.setup_images(
-                            filename, series, offset, size, proc_task)
-                        process_file(
-                            filename, proc_task, proc_val, series, offset, size,
-                            config.roi_offsets[0] if config.roi_offsets else None,
-                            config.roi_sizes[0] if config.roi_sizes else None)
-                else:
-                    # set up image without a task specified, eg for display
-                    np_io.setup_images(filename, series, offset, size)
-        else:
-            print("No image filename set for processing files, skipping")
+        proc_tasks = process_proc_tasks()
         if not proc_tasks or config.ProcessTypes.LOAD in proc_tasks:
             # do not shut down since not a command-line task or if loading files
             return
@@ -1056,13 +1086,13 @@ def _grid_search(series_list: List[int]):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            config.grid_search_profile, _detect_subimgs,
+            config.grid_search_profile.hyperparams, _detect_subimgs,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
-        parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
-        for stats_df in stats_dfs:
-            # plot ROC curve
-            plot_2d.plot_roc(stats_df, config.show)
+        parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
+        
+        # plot ROC curve
+        plot_2d.plot_roc(stats_df, config.show)
 
 
 def process_file(
@@ -1154,8 +1184,13 @@ def process_file(
     elif proc_type is config.ProcessTypes.COLOC_MATCH:
         if config.blobs is not None and config.blobs.blobs is not None:
             # colocalize blobs in separate channels by matching blobs
-            shape = (config.image5d.shape[1:] if subimg_size is None
-                     else subimg_size)
+            shape = subimg_size
+            if shape is None:
+                # get shape from loaded image, falling back to its metadata
+                if config.image5d is not None:
+                    shape = config.image5d.shape[1:]
+                else:
+                    shape = config.img5d.meta[config.MetaKeys.SHAPE][1:]
             matches = colocalizer.StackColocalizer.colocalize_stack(
                 shape, config.blobs.blobs)
             # insert matches into database
@@ -1175,6 +1210,10 @@ def process_file(
         out_path = libmag.combine_paths(config.filename, ".raw", sep="")
         libmag.backup_file(out_path)
         np_io.write_raw_file(config.image5d, out_path)
+
+    elif proc_type is config.ProcessTypes.EXPORT_TIF:
+        # export the main image as a TIF files for each channel
+        np_io.write_tif(config.image5d, config.filename)
 
     elif proc_type is config.ProcessTypes.PREPROCESS:
         # pre-process a whole image and save to file
@@ -1196,6 +1235,8 @@ def shutdown():
     importer.stop_jvm()
     if config.db is not None:
         config.db.conn.close()
+    if config.prefs is not None:
+        config.prefs.save_settings(config.PREFS_PATH)
     sys.exit()
 
     

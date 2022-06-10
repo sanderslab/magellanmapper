@@ -53,6 +53,8 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             axes.
     """
     imgs = None
+    #: Interpolation order, used in :meth:`skimage.transform.resize`.
+    interp_order: Optional[int] = None
     
     def __init__(self):
         super().__init__()
@@ -133,7 +135,8 @@ class StackPlaneIO(chunking.SharedArrsContainer):
                 # atlas image
                 img = transform.resize(
                     img_stack[i], target_size, mode="reflect",
-                    preserve_range=True, anti_aliasing=True)
+                    preserve_range=True, anti_aliasing=True,
+                    order=cls.interp_order)
             else:
                 # labels-based image, using nearest-neighbor interpolation
                 img = transform.resize(
@@ -186,9 +189,10 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             ax_imgs = plot_support.overlay_images(
                 ax, self.aspect, self.origin, imgs, None, cmaps_all,
                 ignore_invis=True, check_single=True)
-            if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
+            if (colorbar is not None and len(ax_imgs) > 0
+                    and len(ax_imgs[0]) > 0 and imgi == 0):
                 # add colorbar with scientific notation if outside limits
-                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
+                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, **colorbar)
                 plot_support.set_scinot(cbar.ax, lbls=None, units=None)
             plotted_imgs[imgi] = np.array(ax_imgs).flatten()
             
@@ -486,6 +490,8 @@ def setup_stack(
     
     # store in stack worker
     stacker = StackPlaneIO()
+    StackPlaneIO.interp_order = config.transform[
+        config.Transforms.INTERPOLATION]
     stacker.images = extracted_planes
     stacker.fn_process = fnc
     stacker.rescale = rescale
@@ -556,6 +562,7 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                 title = os.path.basename(path_sub)
             
             if not stacker.images: continue
+            ax = None
             for k in range(len(stacker.images[0])):
                 # create or retrieve fig; animation has only 1 fig
                 planei = 0 if animated else (
@@ -567,7 +574,9 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                         nrows, ncols, config.plot_labels[config.PlotLabels.SIZE])
                     fig_dict = {"fig": fig, "gs": gs, "imgs": []}
                     figs[planei] = fig_dict
-                ax = fig_dict["fig"].add_subplot(fig_dict["gs"][i, j])
+                if ax is None:
+                    # generate new axes for the gridspec position
+                    ax = fig_dict["fig"].add_subplot(fig_dict["gs"][i, j])
                 if title:
                     ax.title.set_text(title)
                 axs.append(ax)
@@ -635,6 +644,8 @@ def reg_planes_to_img(imgs, path=None, ax=None):
             1, 1, config.plot_labels[config.PlotLabels.SIZE])
         ax = fig.add_subplot(gs[0, 0])
     stacker = StackPlaneIO()
+    StackPlaneIO.interp_order = config.transform[
+        config.Transforms.INTERPOLATION]
     stacker.images = [img[None] for img in imgs]
     stacker.fn_process = StackPlaneIO.process_plane
     stacker.cmaps_labels = _setup_labels_cmaps(imgs)
@@ -647,15 +658,24 @@ def reg_planes_to_img(imgs, path=None, ax=None):
         plot_support.save_fig(path, config.savefig)
 
 
-def export_planes(image5d, ext, channel=None, separate_chls=False):
-    """Export each plane and channel combination into separate 2D image files
+def export_planes(
+        image5d: np.ndarray, ext: str, channel: Optional[int] = None,
+        separate_chls: bool = False):
+    """Export all planes of a 3D+ image into separate 2D image files.
     
+    Unlike :meth:`stack_to_img`, this method exports raw planes and
+    each channels into separate files, without processing through Matplotlib.
     Supports image rotation set in :attr:`magmap.settings.config.transform`.
+    
+    By default, all z-planes are exported, with plane indices specified through
+    :attr:`config.slice_vals`. Alternatively, regions of interest can be
+    specified by :attr:`config.roi_offset` and :attr:`config.roi_size`.
+    The planar orientation can be configured through :attr:`config.plane`.
 
     Args:
-        image5d (:obj:`np.ndarray`): Image in ``t,z,y,x[,c]`` format.
-        ext (str): Save format given as an extension without period.
-        channel (int): Channel to save; defaults to None for all channels.
+        image5d: Image in ``t,z,y,x[,c]`` format.
+        ext: Save format given as an extension without period.
+        channel: Channel to save; defaults to None for all channels.
         separate_chls (bool): True to export all channels from each plane to
             a separate image; defaults to False. 
 
@@ -673,13 +693,19 @@ def export_planes(image5d, ext, channel=None, separate_chls=False):
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     rotate = config.transform[config.Transforms.ROTATE]
     roi = cv_nd.rotate90(roi, rotate, multichannel=multichannel)
+    stacker = setup_stack(
+        roi[np.newaxis, :], offset=config.roi_offset, roi_size=config.roi_size,
+        slice_vals=config.slice_vals,
+        rescale=config.transform[config.Transforms.RESCALE])
+    roi = stacker.images[0]
     
     num_planes = len(roi)
-    num_digits = len(str(num_planes))
+    img_sl = stacker.img_slice
     for i, plane in enumerate(roi):
-        # add plane to output path if more than one output file
-        out_name = basename if num_planes <= 1 else "{}_{:0{}d}".format(
-            basename, i, num_digits)
+        # add plane to output path
+        out_name = f"{basename}_plane_" \
+                   f"{plot_support.get_plane_axis(config.plane)}" \
+                   f"{img_sl.start + img_sl.step * i}"
         path = os.path.join(output_dir, out_name)
         if separate_chls and multichannel:
             for chl in channels:

@@ -1,4 +1,4 @@
-# Build tile configuration for ImageJ/Fiji Stitching pluing
+# Build tile configuration for ImageJ/Fiji Stitching plugin
 # Author: David Young, 2017
 """Builds the tile grid layout for the ImageJ/Fiji Stitching plugin.
 
@@ -9,6 +9,11 @@ Attributes:
         row, where "right" = moving toward the right, "left" = moving
         toward the left
     TILE_CONFIG_FILE = default tile configuration name
+
+Deprecated:
+    This script is designed for the older Stitching plugin. Please see
+    the :mod:`stitch.ij_bigstitch` module for the newer BigStitcher plugin.
+
 """
 
 import os
@@ -17,6 +22,7 @@ import argparse
 OPTIONS_DIRECTIONALITY = ["uni", "bi"]
 OPTIONS_START_DIRECTION = ["right", "left"]
 TILE_CONFIG_FILE = "TileConfiguration.txt"
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -57,6 +63,7 @@ def main():
             offset_y = size[1] * grid_y * frac
             print("offset_x: {}, offset_y: {}".format(offset_x, offset_y))
             f.write("{}; ; ({}, {}, {})\n".format(img, offset_x, offset_y, 0.0))
+
 
 if __name__ == "__main__":
     print("Starting tile configurator...")

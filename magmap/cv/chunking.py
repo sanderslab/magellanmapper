@@ -4,7 +4,7 @@
 
 import multiprocessing as mp
 from multiprocessing import sharedctypes
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -167,35 +167,39 @@ def get_mp_pool(
         initializer=initializer, initargs=initargs)
 
 
-def _num_units(size, max_pixels):
+def _num_units(
+        size: Sequence[int], max_pixels: Union[int, Sequence[int]]
+) -> np.ndarray:
     """Calculates the shape of sub-regions that would comprise a total
     shape of ``size`` with ``max_pixels`` per dimension.
     
     Args:
-        size (List[int]): Shape of the entire region.
-        max_pixels (int): Max number of pixels per dimension.
+        size: Shape of the entire region.
+        max_pixels: Max number of pixels per dimension.
     
     Returns:
-        :obj:`np.ndarray`: Sequence of number of sub-regions for each
-        dimension in ``size``.
+        Sequence of number of sub-regions for each dimension in ``size``.
     """
     num = np.floor_divide(size, max_pixels)
     num[np.remainder(size, max_pixels) > 0] += 1
     return num.astype(np.int)
 
 
-def _bounds_side(size, max_pixels, overlap, coord, axis):
+def _bounds_side(
+        size: Sequence[int], max_pixels: Sequence[int], overlap: Sequence[int],
+        coord: Sequence[int], axis: int
+) -> Tuple[int, int]:
     """Calculates the boundaries of a side based on where in the
     ROI the current sub-ROI is.
     
     Attributes:
-        size: Size in (z, y, x) order.
-        overlap: Overlap size between sub-ROIs.
-        coord: Coordinates of the sub-ROI, in (z, y, x) order.
+        size: Size in ``z, y, x`` order.
+        overlap: Overlap size between sub-ROIs in ``z, y, x`` order.
+        coord: Coordinates of the sub-ROI, in ``z, y, x`` order.
         axis: The axis to calculate.
     
     Returns:
-        int, int: Boundary of sides for the given ``axis`` as ``start, end``.
+        Boundary of sides for the given ``axis`` as ``start, end``.
     """
     pixels = max_pixels[axis]
     start = coord[axis] * pixels
@@ -207,18 +211,21 @@ def _bounds_side(size, max_pixels, overlap, coord, axis):
     return int(start), int(end)
 
 
-def stack_splitter(shape, max_pixels, overlap=None):
+def stack_splitter(
+        shape: Sequence[int],
+        max_pixels: Sequence[int],
+        overlap: Optional[Sequence[int]] = None
+) -> Tuple[np.ndarray, np.ndarray]:
     """Split a stack into multiple sub regions.
     
     Args:
-        shape (Tuple[int]): Shape of the stack to split.
-        max_pixels (Tuple[int]): Max pixels for each side in (z, y, x) order.
-        overlap (Tuple[int]): Overlap size between sub-ROIs. Defaults to None
-            for no overlap.
+        shape: Shape of the stack to split.
+        max_pixels: Max pixels for each side in ``z, y, x`` order.
+        overlap: Overlap size between sub-ROIs in ``z, y, x`` order. Defaults
+            to None for no overlap.
     
     Return:
-        :obj:`np.ndarray`, :obj:`np.ndarray`: Tuple of
-        ``sub_roi_slices, sub_rois_offsets``, where
+        Tuple of ``sub_roi_slices, sub_rois_offsets``, where
         ``sub_roi_slices`` is a Numpy object array where each element contains
         a tuple of slice objects defining the corresponding sub-region at
         that position, and ``sub_rois_offsets`` is a Numpy array of

@@ -18,7 +18,7 @@ from enum import auto, Enum
 import os
 import subprocess
 import sys
-from typing import Dict, Optional, Sequence, Tuple, Type
+from typing import Dict, Optional, Sequence, TYPE_CHECKING, Tuple, Type
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events

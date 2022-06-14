@@ -13,7 +13,7 @@ import SimpleITK as sitk
 from skimage import transform
 
 from magmap.settings import config
-from magmap.io import importer
+from magmap.io import importer, np_io
 from magmap.io import libmag
 
 EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
@@ -200,7 +200,7 @@ def read_sitk_files(
         filename_sitk: str,
         reg_names: Optional[Union[str, Sequence[str]]] = None,
         return_sitk: bool = False, make_3d: bool = False
-) -> Union[np.ndarray, Tuple[np.ndarray, sitk.Image]]:
+) -> Union["np_io.Image5d", Tuple["np_io.Image5d", sitk.Image]]:
     """Read image files through SimpleITK.
     
     Supports identifying files based on registered suffixes and combining
@@ -220,8 +220,9 @@ def read_sitk_files(
         make_3d: True to convert 2D images to 3D; defaults to False.
 
     Returns:
-        ``img_np``: Image array in Numpy 3D format (or 4D if
-        multi-channel). Associated metadata is loaded into
+        ``img5d``: Image5d instance with the loaded image in Numpy 5D format
+        (or 4D if not multi-channel, and 3D if originally 2D and ``make_3d``
+        is False). Associated metadata is loaded into
         :module:`magmap.settings.config` attributes.
         
         If ``return_sitk`` is True, also returns the first loaded image
@@ -262,6 +263,8 @@ def read_sitk_files(
     
     if make_3d:
         # convert 2D images to 3D
+        # TODO: consider converting img_np to 3D regardless so array in
+        #   Image5d is at least 4D
         img_sitk = _make_3d(img_sitk)
         img_np = sitk.GetArrayFromImage(img_sitk)
     
@@ -273,9 +276,12 @@ def read_sitk_files(
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(config.resolutions))
     
+    # add time axis and insert into Image5d with original name
+    img5d = np_io.Image5d(
+        img_np[None], filename_sitk, img_io=config.LoadIO.SITK)
     if return_sitk:
-        return img_np, img_sitk
-    return img_np
+        return img5d, img_sitk
+    return img5d
 
 
 def load_registered_img(

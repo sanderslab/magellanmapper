@@ -29,7 +29,7 @@ from magmap.settings import logs
 
 if TYPE_CHECKING:
     import SimpleITK as sitk
-    from magmap.atlas import labels_meta
+    from magmap.atlas import labels_meta, ontology
     from magmap.cv import detector
     from magmap.io import np_io
     from magmap.settings import prefs_prof
@@ -560,8 +560,8 @@ labels_img_sitk: Optional["sitk.Image"] = None
 labels_img_orig: Optional[np.ndarray] = None
 #: Scaling factors from ``labels_img`` to ``img5d``. 
 labels_scaling: Optional[Sequence[float]] = None
-#: Reference dictionary with keys corresponding to the IDs in the labels image.
-labels_ref_lookup: Optional[Dict[str, Any]] = None
+#: Labels reference IDs corresponding to the labels image values.
+labels_ref: Optional["ontology.LabelsRef"] = None
 labels_level = None
 labels_mirror = True
 borders_img = None

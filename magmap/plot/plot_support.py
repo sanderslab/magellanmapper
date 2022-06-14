@@ -7,7 +7,7 @@ from collections import OrderedDict
 import math
 import os
 import warnings
-from typing import Any, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
 
 import numpy as np
 from matplotlib import backend_bases, gridspec, pyplot as plt
@@ -35,21 +35,18 @@ _logger = config.logger.getChild(__name__)
 
 
 class ImageSyncMixin:
-    """Mixin class for synchronizing editors with Matplotlib figures.
-    
-    Attributes:
-        fig (:class:`matplotlib.figure.Figure`): Matplotlib figure.
-        plot_eds (dict[Any, :class:`magmap.gui.plot_editor.PlotEditor`]):
-            Dictionary of plot editors.
-    
-    """
+    """Mixin class for synchronizing editors with Matplotlib figures."""
     
     def __init__(self):
-        self.fig = None
-        self.plot_eds = OrderedDict()
+        #: Matplotlib figure.
+        self.fig: Optional["figure.Figure"] = None
+        #: Dictionary of plot editors.
+        self.plot_eds: Dict[Any, "plot_editor.PlotEditor"] = OrderedDict()
+        #: Edited flag.
+        self.edited: bool = False
 
-        #: Union[int, Sequence[int]]: Plane(s) for max intensity projections.
-        self._max_intens_proj = None
+        #: Plane(s) for max intensity projections.
+        self._max_intens_proj: Optional[Union[int, Sequence[int]]] = None
 
     def get_img_display_settings(self, imgi, chl=None):
         """Get display settings for the given image.
@@ -137,6 +134,16 @@ class ImageSyncMixin:
         """
         for plot_ed in self.plot_eds.values():
             plot_ed._show_crosslines = val
+
+    def set_labels_level(self, val: int):
+        """Set the labels level all Plot Editors.
+
+        Args:
+            val: Labels level.
+
+        """
+        for plot_ed in self.plot_eds.values():
+            plot_ed.labels_level = val
 
     def update_max_intens_proj(self, shape, display=False):
         """Update max intensity projection planes.

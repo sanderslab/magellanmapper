@@ -242,6 +242,7 @@ def setup_images(
     config.labels_img_orig = None
     config.borders_img = None
     config.labels_meta = None
+    config.labels_ref = None
     
     # reset blobs
     config.blobs = None
@@ -328,28 +329,20 @@ def setup_images(
             import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
             if bg_atlas:
                 # extract image from BrainGlobeAtlas object
-                config.image5d = bg_atlas.reference[None]
-                config.img5d.img = config.image5d
-                config.img5d.path_img = str(bg_atlas.root_dir)
-                config.img5d.img_io = config.LoadIO.BRAIN_GLOBE
+                img5d = Image5d(
+                    bg_atlas.reference[None], str(bg_atlas.root_dir),
+                    img_io=config.LoadIO.BRAIN_GLOBE)
                 # reverse resolutions from x,y,z to z,y,x
                 config.resolutions = np.array([bg_atlas.resolution[::-1]])
             
             elif path_lower.endswith(sitk_io.EXTS_3D):
                 # load format supported by SimpleITK and prepend time axis;
                 # if 2D, convert to 3D
-                config.image5d = sitk_io.read_sitk_files(
-                    path, make_3d=True)[None]
-                config.img5d.img = config.image5d
-                config.img5d.path_img = path
-                config.img5d.img_io = config.LoadIO.SITK
-            
+                img5d = sitk_io.read_sitk_files(path, make_3d=True)
             elif not import_only and path_lower.endswith((".tif", ".tiff")):
                 # load TIF file directly
-                _, meta = read_tif(path, config.img5d)
+                img5d, meta = read_tif(path)
                 config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
-                config.image5d = config.img5d.img
-                
             else:
                 # load or import from MagellanMapper Numpy format
                 img5d = None
@@ -382,10 +375,10 @@ def setup_images(
                         img5d = importer.import_multiplane_images(
                             chls, prefix, import_md, series,
                             channel=config.channel)
-                if img5d is not None:
-                    # set loaded main image in config
-                    config.img5d = img5d
-                    config.image5d = config.img5d.img
+            if img5d is not None:
+                # set loaded main image in config
+                config.img5d = img5d
+                config.image5d = config.img5d.img
         except FileNotFoundError as e:
             _logger.exception(e)
             _logger.info("Could not load %s", path)
@@ -410,11 +403,9 @@ def setup_images(
     if path and atlas_suffix is not None:
         try:
             # will take the place of any previously loaded image5d
-            config.image5d = sitk_io.read_sitk_files(
-                path, atlas_suffix, make_3d=True)[None]
-            config.img5d.img = config.image5d
-            config.img5d.img_io = config.LoadIO.SITK
-            config.img5d.path_img = path
+            config.img5d = sitk_io.read_sitk_files(
+                path, atlas_suffix, make_3d=True)
+            config.image5d = config.img5d.img
         except FileNotFoundError as e:
             print(e)
     
@@ -422,6 +413,31 @@ def setup_images(
     config.labels_metadata = labels_meta.LabelsMeta(
         f"{path}." if config.prefix else path).load()
     
+    # load labels reference file, prioritizing path given by user
+    # and falling back to any extension matching PATH_LABELS_REF
+    path_labels_refs = [config.load_labels]
+    labels_path_ref = config.labels_metadata.path_ref
+    if labels_path_ref:
+        path_labels_refs.append(labels_path_ref)
+    labels_ref = None
+    for ref in path_labels_refs:
+        if not ref: continue
+        try:
+            # load labels reference file
+            labels_ref = ontology.LabelsRef(ref).load()
+            if labels_ref.ref_lookup is not None:
+                config.labels_ref = labels_ref
+                _logger.debug("Loaded labels reference file from %s", ref)
+                break
+        except (FileNotFoundError, KeyError):
+            pass
+    if path_labels_refs and (
+            labels_ref is None or labels_ref.ref_lookup is None):
+        # warn if labels path given but none found
+        _logger.warn(
+            "Unable to load labels reference file from '%s', skipping",
+            path_labels_refs)
+
     if annotation_suffix is not None or bg_atlas:
         if bg_atlas:
             # extract labels image from BrainGlobeAtlas object
@@ -434,8 +450,9 @@ def setup_images(
             try:
                 # load labels image
                 # TODO: need to support multichannel labels images
-                config.labels_img, config.labels_img_sitk = sitk_io.read_sitk_files(
+                img5d, config.labels_img_sitk = sitk_io.read_sitk_files(
                     path, annotation_suffix, True, True)
+                config.labels_img = img5d.img[0]
             except FileNotFoundError as e:
                 print(e)
                 if config.image5d is not None:
@@ -449,35 +466,12 @@ def setup_images(
             # labels images
             config.labels_scaling = importer.calc_scaling(
                 config.image5d, config.labels_img)
-        
-        # load labels reference file, prioritizing path given by user
-        # and falling back to any extension matching PATH_LABELS_REF
-        path_labels_refs = [config.load_labels]
-        labels_path_ref = config.labels_metadata.path_ref
-        if labels_path_ref:
-            path_labels_refs.append(labels_path_ref)
-        for ref in path_labels_refs:
-            if not ref: continue
-            try:
-                # load labels reference file
-                ref_lookup = ontology.LabelsRef(ref).load().ref_lookup
-                if ref_lookup is not None:
-                    config.labels_ref_lookup = ref_lookup
-                    _logger.debug("Loaded labels reference file from %s", ref)
-                    break
-            except (FileNotFoundError, KeyError):
-                pass
-        if path_labels_refs and config.labels_ref_lookup is None:
-            # warn if labels path given but none found
-            _logger.warn(
-                "Unable to load labels reference file from '%s', skipping",
-                path_labels_refs)
     
     if borders_suffix is not None:
         # load borders image, which can also be another labels image
         try:
             config.borders_img = sitk_io.read_sitk_files(
-                path, borders_suffix, make_3d=True)
+                path, borders_suffix, make_3d=True).img[0]
         except FileNotFoundError as e:
             print(e)
     

@@ -70,6 +70,12 @@ class VisHandler(Handler):
             info.object.open_image)
         app.installEventFilter(self._file_open_handler)
         
+        # move progress bar to status bar
+        status_widgets = info.ui.control.findChildren(QtWidgets.QStatusBar)
+        prog_widgets = info.ui.control.findChildren(QtWidgets.QProgressBar)
+        if status_widgets and prog_widgets:
+            status_widgets[0].addPermanentWidget(prog_widgets[0])
+        
         # create TraitsUI preferences database if it does not exist
         pathlib.Path(traits_home()).mkdir(parents=True, exist_ok=True)
         db = info.ui.get_ui_db("c")

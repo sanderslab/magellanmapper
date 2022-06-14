@@ -184,6 +184,8 @@ class PlotEditor:
         self.scale_bar = False
         self.max_intens_proj = 0
         self.enable_painting = True
+        #: Ontology level at which to show region names.
+        self.labels_level: Optional[int] = None
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -1036,15 +1038,18 @@ class PlotEditor:
                         self.coord = coord
                         self.fn_update_coords(self.coord, self.plane)
                 
-                if self.img3d_labels is not None and config.labels_ref_lookup:
+                if (self.img3d_labels is not None and
+                        config.labels_ref is not None and
+                        config.labels_ref.ref_lookup):
                     # show atlas label description
                     name = ""
                     if self._show_labels:
                         # get name from labels reference corresponding to
                         # labels image value under mouse pointer
                         atlas_label = ontology.get_label(
-                            coord, self.img3d_labels, config.labels_ref_lookup,
-                            self.scaling)
+                            coord, self.img3d_labels,
+                            config.labels_ref.ref_lookup, self.scaling,
+                            self.labels_level)
                         if atlas_label is not None:
                             # extract name and ID from label dict
                             name = "{} ({})".format(

@@ -18,7 +18,7 @@ from enum import auto, Enum
 import os
 import subprocess
 import sys
-from typing import Optional, Sequence, TYPE_CHECKING
+from typing import Dict, Optional, Sequence, Tuple, Type
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -39,13 +39,14 @@ except AttributeError:
     pass
 
 # import PyFace components after HiDPI adjustment
-from pyface.api import FileDialog, OK
+from pyface import confirmation_dialog
+from pyface.api import FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
 from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
     Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
-from traitsui.api import View, Item, HGroup, VGroup, Tabbed, RangeEditor, \
-    HSplit, TabularEditor, CheckListEditor, FileEditor, TextEditor, \
-    ArrayEditor, BooleanEditor
+from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
+    EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
+    StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -59,8 +60,8 @@ import run
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
-from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
-    vis_handler
+from magmap.gui import atlas_editor, atlas_threads, import_threads, \
+    roi_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, prefs_prof, profiles
@@ -176,6 +177,7 @@ class RegionOptions(Enum):
     """Enumerations for region options."""
     BOTH_SIDES = "Both sides"
     INCL_CHILDREN = "Include children"
+    APPEND = "Append"
 
 
 class AtlasEditorOptions(Enum):
@@ -502,9 +504,14 @@ class Visualization(HasTraits):
     
     # atlas labels
     _atlas_label = None
-    _structure_scale = Int  # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
+    _structure_scale = Int(_structure_scale_high)  # ontology structure levels
+    _structure_remap_btn = Button(
+        "Remap",
+        tooltip="Remap atlas labels to this level")
+    _region_name = Str
+    _region_names = Instance(TraitsList)
     _region_id = Str
     _region_options = List
     
@@ -516,7 +523,12 @@ class Visualization(HasTraits):
     _camera_pos = None
     _roi_ed_fig = Instance(figure.Figure, ())
     _atlas_ed_fig = Instance(figure.Figure, ())
+    
+    # Status bar
+    
     _status_bar_msg = Str()  # text for status bar
+    _prog_pct = Int(0)
+    _prog_msg = Str()
 
     # ROI selector panel
     panel_roi_selector = VGroup(
@@ -612,26 +624,37 @@ class Visualization(HasTraits):
             label="Viewer Options",
         ),
         HGroup(
-            Item("_structure_scale", label="Atlas ontology level",
+            Item("_structure_scale", label="Atlas level",
                  editor=RangeEditor(
                      low_name="_structure_scale_low",
                      high_name="_structure_scale_high",
                      mode="slider")),
+            Item("_structure_remap_btn", show_label=False),
         ),
+        Item("_region_name", label="Region",
+             editor=EnumEditor(
+                 name="object._region_names.selections",
+                 completion_mode="popup", evaluate=True)),
         HGroup(
-            Item("_region_id", label="Region",
+            Item("_region_id", label="IDs",
                  editor=TextEditor(
                      auto_set=False, enter_set=True, evaluate=str)),
             Item("_region_options", style="custom", show_label=False,
                  editor=CheckListEditor(
-                     values=[e.value for e in RegionOptions], cols=2,
-                     format_func=lambda x: x)),
+                     values=[e.value for e in RegionOptions],
+                     cols=len(RegionOptions), format_func=lambda x: x)),
         ),
         # give initial focus to text editor that does not trigger any events to
         # avoid inadvertent actions by the user when the window first displays;
         # set width to any small val to get smallest size for the whole panel
         Item("_roi_feedback", style="custom", show_label=False, has_focus=True,
              width=100),
+        
+        # generate progress bar but give essentially no height since it will
+        # be moved to the status bar in the handler
+        Item("_prog_pct", show_label=False, height=-2,
+             editor=ProgressEditor(min=0, max=100)),
+        
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
@@ -892,7 +915,10 @@ class Visualization(HasTraits):
         height=600,
         handler=vis_handler.VisHandler(),
         title="MagellanMapper",
-        statusbar="_status_bar_msg",
+        statusbar=[
+            "_status_bar_msg",
+            # reduce width of progress message so it's next to the bar
+            StatusItem("_prog_msg", width=20)],
         resizable=True,
         icon=icon_img,
         # set ID to trigger saving TraitsUI preferences for window size/position
@@ -928,7 +954,14 @@ class Visualization(HasTraits):
             # check "surface" if set in profile
             self._check_list_3d.append(Vis3dOptions.SURFACE.value)
         # self._structure_scale = self._structure_scale_high
+        
+        # set up atlas region names
+        self._region_names = TraitsList()
+        self._region_id_map = {}
+        self._region_options_prev: Dict[Enum, bool] = {}
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
+        
+        # set up blobs
         self.blobs = detector.Blobs()
         self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
 
@@ -944,7 +977,6 @@ class Visualization(HasTraits):
 
         # set up image import
         self._clear_import_files(False)
-        self._import_thread = None  # prevent prematurely destroying threads
         
         # set up BrainGlobe atlases
         self._brain_globe_panel: bg_controller.BrainGlobeCtrl \
@@ -985,7 +1017,7 @@ class Visualization(HasTraits):
             AtlasEditorOptions.SHOW_LABELS.value,
             AtlasEditorOptions.SYNC_ROI.value,
             AtlasEditorOptions.CROSSHAIRS.value]
-        self._atlas_ed_options_prev = list(self._atlas_ed_options)
+        self._atlas_ed_options_prev: Dict[Enum, bool] = {}
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -1006,6 +1038,10 @@ class Visualization(HasTraits):
         self._main_img_names = TraitsList()
         self._labels_img_names = TraitsList()
         self._ignore_main_img_name_changes = False
+
+        # prevent prematurely destroying threads
+        self._import_thread = None
+        self._remap_level_thread = None
         
         # set up image
         self._setup_for_image()
@@ -1491,6 +1527,10 @@ class Visualization(HasTraits):
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str
+        
+        if self.roi_ed:
+            # reset the ROI Editor's edit flag
+            self.roi_ed.edited = False
 
     def _btn_save_segments_fired(self):
         """Handler to save blobs to database when triggered by Trait."""
@@ -1513,16 +1553,24 @@ class Visualization(HasTraits):
         if self._mlab_title is not None:
             self._mlab_title.remove()
             self._mlab_title = None
-        if (config.labels_ref_lookup is not None and curr_offset is not None 
-            and curr_roi_size is not None):
+        
+        # set level in ROI and Atlas Editors
+        level = self._structure_scale
+        if self.roi_ed:
+            self.roi_ed.set_labels_level(level)
+        if self.atlas_eds:
+            for ed in self.atlas_eds:
+                ed.set_labels_level(level)
+        
+        if (config.labels_img is not None and config.labels_ref is not None and
+                config.labels_ref.ref_lookup is not None and
+                curr_offset is not None and curr_roi_size is not None):
+            # get atlas label at ROI center
             center = np.add(
                 curr_offset, 
                 np.around(np.divide(curr_roi_size, 2)).astype(np.int))
-            level = self._structure_scale
-            if level == self._structure_scale_high:
-                level = None
             self._atlas_label = ontology.get_label(
-                center[::-1], config.labels_img, config.labels_ref_lookup, 
+                center[::-1], config.labels_img, config.labels_ref.ref_lookup, 
                 config.labels_scaling, level, rounding=True)
             
             if self._atlas_label is not None and self.scene_3d_shown:
@@ -1832,14 +1880,28 @@ class Visualization(HasTraits):
             self._main_img_name = self._main_img_names.selections[0]
             self._labels_img_name = labels_suffix
             
-            # get labels reference file path, prioritizing CLI arg, and
             # populate labels reference path field
-            lbls_ref = config.load_labels
-            if not lbls_ref and config.labels_metadata:
-                lbls_ref = config.labels_metadata.path_ref
-            if not lbls_ref:
-                lbls_ref = ""
+            lbls_ref = config.labels_ref.path_ref if config.labels_ref else ""
             self._labels_ref_path = lbls_ref
+
+            # populate region names combo box
+            regions = []
+            regions_map = {}
+            if config.labels_ref:
+                df = config.labels_ref.get_ref_lookup_as_df()
+                if df is not None:
+                    # truncate names to preserve panel min width and add
+                    # abbreviations so each name is unique
+                    regions = df[config.ABAKeys.NAME.value].str.slice(
+                        stop=40) + " (" + df[config.ABAKeys.ACRONYM.value] + ")"
+                    regions = regions.to_list()
+                    
+                    # map region names to IDs since navigating to the region
+                    # will require the ID
+                    ids = df[config.ABAKeys.ABA_ID.value]
+                    regions_map = {r: i for r, i in zip(regions, ids)}
+            self._region_id_map = regions_map
+            self._region_names.selections = regions
 
         # set up image adjustment controls
         self._init_imgadj()
@@ -2069,7 +2131,49 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         self._update_structure_level(curr_offset, curr_roi_size)
+    
+    def _update_prog(self, pct: int, msg: str):
+        """Update progress bar.
+        
+        Also updates the logger.
+        
+        Args:
+            pct: Percentage completed.
+            msg: Message.
 
+        """
+        self._prog_pct = pct
+        self._prog_msg = msg
+        _logger.info(msg)
+    
+    @on_trait_change("_structure_remap_btn")
+    def _remap_structure(self):
+        """Remap atlas labels to the selected structure level."""
+        def remap_success(labels_np):
+            # update labels image in editors
+            if self.roi_ed:
+                self.roi_ed.labels_img = labels_np
+            if self.atlas_eds:
+                for ed in self.atlas_eds:
+                    ed.labels_img = labels_np
+            
+            # redraw editor
+            self.redraw_selected_viewer()
+        
+        # remap labels image in separate thread
+        self._remap_level_thread = atlas_threads.RemapLevelThread(
+            self.structure_scale, remap_success, self._update_prog)
+        self._remap_level_thread.start()
+    
+    @property
+    def structure_scale(self):
+        """Atlas level, where the highest value is None."""
+        level = self._structure_scale
+        if level == self._structure_scale_high:
+            # use drawn label rather than a specific level
+            level = None
+        return level
+        
     @on_trait_change("btn_redraw")
     def _redraw_fired(self):
         """Respond to redraw button presses."""
@@ -2104,6 +2208,30 @@ class Visualization(HasTraits):
             clear (bool): True to clear the ROI and blobs; defaults to True.
         
         """
+        def confirm(ed, fn):
+            # prompt to save before redrawing if edited
+            if ed.edited:
+                response = confirmation_dialog.confirm(
+                    None, "Edits have not been saved. Save before redrawing?",
+                    "Save before redraw?", True, YES)
+                if response == YES:
+                    fn()
+                elif response == CANCEL:
+                    return False
+            return True
+        
+        # check for need to save
+        cont = True
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
+            if self.roi_ed:
+                cont = confirm(self.roi_ed, self.save_segs)
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
+            if self.atlas_eds and self.atlas_eds[0].edited:
+                cont = confirm(self.atlas_eds[0], self.atlas_eds[0].save_atlas)
+        if not cont:
+            # user canceled
+            return
+
         # reload profiles if any profile files have changed and reset ROI
         cli.update_profiles()
         self._drawn_offset = self._curr_offset()
@@ -2675,14 +2803,41 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
     
+    @staticmethod
+    def get_changed_options(
+            curr_options: Sequence[str], prev_options: Dict[Enum, bool],
+            enum_options: Type[Enum]
+    ) -> Tuple[Dict[Enum, bool], Dict[Enum, bool]]:
+        """Get dicts of the options and whether they have changed.
+
+        Args:
+            curr_options: Current options as a list of option names.
+            prev_options: Previous options as a dictionary of Enum options
+                to boolean values.
+            enum_options: Enumeration of options.
+
+        Returns:
+            Tuple of:
+            - ``options``: ``prev_options`` but for the current state.
+            - ``changed``: Dictionary with same keys as ``options`` but
+              values of whether the state changed compared to previously.
+
+        """
+        # option is true if it's present in the current options
+        options = {e: e.value in curr_options for e in enum_options}
+    
+        # option changed if it's value differs from previous options
+        changed = {e: e in prev_options and options[e] != prev_options[e]
+                   for e in options}
+        return options, changed
+
     @on_trait_change("_atlas_ed_options")
     def _atlas_ed_options_changed(self):
         """Respond to atlas editor option changes."""
-        # boolean dicts of option settings and whether option changed
-        options = {e: e.value in self._atlas_ed_options
-                   for e in AtlasEditorOptions}
-        changed = {e: options[e] != (e.value in self._atlas_ed_options_prev)
-                   for e in options}
+        # get boolean dicts of the options and whether they have changed
+        options, changed = self.get_changed_options(
+            self._atlas_ed_options, self._atlas_ed_options_prev,
+            AtlasEditorOptions)
         
         if self.roi_ed:
             if changed[AtlasEditorOptions.SHOW_LABELS]:
@@ -2716,7 +2871,7 @@ class Visualization(HasTraits):
             # otherwise, defer sync to tab selection handler
             self.sync_atlas_eds_coords(check_option=True)
         
-        self._atlas_ed_options_prev = list(self._atlas_ed_options)
+        self._atlas_ed_options_prev = options
     
     def _zoom_atlas_ed(self, atlas_ed, zoom):
         """Zoom the Atlas Editor into the ROI.
@@ -2870,6 +3025,32 @@ class Visualization(HasTraits):
                      else (0, 0, 0))
         self._update_mip(mip_shape)
     
+    @on_trait_change("_region_name")
+    def _region_name_changed(self):
+        """Handle changes to the region name combo box."""
+        ids = str(self._region_id_map[self._region_name])
+        if RegionOptions.APPEND.value in self._region_options:
+            # append the region ID
+            ids = f"{self._region_id},{ids}"
+        # remove preceding commas
+        self._region_id = ids.lstrip(",")
+    
+    @on_trait_change("_region_options")
+    def _region_options_changed(self):
+        """Handle changes to the region options check boxes."""
+        # get dict of whether each option changed
+        options, changed = self.get_changed_options(
+            self._region_options, self._region_options_prev, RegionOptions)
+        
+        if changed[RegionOptions.APPEND] and not options[RegionOptions.APPEND]:
+            # trigger region ID change with current ID when unchecking append
+            region_id = self._region_id
+            self._region_id = ""
+            self._region_id = region_id
+        
+        # store current options
+        self._region_options_prev = options
+    
     @on_trait_change("_region_id")
     def _region_id_changed(self):
         """Center the viewer on the region specified in the corresponding 
@@ -2880,8 +3061,17 @@ class Visualization(HasTraits):
         be ignored.
         """
         print("region ID: {}".format(self._region_id))
+        if RegionOptions.APPEND.value in self._region_options:
+            self._roi_feedback = (
+                "Add more regions, then uncheck \"Append\" to view them")
+            return
+        
         if config.labels_img is None:
             self._roi_feedback = "No labels image loaded to find region"
+            return
+
+        if config.labels_ref is None or config.labels_ref.ref_lookup is None:
+            self._roi_feedback = "No labels reference loaded to find region"
             return
 
         # user-given region can be a comma-delimited list of region IDs
@@ -2910,7 +3100,7 @@ class Visualization(HasTraits):
             region_ids.append(region_id)
         incl_chil = RegionOptions.INCL_CHILDREN.value in self._region_options
         centroid, self._img_region, region_ids = ontology.get_region_middle(
-            config.labels_ref_lookup, region_ids, config.labels_img,
+            config.labels_ref.ref_lookup, region_ids, config.labels_img,
             config.labels_scaling, both_sides=both_sides,
             incl_children=incl_chil)
         if centroid is None:
@@ -3057,9 +3247,11 @@ class Visualization(HasTraits):
         seg[3] = -1 * abs(seg[3])
         detector.Blobs.set_blob_confirmed(seg, -1)
     
-    def update_segment(self, segment_new, segment_old=None, remove=False):
-        """Update this class object's segments list with a new or updated 
-        segment.
+    def update_segment(
+            self, segment_new: np.ndarray,
+            segment_old: Optional[np.ndarray] = None, remove: bool = False
+    ) -> np.ndarray:
+        """Update segments/blobs list with a new or updated segment.
         
         Args:
             segment_new: Segment to either add or update, including 
@@ -3077,6 +3269,7 @@ class Visualization(HasTraits):
         
         Returns:
             The updated segment.
+        
         """
         seg = segment_new
         # remove all row selections to ensure that no more than one 
@@ -3123,6 +3316,11 @@ class Visualization(HasTraits):
         
         # scroll to first selected row
         self._segs_row_scroll = min(self.segs_selected)
+        
+        if self.roi_ed:
+            # flag ROI Editor as edited
+            self.roi_ed.edited = True
+        
         return seg
     
     @property
@@ -3484,17 +3682,16 @@ class Visualization(HasTraits):
         """
         self._import_feedback += "{}\n".format(val)
 
-    def _update_roi_feedback(self, val, print_out=False):
+    def _update_roi_feedback(self, val: str, print_out: bool = False):
         """Update the ROI panel feedback text box.
 
         Args:
-            val (str): String to append as a new line.
-            print_out (bool): True to print to console as well; defaults
-                to False.
+            val: String to append as a new line.
+            print_out: True to print to log as well; defaults to False.
 
         """
         if print_out:
-            print(val)
+            _logger.info(val)
         self._roi_feedback += "{}\n".format(val)
     
     # BRAINGLOBE CONTROLS

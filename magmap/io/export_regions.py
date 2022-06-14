@@ -458,22 +458,8 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
     labels_np = sitk.GetArrayFromImage(labels_sitk)
     ref = ontology.LabelsRef(config.load_labels).load()
     
-    ids = list(ref.ref_lookup.keys())
-    for key in ids:
-        keys = [key, -1 * key]
-        for region in keys:
-            if region == 0: continue
-            # get ontological label
-            label = ref.ref_lookup[abs(region)]
-            label_level = label[ontology.NODE][config.ABAKeys.LEVEL.value]
-            if label_level == level:
-                # get children (including parent first) at given level 
-                # and replace them with parent
-                label_ids = ontology.get_children_from_id(
-                    ref.ref_lookup, region)
-                labels_region = np.isin(labels_np, label_ids)
-                print("replacing labels within", region)
-                labels_np[labels_region] = region
+    # remap labels to given level
+    labels_np = ontology.make_labels_level(labels_np, ref, level)
     labels_level_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_np)
     
     # generate an edge image at this level

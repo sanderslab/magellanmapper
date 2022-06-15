@@ -4,7 +4,7 @@ from requests.exceptions import ConnectionError
 import shutil
 from typing import Dict, Optional
 
-from bg_atlasapi import list_atlases, bg_atlas
+from bg_atlasapi import bg_atlas, descriptors, list_atlases
 
 from magmap.settings import config
 
@@ -70,6 +70,10 @@ class BrainGlobeMM:
         if not download and name not in self.atlases_local:
             return None
         atlas = bg_atlas.BrainGlobeAtlas(name)
+        
+        # add an attribute to store the path to the structures file
+        atlas.structures_path = atlas.root_dir / descriptors.STRUCTURES_FILENAME
+        
         return atlas
     
     def remove_local_atlas(self, name: str):

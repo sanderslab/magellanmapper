@@ -413,39 +413,46 @@ def setup_images(
     config.labels_metadata = labels_meta.LabelsMeta(
         f"{path}." if config.prefix else path).load()
     
-    # load labels reference file, prioritizing path given by user
-    # and falling back to any extension matching PATH_LABELS_REF
-    path_labels_refs = [config.load_labels]
-    labels_path_ref = config.labels_metadata.path_ref
-    if labels_path_ref:
-        path_labels_refs.append(labels_path_ref)
-    labels_ref = None
-    for ref in path_labels_refs:
-        if not ref: continue
-        try:
-            # load labels reference file
-            labels_ref = ontology.LabelsRef(ref).load()
-            if labels_ref.ref_lookup is not None:
-                config.labels_ref = labels_ref
-                _logger.debug("Loaded labels reference file from %s", ref)
-                break
-        except (FileNotFoundError, KeyError):
-            pass
-    if path_labels_refs and (
-            labels_ref is None or labels_ref.ref_lookup is None):
-        # warn if labels path given but none found
-        _logger.warn(
-            "Unable to load labels reference file from '%s', skipping",
-            path_labels_refs)
+    # load labels reference file
+    if bg_atlas:
+        # set up labels reference table from BrainGlobe atlas
+        if hasattr(bg_atlas, "structures_path"):
+            config.labels_ref = ontology.LabelsRef(
+                str(bg_atlas.structures_path))
+            config.labels_ref.loaded_ref = bg_atlas.lookup_df
+            config.labels_ref.create_ref_lookup()
+        
+    else:
+        # load labels reference file, prioritizing path given by user
+        # and falling back to any extension matching PATH_LABELS_REF
+        path_labels_refs = [config.load_labels]
+        labels_path_ref = config.labels_metadata.path_ref
+        if labels_path_ref:
+            path_labels_refs.append(labels_path_ref)
+        labels_ref = None
+        for ref in path_labels_refs:
+            if not ref: continue
+            try:
+                # load labels reference file
+                labels_ref = ontology.LabelsRef(ref).load()
+                if labels_ref.ref_lookup is not None:
+                    config.labels_ref = labels_ref
+                    _logger.debug("Loaded labels reference file from %s", ref)
+                    break
+            except (FileNotFoundError, KeyError):
+                pass
+        if path_labels_refs and (
+                labels_ref is None or labels_ref.ref_lookup is None):
+            # warn if labels path given but none found
+            _logger.warn(
+                "Unable to load labels reference file from '%s', skipping",
+                path_labels_refs)
 
     if annotation_suffix is not None or bg_atlas:
         if bg_atlas:
-            # extract labels image from BrainGlobeAtlas object
+            # extract labels image from BrainGlobe atlas
             config.labels_img = bg_atlas.annotation
             config.labels_img_sitk = sitk_io.numpy_to_sitk(config.labels_img)
-            labels_ref = ontology.LabelsRef()
-            labels_ref.loaded_ref = bg_atlas.lookup_df
-            config.labels_ref_lookup = labels_ref.create_lookup_pd()
         else:
             try:
                 # load labels image

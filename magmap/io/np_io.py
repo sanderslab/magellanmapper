@@ -425,13 +425,10 @@ def setup_images(
     else:
         # load labels reference file, prioritizing path given by user
         # and falling back to any extension matching PATH_LABELS_REF
-        path_labels_refs = [config.load_labels]
-        labels_path_ref = config.labels_metadata.path_ref
-        if labels_path_ref:
-            path_labels_refs.append(labels_path_ref)
+        ref_paths = [config.load_labels, config.labels_metadata.path_ref]
+        ref_paths = [p for p in ref_paths if p is not None]
         labels_ref = None
-        for ref in path_labels_refs:
-            if not ref: continue
+        for ref in ref_paths:
             try:
                 # load labels reference file
                 labels_ref = ontology.LabelsRef(ref).load()
@@ -441,12 +438,11 @@ def setup_images(
                     break
             except (FileNotFoundError, KeyError):
                 pass
-        if path_labels_refs and (
-                labels_ref is None or labels_ref.ref_lookup is None):
+        if ref_paths and (labels_ref is None or labels_ref.ref_lookup is None):
             # warn if labels path given but none found
             _logger.warn(
                 "Unable to load labels reference file from '%s', skipping",
-                path_labels_refs)
+                ref_paths)
 
     if annotation_suffix is not None or bg_atlas:
         if bg_atlas:

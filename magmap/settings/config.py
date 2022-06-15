@@ -550,8 +550,11 @@ class RegNames(Enum):
 #: Loaded labels metadata.
 labels_metadata: Optional["labels_meta.LabelsMeta"] = None
 
-#: Path to the labels reference file.
+#: Path to the labels reference file set by the CLI.
 load_labels: Optional[str] = None
+#: Labels ontology level set by the CLI.
+labels_level: Optional[int] = None
+
 #: Numpy array of a labels image file, typically corresponding to ``img5d``.
 labels_img: Optional = None
 #: Labels image as a SimpleITK Image instance.
@@ -562,9 +565,9 @@ labels_img_orig: Optional[np.ndarray] = None
 labels_scaling: Optional[Sequence[float]] = None
 #: Labels reference IDs corresponding to the labels image values.
 labels_ref: Optional["ontology.LabelsRef"] = None
-labels_level = None
 labels_mirror = True
 borders_img = None
+
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density

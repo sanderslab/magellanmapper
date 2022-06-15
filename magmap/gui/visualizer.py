@@ -1978,8 +1978,9 @@ class Visualization(HasTraits):
             return
         
         if self._reset_filename:
-            # reset registered suffixes
+            # reset registered atlas settings
             config.reg_suffixes = dict.fromkeys(config.RegSuffixes, None)
+            self._labels_ref_path = ""
         self._reset_filename = True
         
         if self._ignore_filename:
@@ -1995,7 +1996,8 @@ class Visualization(HasTraits):
             importer.parse_deconstructed_name(
                 filename, offset, size, reg_suffixes)
             np_io.setup_images(
-                config.filename, offset=offset, size=size, allow_import=False)
+                config.filename, offset=offset, size=size, allow_import=False,
+                labels_ref_path=self._labels_ref_path)
             self._setup_for_image()
             self.redraw_selected_viewer()
             self.update_imgadj_for_img()
@@ -2033,10 +2035,6 @@ class Visualization(HasTraits):
                 config.RegSuffixes.ANNOTATION] = self._reg_img_names.get(
                     self._labels_img_name)
         config.reg_suffixes.update(reg_suffixes)
-        
-        if self._labels_ref_path:
-            # set up labels
-            cli.setup_labels([self._labels_ref_path])
         
         # re-setup image
         self.update_filename(self._filename, reset=False)

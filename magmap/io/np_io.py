@@ -181,7 +181,8 @@ def setup_images(
         proc_type: Optional["config.ProcessTypes"] = None,
         allow_import: bool = True,
         fallback_main_img: bool = True,
-        bg_atlas: Optional["BrainGlobeAtlas"] = None):
+        bg_atlas: Optional["BrainGlobeAtlas"] = None,
+        labels_ref_path: Optional[str] = None):
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -202,6 +203,9 @@ def setup_images(
         bg_atlas: BrainGlobe atlas; defaults to None. If provided, the
             images and labels reference will be extracted from the atlas
             instead of loaded from ``path``.
+        labels_ref_path: Path to labels reference file. Defaults to None,
+            in which case :att:`config.load_labels` and any loaded labels
+            metadata will be used.
     
     """
     def add_metadata():
@@ -423,9 +427,12 @@ def setup_images(
             config.labels_ref.create_ref_lookup()
         
     else:
-        # load labels reference file, prioritizing path given by user
-        # and falling back to any extension matching PATH_LABELS_REF
-        ref_paths = [config.load_labels, config.labels_metadata.path_ref]
+        # load labels reference file
+        ref_paths = [
+            labels_ref_path,  # given path
+            config.load_labels,  # CLI path
+            config.labels_metadata.path_ref  # path from metadata
+        ]
         ref_paths = [p for p in ref_paths if p is not None]
         labels_ref = None
         for ref in ref_paths:

@@ -1973,20 +1973,19 @@ class Visualization(HasTraits):
         from the Numpy image filename. Processed files (eg ROIs, blobs) 
         will not be loaded for now.
         """
-        ignore_filename = self._ignore_filename or not self._filename
-        reset_filename = self._reset_filename
-        if ignore_filename:
-            # avoid triggering file load, eg if only updating widget value;
-            # reset flags
-            self._ignore_filename = False
-            self._reset_filename = True
+        if not self._filename:
+            # skip if image path is empty
+            return
         
-        if reset_filename:
+        if self._reset_filename:
             # reset registered suffixes
             config.reg_suffixes = dict.fromkeys(config.RegSuffixes, None)
         self._reset_filename = True
         
-        if ignore_filename or reset_filename: return
+        if self._ignore_filename:
+            # skip triggered file load, eg if only updating widget
+            self._ignore_filename = False
+            return
 
         # load image if possible without allowing import, deconstructing
         # filename from the selected imported image

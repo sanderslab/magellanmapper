@@ -1149,7 +1149,7 @@ def process_file(
         export_path = naming.make_subimage_name(
             filename_base, subimg_offset, subimg_size)
         export_rois.export_rois(
-            db, config.image5d, config.channel, export_path,
+            db, config.img5d, config.channel, export_path,
             config.plot_labels[config.PlotLabels.PADDING],
             config.unit_factor, config.truth_db_mode,
             os.path.basename(export_path))

@@ -2628,7 +2628,7 @@ class Visualization(HasTraits):
             # additional args with defaults
             self._full_border(self.border))
         roi_ed = roi_editor.ROIEditor(
-            config.image5d, config.labels_img, self._img_region,
+            config.img5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
         roi_ed.plane = self._planes_2d[0].lower()
         if self._DEFAULTS_2D[4] in self._check_list_2d:
@@ -2706,7 +2706,7 @@ class Visualization(HasTraits):
             # using the same title causes the windows to overlap
             title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
-            config.image5d, config.labels_img, config.channel, 
+            config.img5d, config.labels_img, config.channel, 
             self._curr_offset(center=False), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,

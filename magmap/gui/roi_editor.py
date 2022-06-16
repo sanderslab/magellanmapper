@@ -1202,8 +1202,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
 
             # show the ROI, which is now a 2D zoomed image
-            ax_imgs = [plot_support.imshow_multichannel(
-                ax, roi, channel, config.cmaps, aspect, alpha)]
+            overlaid = plot_support.OverlaidImages(ax, aspect)
+            ax_imgs = [overlaid.imshow_multichannel(
+                roi, channel, config.cmaps, alpha)]
             #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
 
             # show labels if provided and within ROI

@@ -29,6 +29,7 @@ except ImportError as e:
 if TYPE_CHECKING:
     from matplotlib import axes, colors, figure
     from magmap.gui import plot_editor
+    from magmap.io import np_io
     import pandas as pd
 
 _logger = config.logger.getChild(__name__)
@@ -37,7 +38,10 @@ _logger = config.logger.getChild(__name__)
 class ImageSyncMixin:
     """Mixin class for synchronizing editors with Matplotlib figures."""
     
-    def __init__(self):
+    def __init__(self, img5d):
+        #: Image5d image.
+        self.img5d: "np_io.Image5d" = img5d
+        
         #: Matplotlib figure.
         self.fig: Optional["figure.Figure"] = None
         #: Dictionary of plot editors.

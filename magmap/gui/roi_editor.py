@@ -14,6 +14,7 @@ import os
 from enum import Enum
 import re
 from time import time
+from typing import Callable, Optional, TYPE_CHECKING
 
 import numpy as np
 from matplotlib import figure
@@ -27,6 +28,9 @@ from magmap.gui import pixel_display, plot_editor
 from magmap.io import importer, libmag, naming
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    from magmap.io import np_io
 
 verify = False
 
@@ -326,21 +330,22 @@ class ROIEditor(plot_support.ImageSyncMixin):
     #: int: padding for ROI within overview plots
     _ROI_PADDING = 10
 
-    def __init__(self, image5d=None, labels_img=None, img_region=None,
+    def __init__(self, img5d, labels_img=None, img_region=None,
                  fn_show_label_3d=None, fn_status_bar=None):
         """Initialize the editor."""
-        super().__init__()
+        super().__init__(img5d)
         print("Initiating ROI Editor")
-        self.image5d = image5d
-        self.labels_img = labels_img
+        self.image5d = self.img5d.img if self.img5d else None
+        self.labels_img: Optional[np.ndarray] = labels_img
         if img_region is not None:
             # invert region selection image to opacify areas outside of the
             # region; note that in MIP mode, will still only show lowest plane
             img_region = np.invert(img_region).astype(float)
             img_region[img_region == 0] = np.nan
-        self.img_region = img_region
-        self.fn_show_label_3d = fn_show_label_3d
-        self.fn_status_bar = fn_status_bar
+        self.img_region: Optional[np.ndarray] = img_region
+        self.fn_show_label_3d: Optional[
+            Callable[[float], None]] = fn_show_label_3d
+        self.fn_status_bar: Optional[Callable[[str], None]] = fn_status_bar
 
         # initialize other instance attributes
         self.filename = None

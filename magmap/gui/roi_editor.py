@@ -449,9 +449,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
         img3d_extras = arrs_3d[2:] if num_arrs_3d > 2 else None
         if img3d_extras is not None:
             img3d_extras = [np.array(img) for img in img3d_extras]
+        overlaid = plot_support.OverlaidImages(ax_ov, aspect, origin)
         plot_ed = plot_editor.PlotEditor(
-            ax_ov, arrs_3d[0], labels_img, cmap_labels,
-            self.plane, aspect, origin, update_coords,
+            overlaid, arrs_3d[0], labels_img, cmap_labels,
+            self.plane, update_coords,
             scaling, max_size=max_size, fn_status_bar=self.fn_status_bar,
             img3d_extras=img3d_extras,
             fn_show_label_3d=self.fn_show_label_3d)

@@ -20,7 +20,7 @@ from magmap.atlas import ontology
 from magmap.plot import plot_support
 
 if TYPE_CHECKING:
-    from matplotlib import image
+    from matplotlib import axes, image
 
 
 class PlotAxImg:
@@ -87,8 +87,9 @@ class PlotEditor:
     ALPHA_DEFAULT = 0.5
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
-    def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
-                 aspect, origin, fn_update_coords, fn_refresh_images=None,
+    def __init__(self, overlaid, img3d,
+                 img3d_labels, cmap_labels, plane,
+                 fn_update_coords, fn_refresh_images=None,
                  scaling=None, plane_slider=None, img3d_borders=None,
                  cmap_borders=None, fn_show_label_3d=None, interp_planes=None,
                  fn_update_intensity=None, max_size=None, fn_status_bar=None,
@@ -96,15 +97,12 @@ class PlotEditor:
         """Initialize the plot editor.
         
         Args:
-            axes (:obj:`matplotlib.Axes`): Containing subplot axes.
             img3d (:obj:`np.ndarray`): Main 3D image.
             img3d_labels (:obj:`np.ndarray`): Labels 3D image.
             cmap_labels (:obj:`matplotlib.colors.ListedColormap`): Labels 
                 colormap, generally a :obj:`colormaps.DiscreteColormap`.
             plane (str): One of :attr:`config.PLANE` specifying the orthogonal 
                 plane to view.
-            aspect (float): Aspect ratio.
-            origin (str): Planar orientation, usually either "lower" or None.
             fn_update_coords (function): Callback when updating coordinates,
                 typically mouse click events in x,y; takes two aruments,
                 the updated coordinates and ``plane`` to indicate the
@@ -135,14 +133,14 @@ class PlotEditor:
                 intensity images to display; defaults to None.
 
         """
-        self.axes = axes
+        #: Manager for plotting overlaid images.
+        self.overlaid: "plot_support.OverlaidImages" = overlaid
+        self.axes: "axes.Axes" = self.overlaid.ax
         self.img3d = img3d
         self.img3d_labels = img3d_labels
         self.cmap_labels = cmap_labels
         self.plane = plane
         self.alpha = self.ALPHA_DEFAULT
-        self.aspect = aspect
-        self.origin = origin
         self.fn_update_coords = fn_update_coords
         self.fn_refresh_images = fn_refresh_images
         self.scaling = config.labels_scaling if scaling is None else scaling
@@ -470,9 +468,7 @@ class PlotEditor:
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
         # reasons
-        overlaid = plot_support.OverlaidImages(
-            self.axes, self.aspect, self.origin)
-        ax_imgs = overlaid.overlay_images(
+        ax_imgs = self.overlaid.overlay_images(
             imgs2d, self._channels, cmaps, alphas, vmins, vmaxs,
             check_single=(self._ax_img_labels is None),
             alpha_blends=alpha_blends)

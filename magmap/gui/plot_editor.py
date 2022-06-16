@@ -470,9 +470,11 @@ class PlotEditor:
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
         # reasons
-        ax_imgs = plot_support.overlay_images(
-            self.axes, self.aspect, self.origin, imgs2d, self._channels, cmaps,
-            alphas, vmins, vmaxs, check_single=(self._ax_img_labels is None),
+        overlaid = plot_support.OverlaidImages(
+            self.axes, self.aspect, self.origin)
+        ax_imgs = overlaid.overlay_images(
+            imgs2d, self._channels, cmaps, alphas, vmins, vmaxs,
+            check_single=(self._ax_img_labels is None),
             alpha_blends=alpha_blends)
         
         # add or update colorbar

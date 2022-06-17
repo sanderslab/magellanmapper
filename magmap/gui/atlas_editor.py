@@ -170,7 +170,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             
             # plot editor
             max_size = max_sizes[axis] if max_sizes else None
-            overlaid = plot_support.ImageOverlayer(ax, aspect, origin)
+            overlaid = plot_support.ImageOverlayer(
+                ax, aspect, origin, rgb=self.img5d.rgb)
             plot_ed = plot_editor.PlotEditor(
                 overlaid, img3d_tr, labels_img_tr, config.cmap_labels,
                 plane, self.update_coords, self.refresh_images, 

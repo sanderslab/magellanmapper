@@ -186,7 +186,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             # each group of artists in a list; overlay_images returns 
             # a nested list containing a list for each image, which in turn 
             # contains a list of artists for each channel
-            overlaid = plot_support.OverlaidImages(
+            overlaid = plot_support.ImageOverlayer(
                 ax, self.aspect, self.origin, ignore_invis=True)
             ax_imgs = overlaid.overlay_images(
                 imgs, None, cmaps_all, check_single=True)

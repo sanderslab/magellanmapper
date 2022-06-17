@@ -134,7 +134,7 @@ class PlotEditor:
 
         """
         #: Manager for plotting overlaid images.
-        self.overlaid: "plot_support.OverlaidImages" = overlaid
+        self.overlaid: "plot_support.ImageOverlayer" = overlaid
         self.axes: "axes.Axes" = self.overlaid.ax
         self.img3d = img3d
         self.img3d_labels = img3d_labels

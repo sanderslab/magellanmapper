@@ -168,7 +168,7 @@ class ImageSyncMixin:
                 if display: ed.update_coord()
 
 
-class OverlaidImages:
+class ImageOverlayer:
     """Manager for overlaying multiple images on top of one another."""
     
     def __init__(

@@ -265,6 +265,8 @@ class Visualization(HasTraits):
     _filename = File  # file browser
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
+    _rgb = Bool(tooltip="Show image as RGB(A)")
+    _rgb_enabled = Bool
     
     # main registered image available and selected dropdowns
     _main_img_name_avail = Str
@@ -512,9 +514,12 @@ class Visualization(HasTraits):
                 Item("_filename", label="File", style="simple",
                      editor=FileEditor(entries=10, allow_dir=False)),
             ),
-            Item("_channel", label="Channels", style="custom",
-                 editor=CheckListEditor(
-                     name="object._channel_names.selections", cols=8)),
+            HGroup(
+                Item("_channel", label="Channels", style="custom",
+                     editor=CheckListEditor(
+                         name="object._channel_names.selections", cols=8)),
+                Item("_rgb", label="RGB", enabled_when="_rgb_enabled"),
+            ),
             label="Image path",
         ),
         VGroup(
@@ -1767,12 +1772,15 @@ class Visualization(HasTraits):
         self._init_channels()
         self._vis3d = vis_3d.Vis3D(self.scene)
         self._vis3d.fn_update_coords = self.set_offset
-        if config.image5d is not None:
+        if config.img5d and config.img5d.img is not None:
+            image5d = config.img5d.img
+            config.img5d.rgb = self._rgb
+            
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
             # elsewhere; "high_label" RangeEditor setting also does not
             # appear to be working
-            self.z_high, self.y_high, self.x_high = config.image5d.shape[1:4]
+            self.z_high, self.y_high, self.x_high = image5d.shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
                 self.x_offset, self.y_offset, self.z_offset = config.roi_offset
@@ -1858,6 +1866,10 @@ class Visualization(HasTraits):
                     regions_map = {r: i for r, i in zip(regions, ids)}
             self._region_id_map = regions_map
             self._region_names.selections = regions
+            
+            # enable RGB button only if 3-4 channel
+            self._rgb_enabled = (
+                    len(image5d.shape) >= 5 and 3 <= image5d.shape[4] <= 4)
 
         # set up image adjustment controls
         self._init_imgadj()
@@ -2016,6 +2028,15 @@ class Visualization(HasTraits):
         self._setup_imgadj_channels()
         print("Changed channel to {}".format(config.channel))
     
+    @on_trait_change("_rgb")
+    def _update_rgb(self):
+        """Handle changes to the RGB button."""
+        if config.img5d:
+            # change image RGB setting, which editors reference
+            config.img5d.rgb = self._rgb
+            self.redraw_selected_viewer()
+            _logger.debug("Changed RGB to %s", config.img5d.rgb)
+
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
         """Reset the stale viewer flags for all viewers.
         

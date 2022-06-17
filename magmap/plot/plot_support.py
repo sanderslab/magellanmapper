@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, Un
 import numpy as np
 from matplotlib import backend_bases, gridspec, pyplot as plt
 import matplotlib.transforms as transforms
-from skimage import filters, transform
+from skimage import filters, img_as_float32, transform
 
 from magmap.cv import cv_nd
 from magmap.plot import colormaps
@@ -172,19 +172,19 @@ class ImageOverlayer:
     """Manager for overlaying multiple images on top of one another."""
     
     def __init__(
-            self, ax: "axes.Axes", aspect: Union[str, float],
-            origin: Optional[str] = None, ignore_invis: bool = False):
+            self, ax, aspect, origin=None, ignore_invis=False, rgb=False):
         #: Plot axes.
         self.ax: "axes.Axes" = ax
         #: Aspect ratio.
-        self.aspect = aspect
-        #: Image origin; defaults to None.
-        self.origin = origin
+        self.aspect: Union[str, float] = aspect
+        #: Image planar orientation, usually either "lower" or None; defaults
+        #: to None.
+        self.origin: Optional[str] = origin
         #: True to avoid creating ``AxesImage`` objects for images that would
         #: be invisible; defaults to False.
-        self.ignore_invis = ignore_invis
-        #: True to show images as RGB.
-        self.rgb = rgb
+        self.ignore_invis: bool = ignore_invis
+        #: True to show images as RGB(A); defaults to False.
+        self.rgb: bool = rgb
         
     def imshow_multichannel(
             self, img2d: np.ndarray,
@@ -196,7 +196,8 @@ class ImageOverlayer:
             interpolation: Optional[str] = None,
             norms: Sequence["colors.Normalize"] = None,
             nan_color: Optional[str] = None,
-            alpha_blend: Optional[float] = None) -> List["axes.Axes"]:
+            alpha_blend: Optional[float] = None, rgb: bool = False
+    ) -> List["axes.Axes"]:
         """Show multichannel 2D image with channels overlaid over one another.
     
         Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
@@ -223,14 +224,19 @@ class ImageOverlayer:
             nan_color: String of color to use for NaN values; defaults to
                 None to leave these pixels empty.
             alpha_blend: Opacity blending value; defaults to None.
+            rgb: True to display as RGB(A); defaults to False.
         
         Returns:
             List of ``AxesImage`` objects.
         """
         # assume that 3D array has a channel dimension
         multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
+        if rgb:
+            # only generate one image, using 1st channel's settings
+            channels = [0]
         img = []
         num_chls = len(channels)
+        
         if alpha is None:
             alpha = 1
         if num_chls > 1:
@@ -250,7 +256,13 @@ class ImageOverlayer:
         img2d = cv_nd.rotate90(img2d, rotate, multichannel=multichannel)
     
         for chl in channels:
-            img2d_show = img2d[..., chl] if multichannel else img2d
+            if rgb:
+                # Matplotlib requires 0-1 float or 0-255 int range
+                img2d_show = img_as_float32(img2d)
+            else:
+                # get single channel
+                img2d_show = img2d[..., chl] if multichannel else img2d
+            
             cmap = None if cmaps is None else cmaps[chl]
             norm = None if norms is None else norms[chl]
             cmap = colormaps.get_cmap(cmap)
@@ -391,6 +403,8 @@ class ImageOverlayer:
             alpha_blend = alpha_blends[i]
             vmin = vmins[i]
             vmax = vmaxs[i]
+            rgb = False
+            
             if i == 0:
                 # first image is the main intensity image, potentially multichannel
                 len_chls_main = len(channels_main)
@@ -407,6 +421,9 @@ class ImageOverlayer:
                 if img_norm_setting:
                     # normalize main intensity image
                     img = libmag.normalize(img, *img_norm_setting)
+                # currently only support RGB in main image 
+                rgb = self.rgb
+            
             elif not all(np.equal(img.shape[:2], imgs2d[0].shape[:2])):
                 # resize the image to the main image's shape if shapes differ in
                 # xy; assume that the given image is a labels image whose integer
@@ -416,19 +433,22 @@ class ImageOverlayer:
                 img = transform.resize(
                     img, shape, order=0, anti_aliasing=False,
                     preserve_range=True, mode="reflect").astype(np.int)
+            
             if check_single and discrete and len(np.unique(img)) < 2:
                 # WORKAROUND: increment the last val of single unique val images
                 # shown with a DiscreteColormap (or any ListedColormap) since
                 # they otherwise fail to update on subsequent imshow calls
                 # for unknown reasons
                 img[-1, -1] += 1
+            
             # use nearest neighbor interpolation for consistency across backends;
             # "none" would fallback to this method, but PDF would use no interp
             ax_img = self.imshow_multichannel(
                 img, channels[i], cmap, alpha, vmin, vmax,
                 interpolation="nearest", norms=norm, nan_color=nan_color,
-                alpha_blend=alpha_blend)
+                alpha_blend=alpha_blend, rgb=rgb)
             ax_imgs.append(ax_img)
+        
         return ax_imgs
 
 

@@ -48,6 +48,8 @@ class Image5d:
         self.subimg_offset: Optional[Sequence[int]] = None
         self.subimg_size: Optional[Sequence[int]] = None
         self.meta: Optional[Dict[Union[str, config.MetaKeys], Any]] = None
+        #: True if image is RGB(A); defaults to False. 
+        self.rgb: bool = False
 
 
 def img_to_blobs_path(path):

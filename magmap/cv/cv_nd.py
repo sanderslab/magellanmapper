@@ -951,7 +951,7 @@ def zero_crossing(img, filter_size):
     Returns:
         Array of same size as ``img`` as a mask of edges.
     """
-    selem = morphology.ball(filter_size)
+    selem = get_selem(img.ndim)(filter_size)
     eroded = morphology.erosion(img, selem)
     dilated = morphology.dilation(img, selem)
     # find pixels of border transition, where eroded or dilated pixels 

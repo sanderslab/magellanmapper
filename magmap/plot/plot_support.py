@@ -27,7 +27,7 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 if TYPE_CHECKING:
-    from matplotlib import axes, colors, figure
+    from matplotlib import axes, colors, figure, image
     from magmap.gui import plot_editor
     from magmap.io import np_io
     import pandas as pd
@@ -197,7 +197,7 @@ class ImageOverlayer:
             norms: Sequence["colors.Normalize"] = None,
             nan_color: Optional[str] = None,
             alpha_blend: Optional[float] = None, rgb: bool = False
-    ) -> List["axes.Axes"]:
+    ) -> List["image.AxesImage"]:
         """Show multichannel 2D image with channels overlaid over one another.
     
         Applies :attr:`config.transform` with :obj:`config.Transforms.ROTATE`
@@ -227,7 +227,7 @@ class ImageOverlayer:
             rgb: True to display as RGB(A); defaults to False.
         
         Returns:
-            List of ``AxesImage`` objects.
+            List of Matplotlib image objects.
         """
         # assume that 3D array has a channel dimension
         multichannel, channels = plot_3d.setup_channels(img2d, channel, 2)
@@ -317,7 +317,7 @@ class ImageOverlayer:
             check_single: bool = False,
             alpha_blends: Optional[Union[
                 float, Sequence[Union[float, Sequence[float]]]]] = None
-    ) -> Optional[List[List["axes.Axes"]]]:
+    ) -> Optional[List[List["image.AxesImage"]]]:
         """Show multiple, overlaid images.
         
         Wrapper function calling :meth:`imshow_multichannel` for multiple 
@@ -356,7 +356,7 @@ class ImageOverlayer:
                 defaults to None.
         
         Returns:
-            Nested list containing a list of ``AxesImage`` objects 
+            Nested list containing a list of Matplotlib image objects 
             corresponding to display of each ``imgs2d`` image.
         """
         ax_imgs = []

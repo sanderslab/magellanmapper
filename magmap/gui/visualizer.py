@@ -2639,6 +2639,8 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
+        
+        # create ROI Editor
         filename_base = importer.filename_to_base(
             config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
@@ -2651,6 +2653,8 @@ class Visualization(HasTraits):
         roi_ed = roi_editor.ROIEditor(
             config.img5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
+        self.roi_ed = roi_ed
+        
         roi_ed.plane = self._planes_2d[0].lower()
         if self._DEFAULTS_2D[4] in self._check_list_2d:
             # set MIP for the current plane
@@ -2706,7 +2710,6 @@ class Visualization(HasTraits):
                 *stack_args, **stack_args_named, zoom_levels=2)
         roi_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
-        self.roi_ed = roi_ed
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
         

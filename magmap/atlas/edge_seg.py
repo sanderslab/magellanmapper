@@ -9,6 +9,7 @@ from typing import List, Optional
 import SimpleITK as sitk
 import numpy as np
 import pandas as pd
+from skimage import color
 
 from magmap.atlas import atlas_refiner
 from magmap.cv import chunking, cv_nd, segmenter
@@ -122,6 +123,10 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         path_atlas, atlas_suffix, get_sitk=True)
     config.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
     atlas_np = sitk.GetArrayFromImage(atlas_sitk)
+    
+    if config.rgb:
+        # convert RGB atlas image to grayscale for single channel
+        atlas_np = color.rgb2gray(atlas_np)
     
     # output images
     atlas_sitk_log = None

@@ -16,7 +16,9 @@ from magmap.settings import config
 from magmap.io import importer, np_io
 from magmap.io import libmag
 
-EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
+#: Extensions of 3D formats supported through SimpleITK.
+EXTS_3D: Sequence[str] = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
+# TODO: include all formats supported by SimpleITK
 
 _logger = config.logger.getChild(__name__)
 
@@ -118,8 +120,8 @@ def read_sitk(path, dryrun=False):
     
     Args:
         path (str): Path, including prioritized extension to check first.
-        dryrun (bool): True to load the image; defaults to False. Use False
-            to test whether an path to load is found.
+        dryrun (bool): True to find an existing path if available, without
+            loading the image; defaults to False.
     
     Returns:
         :obj:`sitk.Image`, str: Image object located at ``path`` with

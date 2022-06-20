@@ -12,6 +12,7 @@ Examples:
         
         ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
+import glob
 import pprint
 from collections import OrderedDict
 from enum import auto, Enum 
@@ -1789,20 +1790,29 @@ class Visualization(HasTraits):
             self.roi_array = ([[100, 100, 12]] if config.roi_size is None
                               else [config.roi_size])
             
-            # find matching registered images to populate dropdowns
+            # find matching registered images
             self._reg_img_names = OrderedDict()
             for reg_name in config.RegNames:
-                # check for potential registered image files, using the
-                # prefix path if available
-                reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
+                # potential registered image path including any prefix
+                reg_path = sitk_io.reg_out_path(
                     config.prefix if config.prefix else config.filename,
-                    reg_name.value), dryrun=True)[1]
-                if reg_path:
+                    reg_name.value)
+                base_path = reg_path[:-len(reg_name.value)]
+                
+                # match files with modifiers just before ext
+                reg_name_globs = glob.glob(f"{libmag.splitext(reg_path)[0]}*")
+                for reg_name_glob in reg_name_globs:
+                    if libmag.splitext(reg_name_glob)[1] not in sitk_io.EXTS_3D:
+                        # skip exts not in 3D list
+                        continue
                     # add to list of available suffixes, storing the found
                     # extension to load directly and save to same ext
-                    name = libmag.get_filename_without_ext(reg_name.value)
+                    name = reg_name_glob[len(base_path):]
+                    name = libmag.get_filename_without_ext(name)
                     self._reg_img_names[name] = (
-                        f"{name}{libmag.splitext(reg_path)[1]}")
+                        f"{name}{libmag.splitext(reg_name_glob)[1]}")
+            
+            # populate dropdown of labels images and add empty first option
             self._labels_img_names.selections = list(self._reg_img_names.keys())
             self._labels_img_names.selections.insert(0, "")
             

@@ -87,7 +87,7 @@ class PlotEditor:
     ALPHA_DEFAULT = 0.5
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
-    def __init__(self, overlaid, img3d,
+    def __init__(self, overlayer, img3d,
                  img3d_labels, cmap_labels, plane,
                  fn_update_coords, fn_refresh_images=None,
                  scaling=None, plane_slider=None, img3d_borders=None,
@@ -134,8 +134,8 @@ class PlotEditor:
 
         """
         #: Manager for plotting overlaid images.
-        self.overlaid: "plot_support.ImageOverlayer" = overlaid
-        self.axes: "axes.Axes" = self.overlaid.ax
+        self.overlayer: "plot_support.ImageOverlayer" = overlayer
+        self.axes: "axes.Axes" = self.overlayer.ax
         self.img3d = img3d
         self.img3d_labels = img3d_labels
         self.cmap_labels = cmap_labels
@@ -468,7 +468,7 @@ class PlotEditor:
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
         # reasons
-        ax_imgs = self.overlaid.overlay_images(
+        ax_imgs = self.overlayer.overlay_images(
             imgs2d, self._channels, cmaps, alphas, vmins, vmaxs,
             check_single=(self._ax_img_labels is None),
             alpha_blends=alpha_blends)

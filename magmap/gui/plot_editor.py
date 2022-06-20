@@ -60,6 +60,8 @@ class PlotAxImg:
         self.contrast: float = 1.0
         self.alpha: Optional[float] = None
         self.alpha_blend: Optional[float] = None
+        #: True if the image is displayed as RGB(A); defaults to False.
+        self.rgb: bool = False
         
         # original underlying image data
         self.img: np.ndarray = np.copy(self.ax_img.get_array())
@@ -517,6 +519,7 @@ class PlotEditor:
                 plot_ax_img.alpha = libmag.get_if_within(alphas[i], j)
                 plot_ax_img.alpha_blend = libmag.get_if_within(
                     alpha_blends[i], j)
+                plot_ax_img.rgb = self.overlayer.rgb
                 plot_ax_imgs.append(plot_ax_img)
             self._plot_ax_imgs.append(plot_ax_imgs)
         
@@ -695,20 +698,22 @@ class PlotEditor:
                 ignore contrast changes.
 
         """
-        # get the array for the currently displayed image, which adjusts
-        # dynamically to array changes
+        # get displayed image array, which adjusts dynamically to array changes
         data = plot_ax_img.ax_img.get_array()
+        
+        # get info range from data type, or assume 0-1 for RGB images
         info = libmag.get_dtype_info(data)
+        info_range = (0, 1) if plot_ax_img.rgb else (info.min, info.max)
         img = plot_ax_img.img
         
         if brightness is not None:
             # shift original image array by brightness
-            img = np.clip(plot_ax_img.img + brightness, info.min, info.max)
+            img = np.clip(img + brightness, *info_range)
             data[:] = img
             plot_ax_img.brightness = brightness
         
         if contrast is not None:
-            # stretch original image array by contrast
+            # stretch adjusted image array by contrast
             img = np.clip(img * contrast, info.min, info.max)
             data[:] = img
             plot_ax_img.contrast = contrast

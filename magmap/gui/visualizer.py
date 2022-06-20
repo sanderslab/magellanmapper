@@ -42,8 +42,9 @@ except AttributeError:
 from pyface import confirmation_dialog
 from pyface.api import FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
-from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
-    Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
+from traits.api import Any, Array, Bool, Button, File, Float, Instance, Int, \
+    List, observe, on_trait_change, Property, push_exception_handler, Str, \
+    HasTraits
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
     EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
     StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
@@ -265,7 +266,7 @@ class Visualization(HasTraits):
     _filename = File  # file browser
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
-    _rgb = Bool(tooltip="Show image as RGB(A)")
+    _rgb = Bool(config.rgb, tooltip="Show image as RGB(A)")
     _rgb_enabled = Bool
     
     # main registered image available and selected dropdowns
@@ -2028,8 +2029,8 @@ class Visualization(HasTraits):
         self._setup_imgadj_channels()
         print("Changed channel to {}".format(config.channel))
     
-    @on_trait_change("_rgb")
-    def _update_rgb(self):
+    @observe("_rgb", post_init=True)
+    def _update_rgb(self, event):
         """Handle changes to the RGB button."""
         if config.img5d:
             # change image RGB setting, which editors reference

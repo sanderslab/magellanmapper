@@ -123,6 +123,9 @@ series_list = None
 #: int: Channel of interest, where None specifies all channels.
 channel = None
 
+#: CLI flag to open images in RGB(A) mode if True; defaults to False.
+rgb: bool = False
+
 # ROI settings in x,y,z
 # TODO: change to z,y,x ordering
 roi_offsets = None  # list of offsets

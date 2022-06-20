@@ -8,6 +8,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--meta` | `<metadata-path> [path2] ...` | Metadata paths corresponding to images from `--img`. | v1.0.0 | v1.0.0
 `--prefix` | `<path1> [path2] ...` | Path input/output prefix(es), typically used for the start of output paths. May also modify input paths, eg with `--img`. Takes precedence over `--img` for `--reg_suffixes`. <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Multiple paths can be given.</li></ul> | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--prefix_out` | `<path1> [path2] ...` | Path output prefix(es), typically used for the start of output paths when `--prefix` is used for input paths. <ul><li>*Added in [v1.5.0](#changes-in-magellanmapper-v15)*</li></ul> | v1.5.0 | [v1.5.0](#changes-in-magellanmapper-v15)
+`--rgb` | None | Open images as RGB(A). <ul><li>*Added in [v1.6.0](#changes-in-magellanmapper-v16)*</li></ul> | [v1.6.0](#changes-in-magellanmapper-v16)
 `--suffix` | `<path>` | Path suffix, typically used for the end of output paths. <ul><li>*Since [v1.5.0](#changes-in-magellanmapper-v15):* Multiple paths can be given.</li></ul> | v1.0.0 | v1.0.0
 `--channel` | `<n> [n2] ...` | Indices of channels to include, starting from 0. | v1.0.0 | v1.0.0
 `--series` | `<n>` | Index of image series such as image tile, starting from 0. | v1.0.0 | v1.0.0
@@ -52,6 +53,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
+None | `--rgb` | v1.6.0 | Open images in RGB(a) mode.
 `--transform ...` | `--transform [interpolation=n] ...` | v1.6.0 | Interpolation order can be specified when exporting the main image.
 
 ## Changes in MagellanMapper v1.5

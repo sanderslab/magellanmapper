@@ -373,6 +373,9 @@ def process_cli_args():
         "--vmax",
         help="Maximum intensity levels, which can be comma-delimited "
              "for multichannel images")
+    parser.add_argument(
+        "--rgb", action="store_true",
+        help="Open images as RGB(A) color images")
     parser.add_argument("--seed", help="Random number generator seed")
 
     # export arguments
@@ -688,6 +691,11 @@ def process_cli_args():
             libmag.get_int(val) for val in args.vmax.split(",")]
         config.vmax_overview = list(config.vmaxs)
         print("Set vmaxs to", config.vmaxs)
+    
+    if args.rgb:
+        # flag to open images as RGB
+        config.rgb = args.rgb
+        _logger.info("Set RGB to %s", config.rgb)
     
     if args.reg_suffixes is not None:
         # specify suffixes of registered images to load

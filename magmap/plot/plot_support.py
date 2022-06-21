@@ -770,10 +770,11 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
 
 
 def hide_axes(ax):
-    """Hides x- and y-axes.
+    """Hides x- and y-axes and the axes frame.
     """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
+    ax.set_frame_on(False)
 
 
 def scale_axes(ax, scale_x=None, scale_y=None):

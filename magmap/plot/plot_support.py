@@ -14,6 +14,7 @@ from matplotlib import backend_bases, gridspec, pyplot as plt
 import matplotlib.transforms as transforms
 from skimage import filters, img_as_float32, transform
 
+from magmap.atlas import ontology
 from magmap.cv import cv_nd
 from magmap.plot import colormaps
 from magmap.settings import config
@@ -185,6 +186,9 @@ class ImageOverlayer:
         self.ignore_invis: bool = ignore_invis
         #: True to show images as RGB(A); defaults to False.
         self.rgb: bool = rgb
+        
+        #: Labels annotation text artists; defaults to empty list.
+        self._labels_annots: List["axes.Axes.Text"] = []
         
     def imshow_multichannel(
             self, img2d: np.ndarray,
@@ -450,6 +454,43 @@ class ImageOverlayer:
             ax_imgs.append(ax_img)
         
         return ax_imgs
+    
+    def annotate_labels(
+            self, labels_2d: np.ndarray, ref_lookup: Dict[int, Any],
+            level: Optional[int] = None):
+        """Annotate labels with acronyms.
+        
+        Args:
+            labels_2d: 2D labels image.
+            ref_lookup: Labels lookup dictionary of label IDs to label metadata.
+            level: Ontology level; defaults to None.
+
+        """
+        self._labels_annots = []
+        for label_id in np.unique(labels_2d):
+            # get measurement properties for the given label
+            props = cv_nd.get_label_props(labels_2d, label_id)
+            if not props: continue
+            
+            # position label acronym at center of label
+            y, x = props[0].centroid[:2]
+            atlas_label = ontology.get_label_at_level(
+                label_id, ref_lookup, level)
+            name = ontology.get_label_name(
+                atlas_label, aba_key=config.ABAKeys.ACRONYM)
+            
+            # small annotations with subtle background in case label is dark
+            text = self.ax.text(
+                x, y, name, color="k", fontsize="x-small", clip_on=True,
+                horizontalalignment="center", verticalalignment="center",
+                bbox=dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
+                          linewidth=0, alpha=0.3))
+            self._labels_annots.append(text)
+    
+    def remove_labels(self):
+        """Remove label annotations."""
+        for text in self._labels_annots:
+            text.remove()
 
 
 def alpha_blend_intersection(

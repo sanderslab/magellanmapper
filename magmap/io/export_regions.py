@@ -439,7 +439,9 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
             if img: sitk.Show(img)
 
 
-def make_labels_level_img(img_path, level, prefix=None, show=False):
+def make_labels_level_img(
+        img_path: str, level: int, prefix: Optional[str] = None,
+        show: bool = False) -> Dict[str, sitk.Image]:
     """Replace labels in an image with their parents at the given level.
     
     Labels that do not fall within a parent at that level will remain in place.
@@ -451,6 +453,10 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
         prefix: Start of path for output image; defaults to None to 
             use ``img_path`` instead.
         show: True to show the images after generating them; defaults to False.
+    
+    Returns:
+        Dictionary of registered image suffix to SimpleITK image.
+    
     """
     # load original labels image and setup ontology dictionary
     labels_sitk = sitk_io.load_registered_img(
@@ -464,16 +470,18 @@ def make_labels_level_img(img_path, level, prefix=None, show=False):
     
     # generate an edge image at this level
     labels_edge = vols.make_labels_edge(labels_np)
-    labels_edge_sikt = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_edge)
+    labels_edge_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_edge)
     
     # write and optionally display labels level image
     imgs_write = {
         config.RegNames.IMG_LABELS_LEVEL.value.format(level): labels_level_sitk, 
         config.RegNames.IMG_LABELS_EDGE_LEVEL.value.format(level): 
-            labels_edge_sikt, 
+            labels_edge_sitk, 
     }
     out_path = prefix if prefix else img_path
     sitk_io.write_reg_images(imgs_write, out_path)
     if show:
         for img in imgs_write.values():
             if img: sitk.Show(img)
+    
+    return imgs_write

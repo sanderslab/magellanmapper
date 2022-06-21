@@ -335,7 +335,7 @@ class PlotEditor:
                 self.vline.set_xdata(coord[2])
     
     def set_show_label(self, val):
-        """Set whether to show labels.
+        """Set whether to show labels on hover.
         
         Args:
             val (bool): True to show labels, False otherwise.
@@ -345,6 +345,28 @@ class PlotEditor:
             # reset text to trigger a figure refresh
             self.region_label.set_text("")
         self._show_labels = val
+    
+    def show_labels(self, show: bool = True):
+        """Show or remove labels for all regions.
+        
+        Args:
+            show: True (default) to show all labels; False to remove them.
+
+        """
+        if show:
+            if (len(self._plot_ax_imgs) > 1 and
+                    self._plot_ax_imgs[1] is not None and config.labels_ref
+                    and config.labels_ref.ref_lookup):
+                # add label annotations
+                self.overlayer.annotate_labels(
+                    self._plot_ax_imgs[1][0].img, config.labels_ref.ref_lookup,
+                    self.labels_level)
+        else:
+            # remove all labels
+            self.overlayer.remove_labels()
+        
+        # refresh view
+        self.axes.figure.canvas.draw_idle()
     
     def _get_img2d(self, i, img, max_intens=0):
         """Get the 2D image from the given 3D image, scaling and downsampling

@@ -174,8 +174,9 @@ class Styles2D(Enum):
 class RegionOptions(Enum):
     """Enumerations for region options."""
     BOTH_SIDES = "Both sides"
-    INCL_CHILDREN = "Include children"
+    INCL_CHILDREN = "Children"
     APPEND = "Append"
+    SHOW_ALL = "Show all"
 
 
 class AtlasEditorOptions(Enum):
@@ -489,9 +490,18 @@ class Visualization(HasTraits):
     _structure_remap_btn = Button(
         "Remap",
         tooltip="Remap atlas labels to this level")
-    _region_name = Str
+    _region_name = Str(
+        tooltip="Navigate to selected region. Start typing to search.")
     _region_names = Instance(TraitsList)
-    _region_id = Str
+    # tooltip for both text box and options since options group has no main
+    # label to display a tooltip
+    _region_id = Str(  
+        tooltip="IDs: IDs of labels to navigate to. Add +/- to including both\n"
+                "sides. Separate multiple IDs by commas.\n"
+                "Both sides: include correspondings labels from opposite sides"
+                "\nChildren: include all children of the label\n"
+                "Append: append label IDs; uncheck to navigate to group\n"
+                "Show all: show abbreviations for all visible labels")
     _region_options = List
     
     _mlab_title = None
@@ -2754,6 +2764,8 @@ class Visualization(HasTraits):
         roi_ed.set_labels_level(self.structure_scale)
         roi_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
+        roi_ed.show_labels_annots(
+            RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
         
@@ -2790,6 +2802,8 @@ class Visualization(HasTraits):
         atlas_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
         atlas_ed.set_labels_level(self.structure_scale)
+        atlas_ed.show_labels_annots(
+            RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ATLAS_ED] = None
     
@@ -3069,6 +3083,15 @@ class Visualization(HasTraits):
             region_id = self._region_id
             self._region_id = ""
             self._region_id = region_id
+        
+        if changed[RegionOptions.SHOW_ALL]:
+            # toggle showing all label annotations
+            option = options[RegionOptions.SHOW_ALL]
+            if self.roi_ed:
+                self.roi_ed.show_labels_annots(option)
+            if self.atlas_eds:
+                for ed in self.atlas_eds:
+                    ed.show_labels_annots(option)     
         
         # store current options
         self._region_options_prev = options

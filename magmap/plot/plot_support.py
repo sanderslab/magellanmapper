@@ -149,7 +149,19 @@ class ImageSyncMixin:
         """
         for plot_ed in self.plot_eds.values():
             plot_ed.labels_level = val
+    
+    def show_labels_annots(self, show_annots: bool = True):
+        """Show labels annotations.
+        
+        Args:
+            show_annots: True (default) to show annotations.
 
+        Returns:
+
+        """
+        for plot_ed in self.plot_eds.values():
+            plot_ed.show_labels(show_annots)
+    
     def update_max_intens_proj(self, shape, display=False):
         """Update max intensity projection planes.
         

@@ -22,6 +22,8 @@ from magmap.plot import plot_support
 if TYPE_CHECKING:
     from matplotlib import axes, image
 
+_logger = config.logger.getChild(__name__)
+
 
 class PlotAxImg:
     """Axes image storage class.
@@ -1067,6 +1069,7 @@ class PlotEditor:
                                 ontology.get_label_name(atlas_label),
                                 ontology.get_label_item(
                                     atlas_label, config.ABAKeys.ABA_ID.value))
+                            _logger.debug("Found label: %s", name)
                             
                             # minimize chance of text overflowing out of axes by
                             # word-wrapping and switching sides at midlines

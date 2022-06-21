@@ -581,30 +581,39 @@ def get_label_item(label, item_key, key=NODE):
     return item
 
 
-def get_label_name(label, side=False):
+def get_label_name(
+        label: Dict[str, Any], side: bool = False,
+        aba_key: Optional["config.ABAKeys"] = None):
     """Get the atlas region name from the label.
     
     Args:
-        label (dict): The label dictionary.
-        side (bool):
+        label: The label dictionary.
+        side: True to add side suffix; defaults to False.
+        aba_key: ABA enum to get from ``label``; defaults to None, in which
+            case the name will be retrieved.
     
     Returns:
         The atlas region name, or None if not found.
     """
+    if not aba_key:
+        # default to get the full label name
+        aba_key = config.ABAKeys.NAME
+    
     name = None
     try:
         if label is not None:
             node = label[NODE]
             if node is not None:
-                name = node[config.ABAKeys.NAME.value]
-                print("name: {}".format(name), label[MIRRORED])
+                # get selected metadata
+                name = node[aba_key.value]
                 if side:
+                    # add side indicator
                     if label[MIRRORED]:
                         name += LEFT_SUFFIX
                     else:
                         name += RIGHT_SUFFIX
     except KeyError as e:
-        print(e, name)
+        _logger.debug("Error getting label name: %s, %s", e, name)
     return name
 
 

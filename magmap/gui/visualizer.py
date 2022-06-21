@@ -1530,14 +1530,22 @@ class Visualization(HasTraits):
         self._circles_opened_type = None
         self.segs_feedback = ""
     
-    def _update_structure_level(self, curr_offset, curr_roi_size):
+    def _update_structure_level(
+            self, curr_offset: Sequence[int], curr_roi_size: Sequence[int]):
+        """Handle structure level changes.
+        
+        Args:
+            curr_offset: Current ROI offset in ``x, y, z``.
+            curr_roi_size: Current ROI size in ``x, y, z``.
+
+        """
         self._atlas_label = None
         if self._mlab_title is not None:
             self._mlab_title.remove()
             self._mlab_title = None
         
         # set level in ROI and Atlas Editors
-        level = self._structure_scale
+        level = self.structure_scale
         if self.roi_ed:
             self.roi_ed.set_labels_level(level)
         if self.atlas_eds:

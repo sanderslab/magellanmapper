@@ -41,14 +41,11 @@ class PlotAxImg:
         alpha: Opacity level; defaults to None.
         alpha_blend: Opacity level of the first level in the area of blending
             between two images; defaults to None.
-        img: The original underlying image data,
-            copied to allow adjusting the array in ``ax_img`` while
-            retaining the original data.
 
     """
     def __init__(
             self, ax_img: "image.AxesImage", vmin: Optional[float] = None,
-            vmax: Optional[float] = None):
+            vmax: Optional[float] = None, img: Optional[np.ndarray] = None):
         
         # set from arguments
         self.ax_img = ax_img
@@ -63,8 +60,11 @@ class PlotAxImg:
         #: True if the image is displayed as RGB(A); defaults to False.
         self.rgb: bool = False
         
-        # original underlying image data
-        self.img: np.ndarray = np.copy(self.ax_img.get_array())
+        #: Original underlying image data, copied to allow adjusting the array
+        #: in ``ax_img`` while retaining the original data unless given by
+        #: directly by ``img``.
+        self.img: np.ndarray = np.copy(
+            self.ax_img.get_array()) if img is None else img
 
 
 class PlotEditor:
@@ -416,9 +416,11 @@ class PlotEditor:
             brightnesses[0] = [p.brightness for p in self._plot_ax_imgs[0]]
             contrasts[0] = [p.contrast for p in self._plot_ax_imgs[0]]
         
+        img2d_lbl = None
         if self.img3d_labels is not None:
             # prep labels with discrete colormap and prior alpha if available
-            imgs2d.append(self._get_img2d(1, self.img3d_labels))
+            img2d_lbl = self._get_img2d(1, self.img3d_labels)
+            imgs2d.append(img2d_lbl)
             self._channels.append([0])
             cmaps.append(self.cmap_labels)
             alphas.append(
@@ -505,7 +507,10 @@ class PlotEditor:
         for i, imgs in enumerate(ax_imgs):
             plot_ax_imgs = []
             for j, img in enumerate(imgs):
-                plot_ax_img = PlotAxImg(img)
+                # use original 2D labels, without cmap index conversion
+                img_orig = img2d_lbl if i == 1 else None
+                plot_ax_img = PlotAxImg(img, img=img_orig)
+                
                 if i == 0:
                     # specified vmin/vmax, in contrast to the AxesImages's
                     # norm, which holds the values used for the displayed image
@@ -516,11 +521,14 @@ class PlotEditor:
                     self.change_brightness_contrast(
                         plot_ax_img, libmag.get_if_within(brightnesses[i], j),
                         libmag.get_if_within(contrasts[i], j))
+                
+                # store rest of settings
                 plot_ax_img.alpha = libmag.get_if_within(alphas[i], j)
                 plot_ax_img.alpha_blend = libmag.get_if_within(
                     alpha_blends[i], j)
                 plot_ax_img.rgb = self.overlayer.rgb
                 plot_ax_imgs.append(plot_ax_img)
+            
             self._plot_ax_imgs.append(plot_ax_imgs)
         
         if self.xlim is not None and self.ylim is not None:

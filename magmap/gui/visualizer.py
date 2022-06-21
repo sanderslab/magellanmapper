@@ -2751,6 +2751,7 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
+        roi_ed.set_labels_level(self.structure_scale)
         roi_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
         self._add_mpl_fig_handlers(roi_ed.fig)
@@ -2788,6 +2789,7 @@ class Visualization(HasTraits):
         atlas_ed.show_atlas()
         atlas_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
+        atlas_ed.set_labels_level(self.structure_scale)
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ATLAS_ED] = None
     

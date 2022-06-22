@@ -7,7 +7,7 @@ view of orthogonal planes.
 """
 
 import textwrap
-from typing import List, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional, Sequence, TYPE_CHECKING
 
 from matplotlib import patches
 import numpy as np
@@ -20,7 +20,7 @@ from magmap.atlas import ontology
 from magmap.plot import plot_support
 
 if TYPE_CHECKING:
-    from matplotlib import axes, image
+    from matplotlib import axes, colors, image
 
 _logger = config.logger.getChild(__name__)
 
@@ -92,8 +92,8 @@ class PlotEditor:
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, overlayer, img3d,
-                 img3d_labels, cmap_labels, plane,
-                 fn_update_coords, fn_refresh_images=None,
+                 img3d_labels, cmap_labels, plane=None,
+                 fn_update_coords=None, fn_refresh_images=None,
                  scaling=None, plane_slider=None, img3d_borders=None,
                  cmap_borders=None, fn_show_label_3d=None, interp_planes=None,
                  fn_update_intensity=None, max_size=None, fn_status_bar=None,
@@ -101,16 +101,6 @@ class PlotEditor:
         """Initialize the plot editor.
         
         Args:
-            img3d (:obj:`np.ndarray`): Main 3D image.
-            img3d_labels (:obj:`np.ndarray`): Labels 3D image.
-            cmap_labels (:obj:`matplotlib.colors.ListedColormap`): Labels 
-                colormap, generally a :obj:`colormaps.DiscreteColormap`.
-            plane (str): One of :attr:`config.PLANE` specifying the orthogonal 
-                plane to view.
-            fn_update_coords (function): Callback when updating coordinates,
-                typically mouse click events in x,y; takes two aruments,
-                the updated coordinates and ``plane`` to indicate the
-                coordinates' orientation.
             fn_refresh_images (function): Callback when refreshing the image.
                 Typically takes two arguments, this ``PlotEditor`` object
                 and a boolean where True will update synchronized
@@ -140,12 +130,21 @@ class PlotEditor:
         #: Manager for plotting overlaid images.
         self.overlayer: "plot_support.ImageOverlayer" = overlayer
         self.axes: "axes.Axes" = self.overlayer.ax
-        self.img3d = img3d
-        self.img3d_labels = img3d_labels
-        self.cmap_labels = cmap_labels
-        self.plane = plane
-        self.alpha = self.ALPHA_DEFAULT
-        self.fn_update_coords = fn_update_coords
+        #: Main 3D image.
+        self.img3d: np.ndarray = img3d
+        #: Labels 3D image.
+        self.img3d_labels: np.ndarray = img3d_labels
+        #: Labels  colormap, generally of 
+        #: :class:`magmap.plot.colormaps.DiscreteColormap`.
+        self.cmap_labels: "colors.ListedColormap" = cmap_labels
+        #: One of :attr:`magmap.settings.config.PLANE` specifying the
+        #: orthogonal plane to view.
+        self.plane: str = plane if plane else config.PLANE[0]
+        #: Callback when updating coordinates, typically mouse click events
+        #: in x,y; takes two arguments, the updated coordinates and ``plane``
+        #: to indicate the coordinates' orientation.
+        self.fn_update_coords: Callable[
+            [Sequence[int], str], None] = fn_update_coords
         self.fn_refresh_images = fn_refresh_images
         self.scaling = config.labels_scaling if scaling is None else scaling
         self.plane_slider = plane_slider
@@ -159,6 +158,7 @@ class PlotEditor:
         self.fn_status_bar = fn_status_bar
         self.img3d_extras = img3d_extras
         
+        self.alpha: float = self.ALPHA_DEFAULT
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
         self.intensity_shown = None  # shown intensity in AxesImage
@@ -567,8 +567,17 @@ class PlotEditor:
             0, 0, "", color="k", bbox=dict(facecolor="xkcd:silver", alpha=0.5))
         self.circle = None
     
-    def _update_overview(self, z_overview_new):
-        if z_overview_new != self.coord[0]:
+    def _update_overview(self, z_overview_new: int):
+        """Update overview plot to the given plane.
+        
+        Ignores updates if the update function is missing or the plane is
+        unchanged. In these cases, call :meth:`show_overview` directly.
+        
+        Args:
+            z_overview_new: Z-plane index to show.
+
+        """
+        if self.fn_update_coords and z_overview_new != self.coord[0]:
             # move only if step registered and changing position
             coord = list(self.coord)
             coord[0] = z_overview_new
@@ -942,7 +951,8 @@ class PlotEditor:
                 # click without modifiers to update crosshairs and 
                 # corresponding planes
                 self.coord = coord
-                self.fn_update_coords(self.coord, self.plane)
+                if self.fn_update_coords:
+                    self.fn_update_coords(self.coord, self.plane)
             
             if event.key == "3" and self.fn_show_label_3d is not None:
                 if self.img3d_labels is not None:
@@ -1071,7 +1081,8 @@ class PlotEditor:
                         # mouse left-click drag (separate from the initial
                         # press) moves crosshairs
                         self.coord = coord
-                        self.fn_update_coords(self.coord, self.plane)
+                        if self.fn_update_coords:
+                            self.fn_update_coords(self.coord, self.plane)
                 
                 if (self.img3d_labels is not None and
                         config.labels_ref is not None and

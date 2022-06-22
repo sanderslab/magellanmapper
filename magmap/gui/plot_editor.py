@@ -566,6 +566,10 @@ class PlotEditor:
         self.region_label = self.axes.text(
             0, 0, "", color="k", bbox=dict(facecolor="xkcd:silver", alpha=0.5))
         self.circle = None
+        
+        if self.overlayer.labels_annots:
+            # regenerate label annotations if previously shown
+            self.show_labels()
     
     def _update_overview(self, z_overview_new: int):
         """Update overview plot to the given plane.

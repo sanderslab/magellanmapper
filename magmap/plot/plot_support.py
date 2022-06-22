@@ -200,7 +200,7 @@ class ImageOverlayer:
         self.rgb: bool = rgb
         
         #: Labels annotation text artists; defaults to empty list.
-        self._labels_annots: List["axes.Axes.Text"] = []
+        self.labels_annots: List["axes.Axes.Text"] = []
         
     def imshow_multichannel(
             self, img2d: np.ndarray,
@@ -478,7 +478,7 @@ class ImageOverlayer:
             level: Ontology level; defaults to None.
 
         """
-        self._labels_annots = []
+        self.labels_annots = []
         for label_id in np.unique(labels_2d):
             # get measurement properties for the given label
             props = cv_nd.get_label_props(labels_2d, label_id)
@@ -497,11 +497,11 @@ class ImageOverlayer:
                 horizontalalignment="center", verticalalignment="center",
                 bbox=dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
                           linewidth=0, alpha=0.3))
-            self._labels_annots.append(text)
+            self.labels_annots.append(text)
     
     def remove_labels(self):
         """Remove label annotations."""
-        for text in self._labels_annots:
+        for text in self.labels_annots:
             text.remove()
 
 

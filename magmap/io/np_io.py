@@ -336,8 +336,7 @@ def setup_images(
                 img5d = Image5d(
                     bg_atlas.reference[None], str(bg_atlas.root_dir),
                     img_io=config.LoadIO.BRAIN_GLOBE)
-                # reverse resolutions from x,y,z to z,y,x
-                config.resolutions = np.array([bg_atlas.resolution[::-1]])
+                config.resolutions = np.array([bg_atlas.resolution])
             
             elif path_lower.endswith(sitk_io.EXTS_3D):
                 # load format supported by SimpleITK and prepend time axis;

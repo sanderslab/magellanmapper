@@ -742,7 +742,7 @@ def get_label(
     coord_scaled = scale_coords(
         coord, scaling, labels_img.shape if rounding else None)
     label_id = get_label_ids_from_position(coord_scaled, labels_img)
-    _logger.debug("Found label_id: %s", label_id)
+    # _logger.debug("Found label_id: %s", label_id)
     return get_label_at_level(label_id, labels_lookup, level)
 
 
@@ -792,7 +792,7 @@ def get_label_at_level(
                 "Label %s present but at finer level than %s", label_id, level)
         else:
             label[MIRRORED] = mirrored
-            _logger.debug("Label %s found at level %s", label_id, level)
+            # _logger.debug("Label %s found at level %s", label_id, level)
     except KeyError:
         _logger.debug("Could not find label id %s or its parent", label_id)
     return label

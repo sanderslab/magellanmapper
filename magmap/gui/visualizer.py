@@ -19,7 +19,7 @@ from enum import auto, Enum
 import os
 import subprocess
 import sys
-from typing import Dict, Optional, Sequence, Tuple, Type
+from typing import Dict, Optional, Sequence, TYPE_CHECKING, Tuple, Type, Union
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -67,6 +67,8 @@ from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, prefs_prof, profiles
 
+if TYPE_CHECKING:
+    from magmap.plot import plot_support
 
 # logging instance
 _logger = config.logger.getChild(__name__)
@@ -2765,8 +2767,8 @@ class Visualization(HasTraits):
         roi_ed.set_labels_level(self.structure_scale)
         roi_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
-        roi_ed.show_labels_annots(
-            RegionOptions.SHOW_ALL.value in self._region_options)
+        self._show_all_labels(
+            [self.roi_ed], RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
         
@@ -2805,6 +2807,8 @@ class Visualization(HasTraits):
         atlas_ed.set_labels_level(self.structure_scale)
         atlas_ed.show_labels_annots(
             RegionOptions.SHOW_ALL.value in self._region_options)
+        self._show_all_labels(
+            [atlas_ed], RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ATLAS_ED] = None
     
@@ -3072,6 +3076,33 @@ class Visualization(HasTraits):
         # remove preceding commas
         self._region_id = ids.lstrip(",")
     
+    def _show_all_labels(
+            self, eds: Sequence[Union[
+                "plot_support.ImageSyncMixin",
+                Sequence["plot_support.ImageSyncMixin"]]], show=True):
+        """Show all atlas labels.
+        
+        Args:
+            eds: Sequence of individual or sequences of ROI and Atlas Editors.
+                None values will be ignored.
+            show: True (default) to show the labels.
+
+        """
+        # skip Nones and flatten list
+        eds_all = []
+        for ed in eds:
+            if ed:
+                if libmag.is_seq(ed):
+                    eds_all.extend(ed)
+                else:
+                    eds_all.append(ed)
+        
+        if eds_all:
+            # show in thread
+            self._annotate_labels_thread = atlas_threads.AnnotateLabels(
+                eds_all, show, lambda: None, self._update_prog)
+            self._annotate_labels_thread.start()
+    
     @on_trait_change("_region_options")
     def _region_options_changed(self):
         """Handle changes to the region options check boxes."""
@@ -3088,16 +3119,7 @@ class Visualization(HasTraits):
         if changed[RegionOptions.SHOW_ALL]:
             # toggle showing all label annotations
             option = options[RegionOptions.SHOW_ALL]
-            eds = []
-            if self.roi_ed:
-                eds.append(self.roi_ed)
-            if self.atlas_eds:
-                eds.extend(self.atlas_eds)
-            
-            # show in thread
-            self._annotate_labels_thread = atlas_threads.AnnotateLabels(
-                eds, option, lambda: None, self._update_prog)
-            self._annotate_labels_thread.start()
+            self._show_all_labels((self.roi_ed, self.atlas_eds), option)
         
         # store current options
         self._region_options_prev = options

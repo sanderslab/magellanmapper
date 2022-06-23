@@ -478,7 +478,10 @@ class ImageOverlayer:
             level: Ontology level; defaults to None.
 
         """
-        self.labels_annots = []
+        if self.labels_annots:
+            # reset any existing labels
+            self.remove_labels()
+        
         for label_id in np.unique(labels_2d):
             # get measurement properties for the given label
             props = cv_nd.get_label_props(labels_2d, label_id)
@@ -503,6 +506,7 @@ class ImageOverlayer:
         """Remove label annotations."""
         for text in self.labels_annots:
             text.remove()
+        self.labels_annots = []
 
 
 def alpha_blend_intersection(

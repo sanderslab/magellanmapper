@@ -346,11 +346,13 @@ class PlotEditor:
             self.region_label.set_text("")
         self._show_labels = val
     
-    def show_labels(self, show: bool = True):
+    def show_labels(self, show: bool = True, **kwargs):
         """Show or remove labels for all regions.
         
         Args:
             show: True (default) to show all labels; False to remove them.
+            kwargs: Arguments passed to
+                :meth:`magmap.plot_support.ImageOverlayer.annotate_labels`.
 
         """
         if show:
@@ -360,7 +362,7 @@ class PlotEditor:
                 # add label annotations
                 self.overlayer.annotate_labels(
                     self._plot_ax_imgs[1][0].img, config.labels_ref.ref_lookup,
-                    self.labels_level)
+                    self.labels_level, **kwargs)
         else:
             # remove all labels
             self.overlayer.remove_labels()

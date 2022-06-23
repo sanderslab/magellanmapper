@@ -150,17 +150,32 @@ class ImageSyncMixin:
         for plot_ed in self.plot_eds.values():
             plot_ed.labels_level = val
     
-    def show_labels_annots(self, show_annots: bool = True):
+    def show_labels_annots(
+            self, show_annots: bool = True,
+            annots: Dict[str, Sequence["axes.Axes.Text"]] = None
+    ) -> Dict[str, Sequence["axes.Axes.Text"]]:
         """Show labels annotations.
         
         Args:
             show_annots: True (default) to show annotations.
+            annots: Dictionary of plane to text artist sequence, which
+                serves as a cache to redisplay labels for the same plane.
+                Defaults to None, in which case an empty dict will be used.
 
         Returns:
+            ``annots`` dictionary.
 
         """
+        if annots is None:
+            annots = {}
         for plot_ed in self.plot_eds.values():
-            plot_ed.show_labels(show_annots)
+            # create annotations, retrieving from cache if available; assumes
+            # that images for the same plane are the same across editors
+            annots_plane = annots[
+                plot_ed.plane] if plot_ed.plane in annots else None
+            plot_ed.show_labels(show_annots, labels_annots=annots_plane)
+            annots[plot_ed.plane] = plot_ed.overlayer.labels_annots
+        return annots
     
     def update_max_intens_proj(self, shape, display=False):
         """Update max intensity projection planes.
@@ -469,34 +484,46 @@ class ImageOverlayer:
     
     def annotate_labels(
             self, labels_2d: np.ndarray, ref_lookup: Dict[int, Any],
-            level: Optional[int] = None):
+            level: Optional[int] = None,
+            labels_annots: Optional[List["axes.Axes.Text"]] = None):
         """Annotate labels with acronyms.
         
         Args:
             labels_2d: 2D labels image.
             ref_lookup: Labels lookup dictionary of label IDs to label metadata.
             level: Ontology level; defaults to None.
+            labels_annots: Text artists from which new artists will be
+                re-created with the same name and positions. Takes precedence
+                over ``labels_2d`` and defaults to None.
 
         """
         if self.labels_annots:
             # reset any existing labels
             self.remove_labels()
         
-        for label_id in np.unique(labels_2d):
-            # get measurement properties for the given label
-            props = cv_nd.get_label_props(labels_2d, label_id)
-            if not props: continue
-            
-            # position label acronym at center of label
-            y, x = props[0].centroid[:2]
-            atlas_label = ontology.get_label_at_level(
-                label_id, ref_lookup, level)
-            name = ontology.get_label_name(
-                atlas_label, aba_key=config.ABAKeys.ACRONYM)
-            
+        labels = []
+        if labels_annots:
+            for annot in labels_annots:
+                x, y = annot.get_position()
+                labels.append((x, y, annot.get_text()))
+        else:
+            for label_id in np.unique(labels_2d):
+                # get measurement properties for the given label
+                props = cv_nd.get_label_props(labels_2d, label_id)
+                if not props: continue
+                
+                # position label acronym at center of label
+                y, x = props[0].centroid[:2]
+                atlas_label = ontology.get_label_at_level(
+                    label_id, ref_lookup, level)
+                name = ontology.get_label_name(
+                    atlas_label, aba_key=config.ABAKeys.ACRONYM)
+                labels.append((x, y, name))
+        
+        for label in labels:
             # small annotations with subtle background in case label is dark
             text = self.ax.text(
-                x, y, name, color="k", fontsize="x-small", clip_on=True,
+                *label, color="k", fontsize="x-small", clip_on=True,
                 horizontalalignment="center", verticalalignment="center",
                 bbox=dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
                           linewidth=0, alpha=0.3))

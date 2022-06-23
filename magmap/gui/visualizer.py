@@ -1016,6 +1016,7 @@ class Visualization(HasTraits):
         # prevent prematurely destroying threads
         self._import_thread = None
         self._remap_level_thread = None
+        self._annotate_labels_thread = None
         
         # set up image
         self._setup_for_image()
@@ -3087,11 +3088,16 @@ class Visualization(HasTraits):
         if changed[RegionOptions.SHOW_ALL]:
             # toggle showing all label annotations
             option = options[RegionOptions.SHOW_ALL]
+            eds = []
             if self.roi_ed:
-                self.roi_ed.show_labels_annots(option)
+                eds.append(self.roi_ed)
             if self.atlas_eds:
-                for ed in self.atlas_eds:
-                    ed.show_labels_annots(option)     
+                eds.extend(self.atlas_eds)
+            
+            # show in thread
+            self._annotate_labels_thread = atlas_threads.AnnotateLabels(
+                eds, option, lambda: None, self._update_prog)
+            self._annotate_labels_thread.start()
         
         # store current options
         self._region_options_prev = options

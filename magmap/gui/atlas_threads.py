@@ -70,16 +70,20 @@ class AnnotateLabels(QtCore.QThread):
     
     def run(self):
         """Run the thread."""
+        from time import time
+        start = time()
         # set to 1 instead of 0 since 0 does not appear to trigger reset
         self.update_prog(1, "Initializing label display")
         
         neds = len(self.eds)
+        annots = {}
         for i, ed in enumerate(self.eds):
             # find and show labels for the editor
             self.update_prog(int(i / neds * 100), "Finding labels")
-            ed.show_labels_annots(self.show)
+            ed.show_labels_annots(self.show, annots)
         
         # update before emitting success signal to avoid skipping the call
         self.update_prog(100, "Finished showing labels")
         self.signal.emit()
+        print("elapsed:", time() - start)
 

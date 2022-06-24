@@ -1084,13 +1084,31 @@ class Visualization(HasTraits):
             self._imgadj_name = self._imgadj_names.selections[0]
         self._setup_imgadj_channels()
 
+    @property
+    def imgadj_chls(self) -> str:
+        """Selected image adjustment channel.
+        
+        Returns:
+            "0" as a string if in RGB mode, or the selected value.
+
+        """
+        if self._rgb:
+            # to get the first (and only) image
+            return "0"
+        else:
+            return self._imgadj_chls
+
     def _setup_imgadj_channels(self):
         """Set up channels in the image adjustment panel for the given image."""
         img3d = self._img3ds.get(self._imgadj_name) if self._img3ds else None
         if self._imgadj_name == "Main":
-            # limit image adjustment channel options to currently selected
-            # channels in ROI panel channel selector for main image
-            chls = self._channel
+            if self._rgb:
+                # treat all channels as one
+                chls = ["RGB"]
+            else:
+                # limit image adjustment channel options to currently selected
+                # channels in ROI panel channel selector for main image
+                chls = self._channel
         elif img3d is not None:
             # use all channels, or 1 if no channel dimension
             chls = [str(n) for n in (
@@ -1142,7 +1160,7 @@ class Visualization(HasTraits):
         viewer and channel.
 
         """
-        if not self._imgadj_chls:
+        if not self.imgadj_chls:
             # resetting image adjustment channel names triggers update as
             # empty array
             return
@@ -1159,7 +1177,7 @@ class Visualization(HasTraits):
         # get the first displayed image from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
         plot_ax_img = ed.get_img_display_settings(
-            imgi, chl=int(self._imgadj_chls))
+            imgi, chl=int(self.imgadj_chls))
         if plot_ax_img is None: return
         
         # populate controls with intensity settings
@@ -1334,7 +1352,7 @@ class Visualization(HasTraits):
                 # update settings for the viewer
                 plot_ax_img = ed.update_imgs_display(
                     self._imgadj_names.selections.index(self._imgadj_name),
-                    chl=int(self._imgadj_chls), **kwargs)
+                    chl=int(self.imgadj_chls), **kwargs)
         return plot_ax_img
 
     @staticmethod
@@ -2046,8 +2064,13 @@ class Visualization(HasTraits):
         if config.img5d:
             # change image RGB setting, which editors reference
             config.img5d.rgb = self._rgb
-            self.redraw_selected_viewer()
             _logger.debug("Changed RGB to %s", config.img5d.rgb)
+            
+            # update image adjustment channel options
+            self._update_imgadj_limits()
+            
+            # redraw viewer in selected RGB mode
+            self.redraw_selected_viewer()
 
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
         """Reset the stale viewer flags for all viewers.

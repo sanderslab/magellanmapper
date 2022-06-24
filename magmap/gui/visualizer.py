@@ -518,6 +518,7 @@ class Visualization(HasTraits):
             ),
             HGroup(
                 Item("_channel", label="Channels", style="custom",
+                     enabled_when="not _rgb",
                      editor=CheckListEditor(
                          name="object._channel_names.selections", cols=8)),
                 Item("_rgb", label="RGB", enabled_when="_rgb_enabled"),

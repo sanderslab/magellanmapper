@@ -11,7 +11,7 @@ for program access.
 
 from enum import Enum, auto
 import pathlib
-from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING, Union
 
 try:
     from appdirs import AppDirs
@@ -596,7 +596,8 @@ class RegSuffixes(Enum):
 
 
 #: Dictionary of registered suffix names for each suffix type.
-reg_suffixes: Dict[RegSuffixes, str] = dict.fromkeys(RegSuffixes, None)
+reg_suffixes: Dict[RegSuffixes, Union[str, Sequence[str]]] = dict.fromkeys(
+    RegSuffixes, None)
 
 
 class ABAKeys(Enum):

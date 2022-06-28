@@ -508,12 +508,14 @@ class ImageOverlayer:
                 labels.append((x, y, annot.get_text()))
         else:
             for label_id in np.unique(labels_2d):
-                # get measurement properties for the given label
-                props = cv_nd.get_label_props(labels_2d, label_id)
-                if not props: continue
+                # position label acronym at middle of coordinate list
+                # to ensure that text is over a label pixel
+                coord, reg, region_ids = ontology.get_region_middle(
+                    ref_lookup, label_id, labels_2d, incl_children=False)
+                if coord is None: continue
+                y, x = coord
                 
-                # position label acronym at center of label
-                y, x = props[0].centroid[:2]
+                # get name at the given ontology level
                 atlas_label = ontology.get_label_at_level(
                     label_id, ref_lookup, level)
                 name = ontology.get_label_name(

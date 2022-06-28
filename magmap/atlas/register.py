@@ -472,16 +472,10 @@ def register(
     if not moving_labels_suffix:
         moving_labels_suffix = [config.RegNames.IMG_LABELS.value]
     labels_img = sitk_io.load_registered_img(
-        moving_img_path, moving_labels_suffix[0], get_sitk=True)
-    if len(moving_labels_suffix) > 1:
-        for suffix in moving_labels_suffix[1:]:
-            try:
-                moving_imgs[suffix] = sitk_io.load_registered_img(
-                    moving_img_path, suffix, get_sitk=True)
-            except FileNotFoundError:
-                _logger.warn(
-                    "Skipping registration of '%s' as the file could not be"
-                    " found", suffix)
+        moving_img_path, moving_labels_suffix, get_sitk=True)
+    if isinstance(moving_imgs, dict):
+        moving_imgs = labels_img
+        labels_img = tuple(moving_imgs.values())[0]
 
     # get image masks given as registered image suffixes relative to the
     # fixed image path or prefix

@@ -520,6 +520,10 @@ class ImageOverlayer:
                     label_id, ref_lookup, level)
                 name = ontology.get_label_name(
                     atlas_label, aba_key=config.ABAKeys.ACRONYM)
+                if not name:
+                    # make acronym if not in reference
+                    name = ontology.get_label_name(atlas_label)
+                    name = libmag.make_acronym(name)
                 labels.append((x, y, name))
         
         for label in labels:

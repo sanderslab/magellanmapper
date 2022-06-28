@@ -90,7 +90,17 @@ class TestLibmag(unittest.TestCase):
             "       this is a test         "), "this is a test")
         self.assertEqual(
             libmag.str_to_disp("    this_is a_test    "), "this is a test")
-        
+    
+    def test_make_abbreviation(self):
+        name = "The long name"
+        self.assertEqual(libmag.make_acronym(name), "ln")
+        self.assertEqual(libmag.make_acronym(name, "o"), "Tn")
+        self.assertEqual(libmag.make_acronym(name, ignore=["long"]), "Tn")
+        self.assertEqual(libmag.make_acronym(name, caps=True), "LN")
+        self.assertEqual(libmag.make_acronym("Short"), "Sho")
+        self.assertEqual(libmag.make_acronym("Short", num_single=10), "Short")
+        self.assertEqual(libmag.make_acronym(None), None)
+    
     def test_get_int(self):
         self.assertEqual(libmag.get_int("5"), 5)
         self.assertEqual(libmag.get_int("5.6"), 5.6)

@@ -286,13 +286,39 @@ def read_sitk_files(
     return img5d
 
 
+def load_registered_imgs(
+        img_path: str, reg_names: Sequence[str], *args, **kwargs
+) -> Dict[str, Union[Union[np.ndarray, sitk.Image],
+          Tuple[Union[np.ndarray, sitk.Image], str]]]:
+    """Load atlas-based images registered to another image.
+    
+    Args:
+        img_path: Base image path passed to :meth:`load_registered_img`.
+        reg_names: Atlas image suffixes, passed to above function.
+        args: Arguments passed to above function.
+        kwargs: Arguments passed to above function.
+    
+    Returns:
+        A dictionary of :meth:`load_registered_img` output with ``reg_names``
+        values as keys and any unloaded file ignored.
+    
+    """
+    # recursively load sequences of images
+    out = {}
+    for reg in reg_names:
+        try:
+            out[reg] = load_registered_img(img_path, reg, *args, **kwargs)
+        except FileNotFoundError:
+            _logger.warn(
+                "%s registered to %s not found, skipping", reg, img_path)
+    return out
+    
+
 def load_registered_img(
-        img_path: str, reg_name: Union[str, Sequence[str]], get_sitk: bool = False,
+        img_path: str, reg_name: str, get_sitk: bool = False,
         return_path: bool = False
-) -> Union[Union[Union[np.ndarray, sitk.Image],
-                 Tuple[Union[np.ndarray, sitk.Image], str]],
-           Dict[str, Union[Union[np.ndarray, sitk.Image],
-                           Tuple[Union[np.ndarray, sitk.Image], str]]]]:
+) -> Union[Union[np.ndarray, sitk.Image],
+           Tuple[Union[np.ndarray, sitk.Image], str]]:
     """Load atlas-based image that has been registered to another image.
     
     Args:
@@ -310,26 +336,12 @@ def load_registered_img(
     Returns:
         Tuple of ``img``, the registered image as a Numpy array, or SimpleITK
         Image if ``get_sitk`` is True, and ``path``, the loaded path if
-        ``return_path`` is True. If ``reg_name`` is a sequence, these values
-        will be returned in a dictionary with ``reg_name`` values as keys
-        and any unloaded file ignored.
+        ``return_path`` is True.
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
     
     """
-    if libmag.is_seq(reg_name):
-        # recursively load sequences of images
-        out = {}
-        for reg in reg_name:
-            try:
-                out[reg] = load_registered_img(
-                    img_path, reg, get_sitk, return_path)
-            except FileNotFoundError:
-                _logger.warn(
-                    "%s registered to %s not found, skipping", reg, img_path)
-        return out
-    
     reg_img_path = reg_name
     if not os.path.isabs(reg_name):
         # use suffix given as an absolute path directly; otherwise, get

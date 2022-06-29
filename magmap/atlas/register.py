@@ -471,11 +471,14 @@ def register(
     moving_labels_suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
     if not moving_labels_suffix:
         moving_labels_suffix = [config.RegNames.IMG_LABELS.value]
-    labels_img = sitk_io.load_registered_img(
-        moving_img_path, moving_labels_suffix, get_sitk=True)
-    if isinstance(moving_imgs, dict):
-        moving_imgs = labels_img
+    if libmag.is_seq(moving_labels_suffix):
+        moving_imgs = sitk_io.load_registered_imgs(
+            moving_img_path, moving_labels_suffix, get_sitk=True)
         labels_img = tuple(moving_imgs.values())[0]
+    else:
+        labels_img = sitk_io.load_registered_img(
+            moving_img_path, moving_labels_suffix, get_sitk=True)
+        moving_imgs = {moving_labels_suffix: labels_img}
 
     # get image masks given as registered image suffixes relative to the
     # fixed image path or prefix

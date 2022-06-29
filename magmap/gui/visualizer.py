@@ -1856,7 +1856,7 @@ class Visualization(HasTraits):
             self._reg_img_names = OrderedDict()
             for key_orig, key_short in zip(
                     reg_img_names.keys(),
-                    libmag.crop_mid_str(reg_img_names.keys(), 12)):
+                    libmag.crop_mid_str(tuple(reg_img_names.keys()), 12)):
                 # map shortened name to full path for dropdowns
                 self._reg_img_names[key_short] = reg_img_names[key_orig]
                 
@@ -1920,11 +1920,15 @@ class Visualization(HasTraits):
             if config.labels_ref:
                 df = config.labels_ref.get_ref_lookup_as_df()
                 if df is not None:
-                    # truncate names to preserve panel min width and add
-                    # abbreviations so each name is unique
-                    regions = df[config.ABAKeys.NAME.value].str.slice(
-                        stop=40) + " (" + df[config.ABAKeys.ACRONYM.value] + ")"
-                    regions = regions.to_list()
+                    # truncate names to preserve panel min width; make unique
+                    # by adding abbreviations or during cropping
+                    abbr = df[config.ABAKeys.ACRONYM.value]
+                    abbrs = abbr.unique()
+                    is_abbr = len(abbrs) > 0 and abbrs[0]
+                    regions = libmag.crop_mid_str(
+                        df[config.ABAKeys.NAME.value], 40, not is_abbr)
+                    if is_abbr:
+                        regions = [f"{r} ({a})" for a, r in zip(abbr, regions)]
                     
                     # map region names to IDs since navigating to the region
                     # will require the ID

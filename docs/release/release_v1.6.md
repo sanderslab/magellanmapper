@@ -17,11 +17,14 @@
 - Default confirmation labels can be set before detection (#115)
 - Resets the labels reference file path when reloading an image in the GUI (#139)
 - BrainGlobe panel: access atlases hosted by BrainGlobe directly from the GUI (#75)
+- Registered image suffixes with variable endings (eg `annotationEdgeLevel<n>`) now show up in the dropdown boxes (#142)
+- "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
 - Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 
 - Fixed error window when moving the atlas level slider before a 3D image has been rendered (#139)
 - Fixed saving blobs in an ROI using the first displayed ROI or after moving the sliders without redrawing (#139)
+- Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
 
 #### CLI
 
@@ -65,9 +68,13 @@
 
 #### I/O
 
+- Images can be viewed as RGB(A) using the `RGB` button or the `--rgb` CLI argument (#142)
 - Some TIF files can be loaded directly, without importing the file first (#90)
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
+- Better 2D image support
+  - Extended zero-crossing detection to 2D cases (#142)
+  - Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 
@@ -77,7 +84,6 @@
 
 - Generate swarm plots in Seaborn (#137)
 - Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
-- Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
 - New plot label sub-arguments (#135):
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string

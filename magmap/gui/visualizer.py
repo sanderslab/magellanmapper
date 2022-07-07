@@ -12,13 +12,14 @@ Examples:
         
         ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
+import glob
 import pprint
 from collections import OrderedDict
 from enum import auto, Enum 
 import os
 import subprocess
 import sys
-from typing import Dict, Optional, Sequence, TYPE_CHECKING, Tuple, Type
+from typing import Dict, Optional, Sequence, TYPE_CHECKING, Tuple, Type, Union
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -42,8 +43,9 @@ except AttributeError:
 from pyface import confirmation_dialog
 from pyface.api import FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
-from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
-    Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
+from traits.api import Any, Array, Bool, Button, File, Float, Instance, Int, \
+    List, observe, on_trait_change, Property, push_exception_handler, Str, \
+    HasTraits
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
     EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
     StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
@@ -68,7 +70,7 @@ from magmap.settings import config, prefs_prof, profiles
 
 if TYPE_CHECKING:
     from bg_atlasapi import BrainGlobeAtlas
-
+    from magmap.plot import plot_support
 
 # logging instance
 _logger = config.logger.getChild(__name__)
@@ -176,8 +178,9 @@ class Styles2D(Enum):
 class RegionOptions(Enum):
     """Enumerations for region options."""
     BOTH_SIDES = "Both sides"
-    INCL_CHILDREN = "Include children"
+    INCL_CHILDREN = "Children"
     APPEND = "Append"
+    SHOW_ALL = "Show all"
 
 
 class AtlasEditorOptions(Enum):
@@ -279,6 +282,8 @@ class Visualization(HasTraits):
     _filename = File  # file browser
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
+    _rgb = Bool(config.rgb, tooltip="Show image as RGB(A)")
+    _rgb_enabled = Bool
     
     # main registered image available and selected dropdowns
     _main_img_name_avail = Str
@@ -510,9 +515,18 @@ class Visualization(HasTraits):
     _structure_remap_btn = Button(
         "Remap",
         tooltip="Remap atlas labels to this level")
-    _region_name = Str
+    _region_name = Str(
+        tooltip="Navigate to selected region. Start typing to search.")
     _region_names = Instance(TraitsList)
-    _region_id = Str
+    # tooltip for both text box and options since options group has no main
+    # label to display a tooltip
+    _region_id = Str(  
+        tooltip="IDs: IDs of labels to navigate to. Add +/- to including both\n"
+                "sides. Separate multiple IDs by commas.\n"
+                "Both sides: include correspondings labels from opposite sides"
+                "\nChildren: include all children of the label\n"
+                "Append: append label IDs; uncheck to navigate to group\n"
+                "Show all: show abbreviations for all visible labels")
     _region_options = List
     
     _mlab_title = None
@@ -537,9 +551,13 @@ class Visualization(HasTraits):
                 Item("_filename", label="File", style="simple",
                      editor=FileEditor(entries=10, allow_dir=False)),
             ),
-            Item("_channel", label="Channels", style="custom",
-                 editor=CheckListEditor(
-                     name="object._channel_names.selections", cols=8)),
+            HGroup(
+                Item("_channel", label="Channels", style="custom",
+                     enabled_when="not _rgb",
+                     editor=CheckListEditor(
+                         name="object._channel_names.selections", cols=8)),
+                Item("_rgb", label="RGB", enabled_when="_rgb_enabled"),
+            ),
             label="Image path",
         ),
         VGroup(
@@ -1042,6 +1060,7 @@ class Visualization(HasTraits):
         # prevent prematurely destroying threads
         self._import_thread = None
         self._remap_level_thread = None
+        self._annotate_labels_thread = None
         
         # set up image
         self._setup_for_image()
@@ -1120,13 +1139,31 @@ class Visualization(HasTraits):
             self._imgadj_name = self._imgadj_names.selections[0]
         self._setup_imgadj_channels()
 
+    @property
+    def imgadj_chls(self) -> str:
+        """Selected image adjustment channel.
+        
+        Returns:
+            "0" as a string if in RGB mode, or the selected value.
+
+        """
+        if self._rgb:
+            # to get the first (and only) image
+            return "0"
+        else:
+            return self._imgadj_chls
+
     def _setup_imgadj_channels(self):
         """Set up channels in the image adjustment panel for the given image."""
         img3d = self._img3ds.get(self._imgadj_name) if self._img3ds else None
         if self._imgadj_name == "Main":
-            # limit image adjustment channel options to currently selected
-            # channels in ROI panel channel selector for main image
-            chls = self._channel
+            if self._rgb:
+                # treat all channels as one
+                chls = ["RGB"]
+            else:
+                # limit image adjustment channel options to currently selected
+                # channels in ROI panel channel selector for main image
+                chls = self._channel
         elif img3d is not None:
             # use all channels, or 1 if no channel dimension
             chls = [str(n) for n in (
@@ -1178,7 +1215,7 @@ class Visualization(HasTraits):
         viewer and channel.
 
         """
-        if not self._imgadj_chls:
+        if not self.imgadj_chls:
             # resetting image adjustment channel names triggers update as
             # empty array
             return
@@ -1195,7 +1232,7 @@ class Visualization(HasTraits):
         # get the first displayed image from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
         plot_ax_img = ed.get_img_display_settings(
-            imgi, chl=int(self._imgadj_chls))
+            imgi, chl=int(self.imgadj_chls))
         if plot_ax_img is None: return
         
         # populate controls with intensity settings
@@ -1370,7 +1407,7 @@ class Visualization(HasTraits):
                 # update settings for the viewer
                 plot_ax_img = ed.update_imgs_display(
                     self._imgadj_names.selections.index(self._imgadj_name),
-                    chl=int(self._imgadj_chls), **kwargs)
+                    chl=int(self.imgadj_chls), **kwargs)
         return plot_ax_img
 
     @staticmethod
@@ -1548,14 +1585,22 @@ class Visualization(HasTraits):
         self._circles_opened_type = None
         self.segs_feedback = ""
     
-    def _update_structure_level(self, curr_offset, curr_roi_size):
+    def _update_structure_level(
+            self, curr_offset: Sequence[int], curr_roi_size: Sequence[int]):
+        """Handle structure level changes.
+        
+        Args:
+            curr_offset: Current ROI offset in ``x, y, z``.
+            curr_roi_size: Current ROI size in ``x, y, z``.
+
+        """
         self._atlas_label = None
         if self._mlab_title is not None:
             self._mlab_title.remove()
             self._mlab_title = None
         
         # set level in ROI and Atlas Editors
-        level = self._structure_scale
+        level = self.structure_scale
         if self.roi_ed:
             self.roi_ed.set_labels_level(level)
         if self.atlas_eds:
@@ -1811,12 +1856,15 @@ class Visualization(HasTraits):
         self._init_channels()
         self._vis3d = vis_3d.Vis3D(self.scene)
         self._vis3d.fn_update_coords = self.set_offset
-        if config.image5d is not None:
+        if config.img5d and config.img5d.img is not None:
+            image5d = config.img5d.img
+            config.img5d.rgb = self._rgb
+            
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
             # elsewhere; "high_label" RangeEditor setting also does not
             # appear to be working
-            self.z_high, self.y_high, self.x_high = config.image5d.shape[1:4]
+            self.z_high, self.y_high, self.x_high = image5d.shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
                 self.x_offset, self.y_offset, self.z_offset = config.roi_offset
@@ -1824,20 +1872,29 @@ class Visualization(HasTraits):
             self.roi_array = ([[100, 100, 12]] if config.roi_size is None
                               else [config.roi_size])
             
-            # find matching registered images to populate dropdowns
+            # find matching registered images
             self._reg_img_names = OrderedDict()
             for reg_name in config.RegNames:
-                # check for potential registered image files, using the
-                # prefix path if available
-                reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
+                # potential registered image path including any prefix
+                reg_path = sitk_io.reg_out_path(
                     config.prefix if config.prefix else config.filename,
-                    reg_name.value), dryrun=True)[1]
-                if reg_path:
+                    reg_name.value)
+                base_path = reg_path[:-len(reg_name.value)]
+                
+                # match files with modifiers just before ext
+                reg_name_globs = glob.glob(f"{libmag.splitext(reg_path)[0]}*")
+                for reg_name_glob in reg_name_globs:
+                    if libmag.splitext(reg_name_glob)[1] not in sitk_io.EXTS_3D:
+                        # skip exts not in 3D list
+                        continue
                     # add to list of available suffixes, storing the found
                     # extension to load directly and save to same ext
-                    name = libmag.get_filename_without_ext(reg_name.value)
+                    name = reg_name_glob[len(base_path):]
+                    name = libmag.get_filename_without_ext(name)
                     self._reg_img_names[name] = (
-                        f"{name}{libmag.splitext(reg_path)[1]}")
+                        f"{name}{libmag.splitext(reg_name_glob)[1]}")
+            
+            # populate dropdown of labels images and add empty first option
             self._labels_img_names.selections = list(self._reg_img_names.keys())
             self._labels_img_names.selections.insert(0, "")
             
@@ -1902,6 +1959,10 @@ class Visualization(HasTraits):
                     regions_map = {r: i for r, i in zip(regions, ids)}
             self._region_id_map = regions_map
             self._region_names.selections = regions
+            
+            # enable RGB button only if 3-4 channel
+            self._rgb_enabled = (
+                    len(image5d.shape) >= 5 and 3 <= image5d.shape[4] <= 4)
 
         # set up image adjustment controls
         self._init_imgadj()
@@ -2060,6 +2121,20 @@ class Visualization(HasTraits):
         self._setup_imgadj_channels()
         print("Changed channel to {}".format(config.channel))
     
+    @observe("_rgb", post_init=True)
+    def _update_rgb(self, event):
+        """Handle changes to the RGB button."""
+        if config.img5d:
+            # change image RGB setting, which editors reference
+            config.img5d.rgb = self._rgb
+            _logger.debug("Changed RGB to %s", config.img5d.rgb)
+            
+            # update image adjustment channel options
+            self._update_imgadj_limits()
+            
+            # redraw viewer in selected RGB mode
+            self.redraw_selected_viewer()
+
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
         """Reset the stale viewer flags for all viewers.
         
@@ -2662,6 +2737,8 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
+        
+        # create ROI Editor
         filename_base = importer.filename_to_base(
             config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
@@ -2672,8 +2749,10 @@ class Visualization(HasTraits):
             # additional args with defaults
             self._full_border(self.border))
         roi_ed = roi_editor.ROIEditor(
-            config.image5d, config.labels_img, self._img_region,
+            config.img5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
+        self.roi_ed = roi_ed
+        
         roi_ed.plane = self._planes_2d[0].lower()
         if self._DEFAULTS_2D[4] in self._check_list_2d:
             # set MIP for the current plane
@@ -2727,9 +2806,11 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
+        roi_ed.set_labels_level(self.structure_scale)
         roi_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
-        self.roi_ed = roi_ed
+        self._show_all_labels(
+            [self.roi_ed], RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
         
@@ -2750,7 +2831,7 @@ class Visualization(HasTraits):
             # using the same title causes the windows to overlap
             title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
-            config.image5d, config.labels_img, config.channel, 
+            config.img5d, config.labels_img, config.channel, 
             self._curr_offset(center=False), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
@@ -2765,6 +2846,11 @@ class Visualization(HasTraits):
         atlas_ed.show_atlas()
         atlas_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
+        atlas_ed.set_labels_level(self.structure_scale)
+        atlas_ed.show_labels_annots(
+            RegionOptions.SHOW_ALL.value in self._region_options)
+        self._show_all_labels(
+            [atlas_ed], RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ATLAS_ED] = None
     
@@ -3032,6 +3118,33 @@ class Visualization(HasTraits):
         # remove preceding commas
         self._region_id = ids.lstrip(",")
     
+    def _show_all_labels(
+            self, eds: Sequence[Union[
+                "plot_support.ImageSyncMixin",
+                Sequence["plot_support.ImageSyncMixin"]]], show=True):
+        """Show all atlas labels.
+        
+        Args:
+            eds: Sequence of individual or sequences of ROI and Atlas Editors.
+                None values will be ignored.
+            show: True (default) to show the labels.
+
+        """
+        # skip Nones and flatten list
+        eds_all = []
+        for ed in eds:
+            if ed:
+                if libmag.is_seq(ed):
+                    eds_all.extend(ed)
+                else:
+                    eds_all.append(ed)
+        
+        if eds_all:
+            # show in thread
+            self._annotate_labels_thread = atlas_threads.AnnotateLabels(
+                eds_all, show, lambda: None, self._update_prog)
+            self._annotate_labels_thread.start()
+    
     @on_trait_change("_region_options")
     def _region_options_changed(self):
         """Handle changes to the region options check boxes."""
@@ -3044,6 +3157,11 @@ class Visualization(HasTraits):
             region_id = self._region_id
             self._region_id = ""
             self._region_id = region_id
+        
+        if changed[RegionOptions.SHOW_ALL]:
+            # toggle showing all label annotations
+            option = options[RegionOptions.SHOW_ALL]
+            self._show_all_labels((self.roi_ed, self.atlas_eds), option)
         
         # store current options
         self._region_options_prev = options

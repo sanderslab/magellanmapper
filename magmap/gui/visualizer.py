@@ -3857,7 +3857,8 @@ class Visualization(HasTraits):
     def _setup_brain_globe(self):
         """Set up the BrainGlobe controller."""
         panel = bg_controller.BrainGlobeCtrl(
-            self._set_bg_atlases, self._set_bg_feedback, self._bg_open_handler)
+            self._set_bg_atlases, self._set_bg_feedback, self._update_prog,
+            self._bg_open_handler)
         return panel
         
     @on_trait_change("_bg_access_btn")

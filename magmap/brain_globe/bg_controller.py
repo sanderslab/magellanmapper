@@ -13,96 +13,109 @@ if TYPE_CHECKING:
 class SetupAtlasesThread(QtCore.QThread):
     """Thread for setting atlases by fetching the BrainGlobe atlas listing.
 
-    Attributes:
-        brain_globe_mm: BrainGlobe-MagellanMapper model.
-        fn_success: Signal function taking no arguments, to be emitted upon
-            successfull import.
-        fn_progress: Signal function taking a string argument to emit feedback.
-
     """
     
     signal = QtCore.pyqtSignal()
-    progress = QtCore.pyqtSignal(str)
+    progress = QtCore.pyqtSignal(int, str)
     
     def __init__(
-            self, brain_globe_mm: bg_model.BrainGlobeMM,
-            fn_success: Callable[[], None], fn_progress: Callable[[str], None]):
-        """Initialize the setup thread."""
+            self, brain_globe_mm,
+            fn_success: Callable[[], None],
+            fn_progress: Callable[[int, str], None]):
+        """Initialize the setup thread.
+        
+        Params:
+            fn_success: Signal function taking no arguments, to be emitted upon
+                successfull import.
+            fn_progress: Signal function taking a string argument to emit
+                feedback.
+        
+        """
         super().__init__()
-        self.bg_mm: bg_model.BrainGlobeMM = brain_globe_mm
+        #: BrainGlobe-MagellanMapper model.
+        self.bg_mm: "bg_model.BrainGlobeMM" = brain_globe_mm
+        
         self.signal.connect(fn_success)
         self.progress.connect(fn_progress)
     
+    def update_prog(self, pct, msg):
+        """Update progress bar."""
+        self.progress.emit(pct, msg)
+
     def run(self):
         """Fetch the atlas listing."""
+        self.progress.emit(1, "Getting available BrainGlobe atlases")
         atlases = self.bg_mm.get_avail_atlases()
         msg = ("Fetched atlases available from BrainGlobe" if atlases
                else "Unable to access atlas listing from BrainGlobe. "
                     "Showing atlases dowloaded from BrainGlobe.")
-        self.progress.emit(msg)
+        self.progress.emit(100, msg)
         self.signal.emit()
 
 
 class AccessAtlasThread(QtCore.QThread):
     """Thread for setting up a specific access.
 
-    Attributes:
-        fn_success: Signal function taking no arguments, to be emitted upon
-            successfull import.
-        fn_progress: Signal function taking a string argument to emit feedback.
-
     """
     
     signal = QtCore.pyqtSignal(object)
-    progress = QtCore.pyqtSignal(str)
+    progress = QtCore.pyqtSignal(int, str)
     
     def __init__(
-            self, brain_globe_mm: bg_model.BrainGlobeMM, name: str,
-            fn_success: Callable[[], None], fn_progress: Callable[[str], None]):
-        """Initialize the atlas access thread."""
+            self, brain_globe_mm, name,
+            fn_success: Callable[[], None],
+            fn_progress: Callable[[int, str], None]):
+        """Initialize the atlas access thread.
+        
+        Params:
+            fn_success: Signal function taking no arguments, to be emitted upon
+                successfull import.
+            fn_progress: Signal function taking a string argument to emit
+                feedback.
+        
+        """
         super().__init__()
-        self.bg_mm: bg_model.BrainGlobeMM = brain_globe_mm
-        self.name = name
+        self.bg_mm: "bg_model.BrainGlobeMM" = brain_globe_mm
+        self.name: str = name
+        
         self.signal.connect(fn_success)
         self.progress.connect(fn_progress)
     
     def run(self):
         """Access the atlas, including download if necessary."""
         self.progress.emit(
-            f"Accessing atlas '{self.name}', downloading if necessary...")
+            1, f"Accessing atlas '{self.name}', downloading if necessary...")
         atlas = self.bg_mm.get_atlas(self.name)
-        self.progress.emit(f"Atlas '{self.name}' accessed:\n{atlas}")
+        self.progress.emit(100, f"Atlas '{self.name}' accessed:\n{atlas}")
         self.signal.emit(atlas)
 
 
 class BrainGlobeCtrl:
     """BrainGlobe controller.
     
-    Attributes:
-        fn_set_atlases_table: Handler for setting the atlases table.
-        fn_set_feedback: Handler for outputting feedback messages.
-        fn_opened_atlas: Handler for opening an atlas; defaults to None.
-        bg_mm: BrainGlobe model.
-    
     """
     def __init__(
-            self, fn_set_atlases_table: Callable[[Sequence], None],
-            fn_set_feedback: Callable[[str], None],
-            fn_opened_atlas: Optional[Callable[
-                ["BrainGlobeAtlas"], None]] = None):
+            self, fn_set_atlases_table, fn_feedback, fn_progress,
+            fn_opened_atlas=None):
         """Initialize the controller."""
-        # set up attributes
-        self.fn_set_atlases_table = fn_set_atlases_table
-        self.fn_set_feedback = fn_set_feedback
-        self.fn_opened_atlas = fn_opened_atlas
+        #: Handler for setting the atlases table.
+        self.fn_set_atlases_table: Callable[
+            [Sequence], None] = fn_set_atlases_table
+        #: Handler for outputting feedback messages.
+        self.fn_feedback: Callable[[str], None] = fn_feedback
+        #: Handler for atlas download progress updates; defaults to None.
+        self.fn_progress: Callable[[int, str], None] = fn_progress
+        #: Handler for opening an atlas; defaults to None.
+        self.fn_opened_atlas: Optional[Callable[
+            ["BrainGlobeAtlas"], None]] = fn_opened_atlas
         
-        # set up BrainGlobe-MagellanMapper interface
+        #: BrainGlobe-MagellanMapper interface.
         self.bg_mm = bg_model.BrainGlobeMM()
         
         # fetch listing of available atlases; save thread to avoid garbage
         # collection
         self._thread = SetupAtlasesThread(
-            self.bg_mm, self.update_atlas_table, self.fn_set_feedback)
+            self.bg_mm, self.update_atlas_table, self.fn_progress)
         self._thread.start()
     
     def update_atlas_table(self):
@@ -135,6 +148,7 @@ class BrainGlobeCtrl:
         """Handler to open an atlas."""
         # update table for changes to installed status
         self.update_atlas_table()
+        self.fn_feedback(str(atlas))
         if self.fn_opened_atlas:
             # call handler
             self.fn_opened_atlas(atlas)
@@ -147,7 +161,7 @@ class BrainGlobeCtrl:
 
         """
         self._thread = AccessAtlasThread(
-            self.bg_mm, name, self._open_atlas_handler, self.fn_set_feedback)
+            self.bg_mm, name, self._open_atlas_handler, self.fn_progress)
         self._thread.start()
     
     def remove_atlas(self, name: str):
@@ -158,5 +172,5 @@ class BrainGlobeCtrl:
 
         """
         self.bg_mm.remove_local_atlas(name)
-        self.fn_set_feedback(f"Removed atlas '{name}'")
+        self.fn_progress(100, f"Removed atlas '{name}'")
         self.update_atlas_table()

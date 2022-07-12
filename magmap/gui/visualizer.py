@@ -888,7 +888,7 @@ class Visualization(HasTraits):
             Item("_bg_remove_btn", show_label=False),
         ),
         Item("_bg_feedback", style="custom", show_label=False),
-        label="BrainGlobe",
+        label="Atlases",
     )
 
     # tabbed panel of options

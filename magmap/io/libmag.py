@@ -634,6 +634,30 @@ def format_num(val, dec_digits=1, allow_scinot=True):
     return formatted
 
 
+def format_bytes(size: Union[int, float, str]) -> str:
+    """Format bytes to human-readable unit.
+    
+    Args:
+        size: Size in bytes.
+
+    Returns:
+        ``size`` formatted to human-readable unit.
+
+    """
+    units = ("KB", "MB", "GB", "TB")
+    size_list = [f"{int(size):,} B"]  # initialize with size in bytes
+    for i, unit in enumerate(units):
+        # get size in unit
+        size_unit = f"{int(size) / 1024 ** (i + 1):,.1f} {unit}"
+        if size_unit.startswith("0."):
+            # stop if absolute val in this unit is < 1
+            break
+        size_list.append(size_unit)
+    
+    # get largest unit before size is < 1
+    return size_list[-1]
+
+
 def truncate_decimal_digit(val, repeats=3, trim_near=False):
     """Truncate floats that may have gained unintended decimal point digits
     because of floating point representation.

@@ -2,7 +2,7 @@
 
 from requests.exceptions import ConnectionError
 import shutil
-from typing import Dict, Optional
+from typing import Callable, Dict, Optional
 
 from bg_atlasapi import bg_atlas, descriptors, list_atlases
 
@@ -54,7 +54,8 @@ class BrainGlobeMM:
         return self.atlases_local
     
     def get_atlas(
-            self, name: str, download: bool = True
+            self, name: str, download: bool = True,
+            fn_update: Callable[[int, int], None] = None
     ) -> Optional[bg_atlas.BrainGlobeAtlas]:
         """Get a BrainGlobe atlas.
         
@@ -62,6 +63,8 @@ class BrainGlobeMM:
             name: Name of atlas to retrieve.
             download: True to download the atlas if not available locally;
                 False to return None if the atlas is not present.
+            fn_update: Handler for progress updates during atlas download;
+                defaults to None.
 
         Returns:
             The BrainGlobe atlas instance.
@@ -69,7 +72,7 @@ class BrainGlobeMM:
         """
         if not download and name not in self.atlases_local:
             return None
-        atlas = bg_atlas.BrainGlobeAtlas(name)
+        atlas = bg_atlas.BrainGlobeAtlas(name, fn_update=fn_update)
         
         # add an attribute to store the path to the structures file
         atlas.structures_path = atlas.root_dir / descriptors.STRUCTURES_FILENAME

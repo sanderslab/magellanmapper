@@ -5,6 +5,7 @@ from typing import Callable, Optional, Sequence, TYPE_CHECKING
 from PyQt5 import QtCore
 
 from magmap.brain_globe import bg_model
+from magmap.io import libmag
 
 if TYPE_CHECKING:
     from bg_atlasapi import BrainGlobeAtlas
@@ -81,11 +82,19 @@ class AccessAtlasThread(QtCore.QThread):
         self.signal.connect(fn_success)
         self.progress.connect(fn_progress)
     
+    def update_prog(self, done, tot):
+        """Update progress bar."""
+        # show size downloaded of total with percentage in human-readable units
+        pct = (done / tot) * 100
+        msg = f"Downloaded {libmag.format_bytes(done)} of " \
+              f"{libmag.format_bytes(tot)} ({pct:.1f}%)"
+        self.progress.emit(pct, msg)
+
     def run(self):
         """Access the atlas, including download if necessary."""
         self.progress.emit(
             1, f"Accessing atlas '{self.name}', downloading if necessary...")
-        atlas = self.bg_mm.get_atlas(self.name)
+        atlas = self.bg_mm.get_atlas(self.name, fn_update=self.update_prog)
         self.progress.emit(100, f"Atlas '{self.name}' accessed:\n{atlas}")
         self.signal.emit(atlas)
 

@@ -58,6 +58,15 @@ config = {
         "aws": _EXTRAS_AWS,
         "pandas_plus": _EXTRAS_PANDAS,
         "docs": _EXTRAS_DOCS,
+        
+        # dependencies for most common tasks
+        "most": [
+            "matplotlib_scalebar", 
+            "pyamg",  # for Random-Walker segmentation "cg_mg" mode
+            *_EXTRAS_IMPORT,
+        ],
+        
+        # (almost) all optional dependencies
         "all": [
             "matplotlib_scalebar", 
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode

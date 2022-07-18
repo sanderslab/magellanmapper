@@ -6,8 +6,12 @@ import os
 
 import numpy as np
 import pandas as pd
-from sklearn import cluster
-from sklearn import neighbors
+try:
+    from sklearn import cluster
+    from sklearn import neighbors
+except ImportError:
+    cluster = None
+    neighbors = None
 
 from magmap.cv import chunking, detector
 from magmap.settings import config
@@ -18,6 +22,10 @@ from magmap.plot import plot_2d
 from magmap.settings import profiles
 from magmap.io import sitk_io
 from magmap.io import df_io
+
+_SKLEARN_ERR = (
+    "Scikit-learn is not installed. Please install, eg with "
+    "'pip install scikit-learn'")
 
 
 def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):
@@ -56,6 +64,9 @@ def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):
             title=config.plot_labels[config.PlotLabels.TITLE])
         return df
     
+    if not neighbors:
+        raise ImportError(_SKLEARN_ERR)
+
     #blobs = blobs[::int(len(blobs) / 1000)]  # TESTING: small num of blobs
     knn = neighbors.NearestNeighbors(n, n_jobs=-1).fit(blobs)
     print(knn)
@@ -256,6 +267,9 @@ def cluster_blobs(img_path, suffix=None):
     Returns:
 
     """
+    if not cluster:
+        raise ImportError(_SKLEARN_ERR)
+    
     mod_path = img_path
     if suffix is not None:
         mod_path = libmag.insert_before_ext(img_path, suffix)

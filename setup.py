@@ -44,7 +44,6 @@ config = {
         "PyQt5",
         "pyface",
         "traitsui",
-        "scikit-learn",
         "simpleitk==2.0.2rc2.dev785+g8ac4f",  # pre-built SimpleElastix
         "PyYAML",
         "appdirs",
@@ -63,9 +62,10 @@ config = {
             "matplotlib_scalebar", 
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             "seaborn",  # for Seaborn-based plots
+            "scikit-learn",
             *_EXTRAS_PANDAS,
-            *_EXTRAS_IMPORT,  
-            *_EXTRAS_AWS, 
+            *_EXTRAS_IMPORT,
+            *_EXTRAS_AWS,
         ]
     }, 
 }

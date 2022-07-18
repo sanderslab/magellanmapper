@@ -184,7 +184,7 @@ if [[ -n "$reqs" ]]; then
   pip install "${args_update[@]}" -r "$reqs" -e .
 else
   # import based on setup.py
-  pip install "${args_update[@]}" -e .[all] --extra-index-url \
+  pip install "${args_update[@]}" -e .[most] --extra-index-url \
     https://pypi.fury.io/dd8/
 fi
 

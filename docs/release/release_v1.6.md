@@ -121,6 +121,8 @@
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
+- Scikit-learn is an optional rather than a required dependency (#150)
+- The AWS-related dependencies (`boto3`, `awscli`) are also no longer installed in Conda environments (#150)
 
 #### R Dependency Changes
 

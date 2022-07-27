@@ -1,5 +1,5 @@
 # MagellanMapper stats in R
-# Author: David Young, 2018, 2019
+# Author: David Young, 2018, 2021
 
 # library to avoid overlapping text labels
 #install.packages("devtools")
@@ -72,10 +72,6 @@ kStatsFilesIn <- c(
   "vols_by_sample_compare.csv", "vols_by_sample_compare_levels.csv"
 )
 kStatsPathOut <- "vols_stats" # output stats
-
-# region-ID map from MagellanMapper, which should contain all regions including 
-# hierarchical/ontological ones
-kRegionIDsPath <- "../region_ids.csv"
 
 # configurable environment
 config.env <- new.env()
@@ -819,6 +815,9 @@ setupConfig <- function(name=NULL) {
     config.env$ylim <- NULL
     config.env$Regions.Ignore <- NULL # vector or regions to exclude
     config.env$Split.By.Side <- TRUE # FALSE to combine sides
+    # region-ID map from MagellanMapper, which should contain all regions including 
+    # hierarchical/ontological ones
+    config.env$Labels.Path <- "../region_ids.csv"
 
   } else if (endsWith(name, ".R")) {
     # load a profile file
@@ -985,6 +984,9 @@ setupConfig <- function(name=NULL) {
     # reverse the order of conditions in paired stats
     config.env$ReverseConditions <- TRUE
     
+  } else if (name == "jitter.labels") {
+    config.env$JitterLabels <- TRUE
+    
   } else {
     loaded <- FALSE
     message("Could not find ", name, " profile to load")
@@ -994,22 +996,44 @@ setupConfig <- function(name=NULL) {
   }
 }
 
-runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
-                     verbose=NULL, stat.type=NULL, model=NULL) {
-  # Load data and run full stats.
-  #
-  # Args:
-  #   path: Input data path, typically a spreadsheet such as a CSV file;
-  #     defaults to NULL to use ``StatsPathIn`` in the environment profile.
-  #   profiles: Profile names, where multiple profiles can be given
-  #     separated by commas; defaults to NULL.
-  #   measurements: Measurements names, where multiple measurements can be
-  #     given separated by commas; defaults to NULL.
-  #   verbose: True to show verbose debugging information; defaults to NULL.
-  #   stat.type: One of kStatTypes specifying stat processing typest. 
-  #     Defaults to NULL to use kStatTypes[1].
-  #   model: Statistical model to use, which should be one of `kModel`.
-  #     Defaults to NULL to use the model in [config.env].
+#' Rename a data frame column.
+#' 
+#' @param df Data frame.
+#' @param from Name of column from which to change.
+#' @param to Name to which the column will be changed.
+#' @return The modified data frame.
+renameCol <- function(df, from, to) {
+  # ensure that no existing `to` column exists
+  region.i <- match(to, colnames(df))
+  if (is.na(region.i)) {
+    # get the index of the first matching column for the column to change
+    region.i <- match(from, colnames(df))
+    if (!is.na(region.i)) {
+      # rename the column
+      colnames(df)[region.i] <- to
+    }
+  }
+  return(df)
+}
+
+#' Load data and run full stats.
+#'
+#' @param path Input data path, typically a spreadsheet such as a CSV file;
+#'   defaults to NULL to use ``StatsPathIn`` in the environment profile.
+#' @param profiles Profile names, where multiple profiles can be given
+#'   separated by commas; defaults to NULL.
+#' @param measurements Measurements names, where multiple measurements can be
+#'   given separated by commas; defaults to NULL.
+#' @param verbose True to show verbose debugging information; defaults to NULL.
+#' @param stat.type One of kStatTypes specifying stat processing typest. 
+#'   Defaults to NULL to use kStatTypes[1].
+#' @param parsed.cli.args Named list of parsed command-line interface
+#'   arguments; defaults to NULL.
+#' @param model Statistical model to use, which should be one of `kModel`.
+#'   Defaults to NULL to use the model in [config.env].
+runStats <- function(
+    path=NULL, profiles=NULL, measurements=NULL, prefix=NULL, verbose=NULL,
+    stat.type=NULL, model=NULL, parsed.cli.args=NULL) {
 
   if (is.null(stat.type)) {
     message("Running general stats")
@@ -1058,6 +1082,17 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
     cat("Outputting files to:", config.env$Prefix, "\n")
   }
   
+  if (!is.null(parsed.cli.args)) {
+    # apply remaining parsed CLI arguments
+    print(parsed.cli.args)
+    parsed.names <- names(parsed.cli.args)
+    if ("labels" %in% parsed.names) {
+      # set labels reference path
+      config.env$Labels.Path <- parsed.cli.args$labels
+      message("Set region labels reference path to: ", config.env$Labels.Path)
+    }
+  }
+  
   if (config.env$Verbose) {
     cat("Environment settings:\n")
     print(mget(ls(config.env), envir=config.env))
@@ -1075,8 +1110,12 @@ runStats <- function(path=NULL, profiles=NULL, measurements=NULL, prefix=NULL,
       stat <- "genos"
     }
     region.ids <- NULL
-    if (file.exists(kRegionIDsPath)) {
-      region.ids <- read.csv(kRegionIDsPath)
+    if (file.exists(config.env$Labels.Path)) {
+      # load the region labels reference file, renaming ABA-style column names
+      # to the convention used in MagellanMapper
+      region.ids <- read.csv(config.env$Labels.Path)
+      region.ids <- renameCol(region.ids, "id", "Region")
+      region.ids <- renameCol(region.ids, "name", "RegionName")
     }
     
     # reset graphics to ensure consistent layout

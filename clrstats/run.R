@@ -47,6 +47,9 @@ tryCatchLog::tryCatchLog({
     parser <- optparse::add_option(
       parser, "--prefix", type="character",
       help="Path prefix")
+    parser <- optparse::add_option(
+      parser, "--labels", type="character",
+      help="Path to labels reference lookup file")
     args.parsed <- optparse::parse_args(parser)
   }
   cat("Parsed arguments:", paste(args.parsed), "\n")
@@ -54,7 +57,8 @@ tryCatchLog::tryCatchLog({
   # run main statistics
   print(args.parsed$meas)
   runStats(args.parsed$file, args.parsed$profiles, args.parsed$meas,
-           args.parsed$prefix, args.parsed$verbose, model=args.parsed$model)
+           args.parsed$prefix, args.parsed$verbose, model=args.parsed$model,
+           parsed.cli.args=args.parsed)
 }, finally={
   # return to original directory
   setwd(dir.start)

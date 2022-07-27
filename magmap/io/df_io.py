@@ -572,7 +572,7 @@ def print_data_frame(
 
 
 def dict_to_data_frame(
-        to_import: Union[Dict, List[List]], path: str = None,
+        to_import: Union[Dict, List[Sequence]], path: str = None,
         sort_cols: Union[str, List[str]] = None,
         show: Optional[Union[bool, str]] = None,
         records_cols: Optional[Union[list, tuple]] = None) -> pd.DataFrame:
@@ -584,10 +584,9 @@ def dict_to_data_frame(
     :meth:`data_frames_to_csv`.
     
     Args:
-        to_import: Dictionary to import. May
-            also be list of lists to import as records if ``records_cols``
-            is given. If column name are enums, they will be converted to
-            their values.
+        to_import: Dictionary to import. May also be list of sequences to
+            import as records if ``records_cols`` is given. If column name
+            are enums, they will be converted to their values.
         path: Output path to export data frame to CSV file; defaults to
             None for no export.
         sort_cols: Column as a string or list of

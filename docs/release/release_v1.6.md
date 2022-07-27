@@ -18,6 +18,7 @@
 - Resets the labels reference file path when reloading an image in the GUI (#139)
 - BrainGlobe panel: access atlases hosted by BrainGlobe directly from the GUI (#75)
 - Registered image suffixes with variable endings (eg `annotationEdgeLevel<n>`) now show up in the dropdown boxes (#142)
+- Registered image and region names are truncated in the middle to prevent expanding the sidebar for long names (#147)
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
@@ -30,12 +31,16 @@
 
 - The `--proc export_tif` task exports an NPY file to TIF format
 - the `--transform interpolation=<n>` configures the type of interpolation when resizing images during stack export (#127)
+- Any axis can be flipped through `--transform flip=<axis>`, where `axis = 0` for the z-axis, 1 for the y-axis, and 2 for the x-axis (#147)
 - Density/heat maps can be specified through `--reg_suffixes density=<suffix>` (#129)
 - Fixed to only remove the final extension from image paths, and paths given by the `--prefix <path>` CLI argument do not undergo any stripping (#115)
 
 #### Atlas refinement
 
 #### Atlas registration
+
+- Image registration now supports multiple labels images given as `--reg_suffixes annotation=<suffix1>,<suffix2>,...`, which will apply the same transformation to each of these images (#147)
+- Landmark distance measurements save the raw distances and no longer require spacing (#147)
 
 #### Cell detection
 
@@ -99,7 +104,9 @@
 - Added the `diff.means` stats model to simply give the difference of means between conditions (#135) 
 - The `revpairedstats` profile is now `revconds` since it applies to reversing conditions in general, not just for paired stats (#132)
 - Stats errors are caught rather than stopping the pipeline (#132)
+- The labels reference path has been moved to an environment variable, which can be configured through `--labels <path>` (#147)
 - Fixed t-test, which also provides Cohen's d as a standardized effect size through the `effectsize` package (#135)
+- Fixed jitter plot box plots to avoid covering labels (#147)
 
 #### Code base and docs
 
@@ -111,11 +118,13 @@
 #### Python Dependency Changes
 
 - Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
+- The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75)
 - The `dataclasses` backport is installed for Python < 3.7
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
-- The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75)
+- Scikit-learn is an optional rather than a required dependency (#150)
+- The AWS-related dependencies (`boto3`, `awscli`) are also no longer installed in Conda environments (#150)
 
 #### R Dependency Changes
 

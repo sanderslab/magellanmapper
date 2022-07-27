@@ -485,7 +485,8 @@ class ImageOverlayer:
     def annotate_labels(
             self, labels_2d: np.ndarray, ref_lookup: Dict[int, Any],
             level: Optional[int] = None,
-            labels_annots: Optional[List["axes.Axes.Text"]] = None):
+            labels_annots: Optional[List["axes.Axes.Text"]] = None,
+            over_label: bool = True):
         """Annotate labels with acronyms.
         
         Args:
@@ -495,6 +496,10 @@ class ImageOverlayer:
             labels_annots: Text artists from which new artists will be
                 re-created with the same name and positions. Takes precedence
                 over ``labels_2d`` and defaults to None.
+            over_label: True (default) to ensure that the annotation is over
+                a label pixel. Otherwise, places the annotation at the label's
+                centroid, whether or not it is a label pixel, which may be
+                useful for label edges.
 
         """
         if self.labels_annots:
@@ -508,18 +513,28 @@ class ImageOverlayer:
                 labels.append((x, y, annot.get_text()))
         else:
             for label_id in np.unique(labels_2d):
-                # position label acronym at middle of coordinate list
-                # to ensure that text is over a label pixel
-                coord, reg, region_ids = ontology.get_region_middle(
-                    ref_lookup, label_id, labels_2d, incl_children=False)
-                if coord is None: continue
-                y, x = coord
+                if over_label:
+                    # position label acronym at middle of coordinate list
+                    # to ensure that text is over a label pixel
+                    coord, reg, region_ids = ontology.get_region_middle(
+                        ref_lookup, label_id, labels_2d, incl_children=False)
+                    if coord is None: continue
+                    y, x = coord
+                else:
+                    # get measurement properties' centroid for given label
+                    props = cv_nd.get_label_props(labels_2d, label_id)
+                    if not props: continue
+                    y, x = props[0].centroid[:2]
                 
                 # get name at the given ontology level
                 atlas_label = ontology.get_label_at_level(
                     label_id, ref_lookup, level)
                 name = ontology.get_label_name(
                     atlas_label, aba_key=config.ABAKeys.ACRONYM)
+                if not name:
+                    # make acronym if not in reference
+                    name = ontology.get_label_name(atlas_label)
+                    name = libmag.make_acronym(name)
                 labels.append((x, y, name))
         
         for label in labels:

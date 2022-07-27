@@ -286,6 +286,34 @@ def read_sitk_files(
     return img5d
 
 
+def load_registered_imgs(
+        img_path: str, reg_names: Sequence[str], *args, **kwargs
+) -> Dict[str, Union[Union[np.ndarray, sitk.Image],
+          Tuple[Union[np.ndarray, sitk.Image], str]]]:
+    """Load atlas-based images registered to another image.
+    
+    Args:
+        img_path: Base image path passed to :meth:`load_registered_img`.
+        reg_names: Atlas image suffixes, passed to above function.
+        args: Arguments passed to above function.
+        kwargs: Arguments passed to above function.
+    
+    Returns:
+        A dictionary of :meth:`load_registered_img` output with ``reg_names``
+        values as keys and any unloaded file ignored.
+    
+    """
+    # recursively load sequences of images
+    out = {}
+    for reg in reg_names:
+        try:
+            out[reg] = load_registered_img(img_path, reg, *args, **kwargs)
+        except FileNotFoundError:
+            _logger.warn(
+                "%s registered to %s not found, skipping", reg, img_path)
+    return out
+    
+
 def load_registered_img(
         img_path: str, reg_name: str, get_sitk: bool = False,
         return_path: bool = False
@@ -306,12 +334,13 @@ def load_registered_img(
             was loaded; defaults to False.
     
     Returns:
-        The atlas-based image as a Numpy array, or a :class:`sitk.Image`
-        object if ``get_sitk`` is True. Also returns the loaded path if
+        Tuple of ``img``, the registered image as a Numpy array, or SimpleITK
+        Image if ``get_sitk`` is True, and ``path``, the loaded path if
         ``return_path`` is True.
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
+    
     """
     reg_img_path = reg_name
     if not os.path.isabs(reg_name):

@@ -8,7 +8,7 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Callable, Optional, Sequence, Union
+from typing import Callable, List, Optional, Sequence, Union
 import warnings
 
 if sys.version_info >= (3, 8):
@@ -527,6 +527,91 @@ def str_to_disp(s):
         New, converted string.
     """
     return s.replace("_", " ").strip()
+
+
+def crop_mid_str(
+        vals: Sequence[str], max_chars: int = 10, unique: bool = True
+) -> List[str]:
+    """Crop out the middle portion of strings while keeping them unique.
+    
+    The middle section is replaced with "...".
+    
+    Args:
+        vals: Sequence of strings to crop.
+        max_chars: Maximum characters to retain. Half the characters will be
+            from the start and the remaining characters from the end of the
+            string. Defaults to 10. The final output size of each string
+            is larger than this size by the number of intervening periods.
+        unique: True to ensure that cropped strings are unique. A extra "."
+            is added iteratively so the string is unique in the output list.
+            Uncropped strings are not checked for uniqueness.
+
+    Returns:
+        A list of cropped strings.
+
+    """
+    cropped = []
+    crop_in = max_chars // 2
+    crop_out = max_chars - crop_in
+    for val in vals:
+        if len(val) > max_chars:
+            # crop out middle section
+            val_crs = (val[:crop_in], val[-crop_out:])
+            sep = "..."
+            while True:
+                val_cr = sep.join(val_crs)
+                if not unique or val_cr not in cropped:
+                    break
+                # add extra periods until the cropped string is unique
+                sep += "."
+        else:
+            # add as-is if within size, without checking for uniqueness
+            val_cr = val
+        cropped.append(val_cr)
+    return cropped
+
+
+def make_acronym(
+        val: Optional[str], delim: str = " ", ignore: Sequence[str] = None,
+        caps: bool = False, num_single: int = 3) -> str:
+    """Make an acronymn from a string.
+    
+    Args:
+        val: String to abbreviate.
+        delim: Delimiter to split ``val``.
+        ignore: Sequence of split strings to ignore. Defaults to None, in
+            which case "of" and "the" will be ignored, case-insensitive.
+        caps: True to capitalize the abbreviation; defaults to False.
+        num_single: Number of characters to keep if ``val`` splits into only
+            a single word.
+
+    Returns:
+        Abbreviation of ``val``. Return ``val`` unchanged if it is empty.
+
+    """
+    if not val:
+        # return as-is if empty
+        return val
+    
+    if ignore is None:
+        # default splits to ignore
+        ignore = ("of", "the")
+    
+    # split string and remove empty splits or those in ignore, case-insensitive
+    split = [s for s in val.split(delim) if s and s.lower() not in ignore]
+    
+    if len(split) == 1:
+        # get custom number of characters if single word
+        joined = split[0][:num_single]
+    else:
+        # get first character of each word
+        joined = "".join([s[0] for s in split])
+    
+    if caps:
+        # capitalize whole abbreviation
+        joined = joined.upper()
+    
+    return joined
 
 
 def get_int(val):

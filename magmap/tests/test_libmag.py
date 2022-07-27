@@ -100,6 +100,16 @@ class TestLibmag(unittest.TestCase):
         self.assertEqual(libmag.format_bytes(1099511627776), "1.0 TB")
         self.assertEqual(libmag.format_bytes(1125899906842624), "1,024.0 TB")
     
+    def test_make_abbreviation(self):
+        name = "The long name"
+        self.assertEqual(libmag.make_acronym(name), "ln")
+        self.assertEqual(libmag.make_acronym(name, "o"), "Tn")
+        self.assertEqual(libmag.make_acronym(name, ignore=["long"]), "Tn")
+        self.assertEqual(libmag.make_acronym(name, caps=True), "LN")
+        self.assertEqual(libmag.make_acronym("Short"), "Sho")
+        self.assertEqual(libmag.make_acronym("Short", num_single=10), "Short")
+        self.assertEqual(libmag.make_acronym(None), None)
+    
     def test_get_int(self):
         self.assertEqual(libmag.get_int("5"), 5)
         self.assertEqual(libmag.get_int("5.6"), 5.6)

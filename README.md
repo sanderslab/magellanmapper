@@ -4,7 +4,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 ![ROI Editor and Atlas Editor screenshots](https://user-images.githubusercontent.com/1258953/83934132-f699aa00-a7e0-11ea-932c-0e58366d5061.png)
 
-<img align="right" width="200" src="https://currentprotocols.onlinelibrary.wiley.com/cms/asset/14209f75-4368-40c9-b83b-1bb866991a8b/cpns76-gra-0001-m.jpg" title="Current Protocols cover image">
+<a href="https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7781073/"><img align="right" width="200" src="https://user-images.githubusercontent.com/1258953/179440433-0326c4d5-9a9b-4bae-92c7-d09416375bc5.png" title="Current Protocols cover image"></a>
 
 Related publications and datasets:
 - For more information on the methods used for 3D atlas construction, please see: https://elifesciences.org/articles/61408

@@ -1280,24 +1280,27 @@ def map_meas_to_labels(
     return labels_diff
 
 
-def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None,
-                    name=None):
+def labels_distance(
+        labels_img1: np.ndarray, labels_img2: np.ndarray,
+        spacing: Optional[Sequence[float]] = None,
+        out_path: Optional[str] = None,
+        name: Optional[str] = None) -> pd.DataFrame:
     """Measure distances between corresponding labels in two images.
     
     Assumes that a 0 is background and will be skipped.
     
     Args:
-        labels_img1 (:class:`numpy.nhdarray`): Labels image 1.
-        labels_img2 (:class:`numpy.nhdarray`): Labels image 2. Does not
+        labels_img1: Labels image 1.
+        labels_img2: Labels image 2. Does not
             have to be of the same shape as ``labels_img``, but assumed
             to have the same origin/offset and ``spacing`` as distances
             are based on centroid coordinates of the corresponding labels.
-        spacing (list[float]): Spacing/scaling in ``z,y,x``.
-        out_path (str): CSV output path; defaults to None to not save.
-        name (str): Sample name; defaults to None.
+        spacing: Spacing/scaling in ``z,y,x``; defaults to None.
+        out_path: CSV output path; defaults to None to not save.
+        name: Sample name; defaults to None.
 
     Returns:
-        :class:`pandas.DataFrame`: Data frame of output metrics.
+        Data frame of output metrics.
 
     """
     dists = []
@@ -1311,23 +1314,31 @@ def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None,
         if label_id == 0: continue
         if label_id in label_ids1 and label_id in label_ids2:
             # compute distance between centroids of corresponding labels
-            # in both images
+            # in both images, scaled by spacing if provided
             centroids = [
-                np.multiply(cv_nd.get_label_props(
-                    img, label_id)[0].centroid, spacing) for img in imgs]
+                cv_nd.get_label_props(m, label_id)[0].centroid for m in imgs]
+            centroids_scaled = centroids
+            if spacing is not None:
+                centroids = [np.multiply(c, spacing) for c in centroids]
             dist = cdist(
                 np.array([centroids[0]]), np.array([centroids[1]]))[0][0]
         else:
             # label missing from at least one image
             centroids = [np.nan] * 2
+            centroids_scaled = centroids
             dist = np.nan
-        dists.append((name, label_id, *centroids[:2], dist))
+        dists.append((
+            name, label_id, *centroids_scaled[:2], *centroids[:2], dist))
     
     # export metrics to data frame
     df = df_io.dict_to_data_frame(
         dists, out_path, show=True, records_cols=(
             config.AtlasMetrics.SAMPLE.value,
-            LabelMetrics.Region.name, "Centroid1", "Centroid2",
+            LabelMetrics.Region.name,
+            "Centroid1_px",
+            "Centroid2_px",
+            "Centroid1",
+            "Centroid2",
             LabelMetrics.Dist.name))
     return df
 

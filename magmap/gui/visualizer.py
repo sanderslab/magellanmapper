@@ -1872,8 +1872,8 @@ class Visualization(HasTraits):
             self.roi_array = ([[100, 100, 12]] if config.roi_size is None
                               else [config.roi_size])
             
-            # find matching registered images
-            self._reg_img_names = OrderedDict()
+            # find matching registered images to populate dropdowns
+            reg_img_names = OrderedDict()
             for reg_name in config.RegNames:
                 # potential registered image path including any prefix
                 reg_path = sitk_io.reg_out_path(
@@ -1891,10 +1891,21 @@ class Visualization(HasTraits):
                     # extension to load directly and save to same ext
                     name = reg_name_glob[len(base_path):]
                     name = libmag.get_filename_without_ext(name)
-                    self._reg_img_names[name] = (
+                    reg_img_names[name] = (
                         f"{name}{libmag.splitext(reg_name_glob)[1]}")
             
-            # populate dropdown of labels images and add empty first option
+            # shorten displayed names to avoid expanding panel
+            self._reg_img_names = OrderedDict()
+            for key_orig, key_short in zip(
+                    reg_img_names.keys(),
+                    libmag.crop_mid_str(tuple(reg_img_names.keys()), 12)):
+                # map shortened name to full path for dropdowns
+                self._reg_img_names[key_short] = reg_img_names[key_orig]
+                
+                # map original to shortened name to find shorted name
+                reg_img_names[key_orig] = key_short
+            
+            # copy names to labels image dropdown
             self._labels_img_names.selections = list(self._reg_img_names.keys())
             self._labels_img_names.selections.insert(0, "")
             
@@ -1904,22 +1915,26 @@ class Visualization(HasTraits):
             labels_suffix = self._labels_img_names.selections[0]
             main_img_names_avail = list(self._reg_img_names.keys())
             if config.reg_suffixes:
-                # use registered suffixes without ext, using first suffix
-                # of each type
+                # select atlas images in dropdowns corresponding to reg suffixes
                 suffixes = config.reg_suffixes[config.RegSuffixes.ATLAS]
                 if suffixes:
                     if not libmag.is_seq(suffixes):
                         suffixes = [suffixes]
                     for suffix in suffixes:
-                        suffix_stem = libmag.get_filename_without_ext(suffix)
+                        # get shortened from full name
+                        suffix_stem = reg_img_names.get(
+                            libmag.get_filename_without_ext(suffix))
                         if suffix_stem in main_img_names_avail:
                             # move from available to selected suffixes lists
                             main_suffixes.append(suffix_stem)
                             main_img_names_avail.remove(suffix_stem)
+                
+                # select first annotation image, ignoring rest
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
-                    suffix_stem = libmag.get_filename_without_ext(
-                        libmag.get_if_within(suffix, 0, ""))
+                    suffix_stem = reg_img_names.get(
+                        libmag.get_filename_without_ext(
+                            libmag.get_if_within(suffix, 0, "")))
                     if suffix_stem in self._labels_img_names.selections:
                         labels_suffix = suffix_stem
             
@@ -1947,11 +1962,15 @@ class Visualization(HasTraits):
             if config.labels_ref:
                 df = config.labels_ref.get_ref_lookup_as_df()
                 if df is not None:
-                    # truncate names to preserve panel min width and add
-                    # abbreviations so each name is unique
-                    regions = df[config.ABAKeys.NAME.value].str.slice(
-                        stop=40) + " (" + df[config.ABAKeys.ACRONYM.value] + ")"
-                    regions = regions.to_list()
+                    # truncate names to preserve panel min width; make unique
+                    # by adding abbreviations or during cropping
+                    abbr = df[config.ABAKeys.ACRONYM.value]
+                    abbrs = abbr.unique()
+                    is_abbr = len(abbrs) > 0 and abbrs[0]
+                    regions = libmag.crop_mid_str(
+                        df[config.ABAKeys.NAME.value], 40, not is_abbr)
+                    if is_abbr:
+                        regions = [f"{r} ({a})" for a, r in zip(abbr, regions)]
                     
                     # map region names to IDs since navigating to the region
                     # will require the ID

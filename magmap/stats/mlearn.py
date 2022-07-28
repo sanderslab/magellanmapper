@@ -3,8 +3,6 @@
 """Machine learning and output for MagellanMapper.
 """
 
-# import annotations to allow sub-type hints
-from __future__ import annotations
 from collections import OrderedDict
 from enum import Enum
 from typing import Any, Callable, Dict, Sequence, Tuple
@@ -31,10 +29,10 @@ class GridSearchStats(Enum):
 
 
 def grid_search(
-        hyperparams: OrderedDict[str, Sequence[float]],
+        hyperparams: "OrderedDict[str, Sequence[float]]",
         fnc: Callable[[Any], Tuple[Any, Sequence]],
         *fnc_args
-) -> OrderedDict[str, Tuple[Sequence, Sequence, str, OrderedDict]]:
+) -> "OrderedDict[str, Tuple[Sequence, Sequence, str, OrderedDict]]":
     """Perform a grid search for hyperparameter optimization.
 
     A separate grid search will be performed for each item in ``roc_dict``.
@@ -110,7 +108,7 @@ def grid_search(
 
 
 def parse_grid_stats(
-        stats: OrderedDict[str, Tuple[Sequence, Sequence, str, OrderedDict]]
+        stats: "OrderedDict[str, Tuple[Sequence, Sequence, str, OrderedDict]]"
 ) -> Tuple[Dict[str, Tuple[Sequence, Sequence, Sequence]], pd.DataFrame]:
     """Parse stats from a grid search.
     

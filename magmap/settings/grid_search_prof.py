@@ -2,8 +2,6 @@
 # Author: David Young, 2019, 2020
 """Profile settings for grid search hyperparameter tuning."""
 
-# import annotations to allow sub-type hints
-from __future__ import annotations
 from collections import OrderedDict
 import dataclasses
 from typing import Dict, List, Sequence
@@ -65,7 +63,7 @@ class GridSearchProfile(profiles.SettingsDict):
     
     #: Ordered dictionary of hyperparameters, which should consist of key-pairs
     #: in the format: ``<ROIProfile-key>: <seq-of-param-vals>``.
-    hyperparams: OrderedDict[str, Sequence[float]] = dataclasses.field(
+    hyperparams: "OrderedDict[str, Sequence[float]]" = dataclasses.field(
         default_factory=OrderedDict)
 
     def __init__(self, *args, **kwargs):

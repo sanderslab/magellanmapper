@@ -641,27 +641,6 @@ class Visualization(HasTraits):
                      cols=len(Vis3dOptions), format_func=lambda x: x)),
             label="Viewer Options",
         ),
-        HGroup(
-            Item("_structure_scale", label="Atlas level",
-                 editor=RangeEditor(
-                     low_name="_structure_scale_low",
-                     high_name="_structure_scale_high",
-                     mode="slider")),
-            Item("_structure_remap_btn", show_label=False),
-        ),
-        Item("_region_name", label="Region",
-             editor=EnumEditor(
-                 name="object._region_names.selections",
-                 completion_mode="popup", evaluate=True)),
-        HGroup(
-            Item("_region_id", label="IDs",
-                 editor=TextEditor(
-                     auto_set=False, enter_set=True, evaluate=str)),
-            Item("_region_options", style="custom", show_label=False,
-                 editor=CheckListEditor(
-                     values=[e.value for e in RegionOptions],
-                     cols=len(RegionOptions), format_func=lambda x: x)),
-        ),
         # give initial focus to text editor that does not trigger any events to
         # avoid inadvertent actions by the user when the window first displays;
         # set width to any small val to get smallest size for the whole panel
@@ -879,6 +858,27 @@ class Visualization(HasTraits):
 
     # BrainGlobe panel
     panel_brain_globe = VGroup(
+        Item("_region_name", label="Region",
+             editor=EnumEditor(
+                 name="object._region_names.selections",
+                 completion_mode="popup", evaluate=True)),
+        HGroup(
+            Item("_region_id", label="IDs",
+                 editor=TextEditor(
+                     auto_set=False, enter_set=True, evaluate=str)),
+            Item("_region_options", style="custom", show_label=False,
+                 editor=CheckListEditor(
+                     values=[e.value for e in RegionOptions],
+                     cols=len(RegionOptions), format_func=lambda x: x)),
+        ),
+        HGroup(
+            Item("_structure_scale", label="Atlas level",
+                 editor=RangeEditor(
+                     low_name="_structure_scale_low",
+                     high_name="_structure_scale_high",
+                     mode="slider")),
+            Item("_structure_remap_btn", show_label=False),
+        ),
         VGroup(
             Item("_bg_atlases", editor=_bg_atlases_table, show_label=False),
             label="BrainGlobe Atlases"

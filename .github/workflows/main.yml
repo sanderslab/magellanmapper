@@ -56,6 +56,9 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude stitch
       - name: Test with pytest
         run: |
+          python -u -m magmap.tests.img_equality
+          python -u -m magmap.tests.test_chunking
+          python -u -m magmap.tests.test_libmag
+          python -u -m magmap.tests.test_visualizer
           # TODO: add image artifact
           #python -u -m magmap.tests.unit_testing
-          python -u -m magmap.tests.test_libmag

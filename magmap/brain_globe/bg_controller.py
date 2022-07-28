@@ -84,10 +84,15 @@ class AccessAtlasThread(QtCore.QThread):
     
     def update_prog(self, done, tot):
         """Update progress bar."""
-        # show size downloaded of total with percentage in human-readable units
-        pct = (done / tot) * 100
-        msg = f"Downloaded {libmag.format_bytes(done)} of " \
-              f"{libmag.format_bytes(tot)} ({pct:.1f}%)"
+        if tot == 0:
+            # content-header may return 0
+            pct = 0
+            tot_form = "Unknown"
+        else:
+            # show % downloaded and size in human-readable units
+            pct = (done / tot) * 100
+            tot_form = f"{libmag.format_bytes(tot)} ({pct:.1f}%)"
+        msg = f"Downloaded {libmag.format_bytes(done)} of {tot_form}"
         self.progress.emit(pct, msg)
 
     def run(self):

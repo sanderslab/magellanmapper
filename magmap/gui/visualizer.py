@@ -2235,7 +2235,6 @@ class Visualization(HasTraits):
         """
         self._prog_pct = pct
         self._prog_msg = msg
-        _logger.info(msg)
     
     @on_trait_change("_structure_remap_btn")
     def _remap_structure(self):

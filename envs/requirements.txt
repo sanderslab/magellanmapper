@@ -53,7 +53,8 @@ PyYAML==6.0
 requests==2.27.1
 rich==12.5.1
 s3transfer==0.5.2
-scikit-image==0.17.2
+scikit-image==0.17.2;python_version<"3.9"
+scikit-image==0.19.3;python_version>="3.9"
 scipy==1.5.4
 SimpleITK==2.0.2rc2.dev785+g8ac4f
 six==1.16.0

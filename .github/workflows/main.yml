@@ -29,7 +29,7 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v2
       - name: Install VTK dependencies
-        if: ${{ runner.os == "Linux" }}
+        if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
           sudo apt-get install libsm6 libgl1-mesa-glx

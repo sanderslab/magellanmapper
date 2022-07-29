@@ -49,7 +49,7 @@ jobs:
           python -m pip install --upgrade pip setuptools wheel
           pip install flake8
           export QT_QPA_PLATFORM=offscreen
-          if [ -f envs/requirements.txt ]; then pip install -r envs/requirements.txt; fi
+          pip install -r envs/requirements.txt
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names

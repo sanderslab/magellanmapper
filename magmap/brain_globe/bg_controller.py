@@ -100,7 +100,7 @@ class AccessAtlasThread(QtCore.QThread):
         self.progress.emit(
             1, f"Accessing atlas '{self.name}', downloading if necessary...")
         atlas = self.bg_mm.get_atlas(self.name, fn_update=self.update_prog)
-        self.progress.emit(100, f"Atlas '{self.name}' accessed:\n{atlas}")
+        self.progress.emit(100, f"Atlas '{self.name}' accessed")
         self.signal.emit(atlas)
 
 

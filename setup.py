@@ -53,7 +53,7 @@ config = {
         # part of stdlib in Python >= 3.7
         "dataclasses ; python_version < '3.7'",
         # BrainGlobe dependencies for access to cloud-hosted atlases
-        "bg-atlasapi @ git+https://github.com/brainglobe/bg-atlasapi.git",
+        "bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip",
     ],
     "extras_require": {
         "import": _EXTRAS_IMPORT,

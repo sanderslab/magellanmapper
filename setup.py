@@ -50,6 +50,8 @@ config = {
         # part of stdlib in Python >= 3.8
         "importlib-metadata >= 1.0 ; python_version < '3.8'",
         "tifffile",
+        # required with tifffile >= 2022.7.28
+        "imagecodecs",
         # part of stdlib in Python >= 3.7
         "dataclasses ; python_version < '3.7'",
     ], 

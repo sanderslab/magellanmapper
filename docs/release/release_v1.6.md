@@ -119,6 +119,7 @@
 - Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
 - The `dataclasses` backport is installed for Python < 3.7
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
+- `Imagecodecs` is optional for `tifffile` but required for its uses here as of `tifffile v2022.7.28` and thus added as a dependency (#153)
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
 - Scikit-learn is an optional rather than a required dependency (#150)

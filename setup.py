@@ -25,22 +25,22 @@ _EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 
 # installation configuration
 config = {
-    "name": "magellanmapper", 
+    "name": "magellanmapper",
     "description": "3D atlas analysis and annotation",
     "author": "David Young",
     "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
     "version": "1.6.0",
     "packages": setuptools.find_packages(),
-    "scripts": [], 
+    "scripts": [],
     "python_requires": ">=3.6",
     "install_requires": [
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
         "vtk",
-        "mayavi", 
-        "pandas", 
+        "mayavi",
+        "pandas",
         "PyQt5",
         "pyface",
         "traitsui",
@@ -54,23 +54,25 @@ config = {
         "imagecodecs",
         # part of stdlib in Python >= 3.7
         "dataclasses ; python_version < '3.7'",
-    ], 
+        # BrainGlobe dependencies for access to cloud-hosted atlases
+        "bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip",
+    ],
     "extras_require": {
-        "import": _EXTRAS_IMPORT, 
+        "import": _EXTRAS_IMPORT,
         "aws": _EXTRAS_AWS,
         "pandas_plus": _EXTRAS_PANDAS,
         "docs": _EXTRAS_DOCS,
         
         # dependencies for most common tasks
         "most": [
-            "matplotlib_scalebar", 
+            "matplotlib_scalebar",
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             *_EXTRAS_IMPORT,
         ],
         
         # (almost) all optional dependencies
         "all": [
-            "matplotlib_scalebar", 
+            "matplotlib_scalebar",
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             "seaborn",  # for Seaborn-based plots
             "scikit-learn",
@@ -78,7 +80,7 @@ config = {
             *_EXTRAS_IMPORT,
             *_EXTRAS_AWS,
         ]
-    }, 
+    },
 }
 
 

@@ -158,4 +158,7 @@ See the [table of CLI changes](../cli.md#changes-in-magellanmapper-v15) for a su
 - Python-Bioformats has been upgraded to 4.0.5 and uses a custom package that uses the existing Javabridge rather than Python-Javabridge to avoid a higher NumPy version requirement
 - Workaround for failure to install Mayavi because of a newer VTK, now pinned to 9.0.1
 - Matplotlib >= 3.2 is now required
-- 
+
+#### R Dependency Changes
+
+#### Server dependency Changes

@@ -16,6 +16,7 @@
 - "Help" buttons added to open the online documentation (#109)
 - Default confirmation labels can be set before detection (#115)
 - Resets the labels reference file path when reloading an image in the GUI (#139)
+- BrainGlobe panel: access atlases hosted by BrainGlobe directly from the GUI (#75)
 - Registered image suffixes with variable endings (eg `annotationEdgeLevel<n>`) now show up in the dropdown boxes (#142)
 - Registered image and region names are truncated in the middle to prevent expanding the sidebar for long names (#147)
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
@@ -117,6 +118,7 @@
 #### Python Dependency Changes
 
 - Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
+- The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75)
 - The `dataclasses` backport is installed for Python < 3.7
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 - `Imagecodecs` is optional for `tifffile` but required for its uses here as of `tifffile v2022.7.28` and thus added as a dependency (#153)

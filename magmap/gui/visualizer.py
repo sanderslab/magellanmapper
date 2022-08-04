@@ -60,6 +60,7 @@ import vtk
 
 import run
 from magmap.atlas import ontology
+from magmap.brain_globe import bg_controller
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
     roi_editor, vis_3d, vis_handler
@@ -68,6 +69,7 @@ from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, prefs_prof, profiles
 
 if TYPE_CHECKING:
+    from bg_atlasapi import BrainGlobeAtlas
     from magmap.plot import plot_support
 
 # logging instance
@@ -224,6 +226,16 @@ class ControlsTabs(Enum):
     PROFILES = auto()
     ADJUST = auto()
     IMPORT = auto()
+
+
+class BrainGlobeArrayAdapter(TabularAdapter):
+    """Import files TraitsUI table adapter."""
+    columns = [("Atlas", 0), ("Ver", 1), ("Installed?", 2)]
+    widths = {0: 0.5, 1: 0.1, 2: 0.4}
+
+    def get_width(self, object, trait, column):
+        """Specify column widths."""
+        return self.widths[column]
 
 
 class Visualization(HasTraits):
@@ -441,6 +453,17 @@ class Visualization(HasTraits):
     _import_byte_order = List
     _import_prefix = Str
     _import_feedback = Str
+    
+    # BrainGlobe panel
+    
+    _bg_atlases = List
+    _bg_atlases_sel = List
+    _bg_atlases_table = TabularEditor(
+        adapter=BrainGlobeArrayAdapter(), editable=False, auto_resize_rows=True,
+        stretch_last_section=False, selected="_bg_atlases_sel")
+    _bg_access_btn = Button("Open")
+    _bg_remove_btn = Button("Remove")
+    _bg_feedback = Str
 
     # Image viewers
 
@@ -617,27 +640,6 @@ class Visualization(HasTraits):
                      values=[e.value for e in Vis3dOptions],
                      cols=len(Vis3dOptions), format_func=lambda x: x)),
             label="Viewer Options",
-        ),
-        HGroup(
-            Item("_structure_scale", label="Atlas level",
-                 editor=RangeEditor(
-                     low_name="_structure_scale_low",
-                     high_name="_structure_scale_high",
-                     mode="slider")),
-            Item("_structure_remap_btn", show_label=False),
-        ),
-        Item("_region_name", label="Region",
-             editor=EnumEditor(
-                 name="object._region_names.selections",
-                 completion_mode="popup", evaluate=True)),
-        HGroup(
-            Item("_region_id", label="IDs",
-                 editor=TextEditor(
-                     auto_set=False, enter_set=True, evaluate=str)),
-            Item("_region_options", style="custom", show_label=False,
-                 editor=CheckListEditor(
-                     values=[e.value for e in RegionOptions],
-                     cols=len(RegionOptions), format_func=lambda x: x)),
         ),
         # give initial focus to text editor that does not trigger any events to
         # avoid inadvertent actions by the user when the window first displays;
@@ -854,6 +856,41 @@ class Visualization(HasTraits):
         label="Import",
     )
 
+    # BrainGlobe panel
+    panel_brain_globe = VGroup(
+        Item("_region_name", label="Region",
+             editor=EnumEditor(
+                 name="object._region_names.selections",
+                 completion_mode="popup", evaluate=True)),
+        HGroup(
+            Item("_region_id", label="IDs",
+                 editor=TextEditor(
+                     auto_set=False, enter_set=True, evaluate=str)),
+            Item("_region_options", style="custom", show_label=False,
+                 editor=CheckListEditor(
+                     values=[e.value for e in RegionOptions],
+                     cols=len(RegionOptions), format_func=lambda x: x)),
+        ),
+        HGroup(
+            Item("_structure_scale", label="Atlas level",
+                 editor=RangeEditor(
+                     low_name="_structure_scale_low",
+                     high_name="_structure_scale_high",
+                     mode="slider")),
+            Item("_structure_remap_btn", show_label=False),
+        ),
+        VGroup(
+            Item("_bg_atlases", editor=_bg_atlases_table, show_label=False),
+            label="BrainGlobe Atlases"
+        ),
+        HGroup(
+            Item("_bg_access_btn", show_label=False),
+            Item("_bg_remove_btn", show_label=False),
+        ),
+        Item("_bg_feedback", style="custom", show_label=False),
+        label="Atlases",
+    )
+
     # tabbed panel of options
     panel_options = Tabbed(
         panel_roi_selector,
@@ -861,6 +898,7 @@ class Visualization(HasTraits):
         panel_profiles,
         panel_imgadj,
         panel_import,
+        panel_brain_globe,
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
@@ -957,6 +995,10 @@ class Visualization(HasTraits):
 
         # set up image import
         self._clear_import_files(False)
+        
+        # set up BrainGlobe atlases
+        self._brain_globe_panel: bg_controller.BrainGlobeCtrl \
+            = self._setup_brain_globe()
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -2011,17 +2053,20 @@ class Visualization(HasTraits):
         from the Numpy image filename. Processed files (eg ROIs, blobs) 
         will not be loaded for now.
         """
-        if self._ignore_filename or not self._filename:
-            # avoid triggering file load, eg if only updating widget value;
-            # reset flags
-            self._ignore_filename = False
-            self._reset_filename = True
+        if not self._filename:
+            # skip if image path is empty
             return
-
+        
         if self._reset_filename:
-            # reset registered suffixes
+            # reset registered atlas settings
             config.reg_suffixes = dict.fromkeys(config.RegSuffixes, None)
+            self._labels_ref_path = ""
         self._reset_filename = True
+        
+        if self._ignore_filename:
+            # skip triggered file load, eg if only updating widget
+            self._ignore_filename = False
+            return
 
         # load image if possible without allowing import, deconstructing
         # filename from the selected imported image
@@ -2031,7 +2076,8 @@ class Visualization(HasTraits):
             importer.parse_deconstructed_name(
                 filename, offset, size, reg_suffixes)
             np_io.setup_images(
-                config.filename, offset=offset, size=size, allow_import=False)
+                config.filename, offset=offset, size=size, allow_import=False,
+                labels_ref_path=self._labels_ref_path)
             self._setup_for_image()
             self.redraw_selected_viewer()
             self.update_imgadj_for_img()
@@ -2069,10 +2115,6 @@ class Visualization(HasTraits):
                 config.RegSuffixes.ANNOTATION] = self._reg_img_names.get(
                     self._labels_img_name)
         config.reg_suffixes.update(reg_suffixes)
-        
-        if self._labels_ref_path:
-            # set up labels
-            cli.setup_labels([self._labels_ref_path])
         
         # re-setup image
         self.update_filename(self._filename, reset=False)
@@ -2193,7 +2235,6 @@ class Visualization(HasTraits):
         """
         self._prog_pct = pct
         self._prog_msg = msg
-        _logger.info(msg)
     
     @on_trait_change("_structure_remap_btn")
     def _remap_structure(self):
@@ -3785,6 +3826,70 @@ class Visualization(HasTraits):
         if print_out:
             _logger.info(val)
         self._roi_feedback += "{}\n".format(val)
+    
+    # BRAINGLOBE CONTROLS
+    
+    def _set_bg_atlases(self, val: Sequence):
+        """Set BrainGlobe atlases table data."""
+        self._bg_atlases = val
+    
+    def _set_bg_feedback(self, val: str, append: bool = True):
+        """Set BrainGlobe feedback string.
+        
+        Args:
+            val: Feedback string.
+            append: True to append the string; otherwise, ``val`` replaces
+                all current text. Defaults to True.
+
+        Returns:
+
+        """
+        if append:
+            # append text
+            if self._bg_feedback:
+                # add a newline if text is already present
+                val = f"\n{val}"
+            self._bg_feedback += val
+        else:
+            # replace text
+            self._bg_feedback = val
+    
+    def _bg_open_handler(self, bg_atlas: "BrainGlobeAtlas"):
+        """Handler to open a BrainGlobe atlas.
+        
+        Args:
+            bg_atlas: Atlas to open.
+
+        """
+        # update displayed filename
+        config.filename = str(bg_atlas.root_dir)
+        self.update_filename(config.filename, True)
+        
+        # display the atlas images
+        np_io.setup_images(
+            config.filename, allow_import=False, bg_atlas=bg_atlas)
+        self._setup_for_image()
+        self.redraw_selected_viewer()
+        self.update_imgadj_for_img()
+    
+    def _setup_brain_globe(self):
+        """Set up the BrainGlobe controller."""
+        panel = bg_controller.BrainGlobeCtrl(
+            self._set_bg_atlases, self._set_bg_feedback, self._update_prog,
+            self._bg_open_handler)
+        return panel
+        
+    @on_trait_change("_bg_access_btn")
+    def _open_brain_globe_atlas(self):
+        """Open a BrainGlobe atlas."""
+        if self._bg_atlases_sel:
+            self._brain_globe_panel.open_atlas(self._bg_atlases_sel[0])
+    
+    @on_trait_change("_bg_remove_btn")
+    def _remove_brain_globe_atlas(self):
+        """Remove a local copy of a BrainGlobe atlas."""
+        if self._bg_atlases_sel:
+            self._brain_globe_panel.remove_atlas(self._bg_atlases_sel[0])
 
 
 if __name__ == "__main__":

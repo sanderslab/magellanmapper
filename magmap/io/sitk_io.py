@@ -6,7 +6,7 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import SimpleITK as sitk
@@ -19,6 +19,23 @@ from magmap.io import libmag
 #: Extensions of 3D formats supported through SimpleITK.
 EXTS_3D: Sequence[str] = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 # TODO: include all formats supported by SimpleITK
+
+# Mapping of NumPy dtypes to SimpleITK pixel IDs.
+_DTYPES_NP_SITK: Dict[str, Any] = {
+    np.dtype(np.character).name: sitk.sitkUInt8,
+    np.dtype(np.uint8).name: sitk.sitkUInt8,
+    np.dtype(np.uint16).name: sitk.sitkUInt16,
+    np.dtype(np.uint32).name: sitk.sitkUInt32,
+    np.dtype(np.uint64).name: sitk.sitkUInt64,
+    np.dtype(np.int8).name: sitk.sitkInt8,
+    np.dtype(np.int16).name: sitk.sitkInt16,
+    np.dtype(np.int32).name: sitk.sitkInt32,
+    np.dtype(np.int64).name: sitk.sitkInt64,
+    np.dtype(np.float32).name: sitk.sitkFloat32,
+    np.dtype(np.float64).name: sitk.sitkFloat64,
+    np.dtype(np.complex64).name: sitk.sitkComplexFloat32,
+    np.dtype(np.complex128).name: sitk.sitkComplexFloat64,
+}
 
 _logger = config.logger.getChild(__name__)
 
@@ -591,3 +608,23 @@ def load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
     return sitk_img
+
+
+def numpy_to_sitk(img: np.ndarray):
+    """Wrapper to convert a NumPy array to a SimpleITK Image object.
+    
+    Args:
+        img: NumPy array.
+
+    Returns:
+        ``img`` as a SimpleITK Image object with default settings.
+
+    """
+    try:
+        img_sitk = sitk.GetImageFromArray(img)
+    except TypeError:
+        # WORKAROUND: sitk may not match img's dtype to sitk pixel IDs; match
+        # based on dtype name instead of dtype object identity
+        img_sitk = sitk.Image(
+            img.shape[::-1], _DTYPES_NP_SITK[np.dtype(img.dtype).name])
+    return img_sitk

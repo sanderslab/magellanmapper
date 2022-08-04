@@ -20,6 +20,7 @@ from magmap.io import libmag
 EXTS_3D: Sequence[str] = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
 # TODO: include all formats supported by SimpleITK
 
+# Mapping of NumPy dtypes to SimpleITK pixel IDs.
 _DTYPES_NP_SITK: Dict[str, Any] = {
     np.dtype(np.character).name: sitk.sitkUInt8,
     np.dtype(np.uint8).name: sitk.sitkUInt8,
@@ -622,7 +623,8 @@ def numpy_to_sitk(img: np.ndarray):
     try:
         img_sitk = sitk.GetImageFromArray(img)
     except TypeError:
-        # WORKAROUND: sitk may not match img's dtype to sitk pixel IDs; match based
-        # on dtype name instead of dtype object identity
-        img_sitk = sitk.Image(img.shape[::-1], _DTYPES_NP_SITK[np.dtype(img.dtype).name])
+        # WORKAROUND: sitk may not match img's dtype to sitk pixel IDs; match
+        # based on dtype name instead of dtype object identity
+        img_sitk = sitk.Image(
+            img.shape[::-1], _DTYPES_NP_SITK[np.dtype(img.dtype).name])
     return img_sitk

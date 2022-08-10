@@ -131,7 +131,7 @@ def setup_match_blobs_roi(
     # resize blobs based only on first profile
     resize = config.get_roi_profile(0)["resize_blobs"]
     if resize and blobs is not None:
-        blobs = detector.multiply_blob_rel_coords(blobs, resize)
+        blobs = detector.Blobs.multiply_blob_rel_coords(blobs, resize)
         libmag.log_once(_logger.debug, f"resized blobs by {resize}:\n{blobs}")
     
     return thresh, scaling, inner_padding, resize, blobs
@@ -177,9 +177,9 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         padding = config.plot_labels[config.PlotLabels.PADDING]
         libmag.printv("shifting blobs in ROI by offset {}, border {}"
                       .format(offset, padding))
-        blobs_roi = detector.shift_blob_rel_coords(blobs_roi, offset)
+        blobs_roi = detector.Blobs.shift_blob_rel_coords(blobs_roi, offset)
         if padding:
-            blobs_roi = detector.shift_blob_rel_coords(blobs_roi, padding)
+            blobs_roi = detector.Blobs.shift_blob_rel_coords(blobs_roi, padding)
     blobs_inner, blobs_inner_mask = detector.get_blobs_in_roi(
         blobs_roi, offset_inner, size_inner)
     blobs_base_roi, _ = detector.get_blobs_in_roi(blobs_base, offset, size)
@@ -245,9 +245,9 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
                 for match in matches_sub:
                     _logger.debug(
                         f"Blob1: {match[0][:3]}, chl: "
-                        f"{detector.get_blob_channel(match[0])}, "
+                        f"{detector.Blobs.get_blobs_channel(match[0])}, "
                         f"Blob2: {match[1][:3]}, "
-                        f"chl: {detector.get_blob_channel(match[1])}, "
+                        f"chl: {detector.Blobs.get_blobs_channel(match[1])}, "
                         f"dist: {match[2]}")
             _logger.debug("\n")
     
@@ -291,7 +291,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
         metrics in a data frame.
     
     """
-    blobs_truth = detector.blobs_in_channel(blobs_truth, channel)
+    blobs_truth = detector.Blobs.blobs_in_channel(blobs_truth, channel)
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []

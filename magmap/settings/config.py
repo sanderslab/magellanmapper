@@ -11,7 +11,7 @@ for program access.
 
 from enum import Enum, auto
 import pathlib
-from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING, Union
 
 try:
     from appdirs import AppDirs
@@ -29,9 +29,10 @@ from magmap.settings import logs
 
 if TYPE_CHECKING:
     import SimpleITK as sitk
-    from magmap.atlas import labels_meta
+    from magmap.atlas import labels_meta, ontology
     from magmap.cv import detector
     from magmap.io import np_io
+    from magmap.settings import prefs_prof
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -62,6 +63,15 @@ app_dir = pathlib.Path(__file__).resolve().parent.parent.parent
 user_app_dirs = AppDirs(APP_NAME, False)
 #: PurePath: Absolution path to main application icon.
 ICON_PATH = app_dir / "images" / "magmap.png"
+
+
+# PREFERENCES
+
+#: Preferences file path.
+PREFS_PATH: pathlib.Path = pathlib.Path(
+    user_app_dirs.user_data_dir) / "prefs.yaml"
+#: Preferences dictionary.
+prefs: Optional["prefs_prof.PrefsProfile"] = None
 
 
 # LOGGING
@@ -113,6 +123,9 @@ series_list = None
 #: int: Channel of interest, where None specifies all channels.
 channel = None
 
+#: CLI flag to open images in RGB(A) mode if True; defaults to False.
+rgb: bool = False
+
 # ROI settings in x,y,z
 # TODO: change to z,y,x ordering
 roi_offsets = None  # list of offsets
@@ -142,6 +155,7 @@ class LoadIO(Enum):
     """Enumerations for I/O load packages."""
     NP = auto()
     SITK = auto()
+    BRAIN_GLOBE = auto()
     TIFFFILE = auto()
 
 
@@ -264,19 +278,22 @@ class Cmaps(Enum):
     CMAP_RDBK_NAME = "Red_black"
 
 
-# processing type directly in module
-Plot2DTypes = Enum(
-    "Plot2DTypes", (
-        "BAR_PLOT", "BAR_PLOT_VOLS_STATS", "BAR_PLOT_VOLS_STATS_EFFECTS", 
-        "ROC_CURVE", "SCATTER_PLOT",
-        "LINE_PLOT",  # generic line plot
-    )
-)
+class Plot2DTypes(Enum):
+    """2D plot tasks."""
+    BAR_PLOT = auto()
+    BAR_PLOT_VOLS_STATS = auto()
+    BAR_PLOT_VOLS_STATS_EFFECTS = auto()
+    ROC_CURVE = auto()
+    SCATTER_PLOT = auto()
+    LINE_PLOT = auto()
+    SWARM_PLOT = auto()
+    
+
 plot_2d_type = None
 
 
-# plot label keys for command-line parsing
 class PlotLabels(Enum):
+    """Plot label keys for command-line sub-arguments."""
     TITLE = auto()  # figure title
     X_LABEL = auto()  # axis labels
     Y_LABEL = auto()
@@ -296,7 +313,10 @@ class PlotLabels(Enum):
     GROUP_COL = auto()  # data frame group column
     WT_COL = auto()  # weight column
     ID_COL = auto()  # ID column
-    ERR_COL = auto()  # error column(s)
+    #: Error column(s) with values relative to the data points.
+    ERR_COL = auto()
+    #: Error column(s) with absolute.
+    ERR_COL_ABS = auto()
     ANNOT_COL = auto()  # annotation column for each point
     ZOOM_SHIFT = auto()  # shift plot offset when zooming into ROI
     HLINE = auto()  # horizontal line, usually fn for each group
@@ -307,9 +327,15 @@ class PlotLabels(Enum):
     MARKER = auto()  # Matplotlib marker style
     DROP_DUPS = auto()  # drop duplicates
     DPI = auto()  # dots per inch
-    NAN_COLOR = auto()  # color for NaN values (Matplotlib or RGBA string)
+    #: # Color for NaN values as a Matplotlib or RGBA string.
+    NAN_COLOR = auto()
     TEXT_POS = auto()  # text (annotation) position in x,y
     CONDITION = auto()  # condition
+    #: Column indicating grouping for vertical span.
+    VSPAN_COL = auto()
+    VSPAN_FORMAT = auto()
+    #: Background color as a Matplotlib or RGBA string.
+    BACKGROUND = auto()
 
 
 #: dict[Any]: Plot labels set from command-line.
@@ -326,6 +352,8 @@ class Transforms(Enum):
     FLIP_VERT = auto()
     #: Flip the image horizontally if 1, no flip if 0.
     FLIP_HORIZ = auto()
+    #: Axis to invert (z = 0, y = 1, ...).
+    FLIP = auto()
     #: Rescale the image by the given factor.
     RESCALE = auto()
     #: Interpolate using the given order, which corresponds to
@@ -510,6 +538,7 @@ class RegNames(Enum):
     IMG_ATLAS_MASK = "atlasMask.mhd"
     IMG_LABELS_PRECUR = "annotationPrecur.mhd"
     IMG_LABELS_TRUNC = "annotationTrunc.mhd"
+    IMG_LABELS_TRUNC_PRECUR = "annotationTruncPrecur.mhd"
     IMG_LABELS_EDGE = "annotationEdge.mhd"
     IMG_LABELS_DIST = "annotationDist.mhd"
     IMG_LABELS_MARKERS = "annotationMarkers.mhd"
@@ -527,8 +556,11 @@ class RegNames(Enum):
 #: Loaded labels metadata.
 labels_metadata: Optional["labels_meta.LabelsMeta"] = None
 
-#: Path to the labels reference file.
+#: Path to the labels reference file set by the CLI.
 load_labels: Optional[str] = None
+#: Labels ontology level set by the CLI.
+labels_level: Optional[int] = None
+
 #: Numpy array of a labels image file, typically corresponding to ``img5d``.
 labels_img: Optional = None
 #: Labels image as a SimpleITK Image instance.
@@ -537,11 +569,11 @@ labels_img_sitk: Optional["sitk.Image"] = None
 labels_img_orig: Optional[np.ndarray] = None
 #: Scaling factors from ``labels_img`` to ``img5d``. 
 labels_scaling: Optional[Sequence[float]] = None
-#: Reference dictionary with keys corresponding to the IDs in the labels image.
-labels_ref_lookup: Optional[Dict[str, Any]] = None
-labels_level = None
+#: Labels reference IDs corresponding to the labels image values.
+labels_ref: Optional["ontology.LabelsRef"] = None
 labels_mirror = True
 borders_img = None
+
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
 VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
@@ -550,17 +582,26 @@ GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100  # labels multiplier for sub-segmentations
 REGION_ALL = "all"
 
-# registered image suffix keys for command-line parsing
-RegSuffixes = Enum(
-    "RegSuffixes", [
-        "ATLAS",  # intensity image
-        "ANNOTATION",  # labels image
-        "BORDERS",  # label borders image
-        "FIXED_MASK",  # registration fixed image mask
-        "MOVING_MASK",  # registration moving image mask
-    ]
-)
-reg_suffixes = dict.fromkeys(RegSuffixes, None)
+
+class RegSuffixes(Enum):
+    """Registered image suffix type keys for command-line parsing."""
+    #: Intensity image.
+    ATLAS = auto()
+    #: Labels image.
+    ANNOTATION = auto()
+    #: Borders image.
+    BORDERS = auto()
+    #: Fixed mask for image registration.
+    FIXED_MASK = auto()
+    #: Moving mask for image registration
+    MOVING_MASK = auto()
+    #: Density image.
+    DENSITY = auto()
+
+
+#: Dictionary of registered suffix names for each suffix type.
+reg_suffixes: Dict[RegSuffixes, Union[str, Sequence[str]]] = dict.fromkeys(
+    RegSuffixes, None)
 
 
 class ABAKeys(Enum):

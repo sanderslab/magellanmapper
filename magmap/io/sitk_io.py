@@ -6,17 +6,36 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
-from typing import Dict, List, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import SimpleITK as sitk
 from skimage import transform
 
 from magmap.settings import config
-from magmap.io import importer
+from magmap.io import importer, np_io
 from magmap.io import libmag
 
-EXTS_3D = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
+#: Extensions of 3D formats supported through SimpleITK.
+EXTS_3D: Sequence[str] = (".mhd", ".mha", ".nii.gz", ".nii", ".nhdr", ".nrrd")
+# TODO: include all formats supported by SimpleITK
+
+# Mapping of NumPy dtypes to SimpleITK pixel IDs.
+_DTYPES_NP_SITK: Dict[str, Any] = {
+    np.dtype(np.character).name: sitk.sitkUInt8,
+    np.dtype(np.uint8).name: sitk.sitkUInt8,
+    np.dtype(np.uint16).name: sitk.sitkUInt16,
+    np.dtype(np.uint32).name: sitk.sitkUInt32,
+    np.dtype(np.uint64).name: sitk.sitkUInt64,
+    np.dtype(np.int8).name: sitk.sitkInt8,
+    np.dtype(np.int16).name: sitk.sitkInt16,
+    np.dtype(np.int32).name: sitk.sitkInt32,
+    np.dtype(np.int64).name: sitk.sitkInt64,
+    np.dtype(np.float32).name: sitk.sitkFloat32,
+    np.dtype(np.float64).name: sitk.sitkFloat64,
+    np.dtype(np.complex64).name: sitk.sitkComplexFloat32,
+    np.dtype(np.complex128).name: sitk.sitkComplexFloat64,
+}
 
 _logger = config.logger.getChild(__name__)
 
@@ -118,8 +137,8 @@ def read_sitk(path, dryrun=False):
     
     Args:
         path (str): Path, including prioritized extension to check first.
-        dryrun (bool): True to load the image; defaults to False. Use False
-            to test whether an path to load is found.
+        dryrun (bool): True to find an existing path if available, without
+            loading the image; defaults to False.
     
     Returns:
         :obj:`sitk.Image`, str: Image object located at ``path`` with
@@ -175,7 +194,32 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     return img_sitk, loaded_path
 
 
-def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
+def _make_3d(img_sitk: sitk.Image, spacing_z=1) -> sitk.Image:
+    """Make a 2D image into a 3D image with a single plane.
+    
+    Args:
+        img_sitk: Image in SimpleITK format.
+        spacing_z: Z-axis spacing; defaults to 1.
+
+    Returns:
+        ``img_sitk`` converted to a 3D image if previously 2D.
+
+    """
+    spacing = img_sitk.GetSpacing()
+    if len(spacing) == 2:
+        # prepend an additional axis for 2D images to make them 3D
+        img_np = sitk.GetArrayFromImage(img_sitk)[None]
+        spacing = list(spacing) + [spacing_z]
+        img_sitk = sitk.GetImageFromArray(img_np)
+        img_sitk.SetSpacing(spacing)
+    return img_sitk
+
+
+def read_sitk_files(
+        filename_sitk: str,
+        reg_names: Optional[Union[str, Sequence[str]]] = None,
+        return_sitk: bool = False, make_3d: bool = False
+) -> Union["np_io.Image5d", Tuple["np_io.Image5d", sitk.Image]]:
     """Read image files through SimpleITK.
     
     Supports identifying files based on registered suffixes and combining
@@ -185,18 +229,20 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
     :attr:`magmap.settings.config.resolutions` if not already set.
 
     Args:
-        filename_sitk (str): Path to file in a format that can be read by
+        filename_sitk: Path to file in a format that can be read by
             SimpleITK.
-        reg_names (Union[str, List[str]]): Path or sequence of paths of
+        reg_names: Path or sequence of paths of
             registered names. Can be a registered suffix or a full path.
             Defaults to None to open ``filename_sitk`` as-is through
             :meth:`read_sitk`.
-        return_sitk (bool): True to return the loaded SimpleITK Image object.
+        return_sitk: True to return the loaded SimpleITK Image object.
+        make_3d: True to convert 2D images to 3D; defaults to False.
 
     Returns:
-        :class:`numpy.ndarray`: Image array in Numpy 3D format (or 4D if
-        multi-channel). Associated metadata is loaded into :module:`config`
-        attributes.
+        ``img5d``: Image5d instance with the loaded image in Numpy 5D format
+        (or 4D if not multi-channel, and 3D if originally 2D and ``make_3d``
+        is False). Associated metadata is loaded into
+        :module:`magmap.settings.config` attributes.
         
         If ``return_sitk`` is True, also returns the first loaded image
         in SimpleITK format.
@@ -234,6 +280,13 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
         img_sitk, _ = read_sitk(filename_sitk)
         img_np = sitk.GetArrayFromImage(img_sitk)
     
+    if make_3d:
+        # convert 2D images to 3D
+        # TODO: consider converting img_np to 3D regardless so array in
+        #   Image5d is at least 4D
+        img_sitk = _make_3d(img_sitk)
+        img_np = sitk.GetArrayFromImage(img_sitk)
+    
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
         libmag.warn(
@@ -242,10 +295,41 @@ def read_sitk_files(filename_sitk, reg_names=None, return_sitk=False):
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
         print("set resolutions to {}".format(config.resolutions))
     
+    # add time axis and insert into Image5d with original name
+    img5d = np_io.Image5d(
+        img_np[None], filename_sitk, img_io=config.LoadIO.SITK)
     if return_sitk:
-        return img_np, img_sitk
-    return img_np
+        return img5d, img_sitk
+    return img5d
 
+
+def load_registered_imgs(
+        img_path: str, reg_names: Sequence[str], *args, **kwargs
+) -> Dict[str, Union[Union[np.ndarray, sitk.Image],
+          Tuple[Union[np.ndarray, sitk.Image], str]]]:
+    """Load atlas-based images registered to another image.
+    
+    Args:
+        img_path: Base image path passed to :meth:`load_registered_img`.
+        reg_names: Atlas image suffixes, passed to above function.
+        args: Arguments passed to above function.
+        kwargs: Arguments passed to above function.
+    
+    Returns:
+        A dictionary of :meth:`load_registered_img` output with ``reg_names``
+        values as keys and any unloaded file ignored.
+    
+    """
+    # recursively load sequences of images
+    out = {}
+    for reg in reg_names:
+        try:
+            out[reg] = load_registered_img(img_path, reg, *args, **kwargs)
+        except FileNotFoundError:
+            _logger.warn(
+                "%s registered to %s not found, skipping", reg, img_path)
+    return out
+    
 
 def load_registered_img(
         img_path: str, reg_name: str, get_sitk: bool = False,
@@ -267,12 +351,13 @@ def load_registered_img(
             was loaded; defaults to False.
     
     Returns:
-        The atlas-based image as a Numpy array, or a :class:`sitk.Image`
-        object if ``get_sitk`` is True. Also returns the loaded path if
+        Tuple of ``img``, the registered image as a Numpy array, or SimpleITK
+        Image if ``get_sitk`` is True, and ``path``, the loaded path if
         ``return_path`` is True.
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
+    
     """
     reg_img_path = reg_name
     if not os.path.isabs(reg_name):
@@ -523,3 +608,23 @@ def load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     #sitk_img.SetOrigin([0, 0, -roi.shape[0]])
     return sitk_img
+
+
+def numpy_to_sitk(img: np.ndarray):
+    """Wrapper to convert a NumPy array to a SimpleITK Image object.
+    
+    Args:
+        img: NumPy array.
+
+    Returns:
+        ``img`` as a SimpleITK Image object with default settings.
+
+    """
+    try:
+        img_sitk = sitk.GetImageFromArray(img)
+    except TypeError:
+        # WORKAROUND: sitk may not match img's dtype to sitk pixel IDs; match
+        # based on dtype name instead of dtype object identity
+        img_sitk = sitk.Image(
+            img.shape[::-1], _DTYPES_NP_SITK[np.dtype(img.dtype).name])
+    return img_sitk

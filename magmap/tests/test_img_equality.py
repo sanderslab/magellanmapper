@@ -20,7 +20,7 @@ class TestImgEquality:
             img1 = sitk_io.read_sitk_files(config.filenames[0], suffix)
             img2 = sitk_io.read_sitk_files(config.filenames[1], suffix)
             try:
-                testing.assert_array_equal(img1, img2)
+                testing.assert_array_equal(img1.img, img2.img)
                 _logger.info("%s are equal for %s", config.filenames[:2], key)
             except AssertionError as e:
                 _logger.error(e)

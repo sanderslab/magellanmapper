@@ -28,16 +28,19 @@ from enum import Enum
 import logging
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Type, \
+    Union
 
 import numpy as np
 
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
 from magmap.cv import chunking, colocalizer, stack_detect
-from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, sqlite
+from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, \
+    sqlite
 from magmap.plot import colormaps, plot_2d
-from magmap.settings import atlas_prof, config, grid_search_prof, logs, roi_prof
+from magmap.settings import atlas_prof, config, grid_search_prof, logs, \
+    prefs_prof, roi_prof
 from magmap.stats import mlearn
 
 _logger = config.logger.getChild(__name__)
@@ -370,6 +373,9 @@ def process_cli_args():
         "--vmax",
         help="Maximum intensity levels, which can be comma-delimited "
              "for multichannel images")
+    parser.add_argument(
+        "--rgb", action="store_true",
+        help="Open images as RGB(A) color images")
     parser.add_argument("--seed", help="Random number generator seed")
 
     # export arguments
@@ -390,6 +396,15 @@ def process_cli_args():
     
     # only parse recognized arguments to avoid error for unrecognized ones
     args, args_unknown = parser.parse_known_args()
+
+    # set up application directories
+    user_dir = config.user_app_dirs.user_data_dir
+    if not os.path.isdir(user_dir):
+        # make application data directory
+        if os.path.exists(user_dir):
+            # backup any non-directory file
+            libmag.backup_file(user_dir)
+        os.makedirs(user_dir)
 
     if args.verbose is not None:
         # verbose mode and logging setup
@@ -418,6 +433,10 @@ def process_cli_args():
     # redirect standard out/error to logging
     sys.stdout = logs.LogWriter(config.logger.info)
     sys.stderr = logs.LogWriter(config.logger.error)
+    
+    # load preferences file
+    config.prefs = prefs_prof.PrefsProfile()
+    config.prefs.add_profiles(str(config.PREFS_PATH))
     
     if args.version:
         # print version info and exit
@@ -673,6 +692,11 @@ def process_cli_args():
         config.vmax_overview = list(config.vmaxs)
         print("Set vmaxs to", config.vmaxs)
     
+    if args.rgb:
+        # flag to open images as RGB
+        config.rgb = args.rgb
+        _logger.info("Set RGB to %s", config.rgb)
+    
     if args.reg_suffixes is not None:
         # specify suffixes of registered images to load
         config.reg_suffixes = args_to_dict(
@@ -702,15 +726,6 @@ def process_cli_args():
         print("Set to use themes to {}".format(theme_names))
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
-    
-    # set up application directories
-    user_dir = config.user_app_dirs.user_data_dir
-    if not os.path.isdir(user_dir):
-        # make application data directory
-        if os.path.exists(user_dir):
-            # backup any non-directory file
-            libmag.backup_file(user_dir)
-        os.makedirs(user_dir)
     
     if args.db:
         # set main database path to user arg
@@ -1079,13 +1094,13 @@ def _grid_search(series_list: List[int]):
         # process each series, typically a tile within an microscopy image
         # set or a single whole image
         stats_dict = mlearn.grid_search(
-            config.grid_search_profile, _detect_subimgs,
+            config.grid_search_profile.hyperparams, _detect_subimgs,
             config.filename, series, config.subimg_offsets,
             config.subimg_sizes)
-        parsed_dict, stats_dfs = mlearn.parse_grid_stats(stats_dict)
-        for stats_df in stats_dfs:
-            # plot ROC curve
-            plot_2d.plot_roc(stats_df, config.show)
+        parsed_dict, stats_df = mlearn.parse_grid_stats(stats_dict)
+        
+        # plot ROC curve
+        plot_2d.plot_roc(stats_df, config.show)
 
 
 def process_file(
@@ -1142,7 +1157,7 @@ def process_file(
         export_path = naming.make_subimage_name(
             filename_base, subimg_offset, subimg_size)
         export_rois.export_rois(
-            db, config.image5d, config.channel, export_path,
+            db, config.img5d, config.channel, export_path,
             config.plot_labels[config.PlotLabels.PADDING],
             config.unit_factor, config.truth_db_mode,
             os.path.basename(export_path))
@@ -1228,6 +1243,8 @@ def shutdown():
     importer.stop_jvm()
     if config.db is not None:
         config.db.conn.close()
+    if config.prefs is not None:
+        config.prefs.save_settings(config.PREFS_PATH)
     sys.exit()
 
     

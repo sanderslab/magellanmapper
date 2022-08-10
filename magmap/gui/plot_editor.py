@@ -7,7 +7,7 @@ view of orthogonal planes.
 """
 
 import textwrap
-from typing import List, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional, Sequence, TYPE_CHECKING
 
 from matplotlib import patches
 import numpy as np
@@ -20,7 +20,9 @@ from magmap.atlas import ontology
 from magmap.plot import plot_support
 
 if TYPE_CHECKING:
-    from matplotlib import image
+    from matplotlib import axes, colors, image
+
+_logger = config.logger.getChild(__name__)
 
 
 class PlotAxImg:
@@ -41,14 +43,11 @@ class PlotAxImg:
         alpha: Opacity level; defaults to None.
         alpha_blend: Opacity level of the first level in the area of blending
             between two images; defaults to None.
-        img: The original underlying image data,
-            copied to allow adjusting the array in ``ax_img`` while
-            retaining the original data.
 
     """
     def __init__(
             self, ax_img: "image.AxesImage", vmin: Optional[float] = None,
-            vmax: Optional[float] = None):
+            vmax: Optional[float] = None, img: Optional[np.ndarray] = None):
         
         # set from arguments
         self.ax_img = ax_img
@@ -60,9 +59,14 @@ class PlotAxImg:
         self.contrast: float = 1.0
         self.alpha: Optional[float] = None
         self.alpha_blend: Optional[float] = None
+        #: True if the image is displayed as RGB(A); defaults to False.
+        self.rgb: bool = False
         
-        # original underlying image data
-        self.img: np.ndarray = np.copy(self.ax_img.get_array())
+        #: Original underlying image data, copied to allow adjusting the array
+        #: in ``ax_img`` while retaining the original data unless given by
+        #: directly by ``img``.
+        self.img: np.ndarray = np.copy(
+            self.ax_img.get_array()) if img is None else img
 
 
 class PlotEditor:
@@ -87,8 +91,9 @@ class PlotEditor:
     ALPHA_DEFAULT = 0.5
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
-    def __init__(self, axes, img3d, img3d_labels, cmap_labels, plane, 
-                 aspect, origin, fn_update_coords, fn_refresh_images=None,
+    def __init__(self, overlayer, img3d,
+                 img3d_labels, cmap_labels, plane=None,
+                 fn_update_coords=None, fn_refresh_images=None,
                  scaling=None, plane_slider=None, img3d_borders=None,
                  cmap_borders=None, fn_show_label_3d=None, interp_planes=None,
                  fn_update_intensity=None, max_size=None, fn_status_bar=None,
@@ -96,19 +101,6 @@ class PlotEditor:
         """Initialize the plot editor.
         
         Args:
-            axes (:obj:`matplotlib.Axes`): Containing subplot axes.
-            img3d (:obj:`np.ndarray`): Main 3D image.
-            img3d_labels (:obj:`np.ndarray`): Labels 3D image.
-            cmap_labels (:obj:`matplotlib.colors.ListedColormap`): Labels 
-                colormap, generally a :obj:`colormaps.DiscreteColormap`.
-            plane (str): One of :attr:`config.PLANE` specifying the orthogonal 
-                plane to view.
-            aspect (float): Aspect ratio.
-            origin (str): Planar orientation, usually either "lower" or None.
-            fn_update_coords (function): Callback when updating coordinates,
-                typically mouse click events in x,y; takes two aruments,
-                the updated coordinates and ``plane`` to indicate the
-                coordinates' orientation.
             fn_refresh_images (function): Callback when refreshing the image.
                 Typically takes two arguments, this ``PlotEditor`` object
                 and a boolean where True will update synchronized
@@ -135,15 +127,24 @@ class PlotEditor:
                 intensity images to display; defaults to None.
 
         """
-        self.axes = axes
-        self.img3d = img3d
-        self.img3d_labels = img3d_labels
-        self.cmap_labels = cmap_labels
-        self.plane = plane
-        self.alpha = self.ALPHA_DEFAULT
-        self.aspect = aspect
-        self.origin = origin
-        self.fn_update_coords = fn_update_coords
+        #: Manager for plotting overlaid images.
+        self.overlayer: "plot_support.ImageOverlayer" = overlayer
+        self.axes: "axes.Axes" = self.overlayer.ax
+        #: Main 3D image.
+        self.img3d: np.ndarray = img3d
+        #: Labels 3D image.
+        self.img3d_labels: np.ndarray = img3d_labels
+        #: Labels  colormap, generally of 
+        #: :class:`magmap.plot.colormaps.DiscreteColormap`.
+        self.cmap_labels: "colors.ListedColormap" = cmap_labels
+        #: One of :attr:`magmap.settings.config.PLANE` specifying the
+        #: orthogonal plane to view.
+        self.plane: str = plane if plane else config.PLANE[0]
+        #: Callback when updating coordinates, typically mouse click events
+        #: in x,y; takes two arguments, the updated coordinates and ``plane``
+        #: to indicate the coordinates' orientation.
+        self.fn_update_coords: Callable[
+            [Sequence[int], str], None] = fn_update_coords
         self.fn_refresh_images = fn_refresh_images
         self.scaling = config.labels_scaling if scaling is None else scaling
         self.plane_slider = plane_slider
@@ -157,6 +158,7 @@ class PlotEditor:
         self.fn_status_bar = fn_status_bar
         self.img3d_extras = img3d_extras
         
+        self.alpha: float = self.ALPHA_DEFAULT
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
         self.intensity_shown = None  # shown intensity in AxesImage
@@ -184,6 +186,8 @@ class PlotEditor:
         self.scale_bar = False
         self.max_intens_proj = 0
         self.enable_painting = True
+        #: Ontology level at which to show region names.
+        self.labels_level: Optional[int] = None
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -192,6 +196,7 @@ class PlotEditor:
         self._editing = False
         self._show_labels = True  # show atlas labels on mouseover
         self._show_crosslines = False  # show crosslines to orthogonal views
+        self._colorbar = None  # colorbar for first main image
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -330,7 +335,7 @@ class PlotEditor:
                 self.vline.set_xdata(coord[2])
     
     def set_show_label(self, val):
-        """Set whether to show labels.
+        """Set whether to show labels on hover.
         
         Args:
             val (bool): True to show labels, False otherwise.
@@ -340,6 +345,30 @@ class PlotEditor:
             # reset text to trigger a figure refresh
             self.region_label.set_text("")
         self._show_labels = val
+    
+    def show_labels(self, show: bool = True, **kwargs):
+        """Show or remove labels for all regions.
+        
+        Args:
+            show: True (default) to show all labels; False to remove them.
+            kwargs: Arguments passed to
+                :meth:`magmap.plot_support.ImageOverlayer.annotate_labels`.
+
+        """
+        if show:
+            if (len(self._plot_ax_imgs) > 1 and
+                    self._plot_ax_imgs[1] is not None and config.labels_ref
+                    and config.labels_ref.ref_lookup):
+                # add label annotations
+                self.overlayer.annotate_labels(
+                    self._plot_ax_imgs[1][0].img, config.labels_ref.ref_lookup,
+                    self.labels_level, **kwargs)
+        else:
+            # remove all labels
+            self.overlayer.remove_labels()
+        
+        # refresh view
+        self.axes.figure.canvas.draw_idle()
     
     def _get_img2d(self, i, img, max_intens=0):
         """Get the 2D image from the given 3D image, scaling and downsampling
@@ -383,9 +412,6 @@ class PlotEditor:
 
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
-        # assume colorbar already shown if set and image previously displayed
-        colorbar = (config.roi_profile["colorbar"]
-                    and len(self.axes.images) < 1)
         self.axes.clear()
         self.hline = None
         self.vline = None
@@ -416,9 +442,11 @@ class PlotEditor:
             brightnesses[0] = [p.brightness for p in self._plot_ax_imgs[0]]
             contrasts[0] = [p.contrast for p in self._plot_ax_imgs[0]]
         
+        img2d_lbl = None
         if self.img3d_labels is not None:
             # prep labels with discrete colormap and prior alpha if available
-            imgs2d.append(self._get_img2d(1, self.img3d_labels))
+            img2d_lbl = self._get_img2d(1, self.img3d_labels)
+            imgs2d.append(img2d_lbl)
             self._channels.append([0])
             cmaps.append(self.cmap_labels)
             alphas.append(
@@ -470,12 +498,22 @@ class PlotEditor:
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
         # reasons
-        ax_imgs = plot_support.overlay_images(
-            self.axes, self.aspect, self.origin, imgs2d, self._channels, cmaps,
-            alphas, vmins, vmaxs, check_single=(self._ax_img_labels is None),
+        ax_imgs = self.overlayer.overlay_images(
+            imgs2d, self._channels, cmaps, alphas, vmins, vmaxs,
+            check_single=(self._ax_img_labels is None),
             alpha_blends=alpha_blends)
-        if colorbar:
-            self.axes.figure.colorbar(ax_imgs[0][0], ax=self.axes)
+        
+        # add or update colorbar
+        colobar_prof = config.roi_profile["colorbar"]
+        if self._colorbar:
+            self._colorbar.update_normal(ax_imgs[0][0])
+        elif colobar_prof:
+            # store colorbar since it's tied to the artist, which will be
+            # replaced with the next display and cannot be further accessed
+            self._colorbar = self.axes.figure.colorbar(
+                ax_imgs[0][0], ax=self.axes, **colobar_prof)
+        
+        # display coordinates and label values for each image
         self.axes.format_coord = pixel_display.PixelDisplay(
             imgs2d, ax_imgs, shapes, cmap_labels=self.cmap_labels)
 
@@ -495,7 +533,10 @@ class PlotEditor:
         for i, imgs in enumerate(ax_imgs):
             plot_ax_imgs = []
             for j, img in enumerate(imgs):
-                plot_ax_img = PlotAxImg(img)
+                # use original 2D labels, without cmap index conversion
+                img_orig = img2d_lbl if i == 1 else None
+                plot_ax_img = PlotAxImg(img, img=img_orig)
+                
                 if i == 0:
                     # specified vmin/vmax, in contrast to the AxesImages's
                     # norm, which holds the values used for the displayed image
@@ -506,10 +547,14 @@ class PlotEditor:
                     self.change_brightness_contrast(
                         plot_ax_img, libmag.get_if_within(brightnesses[i], j),
                         libmag.get_if_within(contrasts[i], j))
+                
+                # store rest of settings
                 plot_ax_img.alpha = libmag.get_if_within(alphas[i], j)
                 plot_ax_img.alpha_blend = libmag.get_if_within(
                     alpha_blends[i], j)
+                plot_ax_img.rgb = self.overlayer.rgb
                 plot_ax_imgs.append(plot_ax_img)
+            
             self._plot_ax_imgs.append(plot_ax_imgs)
         
         if self.xlim is not None and self.ylim is not None:
@@ -523,9 +568,22 @@ class PlotEditor:
         self.region_label = self.axes.text(
             0, 0, "", color="k", bbox=dict(facecolor="xkcd:silver", alpha=0.5))
         self.circle = None
+        
+        if self.overlayer.labels_annots:
+            # regenerate label annotations if previously shown
+            self.show_labels()
     
-    def _update_overview(self, z_overview_new):
-        if z_overview_new != self.coord[0]:
+    def _update_overview(self, z_overview_new: int):
+        """Update overview plot to the given plane.
+        
+        Ignores updates if the update function is missing or the plane is
+        unchanged. In these cases, call :meth:`show_overview` directly.
+        
+        Args:
+            z_overview_new: Z-plane index to show.
+
+        """
+        if self.fn_update_coords and z_overview_new != self.coord[0]:
             # move only if step registered and changing position
             coord = list(self.coord)
             coord[0] = z_overview_new
@@ -687,20 +745,22 @@ class PlotEditor:
                 ignore contrast changes.
 
         """
-        # get the array for the currently displayed image, which adjusts
-        # dynamically to array changes
+        # get displayed image array, which adjusts dynamically to array changes
         data = plot_ax_img.ax_img.get_array()
+        
+        # get info range from data type, or assume 0-1 for RGB images
         info = libmag.get_dtype_info(data)
+        info_range = (0, 1) if plot_ax_img.rgb else (info.min, info.max)
         img = plot_ax_img.img
         
         if brightness is not None:
             # shift original image array by brightness
-            img = np.clip(plot_ax_img.img + brightness, info.min, info.max)
+            img = np.clip(img + brightness, *info_range)
             data[:] = img
             plot_ax_img.brightness = brightness
         
         if contrast is not None:
-            # stretch original image array by contrast
+            # stretch adjusted image array by contrast
             img = np.clip(img * contrast, info.min, info.max)
             data[:] = img
             plot_ax_img.contrast = contrast
@@ -897,7 +957,8 @@ class PlotEditor:
                 # click without modifiers to update crosshairs and 
                 # corresponding planes
                 self.coord = coord
-                self.fn_update_coords(self.coord, self.plane)
+                if self.fn_update_coords:
+                    self.fn_update_coords(self.coord, self.plane)
             
             if event.key == "3" and self.fn_show_label_3d is not None:
                 if self.img3d_labels is not None:
@@ -1026,23 +1087,28 @@ class PlotEditor:
                         # mouse left-click drag (separate from the initial
                         # press) moves crosshairs
                         self.coord = coord
-                        self.fn_update_coords(self.coord, self.plane)
+                        if self.fn_update_coords:
+                            self.fn_update_coords(self.coord, self.plane)
                 
-                if self.img3d_labels is not None and config.labels_ref_lookup:
+                if (self.img3d_labels is not None and
+                        config.labels_ref is not None and
+                        config.labels_ref.ref_lookup):
                     # show atlas label description
                     name = ""
                     if self._show_labels:
                         # get name from labels reference corresponding to
                         # labels image value under mouse pointer
                         atlas_label = ontology.get_label(
-                            coord, self.img3d_labels, config.labels_ref_lookup,
-                            self.scaling)
+                            coord, self.img3d_labels,
+                            config.labels_ref.ref_lookup, self.scaling,
+                            self.labels_level)
                         if atlas_label is not None:
                             # extract name and ID from label dict
                             name = "{} ({})".format(
                                 ontology.get_label_name(atlas_label),
                                 ontology.get_label_item(
                                     atlas_label, config.ABAKeys.ABA_ID.value))
+                            _logger.debug("Found label: %s", name)
                             
                             # minimize chance of text overflowing out of axes by
                             # word-wrapping and switching sides at midlines

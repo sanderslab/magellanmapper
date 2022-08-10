@@ -11,9 +11,6 @@ dependencies:
   - pandas
   - openpyxl
   - scikit-image
-  - scikit-learn
-  - boto3
-  - awscli
   - openjdk=8
   - pyqt
   - pyface
@@ -28,3 +25,4 @@ dependencies:
     - simpleitk==2.0.2rc2.dev785+g8ac4f
     - javabridge==1.0.19.post4+gbebed64
     - python-bioformats==4.0.5.post2+g51eb88a
+    - "https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip"

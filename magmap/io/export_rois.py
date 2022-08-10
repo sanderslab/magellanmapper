@@ -8,8 +8,10 @@ machine learning algorithms or other applications.
 
 import os
 import glob
+from typing import List, Optional, TYPE_CHECKING
 
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 import SimpleITK as sitk
 
@@ -22,6 +24,9 @@ from magmap.plot import plot_3d
 from magmap.gui import roi_editor
 from magmap.io import df_io
 from magmap.stats import vols
+
+if TYPE_CHECKING:
+    from magmap.io import np_io
 
 _logger = config.logger.getChild(__name__)
 
@@ -47,8 +52,12 @@ def make_roi_paths(path, roi_id, channel, make_dirs=False):
         path_img_annot, path_img_annot_nifti
 
 
-def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
-                truth_mode=None, exp_name=None):
+def export_rois(
+        db: "sqlite.ClrDB", img5d: "np_io.Image5d", channel: List[int],
+        path: str, padding: Optional[List[int]] = None,
+        unit_factor: Optional[float] = None,
+        truth_mode: Optional["config.TruthDBModes"] = None,
+        exp_name: Optional[str] = None) -> pd.DataFrame:
     """Export all ROIs from database.
     
     If the current processing profile includes isotropic interpolation, the 
@@ -56,21 +65,18 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
     
     Args:
         db: Database from which to export.
-        image5d: The image with the ROIs.
-        channel (List[int]): Channels to export; currently only the first
-            channel is used.
+        img5d: Image5d image with the ROIs.
+        channel: Channels to export; currently only the first channel is used.
         path: Path with filename base from which to save the exported files.
-        padding (List[int]): Padding in x,y,z to exclude from the ROI;
-            defaults to None.
-        unit_factor (float): Linear conversion factor for units (eg 1000.0
+        padding: Padding in x,y,z to exclude from the ROI; defaults to None.
+        unit_factor: Linear conversion factor for units (eg 1000.0
             to convert um to mm).
-        truth_mode (:obj:`config.TruthDBModes`): Truth mode enum; defaults
-            to None.
-        exp_name (str): Name of experiment to export; defaults to None to
+        truth_mode: Truth mode enum; defaults to None.
+        exp_name: Name of experiment to export; defaults to None to
             export all experiments in ``db``.
     
     Returns:
-        :obj:`pd.DataFrame`: ROI metrics in a data frame.
+        ROI metrics in a data frame.
     
     """
     if padding is not None:
@@ -98,7 +104,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
             # get ROI as a small image
             size = sqlite.get_roi_size(roi)
             offset = sqlite.get_roi_offset(roi)
-            img3d = plot_3d.prepare_roi(image5d, offset, size)
+            img3d = plot_3d.prepare_roi(img5d.img, offset, size)
             
             # get blobs and change confirmation flag to avoid confirmation 
             # color in 2D plots
@@ -109,14 +115,14 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 # verified DBs use a truth value of -1 to indicate "detected",
                 # non-truth blobs, including both correct and incorrect 
                 # detections, while the rest of blobs are "truth" blobs
-                truth_vals = detector.get_blob_truth(blobs)
+                truth_vals = detector.Blobs.get_blob_truth(blobs)
                 blobs_detected = blobs[truth_vals == -1]
                 blobs = blobs[truth_vals != -1]
             else:
                 # default to include only confirmed blobs; truth sets 
                 # ironically do not use the truth flag but instead
                 # assume all confirmed blobs are "truth"
-                blobs = blobs[detector.get_blob_confirmed(blobs) == 1]
+                blobs = blobs[detector.Blobs.get_blob_confirmed(blobs) == 1]
             blobs[:, 4] = -1
             
             # adjust ROI size and offset if border set
@@ -134,7 +140,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
                 img3d = cv_nd.make_isotropic(img3d, isotropic)
                 isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
                 blobs_orig = np.copy(blobs)
-                blobs = detector.multiply_blob_rel_coords(
+                blobs = detector.Blobs.multiply_blob_rel_coords(
                     blobs, isotropic_factor)
             
             # export ROI and 2D plots
@@ -155,7 +161,7 @@ def export_rois(db, image5d, channel, path, padding=None, unit_factor=None,
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            roi_ed = roi_editor.ROIEditor(image5d)
+            roi_ed = roi_editor.ROIEditor(img5d.img)
             roi_ed.plot_roi(
                 img3d, blobs, channel, show=False,
                 title=os.path.splitext(path_img)[0])

@@ -4,7 +4,7 @@
 
 from enum import Enum
 import multiprocessing as mp
-from typing import List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import pandas as pd
 import numpy as np
@@ -361,7 +361,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
     # surrounds, but ROI is not available for them
     blobs_roi, blobs_roi_mask = detector.get_blobs_in_roi(
         blobs, (0, 0, 0), roi.shape[:3], reverse=False)
-    blobs_chl = detector.get_blobs_channel(blobs_roi)
+    blobs_chl = detector.Blobs.get_blobs_channel(blobs_roi)
     blobs_range_chls = []
     
     # get labeled masks of blobs for each channel and threshold intensities
@@ -390,7 +390,7 @@ def colocalize_blobs(roi, blobs, thresh=None):
             roi_mask = roi if np.sum(mask_blobs) < 1 else roi[mask_blobs, chl]
             threshs.append(np.percentile(roi_mask, thresh))
 
-    channels = np.unique(detector.get_blobs_channel(blobs_roi)).astype(int)
+    channels = np.unique(detector.Blobs.get_blobs_channel(blobs_roi)).astype(int)
     colocs_roi = np.zeros((blobs_roi.shape[0], roi.shape[3]), dtype=np.uint8)
     for chl in channels:
         # get labeled mask of blobs in the given channel
@@ -403,8 +403,10 @@ def colocalize_blobs(roi, blobs, thresh=None):
                 mask_blob = mask == blobi
                 blob_avg = np.mean(roi[mask_blob, chl_other])
                 if config.verbose:
-                    print(blobi, detector.get_blob_channel(blobs_roi[blobi]),
-                          blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
+                    print(
+                        blobi, detector.Blobs.get_blobs_channel(
+                            blobs_roi[blobi]),
+                        blobs_roi[blobi, :3], blob_avg, threshs[chl_other])
                 if blob_avg >= threshs[chl_other]:
                     # intensities in another channel around blob's position
                     # is above that channel's threshold
@@ -415,26 +417,28 @@ def colocalize_blobs(roi, blobs, thresh=None):
     colocs[blobs_roi_mask] = colocs_roi
     if config.verbose:
         for i, (blob, coloc) in enumerate(zip(blobs_roi, colocs)):
-            print(i, detector.get_blob_channel(blob), blob[:3], coloc)
+            print(i, detector.Blobs.get_blobs_channel(blob), blob[:3], coloc)
     return colocs
 
 
-def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
+def colocalize_blobs_match(
+        blobs: np.ndarray, offset: Sequence[int], size: Sequence[int],
+        tol: Sequence[float], inner_padding: Optional[Sequence[int]] = None
+) -> Optional[Dict[Tuple[int, int], "BlobMatch"]]:
     """Co-localize blobs in separate channels but the same ROI by finding
     optimal blob matches.
 
     Args:
-        blobs (:obj:`np.ndarray`): Blobs from separate channels.
-        offset (List[int]): ROI offset given as x,y,z.
-        size (List[int]): ROI shape given as x,y,z.
-        tol (List[float]): Tolerances for matching given as x,y,z
-        inner_padding (List[int]): ROI padding given as x,y,z; defaults
+        blobs: Blobs from separate channels.
+        offset: ROI offset given as x,y,z.
+        size: ROI shape given as x,y,z.
+        tol: Tolerances for matching given as x,y,z
+        inner_padding: ROI padding given as x,y,z; defaults
             to None to use the padding based on ``tol``.
 
     Returns:
-        dict[tuple[int, int], :class:`BlobMatch`]:
         Dictionary where keys are tuples of the two channels compared and
-        values are blob matches objects.
+        values are blob matches objects, or None if ``blobs`` is None.
 
     """
     if blobs is None:
@@ -444,16 +448,16 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}
-    channels = np.unique(detector.get_blobs_channel(blobs)).astype(int)
+    channels = np.unique(detector.Blobs.get_blobs_channel(blobs)).astype(int)
     for chl in channels:
         # pair channels
-        blobs_chl = detector.blobs_in_channel(blobs, chl)
+        blobs_chl = detector.Blobs.blobs_in_channel(blobs, chl)
         for chl_other in channels:
             # prevent duplicates by skipping other channels below given channel
             if chl >= chl_other: continue
             # find colocalizations between blobs from one channel to blobs
             # in another channel
-            blobs_chl_other = detector.blobs_in_channel(blobs, chl_other)
+            blobs_chl_other = detector.Blobs.blobs_in_channel(blobs, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
                 size_inner, matches = verifier.match_blobs_roi(
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
@@ -461,8 +465,8 @@ def colocalize_blobs_match(blobs, offset, size, tol, inner_padding=None):
             
             # reset truth and confirmation blob flags in matches
             chl_combo = (chl, chl_other)
-            matches.update_blobs(detector.set_blob_truth, -1)
-            matches.update_blobs(detector.set_blob_confirmed, -1)
+            matches.update_blobs(detector.Blobs.set_blob_truth, -1)
+            matches.update_blobs(detector.Blobs.set_blob_confirmed, -1)
             matches_chls[chl_combo] = matches
     return matches_chls
 
@@ -552,13 +556,13 @@ def select_matches(db, channels, offset=None, shape=None, exp_name=None):
             blobs1 = blob_matches.get_blobs(1)
             if blobs1 is None: continue
             chl_matches = BlobMatch(df=blob_matches.df.loc[
-                detector.get_blobs_channel(blobs1) == chl])
+                detector.Blobs.get_blobs_channel(blobs1) == chl])
             
             # also extract only blob1's paired to blob2's in the 2nd channel 
             blobs2 = chl_matches.get_blobs(2)
             if blobs2 is None: continue
             chl_matches.df = chl_matches.df.loc[
-                detector.get_blobs_channel(blobs2) == chl_other]
+                detector.Blobs.get_blobs_channel(blobs2) == chl_other]
             
             # store the matches with chl1-chl2 as key
             matches[(chl, chl_other)] = chl_matches

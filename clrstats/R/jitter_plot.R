@@ -355,11 +355,6 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
       pch <- pchs[match(subgroup, subgroups.unique) + pch.offset]
       points(x.vals, vals.group, pch=pch, col=colors.group, 
              bg=colors.group, cex=pt.cex)
-      if (show.labels) {
-        basicPlotteR::addTextLabels(
-          x.vals, vals.group, label=vals.groups[[i]]$samples,
-          cex.label=0.5, lwd=0.2)
-      }
       
       # plot summary stats, eg means/CIs or boxplots
       x.summary <- x # default to means/CIs under jitter points
@@ -385,6 +380,14 @@ jitterPlot <- function(df.region, col, title, group.col=NULL,
                  angle=90, code=3)
         }
       }
+      
+      if (show.labels) {
+        # annotate points with text labels
+        basicPlotteR::addTextLabels(
+          x.vals, vals.group, label=vals.groups[[i]]$samples,
+          cex.label=0.5, lwd=0.2)
+      }
+      
       group.last <- vals.group
       i <- i + 1
     }

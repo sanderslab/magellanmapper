@@ -7,7 +7,7 @@ import os
 from collections import OrderedDict
 from enum import Enum
 import json
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -185,7 +185,8 @@ class LabelsRef:
             print(e)
         return id_dict
     
-    def create_lookup_pd(self, df: pd.DataFrame) -> Dict[int, Any]:
+    def create_lookup_pd(
+            self, df: Optional[pd.DataFrame] = None) -> Dict[int, Any]:
         """Create a lookup dictionary from a Pandas data frame.
     
         Args:
@@ -193,7 +194,8 @@ class LabelsRef:
                 least columns corresponding to :const:``config.ABAKeys.ABA_ID``
                 or :const:``config.AtlasMetrics.REGION`` and 
                 :const:``config.ABAKeys.ABA_NAME`` or
-                :const:``config.AtlasMetrics.REGION_NAME``.
+                :const:``config.AtlasMetrics.REGION_NAME``. Defaults to None,
+                in which case :attr:`loaded_ref` is used.
     
         Returns:
             Dictionary similar to that generated from 
@@ -260,7 +262,7 @@ class LabelsRef:
                            f"file: {e}")
         return id_dict
 
-    def get_ref_lookup_as_df(self):
+    def get_ref_lookup_as_df(self) -> Optional[pd.DataFrame]:
         """Get the reference lookup dict as a data frame.
         
         Returns:
@@ -268,6 +270,10 @@ class LabelsRef:
             as-is if it is already a data frame.
 
         """
+        if self.ref_lookup is None:
+            # return immediately if no reference dict to convert
+            return None
+        
         if isinstance(self.ref_lookup, pd.DataFrame):
             # return existing data frame
             return self.ref_lookup
@@ -293,7 +299,7 @@ class LabelsRef:
         return df_regions
     
     def create_ref_lookup(
-            self, labels_ref: Union[pd.DataFrame, Dict] = None
+            self, labels_ref: Optional[Union[pd.DataFrame, Dict]] = None
     ) -> Dict[int, Any]:
         """Wrapper to create a reference lookup from different sources.
     
@@ -302,7 +308,8 @@ class LabelsRef:
     
         Args:
             labels_ref: Reference dictionary or data frame, typically loaded
-                from :meth:`load_labels`.
+                from :meth:`load_labels`. Defaults to None, in which case
+                :attr:`loads_ref` is used.
     
         Returns:
             Ordered dictionary for looking up by ID.
@@ -385,18 +392,21 @@ def _get_children(labels_ref_lookup, label_id, children_all=[]):
     return children_all
 
 
-def _mirror_label_ids(label_ids, combine=False):
-    """Mirror label IDs, assuming that a "mirrored" ID is the negative
-    of the given ID.
+def _mirror_label_ids(
+        label_ids: Union[int, Sequence[int]], combine: bool = False
+) -> Union[int, Sequence[int]]:
+    """Mirror label IDs.
+    
+    Assumes that a "mirrored" ID is the negative of the given ID.
     
     Args:
-        label_ids (Union[int, List[int]]): Single ID or sequence of IDs.
-        combine (bool): True to return a list of ``label_ids`` along with
+        label_ids: Single ID or sequence of IDs.
+        combine: True to return a list of ``label_ids`` along with
             their mirrored IDs; defaults to False to return on the mirrored IDs.
 
     Returns:
-        Union[int, List[int]]: A single mirrored ID if ``label_ids`` is
-        one ID and ``combine`` is False, or a list of IDs.
+        A single mirrored ID if ``label_ids`` is one ID and ``combine`` is
+        False, or a list of IDs.
 
     """
     if libmag.is_seq(label_ids):
@@ -511,6 +521,49 @@ def labels_to_parent(labels_ref_lookup, level=None,
     return label_parents
 
 
+def make_labels_level(
+        labels_np: np.ndarray, ref: "LabelsRef", level: int,
+        fn_prog: Optional[Callable[[int, str], None]] = None) -> np.ndarray:
+    """Convert a labels image to the given ontology level.
+    
+    Args:
+        labels_np: Labels image.
+        ref: Atlas labels reference.
+        level: Level at which ``labels_np`` will be remapped.
+        fn_prog: Function to update progress. Takes an integer as a progress
+            percentage and a string as a message. Defaults to None.
+
+    Returns:
+        The remapped ``labels_np``, which will be altered in-place.
+
+    """
+    ids = list(ref.ref_lookup.keys())
+    nids = len(ids)
+    for i, key in enumerate(ids):
+        # get keys from both sides of atlas
+        keys = [key, -1 * key]
+        for region in keys:
+            if region == 0: continue
+            # get ontological label
+            label = ref.ref_lookup[abs(region)]
+            label_level = label[NODE][config.ABAKeys.LEVEL.value]
+            
+            if label_level == level:
+                # get children (including parent first) at given level 
+                # and replace them with parent
+                label_ids = get_children_from_id(
+                    ref.ref_lookup, region)
+                labels_region = np.isin(labels_np, label_ids)
+                if fn_prog is not None:
+                    # update progress
+                    fn_prog(
+                        int(i / nids * 100),
+                        f"Replacing labels within {region}")
+                labels_np[labels_region] = region
+    
+    return labels_np
+
+
 def get_label_item(label, item_key, key=NODE):
     """Convenience function to get the item from the sub-label.
 
@@ -534,30 +587,39 @@ def get_label_item(label, item_key, key=NODE):
     return item
 
 
-def get_label_name(label, side=False):
+def get_label_name(
+        label: Dict[str, Any], side: bool = False,
+        aba_key: Optional["config.ABAKeys"] = None):
     """Get the atlas region name from the label.
     
     Args:
-        label (dict): The label dictionary.
-        side (bool):
+        label: The label dictionary.
+        side: True to add side suffix; defaults to False.
+        aba_key: ABA enum to get from ``label``; defaults to None, in which
+            case the name will be retrieved.
     
     Returns:
         The atlas region name, or None if not found.
     """
+    if not aba_key:
+        # default to get the full label name
+        aba_key = config.ABAKeys.NAME
+    
     name = None
     try:
         if label is not None:
             node = label[NODE]
             if node is not None:
-                name = node[config.ABAKeys.NAME.value]
-                print("name: {}".format(name), label[MIRRORED])
+                # get selected metadata
+                name = node[aba_key.value]
                 if side:
+                    # add side indicator
                     if label[MIRRORED]:
                         name += LEFT_SUFFIX
                     else:
                         name += RIGHT_SUFFIX
     except KeyError as e:
-        print(e, name)
+        _logger.debug("Error getting label name: %s, %s", e, name)
     return name
 
 
@@ -586,7 +648,7 @@ def get_label_side(label_id):
 
 
 def scale_coords(
-        coord: np.ndarray,
+        coord: Sequence[int],
         scaling: Optional[Sequence[int]] = None,
         clip_shape: Optional[Sequence[int]] = None) -> np.ndarray:
     """Get the atlas label IDs for the given coordinates.
@@ -661,42 +723,66 @@ def get_label_ids_from_position(coord_scaled, labels_img):
     return label_ids
 
 
-def get_label(coord, labels_img, labels_ref, scaling, level=None, 
-              rounding=False):
+def get_label(
+        coord: Sequence[int], labels_img: np.ndarray,
+        labels_lookup: Dict[int, Dict], scaling: Optional[Sequence[int]] = None,
+        level: Optional[int] = None, rounding: bool = False
+) -> Optional[Dict[str, Any]]:
     """Get the atlas label for the given coordinates.
     
     Args:
         coord: Coordinates of experiment image in (z, y, x) order.
         labels_img: The registered image whose intensity values correspond to 
             label IDs.
-        labels_ref: The labels reference lookup, assumed to be generated by 
-            :func:`ontology.create_reverse_lookup` to look up by ID.
+        labels_lookup: The labels reference lookup, passed to
+            :meth:`get_label_at_level`.
         scaling: Scaling factor for the labels image size compared with the 
-            experiment image.
-        level: The ontology level as an integer to target; defaults to None. 
-            If None, level will be ignored, and the exact matching label 
-            to the given coordinates will be returned. If a level is given, 
-            the label at the highest (numerically lowest) level encompassing 
-            this region will be returned.
+            experiment image; defaults to None.
+        level: The ontology level as an integer to target; defaults to None.
         rounding: True to round coordinates after scaling (see 
             :func:``get_label_ids_from_position``); defaults to False.
     
     Returns:
         The label dictionary at those coordinates, or None if no label is 
         found.
+    
     """
     coord_scaled = scale_coords(
         coord, scaling, labels_img.shape if rounding else None)
     label_id = get_label_ids_from_position(coord_scaled, labels_img)
-    libmag.printv("found label_id: {}".format(label_id))
+    # _logger.debug("Found label_id: %s", label_id)
+    return get_label_at_level(label_id, labels_lookup, level)
+
+
+def get_label_at_level(
+        label_id: Union[int, Sequence[int]], labels_lookup: Dict[int, Dict],
+        level: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    """Get atlas label at the given level.
+    
+    Args:
+        label_id: Label ID or sequence of IDs.
+        labels_lookup: The labels reference lookup, assumed to be generated by 
+            :func:`ontology.create_reverse_lookup` to look up by ID.
+        level: The ontology level as an integer to target; defaults to None. 
+            If None, level will be ignored, and the exact matching label 
+            to the given coordinates will be returned. If a level is given, 
+            the label at the highest (numerically lowest) level encompassing 
+            this region will be returned.
+
+    Returns:
+        The label dictionary at those coordinates, or None if no label is 
+        found.
+
+    """
+    # TODO: check if can merge with make_labels_level
     mirrored = label_id < 0
     if mirrored:
         label_id = -1 * label_id
     label = None
     try:
-        label = labels_ref[label_id]
+        label = labels_lookup[label_id]
         if level is not None and label[
-            NODE][config.ABAKeys.LEVEL.value] > level:
+                NODE][config.ABAKeys.LEVEL.value] > level:
             
             # search for parent at "higher" (numerically lower) level 
             # that matches the target level
@@ -705,24 +791,28 @@ def get_label(coord, labels_img, labels_ref, scaling, level=None,
             if label_id < 0:
                 parents = np.multiply(parents, -1)
             for parent in parents:
-                parent_label = labels_ref[parent]
+                parent_label = labels_lookup[parent]
                 if parent_label[NODE][config.ABAKeys.LEVEL.value] == level:
-                    
                     label = parent_label
                     break
-        if label is not None:
+        if label is None:
+            _logger.debug(
+                "Label %s present but at finer level than %s", label_id, level)
+        else:
             label[MIRRORED] = mirrored
-            libmag.printv(
-                "label ID at level {}: {}".format(level, label_id))
-    except KeyError as e:
-        libmag.printv(
-            "could not find label id {} or its parent (error {})"
-            .format(label_id, e))
+            # _logger.debug("Label %s found at level %s", label_id, level)
+    except KeyError:
+        _logger.debug("Could not find label id %s or its parent", label_id)
     return label
 
 
-def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling, 
-                      both_sides=False, incl_children=True):
+def get_region_middle(
+        labels_ref_lookup: Dict[int, Dict], label_id: Union[int, Sequence[int]],
+        labels_img: np.ndarray, scaling: Optional[Sequence[int]] = None, 
+        both_sides: Union[bool, Sequence[bool]] = False,
+        incl_children: bool = True
+) -> Tuple[Optional[Sequence[int]], Optional[np.ndarray],
+           Optional[Sequence[int]]]:
     """Approximate the middle position of a region by taking the middle 
     value of its sorted list of coordinates.
     
@@ -736,26 +826,26 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling,
     intermixed with coordinates not part of the region.
     
     Args:
-        labels_ref_lookup (Dict[int, Dict]): The labels reference lookup,
+        labels_ref_lookup: The labels reference lookup,
             assumed to be  generated by :func:`ontology.create_reverse_lookup`
             to look up by ID.
-        label_id (int, List[int]): ID of the label to find, or sequence of IDs.
-        labels_img (:obj:`np.ndarray`): The registered image whose intensity
+        label_id: ID of the label to find, or sequence of IDs.
+        labels_img: The registered image whose intensity
             values correspond to label IDs.
-        scaling (:obj:`np.ndarray`): Scaling factors as a Numpy array in z,y,x
+        scaling: Scaling factors as a Numpy array in z,y,x
             for the labels image size compared with the experiment image.
-        both_sides (bool, List[bool]): True to include both sides, or
+        both_sides: True to include both sides, or
             sequence of booleans corresponding to ``label_id``; defaults
             to False.
-        incl_children (bool): True to include children of ``label_id``,
+        incl_children: True to include children of ``label_id``,
             False to include only ``label_id``; defaults to True.
     
     Returns:
-        List[int], :obj:`np.ndarray`, List[int]: ``coord``, the middle value
-        of a list of all coordinates in the region at the given ID;
-        ``img_region``, a boolean mask of the region within ``labels_img``;
-        and ``region_ids``, a list of the IDs included in the region.
-        If ``labels_ref_lookup`` is None, all values are None.
+        Tuple of ``coord``, the middle value of a list of all coordinates in
+        the region at the given ID; ``img_region``, a boolean mask of the
+        region within ``labels_img``; and ``region_ids``, a list of the IDs
+        included in the region. If ``labels_ref_lookup`` is None, all values
+        are None.
     
     """
     if not labels_ref_lookup:
@@ -799,14 +889,13 @@ def get_region_middle(labels_ref_lookup, label_id, labels_img, scaling,
             return (mid, )
         return None
     
-    coord = None
-    coord_labels = get_middle(region_coords)
-    if coord_labels:
-        print("coord_labels (unscaled): {}".format(coord_labels))
-        print("ID at middle coord: {} (in region? {})"
-              .format(labels_img[coord_labels], img_region[coord_labels]))
-        coord = tuple(np.around(coord_labels / scaling).astype(np.int))
-    print("coord at middle: {}".format(coord))
+    coord = get_middle(region_coords)
+    if scaling is not None and coord:
+        # print("coord_labels (unscaled): {}".format(coord))
+        # print("ID at middle coord: {} (in region? {})"
+        #       .format(labels_img[coord], img_region[coord]))
+        coord = tuple(np.around(np.divide(coord, scaling)).astype(np.int))
+    # print("coord at middle: {}".format(coord))
     return coord, img_region, region_ids
 
 

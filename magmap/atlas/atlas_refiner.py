@@ -71,8 +71,9 @@ def truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
             img_np[tuple(slices)] = 0
             slices[axis] = slice(bound_abs[1], None)
             img_np[tuple(slices)] = 0
-            print("truncated axis {} outside of bounds {}"
-                  .format(axis, bound_abs))
+            _logger.info(
+                "Truncated/cropped image that is outside of the boundaries, %s, "
+                "along axis %s", bound_abs, axis)
         axis += 1
     return img_np
 
@@ -1081,7 +1082,10 @@ def aggr_smoothing_metrics(df_pxs):
 
 def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
                   flipud=None):
-    """Transpose a SimpleITK format image via Numpy and re-export to SimpleITK.
+    """Transpose an image to a different plane or rotation.
+    
+    Supports the `ROTATE` and `FLIP` settings in
+    :attr:`magmap.settings.config.transform` for additional transformations.
     
     Args:
         img_sitk (:obj:`sitk.Image`): Image in SimpleITK format.
@@ -1119,13 +1123,16 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
             flipud = True
     if flipud is None:
         flipud = False
+    # flip along any axis
+    flip = config.transform[config.Transforms.FLIP]
     rotate = rotate_num
-    print("Image transformation settings: plane {}, num of rotations {}, "
-          "target_size {}, z-axis inversion {}"
-          .format(plane, rotate, target_size, flipud))
+    _logger.info(
+        "Image transformation settings: plane: %s, num of rotations: %s, "
+        "target_size: %s, z-axis inversion: %s, flip axis: %s",
+        plane, rotate, target_size, flipud, flip)
     if ((not plane or plane == config.PLANE[0]) and not rotate
-            and target_size is None and not flipud):
-        print("No transformations to apply, skipping")
+            and target_size is None and not flipud and flip is None):
+        _logger.info("No transformations to apply, skipping")
         return img_sitk
 
     img = sitk.GetArrayFromImage(img_sitk)
@@ -1142,6 +1149,9 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
     if flipud:
         # invert along z-axis
         transposed = np.flipud(transposed)
+    if flip is not None:
+        # flip along given axis
+        transposed = np.flip(transposed, flip)
     if rotate:
         # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for 
@@ -1159,16 +1169,14 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
         size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
         rescale = np.mean(size_diff) * resize_factor
         if rescale > 0.5:
-            print("rescaling image by {}x after applying resize factor of {}"
-                  .format(rescale, resize_factor))
+            _logger.info(
+                f"Rescaling image by {rescale}x after applying resize factor "
+                f"of {resize_factor}")
             transposed = transform.rescale(
                 transposed, rescale, mode="constant", preserve_range=True, 
                 multichannel=False, anti_aliasing=False, 
                 order=0).astype(img_dtype)
             spacing = np.divide(spacing, rescale)
-        # casted back since transpose changes data type even when 
-        # preserving range
-        print(transposed.dtype, np.min(transposed), np.max(transposed))
     transposed = sitk.GetImageFromArray(transposed)
     transposed.SetSpacing(spacing[::-1])
     transposed.SetOrigin(origin[::-1])

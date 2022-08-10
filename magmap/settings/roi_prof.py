@@ -40,6 +40,12 @@ class ROIProfile(profiles.SettingsDict):
     )
 
     def __init__(self, *args, **kwargs):
+        """Initialize an ROI profile dictionary.
+        
+        Args:
+            *args: 
+            **kwargs: 
+        """
         super().__init__(self)
         self[self.NAME_KEY] = self.DEFAULT_NAME
 
@@ -50,7 +56,8 @@ class ROIProfile(profiles.SettingsDict):
         self["channel_colors"] = (
             config.Cmaps.CMAP_GRBK_NAME, config.Cmaps.CMAP_RDBK_NAME)
         self["scale_bar_color"] = "w"
-        self["colorbar"] = False
+        #: Colorbar args passed to :meth:`matplotlib.figure.Figure.colorbar`.
+        self["colorbar"] = None
         # num of times to rotate image by 90deg after loading
         self["load_rot90"] = 0
         self["norm"] = None  # (min, max) normalization of image5d
@@ -228,7 +235,7 @@ class ROIProfile(profiles.SettingsDict):
             "diverging": {
                 "channel_colors": ("RdBu", "BrBG"),
                 "scale_bar_color": "k",
-                "colorbar": True,
+                "colorbar": {"shrink": 0.7},
             },
 
             # lightsheet 5x of cytoplasmic markers

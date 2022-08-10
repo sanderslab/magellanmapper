@@ -135,7 +135,7 @@ def add_file_handler(
                 f"{pathl.parent / pathl.stem}{i}{pathl.suffix}")
             logger.debug(f"Trying logger path: {path_log}")
             handler_file = handlers.RotatingFileHandler(
-                path_log, backupCount=backups)
+                path_log, backupCount=backups, encoding="utf-8")
             if roll:
                 # create a new log file if exists, backing up the old one
                 handler_file.doRollover()

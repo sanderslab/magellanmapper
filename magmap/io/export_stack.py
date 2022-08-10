@@ -186,12 +186,14 @@ class StackPlaneIO(chunking.SharedArrsContainer):
             # each group of artists in a list; overlay_images returns 
             # a nested list containing a list for each image, which in turn 
             # contains a list of artists for each channel
-            ax_imgs = plot_support.overlay_images(
-                ax, self.aspect, self.origin, imgs, None, cmaps_all,
-                ignore_invis=True, check_single=True)
-            if colorbar and len(ax_imgs) > 0 and len(ax_imgs[0]) > 0:
+            overlaid = plot_support.ImageOverlayer(
+                ax, self.aspect, self.origin, ignore_invis=True)
+            ax_imgs = overlaid.overlay_images(
+                imgs, None, cmaps_all, check_single=True)
+            if (colorbar is not None and len(ax_imgs) > 0
+                    and len(ax_imgs[0]) > 0 and imgi == 0):
                 # add colorbar with scientific notation if outside limits
-                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, shrink=0.7)
+                cbar = ax.figure.colorbar(ax_imgs[0][0], ax=ax, **colorbar)
                 plot_support.set_scinot(cbar.ax, lbls=None, units=None)
             plotted_imgs[imgi] = np.array(ax_imgs).flatten()
             

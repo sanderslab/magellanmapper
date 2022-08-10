@@ -8,7 +8,6 @@ dependencies:
   - pyamg
   - pandas
   - scikit-image
-  - scikit-learn
   - appdirs
   - tifffile
   - pip:

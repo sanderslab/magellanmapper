@@ -7,7 +7,7 @@ Intended to be higher-level, relatively atlas-agnostic measurements.
 
 from enum import Enum
 from time import time
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -768,7 +768,7 @@ def _parse_vol_metrics(label_metrics, spacing=None, unit_factor=None,
         vols_phys = np.multiply(vols_phys, physical_mult)
     if unit_factor is not None:
         # further conversion to given unit size
-        unit_factor_vol = unit_factor ** 3
+        unit_factor_vol = unit_factor ** len(spacing)
         vols_phys = np.divide(vols_phys, unit_factor_vol)
     if unit_factor is not None:
         # convert metrics not extracted from data frame
@@ -1173,8 +1173,11 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
     return df
 
 
-def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False, 
-                       reverse=False, col_wt=None):
+def map_meas_to_labels(
+        labels_img: np.ndarray, df: pd.DataFrame, meas: str,
+        fn_avg: Callable[[Sequence], float], skip_nans: bool = False, 
+        reverse: bool = False, col_wt: Optional[str] = None
+) -> Optional[np.ndarray]:
     """Generate a map of a given measurement on a labels image.
     
     The intensity values of labels will be replaced by the given metric 
@@ -1197,7 +1200,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
             allows giving a neutral value instead.
         reverse: Reverse the order of sorted conditions when generating 
             stats by ``fn_avg`` to compare conditions; defaults to False.
-        col_wt (str): Name of column to use for weighting, where the 
+        col_wt: Name of column to use for weighting, where the 
             magnitude of ``meas`` will be adjusted as fractions of the max 
             value in this weighting column for labels found in ``labels_img``; 
             defaults to None.
@@ -1206,6 +1209,7 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
         A map of averages for the given measurement as an image of the 
         same shape as ``labels_img`` of float data type, or None if no 
         values for ``meas`` are found.
+    
     """
     if meas not in df or np.all(np.isnan(df[meas])):
         # ensure that measurement column is present with non-NaNs
@@ -1221,13 +1225,13 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
     df = df.loc[df["Region"].isin(regions)].copy()
     
     df_cond = None
-    conds = None
-    if "Condition" in df:
+    conds = config.plot_labels[config.PlotLabels.CONDITION]
+    if conds is None and "Condition" in df:
         # get and sort conditions
         df_cond = df["Condition"]
         conds = sorted(np.unique(df_cond), reverse=reverse)
 
-    if col_wt is not None:
+    if col_wt is not None and len(df) > 0:
         # weight given column for the first condition and normalizing it to
         # its maximum value, or use the whole column if no conditions exist
         print("weighting stats by", col_wt)
@@ -1276,24 +1280,27 @@ def map_meas_to_labels(labels_img, df, meas, fn_avg, skip_nans=False,
     return labels_diff
 
 
-def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None,
-                    name=None):
+def labels_distance(
+        labels_img1: np.ndarray, labels_img2: np.ndarray,
+        spacing: Optional[Sequence[float]] = None,
+        out_path: Optional[str] = None,
+        name: Optional[str] = None) -> pd.DataFrame:
     """Measure distances between corresponding labels in two images.
     
     Assumes that a 0 is background and will be skipped.
     
     Args:
-        labels_img1 (:class:`numpy.nhdarray`): Labels image 1.
-        labels_img2 (:class:`numpy.nhdarray`): Labels image 2. Does not
+        labels_img1: Labels image 1.
+        labels_img2: Labels image 2. Does not
             have to be of the same shape as ``labels_img``, but assumed
             to have the same origin/offset and ``spacing`` as distances
             are based on centroid coordinates of the corresponding labels.
-        spacing (list[float]): Spacing/scaling in ``z,y,x``.
-        out_path (str): CSV output path; defaults to None to not save.
-        name (str): Sample name; defaults to None.
+        spacing: Spacing/scaling in ``z,y,x``; defaults to None.
+        out_path: CSV output path; defaults to None to not save.
+        name: Sample name; defaults to None.
 
     Returns:
-        :class:`pandas.DataFrame`: Data frame of output metrics.
+        Data frame of output metrics.
 
     """
     dists = []
@@ -1307,23 +1314,31 @@ def labels_distance(labels_img1, labels_img2, spacing=None, out_path=None,
         if label_id == 0: continue
         if label_id in label_ids1 and label_id in label_ids2:
             # compute distance between centroids of corresponding labels
-            # in both images
+            # in both images, scaled by spacing if provided
             centroids = [
-                np.multiply(cv_nd.get_label_props(
-                    img, label_id)[0].centroid, spacing) for img in imgs]
+                cv_nd.get_label_props(m, label_id)[0].centroid for m in imgs]
+            centroids_scaled = centroids
+            if spacing is not None:
+                centroids = [np.multiply(c, spacing) for c in centroids]
             dist = cdist(
                 np.array([centroids[0]]), np.array([centroids[1]]))[0][0]
         else:
             # label missing from at least one image
             centroids = [np.nan] * 2
+            centroids_scaled = centroids
             dist = np.nan
-        dists.append((name, label_id, *centroids[:2], dist))
+        dists.append((
+            name, label_id, *centroids_scaled[:2], *centroids[:2], dist))
     
     # export metrics to data frame
     df = df_io.dict_to_data_frame(
         dists, out_path, show=True, records_cols=(
             config.AtlasMetrics.SAMPLE.value,
-            LabelMetrics.Region.name, "Centroid1", "Centroid2",
+            LabelMetrics.Region.name,
+            "Centroid1_px",
+            "Centroid2_px",
+            "Centroid1",
+            "Centroid2",
             LabelMetrics.Dist.name))
     return df
 

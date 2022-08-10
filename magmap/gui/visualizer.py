@@ -12,13 +12,14 @@ Examples:
         
         ./run.py --img /path/to/file.czi --offset 30,50,205 --size 150,150,10
 """
+import glob
 import pprint
 from collections import OrderedDict
 from enum import auto, Enum 
 import os
 import subprocess
 import sys
-from typing import Optional
+from typing import Dict, Optional, Sequence, TYPE_CHECKING, Tuple, Type, Union
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -39,13 +40,15 @@ except AttributeError:
     pass
 
 # import PyFace components after HiDPI adjustment
-from pyface.api import FileDialog, OK
+from pyface import confirmation_dialog
+from pyface.api import FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
-from traits.api import HasTraits, Instance, on_trait_change, Button, Float, \
-    Int, List, Array, Str, Bool, Any, push_exception_handler, Property, File
-from traitsui.api import View, Item, HGroup, VGroup, Tabbed, RangeEditor, \
-    HSplit, TabularEditor, CheckListEditor, FileEditor, TextEditor, \
-    ArrayEditor, BooleanEditor
+from traits.api import Any, Array, Bool, Button, File, Float, Instance, Int, \
+    List, observe, on_trait_change, Property, push_exception_handler, Str, \
+    HasTraits
+from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
+    EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
+    StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
@@ -57,13 +60,17 @@ import vtk
 
 import run
 from magmap.atlas import ontology
+from magmap.brain_globe import bg_controller
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
-from magmap.gui import atlas_editor, import_threads, roi_editor, vis_3d, \
-    vis_handler
+from magmap.gui import atlas_editor, atlas_threads, import_threads, \
+    roi_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
-from magmap.settings import config, profiles
+from magmap.settings import config, prefs_prof, profiles
 
+if TYPE_CHECKING:
+    from bg_atlasapi import BrainGlobeAtlas
+    from magmap.plot import plot_support
 
 # logging instance
 _logger = config.logger.getChild(__name__)
@@ -171,7 +178,9 @@ class Styles2D(Enum):
 class RegionOptions(Enum):
     """Enumerations for region options."""
     BOTH_SIDES = "Both sides"
-    INCL_CHILDREN = "Include children"
+    INCL_CHILDREN = "Children"
+    APPEND = "Append"
+    SHOW_ALL = "Show all"
 
 
 class AtlasEditorOptions(Enum):
@@ -219,6 +228,16 @@ class ControlsTabs(Enum):
     IMPORT = auto()
 
 
+class BrainGlobeArrayAdapter(TabularAdapter):
+    """Import files TraitsUI table adapter."""
+    columns = [("Atlas", 0), ("Ver", 1), ("Installed?", 2)]
+    widths = {0: 0.5, 1: 0.1, 2: 0.4}
+
+    def get_width(self, object, trait, column):
+        """Specify column widths."""
+        return self.widths[column]
+
+
 class Visualization(HasTraits):
     """GUI for choosing a region of interest and segmenting it.
     
@@ -263,6 +282,8 @@ class Visualization(HasTraits):
     _filename = File  # file browser
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
+    _rgb = Bool(config.rgb, tooltip="Show image as RGB(A)")
+    _rgb_enabled = Bool
     
     # main registered image available and selected dropdowns
     _main_img_name_avail = Str
@@ -432,6 +453,17 @@ class Visualization(HasTraits):
     _import_byte_order = List
     _import_prefix = Str
     _import_feedback = Str
+    
+    # BrainGlobe panel
+    
+    _bg_atlases = List
+    _bg_atlases_sel = List
+    _bg_atlases_table = TabularEditor(
+        adapter=BrainGlobeArrayAdapter(), editable=False, auto_resize_rows=True,
+        stretch_last_section=False, selected="_bg_atlases_sel")
+    _bg_access_btn = Button("Open")
+    _bg_remove_btn = Button("Remove")
+    _bg_feedback = Str
 
     # Image viewers
 
@@ -477,10 +509,24 @@ class Visualization(HasTraits):
     
     # atlas labels
     _atlas_label = None
-    _structure_scale = Int  # ontology structure levels
     _structure_scale_low = -1
     _structure_scale_high = 20
-    _region_id = Str
+    _structure_scale = Int(_structure_scale_high)  # ontology structure levels
+    _structure_remap_btn = Button(
+        "Remap",
+        tooltip="Remap atlas labels to this level")
+    _region_name = Str(
+        tooltip="Navigate to selected region. Start typing to search.")
+    _region_names = Instance(TraitsList)
+    # tooltip for both text box and options since options group has no main
+    # label to display a tooltip
+    _region_id = Str(  
+        tooltip="IDs: IDs of labels to navigate to. Add +/- to including both\n"
+                "sides. Separate multiple IDs by commas.\n"
+                "Both sides: include correspondings labels from opposite sides"
+                "\nChildren: include all children of the label\n"
+                "Append: append label IDs; uncheck to navigate to group\n"
+                "Show all: show abbreviations for all visible labels")
     _region_options = List
     
     _mlab_title = None
@@ -491,7 +537,12 @@ class Visualization(HasTraits):
     _camera_pos = None
     _roi_ed_fig = Instance(figure.Figure, ())
     _atlas_ed_fig = Instance(figure.Figure, ())
+    
+    # Status bar
+    
     _status_bar_msg = Str()  # text for status bar
+    _prog_pct = Int(0)
+    _prog_msg = Str()
 
     # ROI selector panel
     panel_roi_selector = VGroup(
@@ -500,9 +551,13 @@ class Visualization(HasTraits):
                 Item("_filename", label="File", style="simple",
                      editor=FileEditor(entries=10, allow_dir=False)),
             ),
-            Item("_channel", label="Channels", style="custom",
-                 editor=CheckListEditor(
-                     name="object._channel_names.selections", cols=8)),
+            HGroup(
+                Item("_channel", label="Channels", style="custom",
+                     enabled_when="not _rgb",
+                     editor=CheckListEditor(
+                         name="object._channel_names.selections", cols=8)),
+                Item("_rgb", label="RGB", enabled_when="_rgb_enabled"),
+            ),
             label="Image path",
         ),
         VGroup(
@@ -586,27 +641,17 @@ class Visualization(HasTraits):
                      cols=len(Vis3dOptions), format_func=lambda x: x)),
             label="Viewer Options",
         ),
-        HGroup(
-            Item("_structure_scale", label="Atlas ontology level",
-                 editor=RangeEditor(
-                     low_name="_structure_scale_low",
-                     high_name="_structure_scale_high",
-                     mode="slider")),
-        ),
-        HGroup(
-            Item("_region_id", label="Region",
-                 editor=TextEditor(
-                     auto_set=False, enter_set=True, evaluate=str)),
-            Item("_region_options", style="custom", show_label=False,
-                 editor=CheckListEditor(
-                     values=[e.value for e in RegionOptions], cols=2,
-                     format_func=lambda x: x)),
-        ),
         # give initial focus to text editor that does not trigger any events to
         # avoid inadvertent actions by the user when the window first displays;
         # set width to any small val to get smallest size for the whole panel
         Item("_roi_feedback", style="custom", show_label=False, has_focus=True,
              width=100),
+        
+        # generate progress bar but give essentially no height since it will
+        # be moved to the status bar in the handler
+        Item("_prog_pct", show_label=False, height=-2,
+             editor=ProgressEditor(min=0, max=100)),
+        
         HGroup(
             Item("btn_redraw", show_label=False),
             Item("_btn_save_fig", show_label=False),
@@ -811,6 +856,41 @@ class Visualization(HasTraits):
         label="Import",
     )
 
+    # BrainGlobe panel
+    panel_brain_globe = VGroup(
+        Item("_region_name", label="Region",
+             editor=EnumEditor(
+                 name="object._region_names.selections",
+                 completion_mode="popup", evaluate=True)),
+        HGroup(
+            Item("_region_id", label="IDs",
+                 editor=TextEditor(
+                     auto_set=False, enter_set=True, evaluate=str)),
+            Item("_region_options", style="custom", show_label=False,
+                 editor=CheckListEditor(
+                     values=[e.value for e in RegionOptions],
+                     cols=len(RegionOptions), format_func=lambda x: x)),
+        ),
+        HGroup(
+            Item("_structure_scale", label="Atlas level",
+                 editor=RangeEditor(
+                     low_name="_structure_scale_low",
+                     high_name="_structure_scale_high",
+                     mode="slider")),
+            Item("_structure_remap_btn", show_label=False),
+        ),
+        VGroup(
+            Item("_bg_atlases", editor=_bg_atlases_table, show_label=False),
+            label="BrainGlobe Atlases"
+        ),
+        HGroup(
+            Item("_bg_access_btn", show_label=False),
+            Item("_bg_remove_btn", show_label=False),
+        ),
+        Item("_bg_feedback", style="custom", show_label=False),
+        label="Atlases",
+    )
+
     # tabbed panel of options
     panel_options = Tabbed(
         panel_roi_selector,
@@ -818,6 +898,7 @@ class Visualization(HasTraits):
         panel_profiles,
         panel_imgadj,
         panel_import,
+        panel_brain_globe,
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
@@ -843,6 +924,7 @@ class Visualization(HasTraits):
         HSplit(
             panel_options,
             panel_figs,
+            id=f"{__name__}.panel_split",
         ),
         # initial window width, which can be resized down to the minimum
         # widths of each panel in the HSplit
@@ -851,27 +933,38 @@ class Visualization(HasTraits):
         height=600,
         handler=vis_handler.VisHandler(),
         title="MagellanMapper",
-        statusbar="_status_bar_msg",
+        statusbar=[
+            "_status_bar_msg",
+            # reduce width of progress message so it's next to the bar
+            StatusItem("_prog_msg", width=20)],
         resizable=True,
         icon=icon_img,
         # set ID to trigger saving TraitsUI preferences for window size/position
         id=f"{__name__}.{__qualname__}",
     )
-
+    
     def __init__(self):
         """Initialize GUI."""
         HasTraits.__init__(self)
         
+        # get saved preferences
+        prefs = config.prefs
+        
         # set up callback flags
         self._ignore_roi_offset_change = False
         
-        # default options setup
+        # set up ROI Editor option
         self._set_border(True)
-        self._circles_2d = [
-            roi_editor.ROIEditor.CircleStyles.CIRCLES.value]
-        self._planes_2d = [self._DEFAULTS_PLANES_2D[0]]
-        self._styles_2d = [Styles2D.SQUARE.value]
+        self._circles_2d = [self.validate_pref(
+            prefs.roi_circles, roi_editor.ROIEditor.CircleStyles.CIRCLES.value,
+            roi_editor.ROIEditor.CircleStyles)]
+        self._planes_2d = [self.validate_pref(
+            prefs.roi_plane, self._DEFAULTS_PLANES_2D[0],
+            self._DEFAULTS_PLANES_2D)]
+        self._styles_2d = [self.validate_pref(
+            prefs.roi_styles, Styles2D.SQUARE.value, Styles2D)]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
+        
         self._check_list_3d = [
             Vis3dOptions.RAW.value, Vis3dOptions.SURFACE.value]
         if (config.roi_profile["vis_3d"].lower()
@@ -879,7 +972,14 @@ class Visualization(HasTraits):
             # check "surface" if set in profile
             self._check_list_3d.append(Vis3dOptions.SURFACE.value)
         # self._structure_scale = self._structure_scale_high
+        
+        # set up atlas region names
+        self._region_names = TraitsList()
+        self._region_id_map = {}
+        self._region_options_prev: Dict[Enum, bool] = {}
         self._region_options = [RegionOptions.INCL_CHILDREN.value]
+        
+        # set up blobs
         self.blobs = detector.Blobs()
         self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
 
@@ -895,16 +995,19 @@ class Visualization(HasTraits):
 
         # set up image import
         self._clear_import_files(False)
-        self._import_thread = None  # prevent prematurely destroying threads
+        
+        # set up BrainGlobe atlases
+        self._brain_globe_panel: bg_controller.BrainGlobeCtrl \
+            = self._setup_brain_globe()
 
         # ROI margin for extracting previously detected blobs
         self._margin = config.plot_labels[config.PlotLabels.MARGIN]
         if self._margin is None:
             self._margin = (5, 5, 3)  # x,y,z
         
-        # store ROI offset for currently drawn plot in case user previews a
-        # new ROI offset, which shifts the current offset sliders
-        self._drawn_offset = self._curr_offset()
+        #: ROI offset at which viewers were drawn. May differ from the
+        #: current state of the offset sliders.
+        self._drawn_offset: Sequence[int] = self._curr_offset()
 
         # setup interface for image
         self._ignore_filename = False  # ignore file update trigger
@@ -932,7 +1035,7 @@ class Visualization(HasTraits):
             AtlasEditorOptions.SHOW_LABELS.value,
             AtlasEditorOptions.SYNC_ROI.value,
             AtlasEditorOptions.CROSSHAIRS.value]
-        self._atlas_ed_options_prev = list(self._atlas_ed_options)
+        self._atlas_ed_options_prev: Dict[Enum, bool] = {}
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -953,9 +1056,36 @@ class Visualization(HasTraits):
         self._main_img_names = TraitsList()
         self._labels_img_names = TraitsList()
         self._ignore_main_img_name_changes = False
+
+        # prevent prematurely destroying threads
+        self._import_thread = None
+        self._remap_level_thread = None
+        self._annotate_labels_thread = None
         
         # set up image
         self._setup_for_image()
+
+    @staticmethod
+    def validate_pref(val, default, choices):
+        """Validate a preference setting.
+        
+        Args:
+            val: Preference value to assign.
+            default: Default value if ``val`` is invalid.
+            choices: Valid preference values.
+
+        Returns:
+            ``val`` if a valid value, otherwise ``default``.
+
+        """
+        try:
+            if issubclass(choices, Enum):
+                choices = [e.value for e in choices]
+        except TypeError:
+            pass
+        if val not in choices:
+            val = default
+        return val
 
     def _init_channels(self):
         """Initialize channel check boxes for the currently loaded main image.
@@ -973,7 +1103,7 @@ class Visualization(HasTraits):
         if config.blobs is not None and config.blobs.blobs is not None:
             # set detection channels to those in loaded blobs
             self._segs_chls_names.selections = [
-                str(n) for n in np.unique(detector.get_blobs_channel(
+                str(n) for n in np.unique(detector.Blobs.get_blobs_channel(
                     config.blobs.blobs).astype(int))]
         else:
             # add detection channel selectors for all image channels
@@ -1009,13 +1139,31 @@ class Visualization(HasTraits):
             self._imgadj_name = self._imgadj_names.selections[0]
         self._setup_imgadj_channels()
 
+    @property
+    def imgadj_chls(self) -> str:
+        """Selected image adjustment channel.
+        
+        Returns:
+            "0" as a string if in RGB mode, or the selected value.
+
+        """
+        if self._rgb:
+            # to get the first (and only) image
+            return "0"
+        else:
+            return self._imgadj_chls
+
     def _setup_imgadj_channels(self):
         """Set up channels in the image adjustment panel for the given image."""
         img3d = self._img3ds.get(self._imgadj_name) if self._img3ds else None
         if self._imgadj_name == "Main":
-            # limit image adjustment channel options to currently selected
-            # channels in ROI panel channel selector for main image
-            chls = self._channel
+            if self._rgb:
+                # treat all channels as one
+                chls = ["RGB"]
+            else:
+                # limit image adjustment channel options to currently selected
+                # channels in ROI panel channel selector for main image
+                chls = self._channel
         elif img3d is not None:
             # use all channels, or 1 if no channel dimension
             chls = [str(n) for n in (
@@ -1067,7 +1215,7 @@ class Visualization(HasTraits):
         viewer and channel.
 
         """
-        if not self._imgadj_chls:
+        if not self.imgadj_chls:
             # resetting image adjustment channel names triggers update as
             # empty array
             return
@@ -1084,7 +1232,7 @@ class Visualization(HasTraits):
         # get the first displayed image from the viewer
         imgi = self._imgadj_names.selections.index(self._imgadj_name)
         plot_ax_img = ed.get_img_display_settings(
-            imgi, chl=int(self._imgadj_chls))
+            imgi, chl=int(self.imgadj_chls))
         if plot_ax_img is None: return
         
         # populate controls with intensity settings
@@ -1259,7 +1407,7 @@ class Visualization(HasTraits):
                 # update settings for the viewer
                 plot_ax_img = ed.update_imgs_display(
                     self._imgadj_names.selections.index(self._imgadj_name),
-                    chl=int(self._imgadj_chls), **kwargs)
+                    chl=int(self.imgadj_chls), **kwargs)
         return plot_ax_img
 
     @staticmethod
@@ -1290,8 +1438,8 @@ class Visualization(HasTraits):
         """
         seg_str = seg[0:3].astype(int).astype(str).tolist()
         seg_str.append(str(round(seg[3], 3)))
-        seg_str.append(str(int(detector.get_blob_confirmed(seg))))
-        seg_str.append(str(int(detector.get_blob_channel(seg))))
+        seg_str.append(str(int(detector.Blobs.get_blob_confirmed(seg))))
+        seg_str.append(str(int(detector.Blobs.get_blobs_channel(seg))))
         return ", ".join(seg_str)
     
     def _append_roi(self, roi, rois_dict):
@@ -1316,7 +1464,7 @@ class Visualization(HasTraits):
         print("segments", self.segments)
         segs_transposed = []
         segs_to_delete = []
-        offset = self._curr_offset()
+        offset = self._drawn_offset
         curr_roi_size = self.roi_array[0].astype(int)
         print("Preparing to insert segments to database with border widths {}"
               .format(self.border))
@@ -1325,7 +1473,7 @@ class Visualization(HasTraits):
             for i in range(len(self.segments)):
                 seg = self.segments[i]
                 # uses absolute coordinates from end of seg
-                seg_db = detector.blob_for_db(seg)
+                seg_db = detector.Blobs.blob_for_db(seg)
                 if seg[4] == -1 and seg[3] < config.POS_THRESH:
                     # attempts to delete user added segments, where radius
                     # assumed to be < 0, that are no longer selected
@@ -1354,7 +1502,7 @@ class Visualization(HasTraits):
             # unverified blobs are those with default confirmation setting 
             # and radius > 0, where radii < 0 would indicate a user-added circle
             unverified = np.logical_and(
-                detector.get_blob_confirmed(segs_transposed_np) == -1, 
+                detector.Blobs.get_blob_confirmed(segs_transposed_np) == -1, 
                 np.logical_not(segs_transposed_np[:, 3] < config.POS_THRESH))
         if np.any(unverified):
             # show missing verifications
@@ -1374,7 +1522,7 @@ class Visualization(HasTraits):
         exp_id = config.db.select_or_insert_experiment(exp_name)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
-            np.add(self._drawn_offset, self.border).tolist(),
+            np.add(offset, self.border).tolist(),
             np.subtract(curr_roi_size, np.multiply(self.border, 2)).tolist())
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, segs_to_delete)
@@ -1382,7 +1530,8 @@ class Visualization(HasTraits):
         # delete the original entry of blobs that moved since replacement
         # is based on coordinates, so moved blobs wouldn't be replaced
         for i in range(len(self._segs_moved)):
-            self._segs_moved[i] = detector.blob_for_db(self._segs_moved[i])
+            self._segs_moved[i] = detector.Blobs.blob_for_db(
+                self._segs_moved[i])
         sqlite.delete_blobs(
             config.db.conn, config.db.cur, roi_id, self._segs_moved)
         self._segs_moved = []
@@ -1394,7 +1543,7 @@ class Visualization(HasTraits):
         # insert blob matches
         if self.blobs.blob_matches is not None:
             self.blobs.blob_matches.update_blobs(
-                detector.shift_blob_rel_coords, offset[::-1])
+                detector.Blobs.shift_blob_rel_coords, offset[::-1])
             config.db.insert_blob_matches(roi_id, self.blobs.blob_matches)
         
         # add ROI to selection dropdown
@@ -1415,6 +1564,10 @@ class Visualization(HasTraits):
         feedback_str = "\n".join(feedback)
         print(feedback_str)
         self.segs_feedback = feedback_str
+        
+        if self.roi_ed:
+            # reset the ROI Editor's edit flag
+            self.roi_ed.edited = False
 
     def _btn_save_segments_fired(self):
         """Handler to save blobs to database when triggered by Trait."""
@@ -1432,25 +1585,43 @@ class Visualization(HasTraits):
         self._circles_opened_type = None
         self.segs_feedback = ""
     
-    def _update_structure_level(self, curr_offset, curr_roi_size):
+    def _update_structure_level(
+            self, curr_offset: Sequence[int], curr_roi_size: Sequence[int]):
+        """Handle structure level changes.
+        
+        Args:
+            curr_offset: Current ROI offset in ``x, y, z``.
+            curr_roi_size: Current ROI size in ``x, y, z``.
+
+        """
         self._atlas_label = None
         if self._mlab_title is not None:
             self._mlab_title.remove()
             self._mlab_title = None
-        if (config.labels_ref_lookup is not None and curr_offset is not None 
-            and curr_roi_size is not None):
+        
+        # set level in ROI and Atlas Editors
+        level = self.structure_scale
+        if self.roi_ed:
+            self.roi_ed.set_labels_level(level)
+        if self.atlas_eds:
+            for ed in self.atlas_eds:
+                ed.set_labels_level(level)
+        
+        if (config.labels_img is not None and config.labels_ref is not None and
+                config.labels_ref.ref_lookup is not None and
+                curr_offset is not None and curr_roi_size is not None):
+            # get atlas label at ROI center
             center = np.add(
                 curr_offset, 
                 np.around(np.divide(curr_roi_size, 2)).astype(np.int))
-            level = self._structure_scale
-            if level == self._structure_scale_high:
-                level = None
             self._atlas_label = ontology.get_label(
-                center[::-1], config.labels_img, config.labels_ref_lookup, 
+                center[::-1], config.labels_img, config.labels_ref.ref_lookup, 
                 config.labels_scaling, level, rounding=True)
-            if self._atlas_label is not None:
+            
+            if self._atlas_label is not None and self.scene_3d_shown:
                 title = ontology.get_label_name(self._atlas_label)
                 if title is not None:
+                    # update title in 3D viewer
                     self._mlab_title = self.scene.mlab.title(title)
     
     def _post_3d_display(self, title="clrbrain3d", show_orientation=True):
@@ -1685,34 +1856,56 @@ class Visualization(HasTraits):
         self._init_channels()
         self._vis3d = vis_3d.Vis3D(self.scene)
         self._vis3d.fn_update_coords = self.set_offset
-        if config.image5d is not None:
+        if config.img5d and config.img5d.img is not None:
+            image5d = config.img5d.img
+            config.img5d.rgb = self._rgb
+            
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
             # elsewhere; "high_label" RangeEditor setting also does not
             # appear to be working
-            self.z_high, self.y_high, self.x_high = config.image5d.shape[1:4]
+            self.z_high, self.y_high, self.x_high = image5d.shape[1:4]
             if config.roi_offset is not None:
                 # apply user-defined offsets
-                self.x_offset = config.roi_offset[0]
-                self.y_offset = config.roi_offset[1]
-                self.z_offset = config.roi_offset[2]
+                self.x_offset, self.y_offset, self.z_offset = config.roi_offset
+                self._drawn_offset = self._curr_offset()
             self.roi_array = ([[100, 100, 12]] if config.roi_size is None
                               else [config.roi_size])
             
             # find matching registered images to populate dropdowns
-            self._reg_img_names = OrderedDict()
+            reg_img_names = OrderedDict()
             for reg_name in config.RegNames:
-                # check for potential registered image files, using the
-                # prefix path if available
-                reg_path = sitk_io.read_sitk(sitk_io.reg_out_path(
+                # potential registered image path including any prefix
+                reg_path = sitk_io.reg_out_path(
                     config.prefix if config.prefix else config.filename,
-                    reg_name.value), dryrun=True)[1]
-                if reg_path:
+                    reg_name.value)
+                base_path = reg_path[:-len(reg_name.value)]
+                
+                # match files with modifiers just before ext
+                reg_name_globs = glob.glob(f"{libmag.splitext(reg_path)[0]}*")
+                for reg_name_glob in reg_name_globs:
+                    if libmag.splitext(reg_name_glob)[1] not in sitk_io.EXTS_3D:
+                        # skip exts not in 3D list
+                        continue
                     # add to list of available suffixes, storing the found
                     # extension to load directly and save to same ext
-                    name = libmag.get_filename_without_ext(reg_name.value)
-                    self._reg_img_names[name] = (
-                        f"{name}{libmag.splitext(reg_path)[1]}")
+                    name = reg_name_glob[len(base_path):]
+                    name = libmag.get_filename_without_ext(name)
+                    reg_img_names[name] = (
+                        f"{name}{libmag.splitext(reg_name_glob)[1]}")
+            
+            # shorten displayed names to avoid expanding panel
+            self._reg_img_names = OrderedDict()
+            for key_orig, key_short in zip(
+                    reg_img_names.keys(),
+                    libmag.crop_mid_str(tuple(reg_img_names.keys()), 12)):
+                # map shortened name to full path for dropdowns
+                self._reg_img_names[key_short] = reg_img_names[key_orig]
+                
+                # map original to shortened name to find shorted name
+                reg_img_names[key_orig] = key_short
+            
+            # copy names to labels image dropdown
             self._labels_img_names.selections = list(self._reg_img_names.keys())
             self._labels_img_names.selections.insert(0, "")
             
@@ -1722,22 +1915,26 @@ class Visualization(HasTraits):
             labels_suffix = self._labels_img_names.selections[0]
             main_img_names_avail = list(self._reg_img_names.keys())
             if config.reg_suffixes:
-                # use registered suffixes without ext, using first suffix
-                # of each type
+                # select atlas images in dropdowns corresponding to reg suffixes
                 suffixes = config.reg_suffixes[config.RegSuffixes.ATLAS]
                 if suffixes:
                     if not libmag.is_seq(suffixes):
                         suffixes = [suffixes]
                     for suffix in suffixes:
-                        suffix_stem = libmag.get_filename_without_ext(suffix)
+                        # get shortened from full name
+                        suffix_stem = reg_img_names.get(
+                            libmag.get_filename_without_ext(suffix))
                         if suffix_stem in main_img_names_avail:
                             # move from available to selected suffixes lists
                             main_suffixes.append(suffix_stem)
                             main_img_names_avail.remove(suffix_stem)
+                
+                # select first annotation image, ignoring rest
                 suffix = config.reg_suffixes[config.RegSuffixes.ANNOTATION]
                 if suffix:
-                    suffix_stem = libmag.get_filename_without_ext(
-                        libmag.get_if_within(suffix, 0, ""))
+                    suffix_stem = reg_img_names.get(
+                        libmag.get_filename_without_ext(
+                            libmag.get_if_within(suffix, 0, "")))
                     if suffix_stem in self._labels_img_names.selections:
                         labels_suffix = suffix_stem
             
@@ -1755,13 +1952,36 @@ class Visualization(HasTraits):
             self._main_img_name = self._main_img_names.selections[0]
             self._labels_img_name = labels_suffix
             
-            # get labels reference file path, prioritizing CLI arg
-            lbls_ref = config.load_labels
-            if not lbls_ref and config.labels_metadata:
-                lbls_ref = config.labels_metadata.path_ref
-            if lbls_ref:
-                # populate labels reference path field
-                self._labels_ref_path = lbls_ref
+            # populate labels reference path field
+            lbls_ref = config.labels_ref.path_ref if config.labels_ref else ""
+            self._labels_ref_path = lbls_ref
+
+            # populate region names combo box
+            regions = []
+            regions_map = {}
+            if config.labels_ref:
+                df = config.labels_ref.get_ref_lookup_as_df()
+                if df is not None:
+                    # truncate names to preserve panel min width; make unique
+                    # by adding abbreviations or during cropping
+                    abbr = df[config.ABAKeys.ACRONYM.value]
+                    abbrs = abbr.unique()
+                    is_abbr = len(abbrs) > 0 and abbrs[0]
+                    regions = libmag.crop_mid_str(
+                        df[config.ABAKeys.NAME.value], 40, not is_abbr)
+                    if is_abbr:
+                        regions = [f"{r} ({a})" for a, r in zip(abbr, regions)]
+                    
+                    # map region names to IDs since navigating to the region
+                    # will require the ID
+                    ids = df[config.ABAKeys.ABA_ID.value]
+                    regions_map = {r: i for r, i in zip(regions, ids)}
+            self._region_id_map = regions_map
+            self._region_names.selections = regions
+            
+            # enable RGB button only if 3-4 channel
+            self._rgb_enabled = (
+                    len(image5d.shape) >= 5 and 3 <= image5d.shape[4] <= 4)
 
         # set up image adjustment controls
         self._init_imgadj()
@@ -1833,17 +2053,20 @@ class Visualization(HasTraits):
         from the Numpy image filename. Processed files (eg ROIs, blobs) 
         will not be loaded for now.
         """
-        if self._ignore_filename or not self._filename:
-            # avoid triggering file load, eg if only updating widget value;
-            # reset flags
-            self._ignore_filename = False
-            self._reset_filename = True
+        if not self._filename:
+            # skip if image path is empty
             return
-
+        
         if self._reset_filename:
-            # reset registered suffixes
+            # reset registered atlas settings
             config.reg_suffixes = dict.fromkeys(config.RegSuffixes, None)
+            self._labels_ref_path = ""
         self._reset_filename = True
+        
+        if self._ignore_filename:
+            # skip triggered file load, eg if only updating widget
+            self._ignore_filename = False
+            return
 
         # load image if possible without allowing import, deconstructing
         # filename from the selected imported image
@@ -1853,7 +2076,8 @@ class Visualization(HasTraits):
             importer.parse_deconstructed_name(
                 filename, offset, size, reg_suffixes)
             np_io.setup_images(
-                config.filename, offset=offset, size=size, allow_import=False)
+                config.filename, offset=offset, size=size, allow_import=False,
+                labels_ref_path=self._labels_ref_path)
             self._setup_for_image()
             self.redraw_selected_viewer()
             self.update_imgadj_for_img()
@@ -1892,10 +2116,6 @@ class Visualization(HasTraits):
                     self._labels_img_name)
         config.reg_suffixes.update(reg_suffixes)
         
-        if self._labels_ref_path:
-            # set up labels
-            cli.setup_labels([self._labels_ref_path])
-        
         # re-setup image
         self.update_filename(self._filename, reset=False)
     
@@ -1920,6 +2140,20 @@ class Visualization(HasTraits):
         self._setup_imgadj_channels()
         print("Changed channel to {}".format(config.channel))
     
+    @observe("_rgb", post_init=True)
+    def _update_rgb(self, event):
+        """Handle changes to the RGB button."""
+        if config.img5d:
+            # change image RGB setting, which editors reference
+            config.img5d.rgb = self._rgb
+            _logger.debug("Changed RGB to %s", config.img5d.rgb)
+            
+            # update image adjustment channel options
+            self._update_imgadj_limits()
+            
+            # redraw viewer in selected RGB mode
+            self.redraw_selected_viewer()
+
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
         """Reset the stale viewer flags for all viewers.
         
@@ -1988,7 +2222,48 @@ class Visualization(HasTraits):
         curr_offset = self._curr_offset()
         curr_roi_size = self.roi_array[0].astype(int)
         self._update_structure_level(curr_offset, curr_roi_size)
+    
+    def _update_prog(self, pct: int, msg: str):
+        """Update progress bar.
+        
+        Also updates the logger.
+        
+        Args:
+            pct: Percentage completed.
+            msg: Message.
 
+        """
+        self._prog_pct = pct
+        self._prog_msg = msg
+    
+    @on_trait_change("_structure_remap_btn")
+    def _remap_structure(self):
+        """Remap atlas labels to the selected structure level."""
+        def remap_success(labels_np):
+            # update labels image in editors
+            if self.roi_ed:
+                self.roi_ed.labels_img = labels_np
+            if self.atlas_eds:
+                for ed in self.atlas_eds:
+                    ed.labels_img = labels_np
+            
+            # redraw editor
+            self.redraw_selected_viewer()
+        
+        # remap labels image in separate thread
+        self._remap_level_thread = atlas_threads.RemapLevelThread(
+            self.structure_scale, remap_success, self._update_prog)
+        self._remap_level_thread.start()
+    
+    @property
+    def structure_scale(self):
+        """Atlas level, where the highest value is None."""
+        level = self._structure_scale
+        if level == self._structure_scale_high:
+            # use drawn label rather than a specific level
+            level = None
+        return level
+        
     @on_trait_change("btn_redraw")
     def _redraw_fired(self):
         """Respond to redraw button presses."""
@@ -2023,6 +2298,30 @@ class Visualization(HasTraits):
             clear (bool): True to clear the ROI and blobs; defaults to True.
         
         """
+        def confirm(ed, fn):
+            # prompt to save before redrawing if edited
+            if ed.edited:
+                response = confirmation_dialog.confirm(
+                    None, "Edits have not been saved. Save before redrawing?",
+                    "Save before redraw?", True, YES)
+                if response == YES:
+                    fn()
+                elif response == CANCEL:
+                    return False
+            return True
+        
+        # check for need to save
+        cont = True
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
+            if self.roi_ed:
+                cont = confirm(self.roi_ed, self.save_segs)
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
+            if self.atlas_eds and self.atlas_eds[0].edited:
+                cont = confirm(self.atlas_eds[0], self.atlas_eds[0].save_atlas)
+        if not cont:
+            # user canceled
+            return
+
         # reload profiles if any profile files have changed and reset ROI
         cli.update_profiles()
         self._drawn_offset = self._curr_offset()
@@ -2153,8 +2452,8 @@ class Visualization(HasTraits):
             
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
-            segs_all = detector.format_blobs(segs_all)
-            segs_all, mask_chl = detector.blobs_in_channel(
+            segs_all = detector.Blobs.format_blobs(segs_all)
+            segs_all, mask_chl = detector.Blobs.blobs_in_channel(
                 segs_all, chls, return_mask=True)
             
             if ColocalizeOptions.MATCHES.value in self._colocalize:
@@ -2170,9 +2469,10 @@ class Visualization(HasTraits):
                     # shift blobs to relative coordinates
                     matches = matches[tuple(matches.keys())[0]]
                     shift = [n * -1 for n in roi[0]]
-                    matches.update_blobs(detector.shift_blob_rel_coords, shift)
                     matches.update_blobs(
-                        detector.multiply_blob_rel_coords,
+                        detector.Blobs.shift_blob_rel_coords, shift)
+                    matches.update_blobs(
+                        detector.Blobs.multiply_blob_rel_coords,
                         config.blobs.scaling[:3])
                     matches.get_mean_coords()
                     self.blobs.blob_matches = matches
@@ -2185,30 +2485,33 @@ class Visualization(HasTraits):
                 # get corresponding blob co-localizations unless showing
                 # blobs from database, which do not have colocs
                 colocs = config.blobs.colocalizations[mask][mask_chl]
-        _logger.debug(f"All blobs:\n{segs_all}\nTotal blobs: {len(segs_all)}")
+        _logger.debug(
+            f"All blobs:\n{segs_all}\nTotal blobs: "
+            f"{0 if segs_all is None else len(segs_all)}")
         
         if segs is not None:
             # segs are typically loaded from DB for a sub-ROI within the
             # current ROI, so fill in the padding area from segs_all
+            # TODO: remove since blobs from different sources may be confusing?
             _, segs_in_mask = detector.get_blobs_in_roi(
                 segs_all, np.zeros(3), 
                 roi_size, np.multiply(self.border, -1))
             segs_outside = segs_all[np.logical_not(segs_in_mask)]
             print("segs_outside:\n{}".format(segs_outside))
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
-            segs = detector.format_blobs(segs)
-            segs = detector.blobs_in_channel(segs, chls)
+            segs = detector.Blobs.format_blobs(segs)
+            segs = detector.Blobs.blobs_in_channel(segs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
         if segs_all is not None:
             # set confirmation flag to user-selected label for any
             # un-annotated blob
-            confirmed = detector.get_blob_confirmed(segs_all)
+            confirmed = detector.Blobs.get_blob_confirmed(segs_all)
             confirmed[confirmed == -1] = self._segs_labels[0]
-            detector.set_blob_confirmed(segs_all, confirmed)
+            detector.Blobs.set_blob_confirmed(segs_all, confirmed)
             
             # convert segments to visualizer table format and plot
-            self.segments = detector.shift_blob_abs_coords(
+            self.segments = detector.Blobs.shift_blob_abs_coords(
                 segs_all, offset[::-1])
             self.blobs.blobs = self.segments
             if colocs is not None:
@@ -2241,15 +2544,17 @@ class Visualization(HasTraits):
                     return atlas_cmap
                 
                 # set up colormaps for blobs and blob matches
-                self.segs_cmap = get_atlas_cmap(detector.get_blob_abs_coords(
-                    segs_all[self.segs_in_mask]))
-                if self.blobs.blob_matches is not None:
+                self.segs_cmap = get_atlas_cmap(
+                    detector.Blobs.get_blob_abs_coords(
+                        segs_all[self.segs_in_mask]))
+                if (self.blobs.blob_matches is not None and
+                        self.blobs.blob_matches.coords is not None):
                     self.blobs.blob_matches.cmap = get_atlas_cmap(
                         np.add(self.blobs.blob_matches.coords, offset[::-1]))
             
             else:
                 # default to color by channel
-                chls = detector.get_blobs_channel(
+                chls = detector.Blobs.get_blobs_channel(
                     segs_all[self.segs_in_mask]).astype(np.int)
                 cmap = colormaps.discrete_colormap(
                     max(chls) + 1, alpha, True, config.seed)
@@ -2450,6 +2755,8 @@ class Visualization(HasTraits):
             blobs_truth_roi = np.subtract(blobs_truth_roi, transpose)
             blobs_truth_roi[:, 5] = blobs_truth_roi[:, 4]
             #print("blobs_truth_roi:\n{}".format(blobs_truth_roi))
+        
+        # create ROI Editor
         filename_base = importer.filename_to_base(
             config.filename, config.series)
         grid = self._DEFAULTS_2D[3] in self._check_list_2d
@@ -2460,8 +2767,10 @@ class Visualization(HasTraits):
             # additional args with defaults
             self._full_border(self.border))
         roi_ed = roi_editor.ROIEditor(
-            config.image5d, config.labels_img, self._img_region,
+            config.img5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
+        self.roi_ed = roi_ed
+        
         roi_ed.plane = self._planes_2d[0].lower()
         if self._DEFAULTS_2D[4] in self._check_list_2d:
             # set MIP for the current plane
@@ -2515,11 +2824,18 @@ class Visualization(HasTraits):
             # of 3D screenshot
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, zoom_levels=2)
+        roi_ed.set_labels_level(self.structure_scale)
         roi_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
-        self.roi_ed = roi_ed
+        self._show_all_labels(
+            [self.roi_ed], RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(roi_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ROI_ED] = None
+        
+        # store selected 2D options
+        config.prefs.roi_circles = self._circles_2d[0]
+        config.prefs.roi_plane = self._planes_2d[0]
+        config.prefs.roi_styles = self._styles_2d[0]
 
     def launch_atlas_editor(self):
         if config.image5d is None:
@@ -2533,7 +2849,7 @@ class Visualization(HasTraits):
             # using the same title causes the windows to overlap
             title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
-            config.image5d, config.labels_img, config.channel, 
+            config.img5d, config.labels_img, config.channel, 
             self._curr_offset(center=False), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
@@ -2548,6 +2864,11 @@ class Visualization(HasTraits):
         atlas_ed.show_atlas()
         atlas_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
+        atlas_ed.set_labels_level(self.structure_scale)
+        atlas_ed.show_labels_annots(
+            RegionOptions.SHOW_ALL.value in self._region_options)
+        self._show_all_labels(
+            [atlas_ed], RegionOptions.SHOW_ALL.value in self._region_options)
         self._add_mpl_fig_handlers(atlas_ed.fig)
         self.stale_viewers[vis_handler.ViewerTabs.ATLAS_ED] = None
     
@@ -2583,14 +2904,41 @@ class Visualization(HasTraits):
             if ed is None or ed is ed_ignore: continue
             ed.refresh_images()
     
+    @staticmethod
+    def get_changed_options(
+            curr_options: Sequence[str], prev_options: Dict[Enum, bool],
+            enum_options: Type[Enum]
+    ) -> Tuple[Dict[Enum, bool], Dict[Enum, bool]]:
+        """Get dicts of the options and whether they have changed.
+
+        Args:
+            curr_options: Current options as a list of option names.
+            prev_options: Previous options as a dictionary of Enum options
+                to boolean values.
+            enum_options: Enumeration of options.
+
+        Returns:
+            Tuple of:
+            - ``options``: ``prev_options`` but for the current state.
+            - ``changed``: Dictionary with same keys as ``options`` but
+              values of whether the state changed compared to previously.
+
+        """
+        # option is true if it's present in the current options
+        options = {e: e.value in curr_options for e in enum_options}
+    
+        # option changed if it's value differs from previous options
+        changed = {e: e in prev_options and options[e] != prev_options[e]
+                   for e in options}
+        return options, changed
+
     @on_trait_change("_atlas_ed_options")
     def _atlas_ed_options_changed(self):
         """Respond to atlas editor option changes."""
-        # boolean dicts of option settings and whether option changed
-        options = {e: e.value in self._atlas_ed_options
-                   for e in AtlasEditorOptions}
-        changed = {e: options[e] != (e.value in self._atlas_ed_options_prev)
-                   for e in options}
+        # get boolean dicts of the options and whether they have changed
+        options, changed = self.get_changed_options(
+            self._atlas_ed_options, self._atlas_ed_options_prev,
+            AtlasEditorOptions)
         
         if self.roi_ed:
             if changed[AtlasEditorOptions.SHOW_LABELS]:
@@ -2624,7 +2972,7 @@ class Visualization(HasTraits):
             # otherwise, defer sync to tab selection handler
             self.sync_atlas_eds_coords(check_option=True)
         
-        self._atlas_ed_options_prev = list(self._atlas_ed_options)
+        self._atlas_ed_options_prev = options
     
     def _zoom_atlas_ed(self, atlas_ed, zoom):
         """Zoom the Atlas Editor into the ROI.
@@ -2646,14 +2994,14 @@ class Visualization(HasTraits):
         atlas_ed.view_subimg(offset[::-1], shape[::-1])
 
     @staticmethod
-    def _get_save_path(default_path):
+    def _get_save_path(default_path: str) -> str:
         """Get a save path from the user through a file dialog.
         
         Args:
-            default_path (str): Default path to display in the dialog.
+            default_path: Default path to display in the dialog.
 
         Returns:
-            str: Chosen path.
+            Chosen path.
         
         Raises:
             FileNotFoundError: User canceled file selection.
@@ -2662,8 +3010,10 @@ class Visualization(HasTraits):
         # open a PyFace file dialog in save mode
         save_dialog = FileDialog(action="save as", default_path=default_path)
         if save_dialog.open() == OK:
-            # get user selected path
-            return save_dialog.path
+            # get user selected path and update preferences
+            path = save_dialog.path
+            config.prefs.fig_save_dir = os.path.dirname(path)
+            return path
         else:
             # user canceled file selection
             raise FileNotFoundError("User canceled file selection")
@@ -2673,17 +3023,25 @@ class Visualization(HasTraits):
         """Save the figure in the currently selected viewer."""
         path = None
         try:
+            # get the figure save directory from preferences
+            save_dir = config.prefs.fig_save_dir
+            
             if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
                 if self.roi_ed is not None:
                     # save screenshot of current ROI Editor
-                    path = self._get_save_path(self.roi_ed.get_save_path())
+                    path = os.path.join(save_dir, self.roi_ed.get_save_path())
+                    path = self._get_save_path(path)
                     self.roi_ed.save_fig(path)
+            
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
                 if self.atlas_eds:
                     # save screenshot of first Atlas Editor
                     # TODO: find active editor
-                    path = self._get_save_path(self.atlas_eds[0].get_save_path())
+                    path = os.path.join(
+                        save_dir, self.atlas_eds[0].get_save_path())
+                    path = self._get_save_path(path)
                     self.atlas_eds[0].save_fig(path)
+            
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
                 if config.filename:
                     # save 3D image with extension in config
@@ -2694,11 +3052,13 @@ class Visualization(HasTraits):
                     path = "{}.{}".format(naming.get_roi_path(
                         config.filename, self._curr_offset(),
                         self.roi_array[0].astype(int)), ext)
-                    path = self._get_save_path(path)
+                    path = self._get_save_path(os.path.join(save_dir, path))
                     plot_2d.plot_image(screenshot, path)
+            
             if not path:
                 # notify that no figure is active to save
                 self._roi_feedback = "Please open a figure to save"
+        
         except FileNotFoundError as e:
             # user canceled path selection
             print(e)
@@ -2727,14 +3087,14 @@ class Visualization(HasTraits):
             blobs = config.db.select_blobs_by_roi(roi_id)[0]
             if len(blobs) > 0:
                 # change to single-channel if all blobs are from same channel
-                chls = np.unique(detector.get_blobs_channel(blobs))
+                chls = np.unique(detector.Blobs.get_blobs_channel(blobs))
                 if len(chls) == 1:
                     self._channel = [str(int(chls[0]))]
             
             # get matches between blobs, such as verifications
             blob_matches = config.db.select_blob_matches(roi_id)
             blob_matches.update_blobs(
-                detector.shift_blob_rel_coords,
+                detector.Blobs.shift_blob_rel_coords,
                 [n * -1 for n in config.roi_offset[::-1]])
             
             # display blobs
@@ -2766,6 +3126,64 @@ class Visualization(HasTraits):
                      else (0, 0, 0))
         self._update_mip(mip_shape)
     
+    @on_trait_change("_region_name")
+    def _region_name_changed(self):
+        """Handle changes to the region name combo box."""
+        ids = str(self._region_id_map[self._region_name])
+        if RegionOptions.APPEND.value in self._region_options:
+            # append the region ID
+            ids = f"{self._region_id},{ids}"
+        # remove preceding commas
+        self._region_id = ids.lstrip(",")
+    
+    def _show_all_labels(
+            self, eds: Sequence[Union[
+                "plot_support.ImageSyncMixin",
+                Sequence["plot_support.ImageSyncMixin"]]], show=True):
+        """Show all atlas labels.
+        
+        Args:
+            eds: Sequence of individual or sequences of ROI and Atlas Editors.
+                None values will be ignored.
+            show: True (default) to show the labels.
+
+        """
+        # skip Nones and flatten list
+        eds_all = []
+        for ed in eds:
+            if ed:
+                if libmag.is_seq(ed):
+                    eds_all.extend(ed)
+                else:
+                    eds_all.append(ed)
+        
+        if eds_all:
+            # show in thread
+            self._annotate_labels_thread = atlas_threads.AnnotateLabels(
+                eds_all, show, lambda: None, self._update_prog)
+            self._annotate_labels_thread.start()
+    
+    @on_trait_change("_region_options")
+    def _region_options_changed(self):
+        """Handle changes to the region options check boxes."""
+        # get dict of whether each option changed
+        options, changed = self.get_changed_options(
+            self._region_options, self._region_options_prev, RegionOptions)
+        
+        if changed[RegionOptions.APPEND] and not options[RegionOptions.APPEND]:
+            # trigger region ID change with current ID when unchecking append
+            region_id = self._region_id
+            self._region_id = ""
+            self._region_id = region_id
+        
+        if changed[RegionOptions.SHOW_ALL]:
+            # toggle showing all label annotations
+            option = options[RegionOptions.SHOW_ALL]
+            self._show_all_labels((self.roi_ed, self.atlas_eds), option)
+        
+        # store current options
+        self._region_options_prev = options
+    
     @on_trait_change("_region_id")
     def _region_id_changed(self):
         """Center the viewer on the region specified in the corresponding 
@@ -2776,8 +3194,17 @@ class Visualization(HasTraits):
         be ignored.
         """
         print("region ID: {}".format(self._region_id))
+        if RegionOptions.APPEND.value in self._region_options:
+            self._roi_feedback = (
+                "Add more regions, then uncheck \"Append\" to view them")
+            return
+        
         if config.labels_img is None:
             self._roi_feedback = "No labels image loaded to find region"
+            return
+
+        if config.labels_ref is None or config.labels_ref.ref_lookup is None:
+            self._roi_feedback = "No labels reference loaded to find region"
             return
 
         # user-given region can be a comma-delimited list of region IDs
@@ -2806,7 +3233,7 @@ class Visualization(HasTraits):
             region_ids.append(region_id)
         incl_chil = RegionOptions.INCL_CHILDREN.value in self._region_options
         centroid, self._img_region, region_ids = ontology.get_region_middle(
-            config.labels_ref_lookup, region_ids, config.labels_img,
+            config.labels_ref.ref_lookup, region_ids, config.labels_img,
             config.labels_scaling, both_sides=both_sides,
             incl_children=incl_chil)
         if centroid is None:
@@ -2951,11 +3378,13 @@ class Visualization(HasTraits):
     
     def _flag_seg_for_deletion(self, seg):
         seg[3] = -1 * abs(seg[3])
-        detector.set_blob_confirmed(seg, -1)
+        detector.Blobs.set_blob_confirmed(seg, -1)
     
-    def update_segment(self, segment_new, segment_old=None, remove=False):
-        """Update this class object's segments list with a new or updated 
-        segment.
+    def update_segment(
+            self, segment_new: np.ndarray,
+            segment_old: Optional[np.ndarray] = None, remove: bool = False
+    ) -> np.ndarray:
+        """Update segments/blobs list with a new or updated segment.
         
         Args:
             segment_new: Segment to either add or update, including 
@@ -2973,6 +3402,7 @@ class Visualization(HasTraits):
         
         Returns:
             The updated segment.
+        
         """
         seg = segment_new
         # remove all row selections to ensure that no more than one 
@@ -2993,7 +3423,7 @@ class Visualization(HasTraits):
             # TODO: consider requiring new seg to already have abs coord updated
             self._segs_moved.append(segment_old)
             diff = np.subtract(seg[:3], segment_old[:3])
-            detector.shift_blob_abs_coords(seg, diff)
+            detector.Blobs.shift_blob_abs_coords(seg, diff)
             segi = self._get_vis_segments_index(segment_old)
             if segi == -1:
                 # try to find old blob from deleted blobs
@@ -3019,6 +3449,11 @@ class Visualization(HasTraits):
         
         # scroll to first selected row
         self._segs_row_scroll = min(self.segs_selected)
+        
+        if self.roi_ed:
+            # flag ROI Editor as edited
+            self.roi_ed.edited = True
+        
         return seg
     
     @property
@@ -3171,8 +3606,11 @@ class Visualization(HasTraits):
     @on_trait_change("_profiles_reset_prefs_btn")
     def _reset_prefs(self):
         """Handle button to reset preferences."""
-        # trigger reset in handler
+        # trigger resetting TraitsUI prefs in handler
         self._profiles_reset_prefs = True
+        
+        # reset preferences profile
+        config.prefs = prefs_prof.PrefsProfile()
     
     @on_trait_change("_import_browser")
     def _add_import_file(self):
@@ -3377,18 +3815,81 @@ class Visualization(HasTraits):
         """
         self._import_feedback += "{}\n".format(val)
 
-    def _update_roi_feedback(self, val, print_out=False):
+    def _update_roi_feedback(self, val: str, print_out: bool = False):
         """Update the ROI panel feedback text box.
 
         Args:
-            val (str): String to append as a new line.
-            print_out (bool): True to print to console as well; defaults
-                to False.
+            val: String to append as a new line.
+            print_out: True to print to log as well; defaults to False.
 
         """
         if print_out:
-            print(val)
+            _logger.info(val)
         self._roi_feedback += "{}\n".format(val)
+    
+    # BRAINGLOBE CONTROLS
+    
+    def _set_bg_atlases(self, val: Sequence):
+        """Set BrainGlobe atlases table data."""
+        self._bg_atlases = val
+    
+    def _set_bg_feedback(self, val: str, append: bool = True):
+        """Set BrainGlobe feedback string.
+        
+        Args:
+            val: Feedback string.
+            append: True to append the string; otherwise, ``val`` replaces
+                all current text. Defaults to True.
+
+        Returns:
+
+        """
+        if append:
+            # append text
+            if self._bg_feedback:
+                # add a newline if text is already present
+                val = f"\n{val}"
+            self._bg_feedback += val
+        else:
+            # replace text
+            self._bg_feedback = val
+    
+    def _bg_open_handler(self, bg_atlas: "BrainGlobeAtlas"):
+        """Handler to open a BrainGlobe atlas.
+        
+        Args:
+            bg_atlas: Atlas to open.
+
+        """
+        # update displayed filename
+        config.filename = str(bg_atlas.root_dir)
+        self.update_filename(config.filename, True)
+        
+        # display the atlas images
+        np_io.setup_images(
+            config.filename, allow_import=False, bg_atlas=bg_atlas)
+        self._setup_for_image()
+        self.redraw_selected_viewer()
+        self.update_imgadj_for_img()
+    
+    def _setup_brain_globe(self):
+        """Set up the BrainGlobe controller."""
+        panel = bg_controller.BrainGlobeCtrl(
+            self._set_bg_atlases, self._set_bg_feedback, self._update_prog,
+            self._bg_open_handler)
+        return panel
+        
+    @on_trait_change("_bg_access_btn")
+    def _open_brain_globe_atlas(self):
+        """Open a BrainGlobe atlas."""
+        if self._bg_atlases_sel:
+            self._brain_globe_panel.open_atlas(self._bg_atlases_sel[0])
+    
+    @on_trait_change("_bg_remove_btn")
+    def _remove_brain_globe_atlas(self):
+        """Remove a local copy of a BrainGlobe atlas."""
+        if self._bg_atlases_sel:
+            self._brain_globe_panel.remove_atlas(self._bg_atlases_sel[0])
 
 
 if __name__ == "__main__":

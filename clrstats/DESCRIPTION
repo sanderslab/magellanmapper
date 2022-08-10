@@ -15,4 +15,6 @@ Imports:
   corrplot,
   optparse,
   tryCatchLog
+Suggests:
+  effectsize
 RoxygenNote: 6.1.1

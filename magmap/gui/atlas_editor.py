@@ -5,6 +5,7 @@
 
 import datetime
 import os
+from typing import TYPE_CHECKING
 
 from matplotlib import pyplot as plt
 from matplotlib import figure
@@ -17,6 +18,9 @@ from magmap.io import libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
 
+if TYPE_CHECKING:
+    from magmap.io import np_io
+
 
 class AtlasEditor(plot_support.ImageSyncMixin):
     """Graphical interface to view an atlas in multiple orthogonal 
@@ -26,7 +30,6 @@ class AtlasEditor(plot_support.ImageSyncMixin):
     :const:`magmap.config.PLANE` plane orientations to Plot Editors.
     
     Attributes:
-        image5d: Numpy image array in t,z,y,x,[c] format.
         labels_img: Numpy image array in z,y,x format.
         channel: Channel of the image to display.
         offset: Index of plane at which to start viewing in x,y,z (user) 
@@ -58,12 +61,11 @@ class AtlasEditor(plot_support.ImageSyncMixin):
 
     _EDIT_BTN_LBLS = ("Edit", "Editing")
 
-    def __init__(self, image5d, labels_img, channel, offset, fn_close_listener, 
+    def __init__(self, img5d, labels_img, channel, offset, fn_close_listener, 
                  borders_img=None, fn_show_label_3d=None, title=None,
                  fn_refresh_atlas_eds=None, fig=None, fn_status_bar=None):
         """Plot ROI as sequence of z-planes containing only the ROI itself."""
-        super().__init__()
-        self.image5d = image5d
+        super().__init__(img5d)
         self.labels_img = labels_img
         self.channel = channel
         self.offset = offset
@@ -157,7 +159,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             arrs_3d, aspect, origin, scaling = \
                 plot_support.setup_images_for_plane(
                     plane,
-                    (self.image5d[0], self.labels_img, self.borders_img))
+                    (self.img5d.img[0], self.labels_img, self.borders_img))
             img3d_tr, labels_img_tr, borders_img_tr = arrs_3d
             
             # slider through image planes
@@ -168,9 +170,11 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             
             # plot editor
             max_size = max_sizes[axis] if max_sizes else None
+            overlayer = plot_support.ImageOverlayer(
+                ax, aspect, origin, rgb=self.img5d.rgb)
             plot_ed = plot_editor.PlotEditor(
-                ax, img3d_tr, labels_img_tr, config.cmap_labels,
-                plane, aspect, origin, self.update_coords, self.refresh_images, 
+                overlayer, img3d_tr, labels_img_tr, config.cmap_labels,
+                plane, self.update_coords, self.refresh_images, 
                 scaling, plane_slider, img3d_borders=borders_img_tr,
                 cmap_borders=cmap_borders, 
                 fn_show_label_3d=self.fn_show_label_3d, 
@@ -302,6 +306,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             if ed.edited:
                 # display save button as enabled if any editor has been edited
                 enable_btn(self.save_btn)
+                self.edited = True
         if update_atlas_eds and self.fn_refresh_atlas_eds is not None:
             # callback to synchronize other Atlas Editors
             self.fn_refresh_atlas_eds(self)
@@ -355,12 +360,12 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         except ValueError as e:
             print(e)
     
-    def save_atlas(self, event):
+    def save_atlas(self, event=None):
         """Save atlas labels using the registered image suffix given by
         :attr:`config.reg_suffixes[config.RegSuffixes.ANNOTATION]`.
         
         Args:
-            event: Button event, currently not used.
+            event: Button event, currently not used; defaults to None.
         
         """
         # only save if at least one editor has been edited
@@ -378,6 +383,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False
+        self.edited = False
         enable_btn(self.save_btn, False)
         print("Saved labels image at {}".format(datetime.datetime.now()))
     

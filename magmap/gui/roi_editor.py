@@ -14,6 +14,7 @@ import os
 from enum import Enum
 import re
 from time import time
+from typing import Callable, Optional, TYPE_CHECKING
 
 import numpy as np
 from matplotlib import figure
@@ -27,6 +28,9 @@ from magmap.gui import pixel_display, plot_editor
 from magmap.io import importer, libmag, naming
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    from magmap.io import np_io
 
 verify = False
 
@@ -326,21 +330,22 @@ class ROIEditor(plot_support.ImageSyncMixin):
     #: int: padding for ROI within overview plots
     _ROI_PADDING = 10
 
-    def __init__(self, image5d=None, labels_img=None, img_region=None,
+    def __init__(self, img5d, labels_img=None, img_region=None,
                  fn_show_label_3d=None, fn_status_bar=None):
         """Initialize the editor."""
-        super().__init__()
+        super().__init__(img5d)
         print("Initiating ROI Editor")
-        self.image5d = image5d
-        self.labels_img = labels_img
+        self.image5d = self.img5d.img if self.img5d else None
+        self.labels_img: Optional[np.ndarray] = labels_img
         if img_region is not None:
             # invert region selection image to opacify areas outside of the
             # region; note that in MIP mode, will still only show lowest plane
             img_region = np.invert(img_region).astype(float)
             img_region[img_region == 0] = np.nan
-        self.img_region = img_region
-        self.fn_show_label_3d = fn_show_label_3d
-        self.fn_status_bar = fn_status_bar
+        self.img_region: Optional[np.ndarray] = img_region
+        self.fn_show_label_3d: Optional[
+            Callable[[float], None]] = fn_show_label_3d
+        self.fn_status_bar: Optional[Callable[[str], None]] = fn_status_bar
 
         # initialize other instance attributes
         self.filename = None
@@ -449,9 +454,11 @@ class ROIEditor(plot_support.ImageSyncMixin):
         img3d_extras = arrs_3d[2:] if num_arrs_3d > 2 else None
         if img3d_extras is not None:
             img3d_extras = [np.array(img) for img in img3d_extras]
+        overlayer = plot_support.ImageOverlayer(
+            ax_ov, aspect, origin, rgb=self.img5d.rgb)
         plot_ed = plot_editor.PlotEditor(
-            ax_ov, arrs_3d[0], labels_img, cmap_labels,
-            self.plane, aspect, origin, update_coords,
+            overlayer, arrs_3d[0], labels_img, cmap_labels,
+            self.plane, update_coords,
             scaling, max_size=max_size, fn_status_bar=self.fn_status_bar,
             img3d_extras=img3d_extras,
             fn_show_label_3d=self.fn_show_label_3d)
@@ -769,9 +776,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                         blob = np.array([[axi - self._z_planes_padding,
                                          event.ydata.astype(int),
                                          event.xdata.astype(int), -5]])
-                        blob = detector.format_blobs(blob, blob_channel)
-                        detector.shift_blob_abs_coords(blob, offset[::-1])
-                        detector.set_blob_confirmed(blob, 1)
+                        blob = detector.Blobs.format_blobs(blob, blob_channel)
+                        detector.Blobs.shift_blob_abs_coords(blob, offset[::-1])
+                        detector.Blobs.set_blob_confirmed(blob, 1)
                         blob = fn_update_seg(blob[0])
                         # adds a circle to denote the new segment
                         patch = self._plot_circle(
@@ -803,7 +810,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     seg_new = fn_update_seg(seg_new, seg_old)
                 else:
                     print("Pasting a copied in segment")
-                    detector.shift_blob_abs_coords(seg_new, (dz, 0, 0))
+                    detector.Blobs.shift_blob_abs_coords(seg_new, (dz, 0, 0))
                     seg_new = fn_update_seg(seg_new)
                 self._plot_circle(
                     inax, seg_new, self._BLOB_LINEWIDTH, None, fn_update_seg)
@@ -1202,8 +1209,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 roi[:, ::grid_intervals[1]] = roi[:, ::grid_intervals[1]] / 2
 
             # show the ROI, which is now a 2D zoomed image
-            ax_imgs = [plot_support.imshow_multichannel(
-                ax, roi, channel, config.cmaps, aspect, alpha)]
+            overlaid = plot_support.ImageOverlayer(
+                ax, aspect, rgb=self.img5d.rgb)
+            ax_imgs = [overlaid.imshow_multichannel(
+                roi, channel, config.cmaps, alpha, rgb=self.img5d.rgb)]
             #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
 
             # show labels if provided and within ROI
@@ -1286,7 +1295,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                             # adjusting rel and abs z coords to the given plane
                             z_diff = z_relative - seg[0]
                             seg[0] = z_relative
-                            detector.shift_blob_abs_coords(
+                            detector.Blobs.shift_blob_abs_coords(
                                 segments_z[i], (z_diff, 0, 0))
                             segments_z[i] = fn_update_seg(seg)
                 else:
@@ -1294,7 +1303,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     segments_z = segs_in[segs_in[:, 0] == z_relative]
                     if segs_out_z is not None:
                         segs_out_z_confirmed = segs_out_z[
-                            detector.get_blob_confirmed(segs_out_z) == 1]
+                            detector.Blobs.get_blob_confirmed(segs_out_z) == 1]
                         if len(segs_out_z_confirmed) > 0:
                             # include confirmed blobs; TODO: show contextual
                             # circles in adjacent planes?
@@ -1386,9 +1395,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
         Returns:
             The DraggableCircle object.
         """
-        channel = detector.get_blob_channel(segment)
+        channel = detector.Blobs.get_blobs_channel(segment)
         facecolor = DraggableCircle.BLOB_COLORS[
-            detector.get_blob_confirmed(segment)]
+            detector.Blobs.get_blob_confirmed(segment)]
         if linestyle is None:
             linestyle = self._BLOB_LINESTYLES[channel]
         circle = patches.Circle(
@@ -1453,7 +1462,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                         blob[2], blob[1],
                         ",".join([str(c) for c in np.where(coloc > 0)[0]]),
                         color="C{}".format(
-                            int(detector.get_blob_channel(blob))),
+                            int(detector.Blobs.get_blobs_channel(blob))),
                         alpha=0.8, horizontalalignment="center",
                         verticalalignment="center"))
         self.fig.canvas.draw_idle()

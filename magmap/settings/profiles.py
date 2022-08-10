@@ -6,14 +6,18 @@ Each profile has a default set of settings, which can be modified through
 "modifier" sub-profiles with groups of settings that overwrite the 
 given default settings. 
 """
+import dataclasses
 from enum import Enum, auto
 import glob
 import os
 import pprint
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional, TYPE_CHECKING, Union
 
 from magmap.io import yaml_io
 from magmap.settings import config
+
+if TYPE_CHECKING:
+    import pathlib
 
 _logger = config.logger.getChild(__name__)
 
@@ -45,10 +49,16 @@ _PROFILE_ENUMS = {
 }
 
 
+# TODO: completely migrate from dict to dataclass
+@dataclasses.dataclass(repr=False)
 class SettingsDict(dict):
-    """Profile dictionary, which contains collections of settings and allows
-    modification by applying additional groups of settings specified in
-    this dictionary.
+    """Profile dictionary, which contains collections of settings.
+    
+    Allows modification by applying additional groups of settings specified in
+    this dictionary. Supports saving and loading settings from a YAML file.
+    
+    This class is being migrated to a data class, which supports type hints
+    and attribute access. It will also reduce the need for Enums as keys.
 
     Attributes:
         PATH_PROFILES (str): Path to profiles directory.
@@ -82,11 +92,11 @@ class SettingsDict(dict):
         
         # update with args
         self.update(*args, **kwargs)
-
-        #: bool: add a modifier directly as a value rather than updating
-        # this dict's settings with the corresponding keys
-        self._add_mod_directly = False
-
+    
+    def __repr__(self):
+        """Represent with dict items and data class attributes."""
+        return f"{super().__repr__()}\n{dataclasses.asdict(self)}"
+    
     @staticmethod
     def get_files(profiles_dir=None, filename_prefix=""):
         """Get profile files.
@@ -111,23 +121,41 @@ class SettingsDict(dict):
                 if os.path.splitext(p)[1].lower() in SettingsDict._EXT_YAML]
     
     def modify_settings(self, mods: Dict[Union[str, Enum], Union[Dict, str]]):
-        """Modify dictionary items from another dictionary.
+        """Modify dictionary or data class items from another dictionary.
         
         If corresponding values are sub-dictionaries, the existing sub-dict
         will be updated rather than replaced with the new sub-dict.
+        
+        Priority is given to updated existing dictionary keys. If unavailable,
+        data class attributes are updated.
         
         Args:
             mods: Dictionary to update this class' dictionary.
 
         """
         for key in mods.keys():
-            if isinstance(self[key], dict) and isinstance(mods[key], dict):
-                # if both current and new setting values are dicts,
-                # update rather than replacing the current dict
-                self[key].update(mods[key])
-            else:
-                # replace the value at the setting with the modified val
-                self[key] = mods[key]
+            mod_is_dict = isinstance(mods[key], dict)
+            try:
+                # incorporate given settings into self as dict
+                if isinstance(self[key], dict) and mod_is_dict:
+                    # if both current and new setting values are dicts,
+                    # update rather than replacing the current dict
+                    self[key].update(mods[key])
+                else:
+                    # replace the value at the setting with the modified val
+                    self[key] = mods[key]
+            
+            except KeyError:
+                try:
+                    # incorporate as data class attributes
+                    attr = getattr(self, key)
+                    if isinstance(attr, dict) and mod_is_dict:
+                        attr.update(mods[key])
+                    else:
+                        setattr(self, key, mods[key])
+                except AttributeError as e:
+                    _logger.debug(e)
+                    _logger.debug("Ignoring preference key: %s", key)
     
     def get_profile(
             self, profile_name: str
@@ -187,30 +215,6 @@ class SettingsDict(dict):
                 mods = self.profiles[profile_name]
         return mods
     
-    def add_profile(
-            self, profile_name: str,
-            mods: Optional[Dict[Union[str, Enum], Union[Dict, str]]]):
-        """Add a profile dictionary into this dictionary.
-        
-        The profile can consist of a subset of keys in this dictionary that
-        will override the current values of the corresponding keys.
-        If both the original and new value are dictionaries for any given key,
-        the original dictionary will be updated with rather than overwritten
-        by the new value.
-
-        Args:
-            profile_name: Name of the modifier, which will be appended to
-                the name of the current settings.
-            mods: Dictionary with which to update this instance.
-        
-        """
-        self[self.NAME_KEY] += self.delimiter + profile_name
-        if self._add_mod_directly:
-            # add/replace the value at mod_name with the found value
-            self[profile_name] = mods
-        else:
-            self.modify_settings(mods)
-
     def add_profiles(self, names_str):
         """Add profiles by names and files.
         
@@ -232,7 +236,8 @@ class SettingsDict(dict):
             # profiles determines the precedence of settings
             mods = self.get_profile(profile)
             if mods:
-                self.add_profile(profile, mods)
+                self[self.NAME_KEY] += self.delimiter + profile
+                self.modify_settings(mods)
 
         if config.verbose:
             _logger.debug("settings for '%s':", self[self.NAME_KEY])
@@ -290,3 +295,19 @@ class SettingsDict(dict):
                         return False
         print("Block settings are identical")
         return True
+    
+    def save_settings(self, path: Union[str, "pathlib.Path"]) -> Dict:
+        """Save current settings to YAML file.
+        
+        Args:
+            path: Output path.
+
+        Returns:
+            Saved dictionary, including any modifications
+
+        """
+        # update dict with attributes from data class fields
+        self.update(dataclasses.asdict(self))
+        
+        # save dict to YAML
+        return yaml_io.save_yaml(path, self, convert_enums=True)

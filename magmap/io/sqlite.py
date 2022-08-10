@@ -374,7 +374,7 @@ def insert_blobs(conn, cur, roi_id, blobs):
         blob_entry.extend(blob)
         #print("blob type:\n{}".format(blob.dtype))
         blobs_list.append(blob_entry)
-        if detector.get_blob_confirmed(blob) == 1:
+        if detector.Blobs.get_blob_confirmed(blob) == 1:
             confirmed += 1
     #print(match_elements(_COLS_BLOBS, ", ", "?"))
     cur.executemany("INSERT OR REPLACE INTO blobs ({}) VALUES ({})"
@@ -399,7 +399,7 @@ def delete_blobs(conn, cur, roi_id, blobs):
     """
     deleted = 0
     for blob in blobs:
-        blob_entry = [roi_id, *blob[:3], detector.get_blob_channel(blob)]
+        blob_entry = [roi_id, *blob[:3], detector.Blobs.get_blobs_channel(blob)]
         print("attempting to delete blob {}".format(blob))
         cur.execute("DELETE FROM blobs WHERE roi_id = ? AND z = ? AND y = ? "
                     "AND x = ? AND channel = ?", blob_entry)

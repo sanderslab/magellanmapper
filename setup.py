@@ -27,9 +27,12 @@ _EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 config = {
     "name": "magellanmapper",
     "description": "3D atlas analysis and annotation",
+    "long_description": open("README.md").read(),
+    "long_description_content_type": "text/markdown",
     "author": "David Young",
     "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
+    "license": "BSD-3",
     "version": "1.6a1",
     "packages": setuptools.find_packages(),
     "scripts": [],

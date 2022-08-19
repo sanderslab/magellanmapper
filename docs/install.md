@@ -50,7 +50,24 @@ Alternatively, those who already have Conda installed can set up an envirionment
 conda env create -n mag -f environment.yml
 ```
 
-See the [Readme](../README.md#run-magellanmapper) for instructions on running MagellanMapper.
+#### Run from a file browser
+
+**On Mac or Linux**: Double-click the MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
+
+**On Windows**: Run `run.py` through Python.
+- It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`
+- If a security warning displays, click on "More info" and "Run anyway" to launch the file
+
+Note that during the first run, there may be a delay of up to several minutes from antivirus scanning for the new Python interpreter location in the new environment. Subsequent launches are typically much faster.
+
+#### Run from a terminal
+
+```
+conda activate mag
+python <path-to-magellanmapper>/run.py
+```
+
+This approach is recommended when running command-line tasks or for debugging output. Replace `mag` if you gave the environment a different name.
 
 ### Option 2: Install through Venv+Pip
 

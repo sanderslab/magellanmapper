@@ -120,16 +120,15 @@ The main required and optional dependencies in MagellanMapper are:
 
 ### Optional Dependency Build and Runtime Requirements
 
-In most cases MagellanMapper can be installed without a compiler by using custom dependency packages we have provided (see Conda pathway above). Where possible, we have made these dependencies optional for those who would prefer not to use the custom packages. They may also be compiled directly as described here.
+#### Custom packages
 
-### Custom precompiled packages
+In most cases MagellanMapper can be installed without a compiler by using custom dependency packages that we have pre-built and hosted.
 
-| Dependency | Precompiled Available? | Precompiled Run Req | Build Req | Purpose | 
-| --- | --- | --- | --- | --- |
-| Python-Javabridge | Yes, via custom package | Python 3.6-3.9[^\*], Java 8+ | JDK, C compiler| Import proprietary image formats |
-| Traits, Pyface, Traitsui | Yes, via Conda (not PyPI) | Python 3.6+ | C compiler, Python dev | GUI |
+| Dependency | Custom Package | Precompiled Run Req | Build Req | Purpose |
+|-----|-----|-----|-----|-----|
+| Python-Javabridge | Precompiled, later release | Python 3.6-3.9[^\*], Java 8+ | JDK, C compiler| For Python-Bioformats |
+| Python-Bioformats | Extended support for older NumPy releases | Python 3.6+ | JDK, C compiler | Import proprietary image formats |
 | SimpleElastix | Yes, via custom package | Python 3.6-3.9 | C, C++ compilers | Load medical 3D formats, image regsitration |
-| ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
 
 [^\*]: MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies. MagellanMapper 1.6 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions.
 
@@ -147,7 +146,7 @@ Java versions:
 - Python-Javabridge uses JDK v8+ (v12+ in Javabridge 1.0.19; see [below](#image-loading) for image loading times and setup troubleshooting with various Java versions)
 - ImageJ/Fiji currently supports Java 8 best in our experience
 
-### Additional optional packages
+#### Additional optional packages
 
 - R for additional stats
 - Zstd (fallback to Zip) for compression on servers

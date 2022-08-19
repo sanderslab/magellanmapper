@@ -37,6 +37,10 @@ config = {
     "packages": setuptools.find_packages(),
     "scripts": [],
     "python_requires": ">=3.6",
+    "entry_points": {
+      "console_scripts": ["mm-cli = magmap.io.cli:main"],
+      "gui_scripts": ["mm = magmap.io.load_env:launch_magmap"],
+    },
     "install_requires": [
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1

@@ -112,6 +112,7 @@
 
 - Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)
 - Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
+- Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
 
 ### Dependency Updates
 
@@ -126,6 +127,7 @@
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
 - Scikit-learn is an optional rather than a required dependency (#150)
 - The AWS-related dependencies (`boto3`, `awscli`) are also no longer installed in Conda environments (#150)
+- The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 
 #### R Dependency Changes
 

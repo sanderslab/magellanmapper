@@ -43,41 +43,11 @@ The extra index accesses a few [customized dependencies](docs/install.md#custom-
 
 Conda installs Java to import proprietary image file formats, which can also be installed separately when using Pip (eg from [here](https://www.azul.com/downloads/?package=jdk)).
 
-### Using our installer scripts
+### More ways to install
 
-We have provided scripts to take care of installing Miniconda (if necessary), creating an environment, and installing MagellanMapper, without requiring command-line/terminal experience. Alternatively, see [here](docs/install.md#option-2-install-through-venvpip) for our Pip+Venv installer scripts.
-
-1. Download MagellanMapper by cloning the git repo (or download the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest)):
-```
-git clone https://github.com/sanderslab/magellanmapper.git
-```
-1. Install MagellanMapper using the following script in the `magellanmapper` folder
-    - On Mac or Linux: `bin/setup_conda`
-    - On Windows: `bin\setup_conda.bat`
-
-1. Run by double-clicking on `MagellanMapper` in the main folder (macOS/Linux) or running `run.py` with Python (Windows).
-
-- Installation may take up to 5 minutes, depending on internet connection speed.
-- The script will also install the Conda package manager if not already installed.
-- To update the environment, rerun the appropriate `setup_conda` script above.
-- On Mac, it may be necessary to right-click and "Open with" the Terminal app.
-- On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
-- See [Installation](docs/install.md) for more details and install options.
-
-### Using the installer
-
-**Note**: We're in the process of determining how useful these are for the community. If you've liked them, please let us know! (And feedback welcome if you've run into any issues with them.)
-
-The easiest way to install MagellanMapper is using one of the [installers](https://github.com/sanderslab/magellanmapper/releases) now available for Windows, macOS, and Linux.
-
-To run:
-- **Mac**: run the MagellanMapper app
-- **Windows**: in the Start Menu, go to "MagallanMapper v.x.y.z" and run "MagellanMapper"
-- **Linux**: in a file browser, double-click on `MagellanMapper/MagellanMapper`
-
-On Windows and Mac, you can also use "Open with" on supported file types (eg `.npy`, `.mhd`, `.nii.gz`) to open them in MagellanMapper.
-
-## Using MagellanMapper
+- [Developer installs](docs/install.md#developer-installs) from source code
+- [Installer scripts](docs/install.md#installer-scripts), which install Miniconda and MagellanMapper without requiring command-line usage
+- [Installer packages](docs/install.md#installer-packages), for point-and-click installation
 
 MagellanMapper consists of a graphical user interface (GUI), command-line interface (CLI), and application programming interface (API) for Python programmatic access. See the [GUI docs](docs/viewers.md) for graphical usage and the [CLI docs](docs/cli.md) for scripting.
 

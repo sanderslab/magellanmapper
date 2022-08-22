@@ -23,6 +23,9 @@ _EXTRAS_AWS = ["boto3", "awscli"]
 # optional dependencies to build API documentation
 _EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 
+# optional dependencies for Jupyter notebooks
+_EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
+
 # installation configuration
 config = {
     "name": "magellanmapper",
@@ -62,6 +65,7 @@ config = {
         "aws": _EXTRAS_AWS,
         "pandas_plus": _EXTRAS_PANDAS,
         "docs": _EXTRAS_DOCS,
+        "jupyter": _EXTRAS_JUPYTER,
         
         # dependencies for most common tasks
         "most": [
@@ -79,6 +83,7 @@ config = {
             *_EXTRAS_PANDAS,
             *_EXTRAS_IMPORT,
             *_EXTRAS_AWS,
+            *_EXTRAS_JUPYTER,
         ]
     },
 }

@@ -51,7 +51,7 @@ Press on the "Edit" button to start painting labels using these controls:
 | To Do...        | Shortcut                    |
 | ------------- |:-------------------------:|
 |Paint over a new area | `Left-click`, pick a color, then drag over image |
-| Use the last picked color to paint over a new area | `Alt+Left-click`(option-click on Mac) |
+| Use the last picked color to paint over a new area | `Alt+Left-click` (option-click on Mac) |
 | Make the paintbrush smaller/bigger | `[`/`]` (brackets) |
 | Halve the increment of the paintbrush size | `[`/`]` and add `shift` |
 
@@ -61,6 +61,14 @@ Use the save button in the main window with the atlas window still open to resav
 
 ## 3D viewer
 
-The 3D viewer displays regions of interest, atlas structures, or whole images. MagellanMapper uses the Mayavi data visualizer for 3D voxel or surface rendering.
+The 3D viewer displays regions of interest, atlas structures, or whole images. MagellanMapper uses the Mayavi data visualizer for 3D voxel or surface rendering. See the [Mayavi docs](https://docs.enthought.com/mayavi/mayavi/application.html#keyboard-interaction) for more shortcuts.
+
+| To Do...        | Shortcut                    |
+| ------------- |:-------------------------:|
+|Rotate the camera | `Left-click` and drag |
+| Pan the camera | `Shift+Left-click` or `Middle-click` and drag |
+| Zoom the camera | Scroll, or `Ctrl+Left-click` and drag up/down |
+| Switch to "Joystick" mode. The view becomes a joystick where the center of the view is neutral. Clicking in the view using any of the above controls "moves" the joystick to that position. | `j`  |
+| Switch back to the default, "Trackball" mode | `t` |
 
 TODO: add further description

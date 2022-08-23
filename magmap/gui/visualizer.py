@@ -2036,7 +2036,7 @@ class Visualization(HasTraits):
             # image is currently loaded
             popen_args = [sys.executable, filename]
             if not getattr(sys, "frozen", False):
-                # launch the run script unless in a frozen environment
+                # run the launch script unless in a frozen environment
                 popen_args.insert(1, load_env.__file__)
             subprocess.Popen(popen_args)
         else:

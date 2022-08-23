@@ -125,6 +125,12 @@ def launch_magmap():
     remains alive, the GUI will be launched.
 
     """
+    if sys.path and sys.path[0].endswith(os.path.dirname(__file__)):
+        # remove this module's sub-package from path as may occur when the
+        # module is launched directly, eg from a subprocess in Visualization,
+        # which can mask other packages named the same as this app's modules
+        sys.path.pop(0)
+    
     from magmap.io import cli
     cli.main()
     from magmap.gui import visualizer

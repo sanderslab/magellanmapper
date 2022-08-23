@@ -43,31 +43,35 @@ The extra index accesses a few [customized dependencies](docs/install.md#custom-
 
 Conda installs Java to import proprietary image file formats, which can also be installed separately when using Pip (eg from [here](https://www.azul.com/downloads/?package=jdk)).
 
-### More ways to install
+### More ways to install and run
 
 - [Developer installs](docs/install.md#developer-installs) from source code
 - [Installer scripts](docs/install.md#installer-scripts), which install Miniconda and MagellanMapper without requiring command-line usage
 - [Installer packages](docs/install.md#installer-packages), for point-and-click installation
 
+## Using MagellanMapper
+
 MagellanMapper consists of a graphical user interface (GUI), command-line interface (CLI), and application programming interface (API) for Python programmatic access. See the [GUI docs](docs/viewers.md) for graphical usage and the [CLI docs](docs/cli.md) for scripting.
 
-For automated tasks, [`sample_cmds.sh`](bin/sample_cmds.sh) is a script that shows examples of common commands. You can also use [`pipelines.sh`](bin/pipelines.sh), a script to run many automated pipelines within MagellanMapper, such as whole volume nuclei detection and image transposition. See [Settings](docs/settings.md) for how to customize parameters for your image analysis.
+For automated tasks, see the [`sample_cmds_bash.ipynb`](bin/sample_cmds_bash.ipynb) Jupyter Notebook (or the older [`sample_cmds.sh`](bin/sample_cmds.sh) script) that shows examples of running the CLI and exploring images in the GUI. See ReadTheDocs for more details, including [viewer shortcuts](docs/viewers.md) and customizing [settings](docs/settings.md) for your image analysis.
+
+Have a question? Found a bug? Want a feature? Please [ask](https://github.com/sanderslab/magellanmapper/issues)!
 
 ### Image file import
 
-In the "Import" tab, you can select files, view and update metadata, and import the files.
+Large images or proprietary microscopy formats such as CZI can be imported by MagellanMapper into NumPy format, which allows on-the-fly loading to reduce memory requirements and initial loading time. In the "Import" tab, you can select files, view and update metadata, and import the files.
 
-Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) can be opened with the SimpleITK/SimpleElastix Library and do not require separate import. Standard image formats such as TIFF or proprietary microscopy formats such as CZI can be imported by MagellanMapper into an industry standard Numpy format, which allows on-the-fly loading to reduce memory requirements and initial loading time.
+Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) can be opened with the SimpleITK/SimpleElastix library and do not require separate import. 
 
 ### Sample 3D data
 
-To try out functions with sample images, download any of these practice files:
+To try out functions with sample images, download any of these files:
 
 - [Sample region of nuclei at 4x (`sample_region.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.zip)
 - [Sample downsampled tissue cleared whole brain (`sample_brain.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_brain.zip)
 - [Allen Developing Mouse Brain Atlas E18.5 (`ADMBA-E18pt5.zip`)](https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/ADMBA-E18pt5.zip)
 
-### Related publications and datasets
+## Related publications and datasets
 
 - For more information on the methods used for 3D atlas construction, please see: https://elifesciences.org/articles/61408
 - For step-by-step instructions on using v1.3.x of the software, please see: https://currentprotocols.onlinelibrary.wiley.com/doi/abs/10.1002/cpns.104 (now [open access on PubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7781073/)!); see [ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/) for ongoing updates

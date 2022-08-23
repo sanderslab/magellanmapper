@@ -9,7 +9,7 @@ attrs==21.4.0
 bg-atlasapi @ git+https://github.com/brainglobe/bg-atlasapi.git@cc980143c88e71202d09cbbd0f1bcfa491ea759d
 bg-space==0.6.0
 boto3==1.23.10
-botocore==1.26.10
+botocore==1.27.57
 certifi==2022.6.15
 charset-normalizer==2.0.12
 click==8.0.4

@@ -31,6 +31,14 @@ mm
 
 Conda will also install Java, which we use to read proprietary image formats.
 
+For non-graphical tasks, enter the CLI through:
+
+```shell
+mm-cli
+```
+
+The `mm` and `mm-cli` entry points were added in v1.6.0 to facilitate launching from installed packages.
+
 ### Install using Pip
 
 Install using Pip with Python >= 3.6 (virtual environment [recommended](https://realpython.com/python-virtual-environments-a-primer/)):
@@ -63,6 +71,12 @@ Or Pip:
 
 ```shell
 pip install -e .[most] --extra-index-url https://pypi.fury.io/dd8/
+```
+
+MagellanMapper can be run using `mm` and `mm-cli` as above, or through the run script:
+
+```shell
+python run.py
 ```
 
 ### Installer packages
@@ -107,12 +121,6 @@ git clone https://github.com/sanderslab/magellanmapper.git
 - On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
 - See [Installation](docs/install.md) for more details and install options.
 
-Alternatively, those who already have Conda installed can set up an envirionment directly based on the environment spec:
-
-```shell
-conda env create -n mag -f environment.yml
-```
-
 #### Run from a file browser
 
 **On Mac or Linux**: Double-click the MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
@@ -125,12 +133,7 @@ Note that during the first run, there may be a delay of up to several minutes fr
 
 #### Run from a terminal
 
-```shell
-conda activate mag
-python <path-to-magellanmapper>/run.py
-```
-
-This approach is recommended when running command-line tasks or for debugging output. Replace `mag` if you gave the environment a different name.
+See [above](#install-using-conda) for running MagellanMapper from a terminal, which is recommended when running command-line tasks or for debugging output.
 
 #### Venv+Pip installer script
 

@@ -26,14 +26,14 @@ If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.htm
 conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
 ```
 
-To run in this new environment named `mag`[^\*]:
+To run in this new environment named `mag`<sup>*</sup>:
 
 ```shell
 conda activate mag
 mm
 ```
 
-[^\*]: `mm` was added in v1.6.0 to launch from installed packages. When installed [from source](docs/install.md#developer-installs), `python run.py` still works!
+<sup>*</sup> `mm` was added in v1.6.0 to launch from installed packages. When installed [from source](docs/install.md#developer-installs), `python run.py` still works!
 
 Or install using Pip (virtual environment [recommended](https://realpython.com/python-virtual-environments-a-primer/)):
 

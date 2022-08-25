@@ -31,13 +31,7 @@ mm
 
 Conda will also install Java, which we use to read proprietary image formats.
 
-For non-graphical tasks, enter the CLI through:
-
-```shell
-mm-cli
-```
-
-The `mm` and `mm-cli` entry points were added in v1.6.0 to facilitate launching from installed packages.
+The `mm` entry points was added in v1.6.0 to facilitate launching from installed packages.
 
 ### Install using Pip
 

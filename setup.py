@@ -38,8 +38,8 @@ config = {
     "scripts": [],
     "python_requires": ">=3.6",
     "entry_points": {
-      "console_scripts": ["mm-cli = magmap.io.cli:main"],
-      "gui_scripts": ["mm = magmap.io.load_env:launch_magmap"],
+        # gui_scripts doesn't load because of TraitsUI issue #1032
+        "console_scripts": ["mm = magmap.io.load_env:launch_magmap"],
     },
     "install_requires": [
         "scikit-image",

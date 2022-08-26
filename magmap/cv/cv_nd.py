@@ -17,6 +17,8 @@ from magmap.settings import config
 from magmap.cv import segmenter
 from magmap.io import libmag
 
+_logger = config.logger.getChild(__name__)
+
 
 def in_paint(roi, to_fill):
     """In-paint to interpolate values into pixels to fill from nearest 
@@ -347,8 +349,18 @@ def surface_area_3d(
         verts, faces, normals, vals = fn_marching(
             img_np, level=level, spacing=spacing)
         return measure.mesh_surface_area(verts, faces)
+    except ValueError as ve:
+        # marching cubes gives this error if img_np is all the same value,
+        # such as a mask that is completely True
+        _logger.exception(ve)
+        # if np.amin(img_np) == np.amax(img_np):
+        if len(np.unique(img_np)) == 1:
+            raise ValueError(
+                "All values in array are the same value, please check "
+                "threshold for array")
+        raise ve
     except RuntimeError as e:
-        print(e)
+        _logger.error(e)
     return np.nan
 
 

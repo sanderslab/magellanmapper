@@ -42,7 +42,7 @@ from collections import OrderedDict
 import os
 import shutil
 from time import time
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import pandas as pd
 import numpy as np
@@ -54,7 +54,7 @@ from magmap.atlas import atlas_refiner, edge_seg, labels_meta, ontology, \
 from magmap.cv import cv_nd
 from magmap.io import cli, df_io, export_regions, importer, libmag, sitk_io
 from magmap.plot import plot_2d, plot_3d
-from magmap.settings import config
+from magmap.settings import atlas_prof, config
 from magmap.stats import atlas_stats, clustering, vols
 
 SAMPLE_VOLS = "vols_by_sample"
@@ -256,29 +256,32 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
         param_map["NumberOfResolutions"] = [str(num_res)]
 
 
-def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
-                 moving_mask=None, regs=None):
+def register_duo(
+        fixed_img: sitk.Image, moving_img: sitk.Image,
+        path: Optional[str] = None, fixed_mask: Optional[sitk.Image] = None,
+        moving_mask: Optional[sitk.Image] = None,
+        regs: Optional[Union[
+            Sequence[str], Sequence["atlas_prof.RegParamMap"]]] = None
+) -> Tuple[sitk.Image, sitk.TransformixImageFilter]:
     """Register two images to one another using ``SimpleElastix``.
     
     Args:
-        fixed_img (:obj:`sitk.Image`): The image to be registered to.
-        moving_img (:obj:`sitk.Image`): The image to register to ``fixed_img``.
-        path (str): Path as string from whose parent directory the points-based
+        fixed_img: The image to be registered to.
+        moving_img: The image to register to ``fixed_img``.
+        path: Path as string from whose parent directory the points-based
             registration files ``fix_pts.txt`` and ``mov_pts.txt`` will
             be found; defaults to None, in which case points-based
             reg will be ignored even if set.
-        fixed_mask (:obj:`sitk.Image`): Mask for ``fixed_img``; defaults
-            to None.
-        moving_mask (:obj:`sitk.Image`): Mask for ``moving_img``; defaults
-            to None.
-        regs (list[str]): Sequence of atlas profile registration keys to use;
-            the default of None gives all three major registration types,
-            "reg_translation", "reg_affine", "reg_bspline".
+        fixed_mask: Mask for ``fixed_img``; defaults to None.
+        moving_mask: Mask for ``moving_img``; defaults to None.
+        regs: Sequence of atlas profile registration keys or registration
+            parameter objects. The default of None gives all three major
+            registration types, "reg_translation", "reg_affine", "reg_bspline".
     
     Returns:
-        :obj:`SimpleITK.Image`, :obj:`sitk.TransformixImageFilter`: Tuple of
-        the registered image and a Transformix filter with the registration's
-        parameters to reapply them on other images.
+        Tuple of the registered image and a Transformix filter with the
+        registration's parameters to reapply them on other images.
+    
     """
     if regs is None:
         # default to perform all the major registration types
@@ -307,9 +310,12 @@ def register_duo(fixed_img, moving_img, path=None, fixed_mask=None,
     # set up parameter maps for the included registration types
     settings = config.atlas_profile
     param_map_vector = sitk.VectorOfParameterMap()
-    for key in regs:
-        params = settings[key]
+    for reg in regs:
+        # get registration parameters from profile
+        params = reg if isinstance(
+            reg, atlas_prof.RegParamMap) else settings[reg]
         if not params: continue
+        
         max_iter = params["max_iter"]
         # TODO: consider removing since does not skip if "0" and need at least
         # one transformation for reg, even if 0 iterations

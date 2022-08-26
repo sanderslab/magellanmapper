@@ -26,6 +26,7 @@ class RegParamMap(dict):
         # but leave False to use area around mask for the registration
         # (see Elastix manual section 5.4)
         self["erode_mask"] = None
+        # True to use point-based registration during b-spline reg
         self["point_based"] = False
         
         # update with args
@@ -73,8 +74,6 @@ class AtlasProfile(profiles.SettingsDict):
         self["groupwise_iter_max"] = "1024"
         self["resize_factor"] = 0.7
         self["preprocess"] = False
-        # True to use point-based registration during b-spline reg
-        self["point_based"] = False
         self["curate"] = True  # carve image; in-paint if generating atlas
 
         # erase labels outside of ((x_start, x_end), (y_start, ...) ...)

@@ -5,7 +5,7 @@
 
 import datetime
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 from matplotlib import pyplot as plt
 from matplotlib import figure
@@ -86,6 +86,12 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.edit_btn = None
         self.color_picker_box = None
         self.fn_update_coords = None
+        #: Sequence of planes to show in the Plot Editors.
+        #: Planes are given as axis-border strings (eg "xy"). Defaults
+        #: to :attr:`magmap.settings.config.PLANE`. Plots are ordered
+        #: clockwise from the left of the Atlas Editor and can be None to
+        #: remove the plot.
+        self.planes: Sequence[str] = config.PLANE
         
         self._labels_img_sitk = None  # for saving labels image
         
@@ -103,6 +109,22 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             left=0.06, right=0.94, bottom=0.02, top=0.98)
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs[0, 0])
+        
+        # lay out plot editors based on number shown
+        nplanes = len([p for p in self.planes if p is not None])
+        if nplanes == 1:
+            # show single plot editor filling the frame
+            viewers = (gs_viewers[:2, :2], None, None)
+        elif nplanes == 2:
+            if self.planes[0]:
+                # show plot editors side-by-side
+                viewers = (gs_viewers[:2, 0], gs_viewers[:2, 1], None)
+            else:
+                # show plot editors on top of one another
+                viewers = (None, gs_viewers[0, :2], gs_viewers[1, :2])
+        else:
+            # vertical plot on left, two plots above one another on right
+            viewers = (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])
         
         # set up a colormap for the borders image if present
         cmap_borders = colormaps.get_borders_colormap(
@@ -144,18 +166,18 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             # set up a PlotEditor for the given axis
 
             # get subplot grid with extra height ratio weighting for
-            # each increased row to make sliders of approx equal size and  
+            # each increased row to make sliders of approx equal size and
             # align top borders of top images
             extra_rows = gs_spec.rowspan.stop - gs_spec.rowspan.start - 1
             gs_plot = gridspec.GridSpecFromSubplotSpec(
-                2, 1, subplot_spec=gs_spec, 
-                height_ratios=(1, 10 + 14 * extra_rows), 
+                2, 1, subplot_spec=gs_spec,
+                height_ratios=(1, 10 + 14 * extra_rows),
                 hspace=0.1/(extra_rows*1.4+1))
             
             # transform arrays to the given orthogonal direction
             ax = fig.add_subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
-            plane = config.PLANE[axis]
+            plane = self.planes[axis]
             arrs_3d, aspect, origin, scaling = \
                 plot_support.setup_images_for_plane(
                     plane,
@@ -165,7 +187,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             # slider through image planes
             ax_scroll = fig.add_subplot(gs_plot[0, 0])
             plane_slider = Slider(
-                ax_scroll, plot_support.get_plane_axis(plane), 0, 
+                ax_scroll, plot_support.get_plane_axis(plane), 0,
                 len(img3d_tr) - 1, valfmt="%d", valinit=0, valstep=1)
             
             # plot editor
@@ -174,20 +196,20 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                 ax, aspect, origin, rgb=self.img5d.rgb)
             plot_ed = plot_editor.PlotEditor(
                 overlayer, img3d_tr, labels_img_tr, config.cmap_labels,
-                plane, self.update_coords, self.refresh_images, 
+                plane, self.update_coords, self.refresh_images,
                 scaling, plane_slider, img3d_borders=borders_img_tr,
                 cmap_borders=cmap_borders, 
-                fn_show_label_3d=self.fn_show_label_3d, 
+                fn_show_label_3d=self.fn_show_label_3d,
                 interp_planes=self.interp_planes,
                 fn_update_intensity=self.update_color_picker,
                 max_size=max_size, fn_status_bar=self.fn_status_bar)
             return plot_ed
         
-        # setup plot editors for all 3 orthogonal directions
+        # set up plot editors for the given orthogonal planes
         max_sizes = plot_support.get_downsample_max_sizes()
-        for i, gs_viewer in enumerate(
-                (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])):
-            self.plot_eds[config.PLANE[i]] = setup_plot_ed(i, gs_viewer)
+        for i, gs_viewer in enumerate(viewers):
+            if gs_viewer:
+                self.plot_eds[self.planes[i]] = setup_plot_ed(i, gs_viewer)
         self.set_show_crosslines(True)
         
         # attach listeners
@@ -237,8 +259,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                     self.alpha_last = self.alpha_slider.val
                 self.alpha_slider.set_val(0)
         elif event.key == "A":
-            # halve opacity, only saving alpha on first halving to allow 
-            # further halving or manual movements while still returning to 
+            # halve opacity, only saving alpha on first halving to allow
+            # further halving or manual movements while still returning to
             # originally saved alpha
             if self.alpha_last is None:
                 self.alpha_last = self.alpha_slider.val
@@ -260,12 +282,13 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         
         Args:
             coord: Coordinate at which to center images, in z,y,x order.
-            plane_src: One of :const:`magmap.config.PLANE` to specify the 
-                orientation from which the coordinates were given; defaults 
-                to the first element of :const:`magmap.config.PLANE`.
+            plane_src: One of :const:`magmap.config.PLANE` (defaults to first
+                element) to specify the orientation from which the coordinates
+                were given.
         """
         coord_rev = libmag.transpose_1d_rev(list(coord), plane_src)
-        for i, plane in enumerate(config.PLANE):
+        for i, plane in enumerate(self.planes):
+            if not plane: continue
             coord_transposed = libmag.transpose_1d(list(coord_rev), plane)
             if i == 0:
                 self.offset = coord_transposed[::-1]
@@ -283,7 +306,8 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             shape: Sub-image shape in ``z,y,x`` order.
         
         """
-        for i, plane in enumerate(config.PLANE):
+        for i, plane in enumerate(self.planes):
+            if not plane: continue
             offset_tr = libmag.transpose_1d(list(offset), plane)
             shape_tr = libmag.transpose_1d(list(shape), plane)
             self.plot_eds[plane].view_subimg(offset_tr[1:], shape_tr[1:])

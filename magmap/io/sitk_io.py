@@ -172,7 +172,7 @@ def read_sitk(path, dryrun=False):
 
 
 def _load_reg_img_to_combine(path, reg_name, img_nps):
-    # load registered image in sitk format to combine with other images 
+    # load registered image in sitk format to combine with other images
     # by resizing to the shape of the first image
     img_np_base = None
     if img_nps:
@@ -260,18 +260,24 @@ def read_sitk_files(
         if not libmag.is_seq(reg_names):
             reg_names = [reg_names]
         for reg_name in reg_names:
-            # load each registered suffix into list of images with same shape, 
+            # load each registered suffix into list of images with same shape,
             # keeping first image in sitk format
             img, path = _load_reg_img_to_combine(
                 filename_sitk, reg_name, img_nps)
             if img_sitk is None:
                 img_sitk = img
                 loaded_path = path
+        
         if len(img_nps) > 1:
             # merge images into separate channels
             img_np = np.stack(img_nps, axis=img_nps[0].ndim)
         else:
             img_np = img_nps[0]
+        
+        if img_sitk:
+            # update sitk image with np array
+            img_sitk = replace_sitk_with_numpy(img_sitk, img_np)
+    
     else:
         # load filename_sitk directly
         if not os.path.exists(filename_sitk):

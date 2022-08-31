@@ -4,9 +4,20 @@
 
 ### Highlights
 
+- Available as binary wheel to install without requiring the source code
+- Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
+- Atlas regions can be searched (see "Atlases > Region")
+- Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
+- Images can be viewed as RGB (see "ROI > Channels")
+- [Jupyter Notebook tutorial](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
+
 ### Changes
 
 #### Installation
+
+- Available as binary wheel to install without requiring the source code (#166)
+- Entry point added to launch the app by: `mm` (#166)
+- Conda install simplified to use Pip primarily, which reduces disk space usage (#166)
 
 #### GUI
 

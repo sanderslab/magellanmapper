@@ -12,87 +12,140 @@
 
 ## Installation Options
 
-MagellanMapper can be installed many ways depending on one's Python preferences.
+MagellanMapper can be installed depending on one's Python preferences.
 
-### Recommended: Using the installer
+### Install using Conda
+
+If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment named `mag` (or replace with desired name):
+
+```shell
+conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
+```
+
+To run, activate the environment and launch MagellanMapper by `mm`:
+
+```shell
+conda activate mag
+mm
+```
+
+Conda will also install Java, which we use to read proprietary image formats.
+
+The `mm` entry points was added in v1.6.0 to facilitate launching from installed packages.
+
+### Install using Pip
+
+Install using Pip with Python >= 3.6 (virtual environment [recommended](https://realpython.com/python-virtual-environments-a-primer/)):
+
+```shell
+pip install magellanmapper[most] --extra-index-url https://pypi.fury.io/dd8/
+```
+
+`most` installs additional pacakges to import more file formats. The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
+
+Java will need to be installed to support more image formats (eg from [here](https://www.azul.com/downloads/?package=jdk)).
+
+### Developer installs
+
+If you download the source code, you can install in developer mode for the latest updates and any changes you make.
+
+Download the repo:
+
+```shell
+git clone https://github.com/sanderslab/magellanmapper.git
+```
+
+For Conda:
+
+```shell
+conda env create -n mag -f environment.yml
+```
+
+Or Pip:
+
+```shell
+pip install -e .[most] --extra-index-url https://pypi.fury.io/dd8/
+```
+
+MagellanMapper can be run using `mm` and `mm-cli` as above, or through the run script:
+
+```shell
+python run.py
+```
+
+### Installer packages
+
+***Note**: We're in the process of determining how useful these are for the community. If you've liked them, please let us know! (And feedback welcome if you've run into any issues with them.)*
 
 The easiest way to install MagellanMapper is using one of the [installers](https://github.com/sanderslab/magellanmapper/releases) now available for Windows, macOS, and Linux.
 
 Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
 
-### Recommended: Install in a Conda environment
+To run:
+- **Mac**: run the MagellanMapper app
+- **Windows**: in the Start Menu, go to "MagallanMapper v.x.y.z" and run "MagellanMapper"
+- **Linux**: in a file browser, double-click on `MagellanMapper/MagellanMapper`
+
+Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
+
+On Windows and Mac, you can also use "Open with" on supported file types (eg `.npy`, `.mhd`, `.nii.gz`) to open them in MagellanMapper.
+
+### Installer scripts
+
+We have also provided scripts to take care of installing Miniconda (if necessary), creating an environment, and installing MagellanMapper, without requiring command-line/terminal experience.
+
+#### Conda installer script
 
 Conda simplifies installation by managing all supporting packages such as Java and others that would otherwise need to be compiled. Conda's virtual environment also keeps these packages separate from other Python package installations that may be on your system.
 
-After downloading MagellanMapper, create a new Conda environment with all required packages using the appropriate script:
-
-**Mac, Linux**:
-
+1. Download MagellanMapper by cloning the git repo (or download the [latest release](https://github.com/sanderslab/magellanmapper/releases/latest)):
 ```
-bin/setup_conda [-n name] [-s spec]
+git clone https://github.com/sanderslab/magellanmapper.git
 ```
+1. Install MagellanMapper using the following script in the `magellanmapper` folder
+    - On Mac or Linux: `bin/setup_conda`
+    - On Windows: `bin\setup_conda.bat`
 
-**Windows**:
+1. Run by double-clicking on `MagellanMapper` in the main folder (macOS/Linux) or running `run.py` with Python (Windows).
 
-```
-bin/setup_conda.bat
-```
+- Installation may take up to 5 minutes, depending on internet connection speed.
+- The script will also install the Conda package manager if not already installed.
+- To update the environment, rerun the appropriate `setup_conda` script above.
+- On Mac, it may be necessary to right-click and "Open with" the Terminal app.
+- On Linux, it may be necessary to go to "Preferences" in the file browser (eg the Files app), select the "Behavior" tab, and choose to "Run" or "Ask" when executing text files.
+- See [Installation](docs/install.md) for more details and install options.
 
-These scripts also install Conda if not present. Specifically, it installs:
+#### Run from a file browser
 
-- [Miniconda](https://conda.io/miniconda.html), a free minimal installer for the Anaconda Python Distribution, if not already present based on running the `conda` command
-- A Conda environment with Python 3, named according to the `-n` option, or `mag` by default
-- All required packages based on `environment.yml`, or an alternative specification if the `-s` option is given, such as `-s envs/environment_light.yml` for headless systems that do not require a GUI
+**On Mac or Linux**: Double-click the MagellanMapper icon created during Conda setup. This Unix executable should open with Terminal by default on Mac and after the file browser preference change described above on Linux.
 
-Alternatively, those who already have Conda installed can set up an envirionment directly based on the environment spec:
+**On Windows**: Run `run.py` through Python.
+- It may be necessary to right-click, choose "Open with", and browse to the Conda `pythonw.exe` file to open `run.py`
+- If a security warning displays, click on "More info" and "Run anyway" to launch the file
 
-```
-conda env create -n mag -f environment.yml
-```
+Note that during the first run, there may be a delay of up to several minutes from antivirus scanning for the new Python interpreter location in the new environment. Subsequent launches are typically much faster.
 
-See the [Readme](../README.md#run-magellanmapper) for instructions on running MagellanMapper.
+#### Run from a terminal
 
-### Option 2: Install through Venv+Pip
+See [above](#install-using-conda) for running MagellanMapper from a terminal, which is recommended when running command-line tasks or for debugging output.
 
-Python 3.6-3.9 supported. Venv is a virtual environment manager included with Python. We have provided a convenient script to set up a new environment and install all dependencies using Pip:
+#### Venv+Pip installer script
 
-```
+Venv is a virtual environment manager included with Python. We have provided a convenient script to set up a new environment and install all dependencies using Pip. This option assumes that you have already installed Python 3.6-3.9 and Java 8+.
+
+```shell
 bin/setup_venv.sh [-n name]
 ```
 
-This option assumes that you have already installed Python 3.6+ and Java 8+.
-
-**UPDATE**: Python 3.6 support is deprecated in MagellanMapper 1.6.
+**UPDATE**: Python 3.6-3.7 support is deprecated in MagellanMapper 1.6.
 
 This setup script will check and install the following dependencies:
 
 - Checks for an existing compatible Python version
-- Checks for other requirements, such as a C compiler to [build some dependencies](#custom-precompiled-packages)
+- Creates a new virtual environment
 - Performs a Pip install of MagellanMapper and all dependencies
 
 On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) (same package for all three years) is required.
-
-### Option 3: Install in another virtual environment or system-wide
-
-Whether in a virtual environment of your choice or none at all, MagellanMapper can be installed through Pip:
-
-```
-pip install -e . --extra-index-url https://pypi.fury.io/dd8/
-```
-
-The extra URL provides pre-built custom (with [certain requirements](#custom-precompiled-packages)) dependency packages. To include all dependencies, run this command instead:
-
-```
-pip install -e .[all] --extra-index-url https://pypi.fury.io/dd8/
-```
-
-### Option 4: Even more installation methods
-
-You can also install MagellanMapper these ways in the shell and Python environment of your choice:
-
-- In a Python environment of your choice or none at all, run `pip install -r envs/requirements.txt` to match dependencies in a pinned, current test setup (cross-platform)
-- To create a similar environment in Conda, run `conda env create -n [name] -f envs/environment_[os].yml`, where `name` is your desired environment name, and `os` is `win|mac|lin` for your OS (assumes 64-bit)
-- To install without Pip, run `python setup.py install` to install the package and only required dependencies
 
 ## Update MagellanMapper
 
@@ -103,7 +156,7 @@ You can also install MagellanMapper these ways in the shell and Python environme
 
 ### Update the Conda environment
 
-- Typically the existing Conda environment can be used without updating, but sometimes an update is required for new depdendencies
+- Typically, the existing Conda environment can be used without updating, but sometimes an update is required for new depdendencies
 - To update the environment, rerun the `setup_conda` script (`bin/setup_conda` for Mac/Linux or `bin\setup_conda.bat` for Windows)
 
 ## Dependencies
@@ -120,16 +173,15 @@ The main required and optional dependencies in MagellanMapper are:
 
 ### Optional Dependency Build and Runtime Requirements
 
-In most cases MagellanMapper can be installed without a compiler by using custom dependency packages we have provided (see Conda pathway above). Where possible, we have made these dependencies optional for those who would prefer not to use the custom packages. They may also be compiled directly as described here.
+#### Custom packages
 
-### Custom precompiled packages
+In most cases MagellanMapper can be installed without a compiler by using custom dependency packages that we have pre-built and hosted.
 
-| Dependency | Precompiled Available? | Precompiled Run Req | Build Req | Purpose | 
-| --- | --- | --- | --- | --- |
-| Python-Javabridge | Yes, via custom package | Python 3.6-3.9[^\*], Java 8+ | JDK, C compiler| Import proprietary image formats |
-| Traits, Pyface, Traitsui | Yes, via Conda (not PyPI) | Python 3.6+ | C compiler, Python dev | GUI |
+| Dependency | Custom Package | Precompiled Run Req | Build Req | Purpose |
+|-----|-----|-----|-----|-----|
+| Python-Javabridge | Precompiled, later release | Python 3.6-3.9[^\*], Java 8+ | JDK, C compiler| For Python-Bioformats |
+| Python-Bioformats | Extended support for older NumPy releases | Python 3.6+ | JDK, C compiler | Import proprietary image formats |
 | SimpleElastix | Yes, via custom package | Python 3.6-3.9 | C, C++ compilers | Load medical 3D formats, image regsitration |
-| ImageJ/FIJI | Yes, via direct download | Java 8 | n/a | Image stitching |
 
 [^\*]: MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies. MagellanMapper 1.6 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions.
 
@@ -147,7 +199,7 @@ Java versions:
 - Python-Javabridge uses JDK v8+ (v12+ in Javabridge 1.0.19; see [below](#image-loading) for image loading times and setup troubleshooting with various Java versions)
 - ImageJ/Fiji currently supports Java 8 best in our experience
 
-### Additional optional packages
+#### Additional optional packages
 
 - R for additional stats
 - Zstd (fallback to Zip) for compression on servers

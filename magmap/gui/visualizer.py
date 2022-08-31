@@ -58,13 +58,13 @@ from mayavi.tools.mlab_scene_model import MlabSceneModel
 from mayavi.core.ui.mayavi_scene import MayaviScene
 import vtk
 
-import run
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
     roi_editor, vis_3d, vis_handler
-from magmap.io import cli, importer, libmag, naming, np_io, sitk_io, sqlite
+from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
+    sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, prefs_prof, profiles
 
@@ -2036,8 +2036,8 @@ class Visualization(HasTraits):
             # image is currently loaded
             popen_args = [sys.executable, filename]
             if not getattr(sys, "frozen", False):
-                # launch the run script unless in a frozen environment
-                popen_args.insert(1, run.__file__)
+                # run the launch script unless in a frozen environment
+                popen_args.insert(1, load_env.__file__)
             subprocess.Popen(popen_args)
         else:
             # load the image in the empty current app window

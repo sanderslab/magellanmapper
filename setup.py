@@ -30,13 +30,20 @@ _EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
 config = {
     "name": "magellanmapper",
     "description": "3D atlas analysis and annotation",
+    "long_description": open("README.md").read(),
+    "long_description_content_type": "text/markdown",
     "author": "David Young",
     "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
-    "version": "1.6.0",
+    "license": "BSD-3",
+    "version": "1.6a1",
     "packages": setuptools.find_packages(),
     "scripts": [],
     "python_requires": ">=3.6",
+    "entry_points": {
+        # gui_scripts doesn't load because of TraitsUI issue #1032
+        "console_scripts": ["mm = magmap.io.load_env:launch_magmap"],
+    },
     "install_requires": [
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1

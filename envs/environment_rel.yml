@@ -7,4 +7,4 @@ dependencies:
   - openjdk=8
   - pip:
     - --extra-index-url https://pypi.fury.io/dd8/
-    - -e .[most]
+    - magellanmapper[most]

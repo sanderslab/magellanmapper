@@ -507,6 +507,18 @@ class Visualization(HasTraits):
                 "Crosslines: show lines for orthogonal planes")
     _atlas_ed_options_prev = []  # last atlas ed option settings
     
+    #: Choices of planes to show in Plot Editors.
+    _PLOT_ED_PLANES: Sequence[str] = ("", "xy", "xz", "yz")
+    _atlas_ed_plot_tip = (
+        "Plane to show in the {} plot. The blank selection will turn off the\n"
+        "plot and expand the other plots to fill the space.")
+    _atlas_ed_plot_left = List(tooltip=_atlas_ed_plot_tip.format("left"))
+    _atlas_ed_plot_right_up = List(
+        tooltip=_atlas_ed_plot_tip.format("upper right"))
+    _atlas_ed_plot_right_down = List(
+        tooltip=_atlas_ed_plot_tip.format("lower right"))
+    _atlas_ed_plot_ignore = False
+    
     # atlas labels
     _atlas_label = None
     _structure_scale_low = -1
@@ -628,8 +640,29 @@ class Visualization(HasTraits):
                          values=[e.value for e in Styles2D],
                          format_func=lambda x: x)),
             ),
-            HGroup(
-                Item("_atlas_ed_options", style="custom", label="Atlas Editor",
+            VGroup(
+                HGroup(
+                    Item("_atlas_ed_options", style="custom", label="Atlas Editor",
+                         editor=CheckListEditor(
+                             values=[e.value for e in AtlasEditorOptions],
+                             cols=len(AtlasEditorOptions),
+                             format_func=lambda x: x)),
+                ),
+                HGroup(
+                    Item("_atlas_ed_plot_left", style="simple", label="Left plane",
+                         editor=CheckListEditor(
+                             values=_PLOT_ED_PLANES, format_func=lambda x: x)),
+                    Item("_atlas_ed_plot_right_up", style="simple",
+                         label="Upper right",
+                         editor=CheckListEditor(
+                             values=_PLOT_ED_PLANES, format_func=lambda x: x)),
+                    Item("_atlas_ed_plot_right_down", style="simple",
+                         label="Lower right",
+                         editor=CheckListEditor(
+                             values=_PLOT_ED_PLANES, format_func=lambda x: x)),
+                ),
+                show_border=True,
+            ),
                      editor=CheckListEditor(
                          values=[e.value for e in AtlasEditorOptions],
                          cols=len(AtlasEditorOptions),
@@ -1024,18 +1057,27 @@ class Visualization(HasTraits):
                 print("Dark mode detected; applying dark theme to "
                       "Matplotlib figures")
                 rc_params = [config.Themes.DARK]
+        
         # ROI and Atlas Editors are currently designed for Seaborn style
         plot_2d.setup_style("seaborn", rc_params)
+        
+        # set up ROI and Atlas Editor figures without constrained layout
+        # because of performance impact at least as of Matplotlib 3.2
         self.roi_ed = None
-        # no constrained layout because of performance impact at least as of
-        # Matplotlib 3.2
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
+        
+        # set up Atlas Editor controls
         self._atlas_ed_options = [
             AtlasEditorOptions.SHOW_LABELS.value,
             AtlasEditorOptions.SYNC_ROI.value,
             AtlasEditorOptions.CROSSHAIRS.value]
         self._atlas_ed_options_prev: Dict[Enum, bool] = {}
+        self._atlas_ed_plot_left = [self._PLOT_ED_PLANES[1]]
+        self._atlas_ed_plot_right_up = [self._PLOT_ED_PLANES[2]]
+        self._atlas_ed_plot_right_down = [self._PLOT_ED_PLANES[3]]
+        
+        # set up detector controls
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         
         # 3D visualization object
@@ -2841,7 +2883,7 @@ class Visualization(HasTraits):
         if config.image5d is None:
             print("Main image has not been loaded, cannot show Atlas Editor")
             return
-        # atlas editor; need to retain ref or else instance callbacks 
+        # atlas editor; need to retain ref or else instance callbacks
         # created within AtlasEditor will be garbage collected
         title = config.filename
         if self.atlas_eds:
@@ -2849,18 +2891,25 @@ class Visualization(HasTraits):
             # using the same title causes the windows to overlap
             title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
-            config.img5d, config.labels_img, config.channel, 
+            config.img5d, config.labels_img, config.channel,
             self._curr_offset(center=False), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
             self.update_status_bar_msg)
         self.atlas_eds.append(atlas_ed)
         
-        # show the Atlas Editor
         if self._DEFAULTS_2D[4] in self._check_list_2d:
             # show max intensity projection planes based on ROI size
             atlas_ed.update_max_intens_proj(self.get_roi_size())
         atlas_ed.fn_update_coords = self.set_offset
+        
+        # set Plot Editor planes from dropdowns
+        atlas_ed.planes = (
+            self._atlas_ed_plot_left[0],
+            self._atlas_ed_plot_right_up[0],
+            self._atlas_ed_plot_right_down[0])
+        
+        # show the Atlas Editor
         atlas_ed.show_atlas()
         atlas_ed.set_show_labels(
             AtlasEditorOptions.SHOW_LABELS.value in self._atlas_ed_options)
@@ -2992,7 +3041,33 @@ class Visualization(HasTraits):
             offset = np.zeros(3, dtype=int)
             shape = self._get_max_offset()
         atlas_ed.view_subimg(offset[::-1], shape[::-1])
-
+    
+    @observe("_atlas_ed_plot_left")
+    @observe("_atlas_ed_plot_right_up")
+    @observe("_atlas_ed_plot_right_down")
+    def _atlas_ed_plot_changed(self, evt):
+        """Handler for Atlas Editor plot plane dropdowns."""
+        if self._atlas_ed_plot_ignore: return
+        # get plane selections
+        viewers = dict(
+            _atlas_ed_plot_left=self._atlas_ed_plot_left,
+            _atlas_ed_plot_right_up=self._atlas_ed_plot_right_up,
+            _atlas_ed_plot_right_down=self._atlas_ed_plot_right_down,
+        )
+        
+        self._atlas_ed_plot_ignore = True
+        for key, val in viewers.items():
+            if val == evt.new and key != evt.name:
+                # swap out any other dropdown set to the new selection from
+                # the triggering dropdown with its prior selection
+                if key == "_atlas_ed_plot_left":
+                    self._atlas_ed_plot_left = evt.old
+                elif key == "_atlas_ed_plot_right_up":
+                    self._atlas_ed_plot_right_up = evt.old
+                elif key == "_atlas_ed_plot_right_down":
+                    self._atlas_ed_plot_right_down = evt.old
+        self._atlas_ed_plot_ignore = False
+    
     @staticmethod
     def _get_save_path(default_path: str) -> str:
         """Get a save path from the user through a file dialog.

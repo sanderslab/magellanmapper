@@ -279,7 +279,9 @@ class Visualization(HasTraits):
 
     # File selection
 
-    _filename = File  # file browser
+    _filename = File(
+        tooltip="Load an image. If the file format requires import, the\n"
+                "Import tab will open automatically.")
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
     _rgb = Bool(config.rgb, tooltip="Show image as RGB(A)")
@@ -532,7 +534,7 @@ class Visualization(HasTraits):
     _region_names = Instance(TraitsList)
     # tooltip for both text box and options since options group has no main
     # label to display a tooltip
-    _region_id = Str(  
+    _region_id = Str(
         tooltip="IDs: IDs of labels to navigate to. Add +/- to including both\n"
                 "sides. Separate multiple IDs by commas.\n"
                 "Both sides: include correspondings labels from opposite sides"
@@ -560,8 +562,9 @@ class Visualization(HasTraits):
     panel_roi_selector = VGroup(
         VGroup(
             HGroup(
-                Item("_filename", label="File", style="simple",
+                Item("_filename", show_label=False, style="simple",
                      editor=FileEditor(entries=10, allow_dir=False)),
+                label="Image path",
             ),
             HGroup(
                 Item("_channel", label="Channels", style="custom",
@@ -570,7 +573,6 @@ class Visualization(HasTraits):
                          name="object._channel_names.selections", cols=8)),
                 Item("_rgb", label="RGB", enabled_when="_rgb_enabled"),
             ),
-            label="Image path",
         ),
         VGroup(
             HGroup(
@@ -595,9 +597,12 @@ class Visualization(HasTraits):
             label="Registered Images",
         ),
         VGroup(
-            Item("rois_check_list", label="ROIs",
-                 editor=CheckListEditor(
-                     name="object._rois_selections.selections")),
+            HGroup(
+                Item("rois_check_list", show_label=False,
+                     editor=CheckListEditor(
+                         name="object._rois_selections.selections")),
+                label="Regions",
+            ),
             HGroup(
                 Item("roi_array", label="Size (x,y,z)"),
                 Item("_roi_center", label="Center",
@@ -618,27 +623,29 @@ class Visualization(HasTraits):
                      low_name="z_low",
                      high_name="z_high",
                      mode="slider")),
-            label="Region of Interest",
         ),
         VGroup(
-            Item("_check_list_2d", style="custom", label="ROI Editor",
-                 editor=CheckListEditor(
-                     values=_DEFAULTS_2D, cols=5, format_func=lambda x: x)),
-            HGroup(
-                Item("_circles_2d", style="simple", show_label=False,
+            VGroup(
+                Item("_check_list_2d", style="custom", label="ROI Editor",
                      editor=CheckListEditor(
-                         values=[e.value for e in
-                                 roi_editor.ROIEditor.CircleStyles],
-                         format_func=lambda x: x)),
-                Item("_planes_2d", style="simple", show_label=False,
-                     editor=CheckListEditor(
-                         values=_DEFAULTS_PLANES_2D,
-                         format_func=lambda x: "Plane {}".format(x.upper()))),
-                Item("_styles_2d", style="simple", show_label=False,
-                     springy=True,
-                     editor=CheckListEditor(
-                         values=[e.value for e in Styles2D],
-                         format_func=lambda x: x)),
+                         values=_DEFAULTS_2D, cols=5, format_func=lambda x: x)),
+                HGroup(
+                    Item("_circles_2d", style="simple", show_label=False,
+                         editor=CheckListEditor(
+                             values=[e.value for e in
+                                     roi_editor.ROIEditor.CircleStyles],
+                             format_func=lambda x: x)),
+                    Item("_planes_2d", style="simple", show_label=False,
+                         editor=CheckListEditor(
+                             values=_DEFAULTS_PLANES_2D,
+                             format_func=lambda x: "Plane {}".format(x.upper()))),
+                    Item("_styles_2d", style="simple", show_label=False,
+                         springy=True,
+                         editor=CheckListEditor(
+                             values=[e.value for e in Styles2D],
+                             format_func=lambda x: x)),
+                ),
+                show_border=True,
             ),
             VGroup(
                 HGroup(
@@ -663,16 +670,13 @@ class Visualization(HasTraits):
                 ),
                 show_border=True,
             ),
+            VGroup(
+                Item("_check_list_3d", style="custom", label="3D Viewer",
                      editor=CheckListEditor(
-                         values=[e.value for e in AtlasEditorOptions],
-                         cols=len(AtlasEditorOptions),
-                         format_func=lambda x: x)),
+                         values=[e.value for e in Vis3dOptions],
+                         cols=len(Vis3dOptions), format_func=lambda x: x)),
+                show_border=True,
             ),
-            Item("_check_list_3d", style="custom", label="3D Viewer",
-                 editor=CheckListEditor(
-                     values=[e.value for e in Vis3dOptions],
-                     cols=len(Vis3dOptions), format_func=lambda x: x)),
-            label="Viewer Options",
         ),
         # give initial focus to text editor that does not trigger any events to
         # avoid inadvertent actions by the user when the window first displays;

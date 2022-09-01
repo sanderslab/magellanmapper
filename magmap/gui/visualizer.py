@@ -62,7 +62,7 @@ from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
 from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
-    roi_editor, vis_3d, vis_handler
+    roi_editor, verifier_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
     sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
@@ -334,6 +334,10 @@ class Visualization(HasTraits):
     
     btn_detect = Button("Detect")
     btn_save_segments = Button("Save Blobs")
+    _btn_verifier = Button(
+        "Open Verifier",
+        tooltip="Open a viewer displaying each blob in a separate plot to\n"
+                "verify classifications.")
     _segs_chls_names = Instance(TraitsList)  # blob detection channels
     _segs_chls = List  # selected channels, 0-based
     _segs_labels = List(  # blob label selector
@@ -712,6 +716,7 @@ class Visualization(HasTraits):
                      values=[str(c) for c in
                              roi_editor.DraggableCircle.BLOB_COLORS.keys()],
                      format_func=lambda x: x)),
+            Item("_btn_verifier", show_label=False),
         ),
         HGroup(
             Item("_segs_visible", style="custom", show_label=False,
@@ -1086,6 +1091,9 @@ class Visualization(HasTraits):
         
         # 3D visualization object
         self._vis3d = None
+        
+        #: Verifier Editor to verify blob classifications.
+        self.verifier_ed: Optional["verifier_editor.VerifierEditor"] = None
         
         # set up rest of image adjustment during image setup
         self.stale_viewers = self.reset_stale_viewers()
@@ -3071,6 +3079,13 @@ class Visualization(HasTraits):
                 elif key == "_atlas_ed_plot_right_down":
                     self._atlas_ed_plot_right_down = evt.old
         self._atlas_ed_plot_ignore = False
+    
+    @observe("_btn_verifier")
+    def _launch_verifier_editor(self, evt):
+        verifier_ed = verifier_editor.VerifierEditor(
+            config.img5d, self.blobs, "Verifier", self._roi_ed_fig)
+        verifier_ed.show_fig()
+        self.verifier_ed = verifier_ed
     
     @staticmethod
     def _get_save_path(default_path: str) -> str:

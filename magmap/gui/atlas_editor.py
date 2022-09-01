@@ -243,6 +243,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             evt (:obj:`matplotlib.backend_bases.CloseEvent`): Close event.
 
         """
+        self.on_close()
         self.fn_close_listener(evt, self)
 
     def on_key_press(self, event):

@@ -833,6 +833,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
         fig.canvas.mpl_connect("button_release_event", key_press)
+        fig.canvas.mpl_connect("close_event", self.on_close)
         # fig.canvas.mpl_connect("draw_event", lambda x: print("redraw"))
         
         if self.fn_redraw:

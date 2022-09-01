@@ -194,6 +194,15 @@ class ImageSyncMixin:
             if n != ed.max_intens_proj:
                 ed.max_intens_proj = n
                 if display: ed.update_coord()
+    
+    def on_close(self):
+        """Figure close handler.
+        
+        Disconnects all Plot Editors.
+
+        """
+        for plot_ed in self.plot_eds.values():
+            plot_ed.disconnect()
 
 
 class ImageOverlayer:

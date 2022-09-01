@@ -248,9 +248,10 @@ class PlotEditor:
         listeners = [
             self.cidpress, self.cidrelease, self.cidmotion, self.cidenter,
             self.cidleave, self.cidkeypress]
+        canvas = self.axes.figure.canvas
         for listener in listeners:
-            if listener and self._ax_img_labels is not None:
-                self._ax_img_labels.figure.canvas.mpl_disconnect(listener)
+            if listener:
+                canvas.mpl_disconnect(listener)
         self.connected = False
 
     def update_coord(self, coord=None):

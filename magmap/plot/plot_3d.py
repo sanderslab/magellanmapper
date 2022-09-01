@@ -377,20 +377,22 @@ def prepare_roi(image5d, roi_offset, roi_size, ndim_base=5):
     return prepare_subimg(image5d, roi_offset[::-1], roi_size[::-1], ndim_base)
 
 
-def roi_center_to_offset(offset, shape, reverse=False):
+def roi_center_to_offset(
+        offset: Sequence[int], shape: Sequence[int], reverse: bool = False
+) -> Sequence[int]:
     """Convert an ROI offset given as the center of the ROI to the
     coordinates of the upper left hand corner of the ROI.
     
     Args:
-        offset (list[int]): Offset taken as the center of the ROI in any
+        offset: Offset taken as the center of the ROI in any
             order, typically either ``x,y,z`` or ``z,y,x``.
-        shape (list[int]): ROI shape in the same order as that of ``offset``.
-        reverse (bool): True to treat ``offset`` as the upper left hand
+        shape: ROI shape in the same order as that of ``offset``.
+        reverse: True to treat ``offset`` as the upper left hand
             corner of the ROI and to obtain the center coordinates of
             this ROI; defaults to False.
 
     Returns:
-        list[int]: Coordinates of the upper left corner of the ROI, or the
+        Coordinates of the upper left corner of the ROI, or the
         center of the ROI if ``reverse`` is True.
 
     """

@@ -275,7 +275,9 @@ class PlotEditor:
         if self._show_crosslines:
             self.draw_crosslines()
 
-    def translate_coord(self, coord, up=False, coord_slice=None):
+    def translate_coord(
+            self, coord: Sequence[int], up: bool = False,
+            coord_slice: Optional[Sequence[slice]] = None) -> Sequence[int]:
         """Translate coordinate based on downsampling factor of the main image.
 
         Coordinates sent to and received from the Atlas Editor are assumed to
@@ -283,10 +285,10 @@ class PlotEditor:
         resized to the shape of the main image.
 
         Args:
-            coord (List[int]): Coordinates in z,y,x.
-            up (bool): True to upsample; defaults to False to adjust
+            coord: Coordinates in z,y,x.
+            up: True to upsample; defaults to False to adjust
                 coordinates for downsampled images.
-            coord_slice (slice): Slice of each set of coordinates to
+            coord_slice: Slice of each set of coordinates to
                 transpose. Defaults to None, which gives a slice starting
                 at 1 so that the z-value will not be adjusted on the
                 assumption that downsampling is only performed in ``x,y``.
@@ -599,12 +601,12 @@ class PlotEditor:
     def update_plane_slider(self, val):
         self._update_overview(int(val))
 
-    def view_subimg(self, offset, size):
+    def view_subimg(self, offset: Sequence[int], size: Sequence[int]):
         """View a sub-image.
 
         Args:
-            offset (List[int]): Sub-image offset in ``y, x``.
-            size (List[int]): Sub-image size in ``y, x``.
+            offset: Sub-image offset in ``y, x``.
+            size: Sub-image size in ``y, x``.
 
         """
         coord_slice = slice(0, None)

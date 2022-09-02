@@ -20,6 +20,7 @@
 - Registered image suffixes with variable endings (eg `annotationEdgeLevel<n>`) now show up in the dropdown boxes (#142)
 - Registered image and region names are truncated in the middle to prevent expanding the sidebar for long names (#147)
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
+- Atlas Editor planes can be reordered or turned off (#180)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
 - Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 

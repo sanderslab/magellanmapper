@@ -111,17 +111,21 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             2, 2, subplot_spec=gs[0, 0])
         
         # lay out plot editors based on number shown
-        nplanes = len([p for p in self.planes if p is not None])
-        if nplanes == 1:
+        planes = [p for p in self.planes if p]
+        nplanes = len(planes)
+        if nplanes == 0:
+            # no planes
+            viewers = tuple()
+        elif nplanes == 1:
             # show single plot editor filling the frame
-            viewers = (gs_viewers[:2, :2], None, None)
+            viewers = (gs_viewers[:2, :2],)
         elif nplanes == 2:
             if self.planes[0]:
                 # show plot editors side-by-side
-                viewers = (gs_viewers[:2, 0], gs_viewers[:2, 1], None)
+                viewers = (gs_viewers[:2, 0], gs_viewers[:2, 1])
             else:
                 # show plot editors on top of one another
-                viewers = (None, gs_viewers[0, :2], gs_viewers[1, :2])
+                viewers = (gs_viewers[0, :2], gs_viewers[1, :2])
         else:
             # vertical plot on left, two plots above one another on right
             viewers = (gs_viewers[:2, 0], gs_viewers[0, 1], gs_viewers[1, 1])
@@ -162,7 +166,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         enable_btn(self.save_btn, False)
         enable_btn(self.color_picker_box, color=config.widget_color+0.1)
     
-        def setup_plot_ed(axis, gs_spec):
+        def setup_plot_ed(gs_spec, plane):
             # set up a PlotEditor for the given axis
 
             # get subplot grid with extra height ratio weighting for
@@ -177,7 +181,6 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             # transform arrays to the given orthogonal direction
             ax = fig.add_subplot(gs_plot[1, 0])
             plot_support.hide_axes(ax)
-            plane = self.planes[axis]
             arrs_3d, aspect, origin, scaling = \
                 plot_support.setup_images_for_plane(
                     plane,
@@ -191,7 +194,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                 len(img3d_tr) - 1, valfmt="%d", valinit=0, valstep=1)
             
             # plot editor
-            max_size = max_sizes[axis] if max_sizes else None
+            max_size = max_sizes[plane] if max_sizes else None
             overlayer = plot_support.ImageOverlayer(
                 ax, aspect, origin, rgb=self.img5d.rgb)
             plot_ed = plot_editor.PlotEditor(
@@ -207,9 +210,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         
         # set up plot editors for the given orthogonal planes
         max_sizes = plot_support.get_downsample_max_sizes()
-        for i, gs_viewer in enumerate(viewers):
+        for pln, gs_viewer in zip(planes, viewers):
             if gs_viewer:
-                self.plot_eds[self.planes[i]] = setup_plot_ed(i, gs_viewer)
+                self.plot_eds[pln] = setup_plot_ed(gs_viewer, pln)
         self.set_show_crosslines(True)
         
         # attach listeners

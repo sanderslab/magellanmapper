@@ -1226,14 +1226,15 @@ def show():
     plt.show()
 
 
-def get_downsample_max_sizes():
+def get_downsample_max_sizes() -> Dict[str, int]:
     """Get the maximum sizes by axis to keep an image within size limits
     during downsampling as set in the current atlas profile based on whether
-    the images is loaded as a Numpy memmapped array or not.
+    the image is loaded as a NumPy memmapped array or not.
 
     Returns:
-        List[int]: Sequence of maximum sizes by axis set in the current profile
-        if it is also set to downsample images loaded by Numpy, otherwise None.
+        Dictionary of plane in `xy` format to maximum sizes by axis set in
+        the current profile if it is also set to downsample images loaded by
+        NumPy, otherwise None.
 
     """
     max_sizes = None
@@ -1241,7 +1242,12 @@ def get_downsample_max_sizes():
     if downsample_io and config.img5d and config.img5d.img_io in downsample_io:
         max_sizes = config.atlas_profile["editor_max_sizes"]
         if max_sizes:
+            # reverse order to z,y,x since profile is in x,y,z order
             max_sizes = max_sizes[::-1]
+    
+    if max_sizes:
+        # map to planes in xy format
+        max_sizes = {p: m for p, m in zip(config.PLANE, max_sizes)}
     return max_sizes
 
 

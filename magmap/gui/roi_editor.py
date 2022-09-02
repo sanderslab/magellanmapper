@@ -652,8 +652,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         scaling = config.labels_scaling
         if scaling is not None: scaling = [scaling]
         max_sizes = plot_support.get_downsample_max_sizes()
-        max_size = max_sizes[plot_support.get_plane_axis(
-            self.plane, get_index=True)] if max_sizes else None
+        max_size = max_sizes[self.plane] if max_sizes else None
 
         # plot layout depending on number of z-planes
         if single_roi_row:

@@ -3061,9 +3061,9 @@ class Visualization(HasTraits):
         
         self._atlas_ed_plot_ignore = True
         for key, val in viewers.items():
-            if val == evt.new and key != evt.name:
-                # swap out any other dropdown set to the new selection from
-                # the triggering dropdown with its prior selection
+            if evt.new and evt.new[0] and val == evt.new and key != evt.name:
+                # for a non-empty new selection already in another dropdown,
+                # swap it with the old selection
                 if key == "_atlas_ed_plot_left":
                     self._atlas_ed_plot_left = evt.old
                 elif key == "_atlas_ed_plot_right_up":

@@ -5,7 +5,7 @@
 
 import datetime
 import os
-from typing import TYPE_CHECKING, Sequence
+from typing import Sequence
 
 from matplotlib import pyplot as plt
 from matplotlib import figure
@@ -17,9 +17,6 @@ from magmap.gui import plot_editor
 from magmap.io import libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
-
-if TYPE_CHECKING:
-    from magmap.io import np_io
 
 
 class AtlasEditor(plot_support.ImageSyncMixin):
@@ -162,9 +159,9 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         # adjust button colors based on theme and enabled status; note
         # that colors do not appear to refresh until fig mouseover
         for btn in (self.alpha_reset_btn, self.edit_btn):
-            enable_btn(btn)
-        enable_btn(self.save_btn, False)
-        enable_btn(self.color_picker_box, color=config.widget_color+0.1)
+            self.enable_btn(btn)
+        self.enable_btn(self.save_btn, False)
+        self.enable_btn(self.color_picker_box, color=config.widget_color+0.1)
     
         def setup_plot_ed(gs_spec, plane):
             # set up a PlotEditor for the given axis
@@ -333,7 +330,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             if ed != plot_ed: ed.refresh_img3d_labels()
             if ed.edited:
                 # display save button as enabled if any editor has been edited
-                enable_btn(self.save_btn)
+                self.enable_btn(self.save_btn)
                 self.edited = True
         if update_atlas_eds and self.fn_refresh_atlas_eds is not None:
             # callback to synchronize other Atlas Editors
@@ -412,7 +409,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         # reset edited flag in all editors and show save button as disabled
         for ed in self.plot_eds.values(): ed.edited = False
         self.edited = False
-        enable_btn(self.save_btn, False)
+        self.enable_btn(self.save_btn, False)
         print("Saved labels image at {}".format(datetime.datetime.now()))
     
     def get_save_path(self):
@@ -440,7 +437,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             if i == 0:
                 # change edit mode based on current mode in first plot editor
                 edit_mode = not ed.edit_mode
-                toggle_btn(self.edit_btn, edit_mode, text=self._EDIT_BTN_LBLS)
+                self.toggle_btn(self.edit_btn, edit_mode, text=self._EDIT_BTN_LBLS)
             ed.edit_mode = edit_mode
         if not edit_mode:
             # reset the color picker text box when turning off editing
@@ -477,65 +474,6 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             ed.intensity_spec = intensity
 
 
-def enable_btn(btn, enable=True, color=None, max_color=0.99):
-    """Display a button or other widget as enabled or disabled.
-    
-    Note that the button's active state will not change since doing so 
-    prevents the coloration from changing.
-    
-    Args:
-        btn (:class:`matplotlib.widgets.AxesWidget`): Widget to change,
-            which must have ``color`` and ``hovercolor`` attributes.
-        enable (bool): True to enable (default), False to disable.
-        color (float): Intensity value from 0-1 for the main color. The
-            hovercolor will be just above this value, while the disabled
-            main and hovercolors will be just below this value. Defaults
-            to None, which will use :attr:`config.widget_color`.
-        max_color (float): Max intensity value for hover color; defaults
-            to 0.99 to provide at least some contrast with white backgrounds.
-    """
-    if color is None:
-        color = config.widget_color
-    if enable:
-        # "enable" button by changing to default grayscale color intensities
-        btn.color = str(color)
-        hover = color + 0.1
-        if hover > max_color:
-            # intensities > 1 appear to recycle, so clip to max allowable val
-            hover = max_color
-        btn.hovercolor = str(hover)
-    else:
-        # "disable" button by making darker and no hover response
-        color_disabled = color - 0.2
-        if color_disabled < 0: color_disabled = 0
-        color_disabled = str(color_disabled)
-        btn.color = color_disabled
-        btn.hovercolor = color_disabled
-
-
-def toggle_btn(btn, on=True, shift=0.2, text=None):
-    """Toggle a button between on/off modes.
-
-    Args:
-        btn: Button widget to change.
-        on: True to display the button as on, False as off.
-        shift: Float of amount to shift the button color intensity;
-            defaults to 0.2.
-        text: Tuple of ``(on_text, off_text)`` for the button label;
-            defaults to None to keep the original text.
-    """
-    if on:
-        # turn button "on" by darkening intensities and updating label
-        btn.color = str(float(btn.color) - shift)
-        btn.hovercolor = str(float(btn.hovercolor) - shift)
-        if text: btn.label.set_text(text[1])
-    else:
-        # turn button "off" by lightening intensities and updating label
-        btn.color = str(float(btn.color) + shift)
-        btn.hovercolor = str(float(btn.hovercolor) + shift)
-        if text: btn.label.set_text(text[0])
-
-
 class InterpolatePlanes:
     """Track manually edited planes between which to interpolate changes 
     for a given label.
@@ -567,7 +505,7 @@ class InterpolatePlanes:
                 .format(plot_support.get_plane_axis(self.plane), self.bounds,
                         self.label_id))
             self.btn.label.set_fontsize("xx-small")
-        enable_btn(self.btn, all(self.bounds))
+        plot_support.ImageSyncMixin.enable_btn(self.btn, all(self.bounds))
         
     def update_plane(self, plane, i, label_id):
         """Update the current plane.

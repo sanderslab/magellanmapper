@@ -195,6 +195,65 @@ class ImageSyncMixin:
                 ed.max_intens_proj = n
                 if display: ed.update_coord()
     
+    @staticmethod
+    def enable_btn(btn, enable=True, color=None, max_color=0.99):
+        """Display a button or other widget as enabled or disabled.
+
+        Note that the button's active state will not change since doing so 
+        prevents the coloration from changing.
+
+        Args:
+            btn (:class:`matplotlib.widgets.AxesWidget`): Widget to change,
+                which must have ``color`` and ``hovercolor`` attributes.
+            enable (bool): True to enable (default), False to disable.
+            color (float): Intensity value from 0-1 for the main color. The
+                hovercolor will be just above this value, while the disabled
+                main and hovercolors will be just below this value. Defaults
+                to None, which will use :attr:`config.widget_color`.
+            max_color (float): Max intensity value for hover color; defaults
+                to 0.99 to provide at least some contrast with white backgrounds.
+        """
+        if color is None:
+            color = config.widget_color
+        if enable:
+            # "enable" button by changing to default grayscale color intensities
+            btn.color = str(color)
+            hover = color + 0.1
+            if hover > max_color:
+                # intensities > 1 appear to recycle, so clip to max allowable val
+                hover = max_color
+            btn.hovercolor = str(hover)
+        else:
+            # "disable" button by making darker and no hover response
+            color_disabled = color - 0.2
+            if color_disabled < 0: color_disabled = 0
+            color_disabled = str(color_disabled)
+            btn.color = color_disabled
+            btn.hovercolor = color_disabled
+
+    @staticmethod
+    def toggle_btn(btn, on=True, shift=0.2, text=None):
+        """Toggle a button between on/off modes.
+
+        Args:
+            btn: Button widget to change.
+            on: True to display the button as on, False as off.
+            shift: Float of amount to shift the button color intensity;
+                defaults to 0.2.
+            text: Tuple of ``(on_text, off_text)`` for the button label;
+                defaults to None to keep the original text.
+        """
+        if on:
+            # turn button "on" by darkening intensities and updating label
+            btn.color = str(float(btn.color) - shift)
+            btn.hovercolor = str(float(btn.hovercolor) - shift)
+            if text: btn.label.set_text(text[1])
+        else:
+            # turn button "off" by lightening intensities and updating label
+            btn.color = str(float(btn.color) + shift)
+            btn.hovercolor = str(float(btn.hovercolor) + shift)
+            if text: btn.label.set_text(text[0])
+
     def on_close(self):
         """Figure close handler.
         

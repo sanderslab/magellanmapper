@@ -35,7 +35,9 @@ class VerifierEditor(plot_support.ImageSyncMixin):
         self.title: Optional[str] = title
         self.fig: Optional[figure.Figure] = fig
         
+        #: Available blob flags, sorted in ascending order.
         self._blob_flags: Sequence[Any] = []
+        #: Dictionary of sub-plot index to data object for the plot.
         self._blob_views: Dict[int, "VerifierEditor.BlobView"] = {}
         
     def show_fig(self):
@@ -53,21 +55,21 @@ class VerifierEditor(plot_support.ImageSyncMixin):
             nrows, ncols, wspace=0.1, hspace=0.1, figure=fig,
             left=0.06, right=0.94, bottom=0.02, top=0.98)
         
-        # get blobs with confirmation flags
+        # get blobs with confirmation flags set by user (ie non-neg)
         blobs = self.blobs.blobs
-        blobs = blobs[self.blobs.get_blob_confirmed(blobs) >= 0]
+        blobs_mask = self.blobs.get_blob_confirmed(blobs) >= 0
         self._blob_flags = sorted(np.unique(
-            self.blobs.get_blob_confirmed(blobs).astype(int)))
-        nblobs = len(blobs)
-        offsets = self.blobs.get_blob_abs_coords(blobs).astype(int)
+            self.blobs.get_blob_confirmed(blobs[blobs_mask]).astype(int)))
+        
+        # get indices of these blobs to access by view rather than copy
+        blobs_inds = np.argwhere(blobs_mask)
+        nblobs = len(blobs_inds)
         subimg_shape = (50, 50)
         for row in range(nrows):
             for col in range(ncols):
-                # get offset from blob's absolute coordinates
                 n = row * ncols + col
                 if n >= nblobs:
                     break
-                blob = blobs[n]
                 
                 # add axes
                 ax = fig.add_subplot(gs[row, col])
@@ -79,14 +81,20 @@ class VerifierEditor(plot_support.ImageSyncMixin):
                     ax, aspect, origin, rgb=config.rgb)
                 plot_ed = plot_editor.PlotEditor(
                     overlayer, self.img5d.img[0], None, None)
-                offset = offsets[n]
+                
+                # get blob as view and use absolute coordinates as ROI offset
+                blob = blobs[blobs_inds[n][0]]
+                offset = self.blobs.get_blob_abs_coords(blob).astype(int)
                 plot_ed.coord = offset
                 plot_ed.show_overview()
+                
+                # center plot on offset
                 offset_ctr = plot_3d.roi_center_to_offset(
                     offset[1:], subimg_shape)
                 plot_ed.view_subimg(offset_ctr, subimg_shape)
                 self.plot_eds[n] = plot_ed
                 
+                # store plot and blob
                 blob_view = self.BlobView(plot_ed, blob)
                 self._set_ax_title(blob_view)
                 self._blob_views[n] = blob_view

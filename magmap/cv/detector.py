@@ -287,7 +287,8 @@ class Blobs:
 
     @classmethod
     def get_blob_col(
-            cls, blob: np.ndarray, col: int) -> Union[int, float, np.ndarray]:
+            cls, blob: np.ndarray, col: Union[int, Sequence[int]]
+    ) -> Union[int, float, np.ndarray]:
         """Get the value for the given column of a blob or blobs.
 
         Args:
@@ -370,17 +371,19 @@ class Blobs:
         """Get blob absolute coordinates.
         
         Args:
-            blobs: 2D array of blobs.
+            blobs: 1D blob array or 2D array of blobs.
 
         Returns:
-            2D array of absolute coordinates.
+            Array of absolute coordinates, with dimensions corresponding to
+            ``blobs``.
 
         """
-        return blobs[:, cls._get_abs_inds()]
+        return cls.get_blob_col(blobs, cls._get_abs_inds())
 
     @classmethod
     def set_blob_col(
-            cls, blob: np.ndarray, col: int, val: Union[int, np.ndarray]
+            cls, blob: np.ndarray, col: Union[int, Sequence[int]],
+            val: Union[float, Sequence[float]]
     ) -> np.ndarray:
         """Set the value for the given column of a blob or blobs.
 
@@ -449,7 +452,8 @@ class Blobs:
         return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
     
     @classmethod
-    def set_blob_abs_coords(cls, blobs: np.ndarray, coords: np.ndarray) -> np.ndarray:
+    def set_blob_abs_coords(
+            cls, blobs: np.ndarray, coords: Sequence[int]) -> np.ndarray:
         """Set blob absolute coordinates.
         
         Args:
@@ -461,7 +465,7 @@ class Blobs:
             Modified ``blobs``.
 
         """
-        blobs[:, cls._get_abs_inds()] = coords
+        cls.set_blob_col(blobs, cls._get_abs_inds(), coords)
         return blobs
     
     @classmethod

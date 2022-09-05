@@ -2,7 +2,7 @@
 """Blob verifier viewer GUI."""
 
 import dataclasses
-from typing import Optional, Dict, Sequence, Any
+from typing import Optional, Dict, Sequence, Any, Callable
 
 import numpy as np
 
@@ -28,12 +28,15 @@ class VerifierEditor(plot_support.ImageSyncMixin):
         #: Displayed blob.
         blob: np.ndarray
     
-    def __init__(self, img5d, blobs, title=None, fig=None):
+    def __init__(self, img5d, blobs, title=None, fig=None, fn_update_blob=None):
         """Initialize the viewer."""
         super().__init__(img5d)
         self.blobs: "detector.Blobs" = blobs
         self.title: Optional[str] = title
         self.fig: Optional[figure.Figure] = fig
+        #: Handler for updating a blob; defaults to None.
+        self.fn_update_blob: Optional[Callable[
+            [np.ndarray, Optional[np.ndarray]], np.ndarray]] = fn_update_blob
         
         #: Available blob flags, sorted in ascending order.
         self._blob_flags: Sequence[Any] = []
@@ -120,8 +123,13 @@ class VerifierEditor(plot_support.ImageSyncMixin):
                 i = 0
             
             # update the blob's flag and show in axes title
+            blob_orig = np.copy(view.blob)
             self.blobs.set_blob_confirmed(view.blob, self._blob_flags[i])
             self._set_ax_title(view)
+            
+            if self.fn_update_blob:
+                # handle any blob changes
+                self.fn_update_blob(view.blob, blob_orig)
             
     def _set_ax_title(self, view: "BlobView"):
         """Set the axes title for a blob view.

@@ -3085,7 +3085,9 @@ class Visualization(HasTraits):
     @observe("_btn_verifier")
     def _launch_verifier_editor(self, evt):
         verifier_ed = verifier_editor.VerifierEditor(
-            config.img5d, self.blobs, "Verifier", self._roi_ed_fig)
+            config.img5d, self.blobs, "Verifier", self._roi_ed_fig,
+            # necessary for immediate table refresh rather than after scroll
+            self.update_segment)
         verifier_ed.show_fig()
         self.verifier_ed = verifier_ed
     

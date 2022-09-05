@@ -9,7 +9,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import figure
 from matplotlib import gridspec
-from matplotlib.widgets import Button, TextBox
+from matplotlib.widgets import Button, Slider, TextBox
 
 from magmap.cv import detector
 from magmap.gui import plot_editor
@@ -41,6 +41,8 @@ class VerifierEditor(plot_support.ImageSyncMixin):
         
         # GUI elements
         self._grid_spec = None
+        self._row_slider = None
+        self._col_slider = None
         self._back_btn = None
         self._next_btn = None
         self._page_txt = None
@@ -65,18 +67,27 @@ class VerifierEditor(plot_support.ImageSyncMixin):
             self.fig = figure.Figure(self.title)
         self.fig.clear()
         self._grid_spec = gridspec.GridSpec(
-            2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1), figure=self.fig,
-            left=0.06, right=0.94, bottom=0.02, top=0.98)
+            2, 1, wspace=0.1, hspace=0.1, height_ratios=(20, 1),
+            figure=self.fig, left=0.06, right=0.94, bottom=0.02, top=0.96)
         
-        # add controls
+        # add controls with sub-grid-spec that includes gaps to accommodate
+        # labels, which otherwise overlap other controls
         gs_controls = gridspec.GridSpecFromSubplotSpec(
-            1, 5, subplot_spec=self._grid_spec[1, 0], wspace=0.1)
+            1, 8, subplot_spec=self._grid_spec[1, 0], wspace=0.1,
+            width_ratios=(30, 5, 30, 3, 11, 11, 3, 7))
+        self._row_slider = Slider(
+            self.fig.add_subplot(gs_controls[0, 0]), "Rows", 0, 10,
+            valinit=self._nrows, valstep=1, valfmt="%d")
+        self._col_slider = Slider(
+            self.fig.add_subplot(gs_controls[0, 2]), "Cols", 0, 10,
+            valinit=self._ncols, valstep=1, valfmt="%d")
         self._back_btn = Button(
-            self.fig.add_subplot(gs_controls[0, 0]), "Back")
+            self.fig.add_subplot(gs_controls[0, 4]), "Back")
         self._next_btn = Button(
-            self.fig.add_subplot(gs_controls[0, 1]), "Next")
+            self.fig.add_subplot(gs_controls[0, 5]), "Next")
         self._page_txt = TextBox(
-            self.fig.add_subplot(gs_controls[0, 4]), "Page", "1")
+            self.fig.add_subplot(gs_controls[0, 7]), "Page", "1",
+            label_pad=0.05)
         
         for btn in (self._back_btn, self._next_btn, self._page_txt):
             # enable button and color theme
@@ -91,6 +102,8 @@ class VerifierEditor(plot_support.ImageSyncMixin):
         self.fig.canvas.mpl_connect("close_event", self.on_close)
         
         # attach handlers
+        self._row_slider.on_changed(self._change_row)
+        self._col_slider.on_changed(self._change_col)
         self._back_btn.on_clicked(self._back_page)
         self._next_btn.on_clicked(self._next_page)
         self._page_txt.on_submit(self._select_page)
@@ -187,6 +200,16 @@ class VerifierEditor(plot_support.ImageSyncMixin):
         # show the blob's confirmed flag in the title
         view.plot_ed.axes.set_title(
             f"Class: {self.blobs.get_blob_confirmed(view.blob).astype(int)}")
+
+    def _change_row(self, evt):
+        """Handle change to the number of rows."""
+        self._nrows = int(evt)
+        self.show_views()
+    
+    def _change_col(self, evt):
+        """Handle change to the number of cols."""
+        self._ncols = int(evt)
+        self.show_views()
     
     def _back_page(self, evt):
         """Scroll back one page of views."""

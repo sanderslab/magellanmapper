@@ -43,9 +43,9 @@ except AttributeError:
 from pyface import confirmation_dialog
 from pyface.api import FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
-from traits.api import Any, Array, Bool, Button, File, Float, Instance, Int, \
-    List, observe, on_trait_change, Property, push_exception_handler, Str, \
-    HasTraits
+from traits.api import Any, Array, Bool, Button, Event, File, Float, Instance, \
+    Int, List, observe, on_trait_change, Property, push_exception_handler, \
+    Str, HasTraits
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
     EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
     StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
@@ -364,9 +364,11 @@ class Visualization(HasTraits):
     _segs_row_scroll = Int()  # row index to scroll the table
     # multi-select to allow updating with a list, but segment updater keeps
     # selections to single when updating them
+    _segs_refresh_evt = Event()
     segs_table = TabularEditor(
-        adapter=SegmentsArrayAdapter(), multi_select=True, 
-        selected_row="segs_selected", scroll_to_row="_segs_row_scroll")
+        adapter=SegmentsArrayAdapter(), multi_select=True,
+        selected_row="segs_selected", scroll_to_row="_segs_row_scroll",
+        refresh="_segs_refresh_evt")
     segs_in_mask = None  # boolean mask for segments in the ROI
     segs_cmap = None
     segs_feedback = Str("Segments output")
@@ -3454,22 +3456,6 @@ class Visualization(HasTraits):
             return segi[0][0]
         return -1
     
-    def _force_seg_refresh(self, i, show=False):
-        """Trigger table update by either selecting and reselected the segment
-        or vice versa.
-
-        Args:
-            i: The element in vis.segs_selected, which is simply an index to
-               the segment in vis.segments.
-        """
-        if i in self.segs_selected:
-            self.segs_selected.remove(i)
-            self.segs_selected.append(i)
-        else:
-            self.segs_selected.append(i)
-            if not show:
-                self.segs_selected.remove(i)
-    
     def _flag_seg_for_deletion(self, seg):
         seg[3] = -1 * abs(seg[3])
         detector.Blobs.set_blob_confirmed(seg, -1)
@@ -3480,18 +3466,22 @@ class Visualization(HasTraits):
     ) -> np.ndarray:
         """Update segments/blobs list with a new or updated segment.
         
+        The blobs table will immediately reflect changes to :attr:`segments`.
+        This handler further updates blobs with any other required changes
+        and scroll the table to the changed blob.
+        
         Args:
-            segment_new: Segment to either add or update, including 
-                changes to relative coordinates or radius. Segments are 
-                generally given as an array in :func:``detector.format_blob`` 
-                format. 
-            segment_old: Previous version of the segment, which if found will 
-                be replaced by ``segment_new``. The absolute coordinates of 
-                ``segment_new`` will also be updated based on the relative 
-                coordinates' difference between ``segment_new`` and 
+            segment_new: Segment to either add or update, including
+                changes to relative coordinates or radius. Segments are
+                generally given as an array in :func:``detector.format_blob``
+                format.
+            segment_old: Previous version of the segment, which if found will
+                be replaced by ``segment_new``. The absolute coordinates of
+                ``segment_new`` will also be updated based on the relative
+                coordinates' difference between ``segment_new`` and
                 ``segments_old`` as a convenience. Defaults to None.
-            remove: True if the segment should be removed instead of added, 
-                in which case ``segment_old`` will be ignored. Defaults to 
+            remove: True if the segment should be removed instead of added,
+                in which case ``segment_old`` will be ignored. Defaults to
                 False.
         
         Returns:
@@ -3499,18 +3489,17 @@ class Visualization(HasTraits):
         
         """
         seg = segment_new
-        # remove all row selections to ensure that no more than one 
+        # remove all row selections to ensure that no more than one
         # row is selected by the end
         while len(self.segs_selected) > 0:
             self.segs_selected.pop()
-        #print("updating: ", segment_new, offset)
         if remove:
-            # remove segments, changing radius and confirmation values to 
+            # remove segments, changing radius and confirmation values to
             # flag for deletion from database while saving the ROI
             segi = self._get_vis_segments_index(seg)
             seg = self.segments[segi]
             self._flag_seg_for_deletion(seg)
-            self._force_seg_refresh(segi, show=True)
+            self.segs_selected.append(segi)
         elif segment_old is not None:
             # new blob's abs coords are not shifted, so shift new blob's abs
             # coordinates by relative coords' diff between old and new blobs
@@ -3527,13 +3516,13 @@ class Visualization(HasTraits):
                 # replace corresponding blob entry in table
                 self.segments[segi] = seg
                 print("updated seg: {}".format(seg))
-                self._force_seg_refresh(segi, show=True)
+            self.segs_selected.append(segi)
         else:
             # add a new segment to the visualizer table
             segs = [seg]  # for concatenation
             if self.segments is None or len(self.segments) == 0:
-                # copy since the object may be changed elsewhere; cast to 
-                # float64 since original type causes an incorrect database 
+                # copy since the object may be changed elsewhere; cast to
+                # float64 since original type causes an incorrect database
                 # insertion for some reason
                 self.segments = np.copy(segs).astype(np.float64)
             else:
@@ -3543,6 +3532,9 @@ class Visualization(HasTraits):
         
         # scroll to first selected row
         self._segs_row_scroll = min(self.segs_selected)
+        
+        # trigger refresh since the table may otherwise not refresh until scroll
+        self._segs_refresh_evt = True
         
         if self.roi_ed:
             # flag ROI Editor as edited

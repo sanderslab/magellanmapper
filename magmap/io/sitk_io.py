@@ -525,6 +525,27 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None,
             print("also copied to", out_path_copy)
 
 
+def write_pts(path: str, pts: Sequence[Sequence[int]], pt_type: str = "index"):
+    """Write file for corresponding points in Elastix.
+    
+    See format described in the Elastix manual, section 4.2 (as of
+    Elastix 5.0.1).
+    
+    Args:
+        path: Output path.
+        pts: Points as a nested sequence of ints, in `x, y, [z]` order.
+        pt_type: Point type, either "index" (default) for points as image
+            indices, or "points" as physical coordinates.
+
+    """
+    with open(path, mode="w") as f:
+        f.write(f"{pt_type}\n")  # point type
+        f.write(f"{len(pts)}\n")  # number of points
+        for pt in pts:
+            # write space-delimited points
+            f.write(f"{' '.join([str(p) for p in pt])}\n")
+
+
 def merge_images(img_paths, reg_name, prefix=None, suffix=None, 
                  fn_combine=np.sum):
     """Merge images from multiple paths.

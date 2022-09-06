@@ -3448,12 +3448,11 @@ class Visualization(HasTraits):
         print("set border to {}".format(self.border))
     
     def _get_vis_segments_index(self, segment):
-        # must take from vis rather than saved copy in case user 
+        """Get index of blob in blobs table."""
+        # must take from vis rather than saved copy in case user
         # manually updates the table
-        #print("segs:\n{}".format(self.segments))
-        #print("seg: {}".format(segment))
-        #print(self.segments == segment)
-        segi = np.where((self.segments == segment).all(axis=1))
+        # TODO: consider using ID instead of checking whole blob
+        segi = np.nonzero((self.segments == segment).all(axis=1))
         if len(segi) > 0 and len(segi[0]) > 0:
             return segi[0][0]
         return -1
@@ -3473,15 +3472,16 @@ class Visualization(HasTraits):
         and scroll the table to the changed blob.
         
         Args:
-            segment_new: Segment to either add or update, including
-                changes to relative coordinates or radius. Segments are
-                generally given as an array in :func:``detector.format_blob``
-                format.
-            segment_old: Previous version of the segment, which if found will
-                be replaced by ``segment_new``. The absolute coordinates of
-                ``segment_new`` will also be updated based on the relative
+            segment_new: New or updated segment. Assumed to have absolute
+                coordinates. The segment will be added if ``segment_old``
+                is not given, or updated if provided.
+            segment_old: Previous version of the segment, which will be
+                replaced by ``segment_new`` if found. The absolute coordinates
+                of ``segment_new`` will also be updated based on the relative
                 coordinates' difference between ``segment_new`` and
-                ``segments_old`` as a convenience. Defaults to None.
+                ``segments_old`` as a convenience. Defaults to None. Can be
+                the same as ``segement_new`` to simply trigger a table refresh
+                and scrolling.
             remove: True if the segment should be removed instead of added,
                 in which case ``segment_old`` will be ignored. Defaults to
                 False.
@@ -3517,7 +3517,7 @@ class Visualization(HasTraits):
             if segi != -1:
                 # replace corresponding blob entry in table
                 self.segments[segi] = seg
-                print("updated seg: {}".format(seg))
+                _logger.debug("Updated segment: %s", seg)
             self.segs_selected.append(segi)
         else:
             # add a new segment to the visualizer table
@@ -3530,7 +3530,7 @@ class Visualization(HasTraits):
             else:
                 self.segments = np.concatenate((self.segments, segs))
             self.segs_selected.append(len(self.segments) - 1)
-            print("added segment to table: {}".format(seg))
+            _logger.debug("Added segment to table: %s", seg)
         
         # scroll to first selected row
         self._segs_row_scroll = min(self.segs_selected)

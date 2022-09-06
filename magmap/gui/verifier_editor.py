@@ -181,14 +181,15 @@ class VerifierEditor(plot_support.ImageSyncMixin):
                 # reset if the index exceeds the flag list
                 i = 0
             
-            # update the blob's flag and show in axes title
-            blob_orig = np.copy(view.blob)
+            # update the blob's flag and show in axes title, which will update
+            # the underlying blobs array since this blob is a view, not a copy
             self.blobs.set_blob_confirmed(view.blob, self._blob_flags[i])
             self._set_ax_title(view)
             
             if self.fn_update_blob:
-                # handle any blob changes
-                self.fn_update_blob(view.blob, blob_orig)
+                # handle any blob changes with the same updated blob as both
+                # new and old blobs since blobs array has already been updated
+                self.fn_update_blob(view.blob, view.blob)
             
     def _set_ax_title(self, view: "BlobView"):
         """Set the axes title for a blob view.

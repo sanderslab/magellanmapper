@@ -221,15 +221,30 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
     return result_imgs
 
 
-def _transform_labels(transformix_img_filter, labels_img):
+def register_repeat(
+        transformix_img_filter: sitk.TransformixImageFilter,
+        img: sitk.Image) -> sitk.Image:
+    """Transform labels to match a prior registration.
+    
+    Uses an Elastix Transformix filter to reproduce a transformation on
+    a labels image. Ensures that the output pixel type remains the same as
+    the input.
+    
+    Args:
+        transformix_img_filter: Filter generated from a prior registration.
+        img: SimpleITK image.
+
+    Returns:
+        Transformed image.
+
+    """
     # apply atlas transformation to labels image
-    labels_pixel_id = labels_img.GetPixelID()  # now as signed int
-    print("labels_pixel type: {}".format(labels_img.GetPixelIDTypeAsString()))
-    transformix_img_filter.SetMovingImage(labels_img)
+    pixel_id = img.GetPixelID()  # now as signed int
+    transformix_img_filter.SetMovingImage(img)
     transformix_img_filter.Execute()
-    transformed_labels_img = transformix_img_filter.GetResultImage()
-    transformed_labels_img = sitk.Cast(transformed_labels_img, labels_pixel_id)
-    print(transformed_labels_img)
+    transformed_img = transformix_img_filter.GetResultImage()
+    transformed_img = sitk.Cast(transformed_img, pixel_id)
+    _logger.info(f"Transformed image:\n{transformed_img}")
     '''
     LabelStatistics = sitk.LabelStatisticsImageFilter()
     LabelStatistics.Execute(fixed_img, labels_img)
@@ -238,7 +253,7 @@ def _transform_labels(transformix_img_filter, labels_img):
     variance = LabelStatistics.GetVariance(1)
     print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
     '''
-    return transformed_labels_img
+    return transformed_img
 
 
 def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
@@ -272,8 +287,10 @@ def register_duo(
             registration files ``fix_pts.txt`` and ``mov_pts.txt`` will
             be found; defaults to None, in which case points-based
             reg will be ignored even if set.
-        fixed_mask: Mask for ``fixed_img``; defaults to None.
-        moving_mask: Mask for ``moving_img``; defaults to None.
+        fixed_mask: Mask for ``fixed_img``, typically a uint8 image.; defaults
+            to None.
+        moving_mask: Mask for ``moving_img``, typically a uint8 image.; defaults
+            to None.
         regs: Sequence of atlas profile registration keys or registration
             parameter objects. The default of None gives all three major
             registration types, "reg_translation", "reg_affine", "reg_bspline".
@@ -287,9 +304,9 @@ def register_duo(
         # default to perform all the major registration types
         regs = ("reg_translation", "reg_affine", "reg_bspline")
     
-    # basic info from images just prior to SimpleElastix filtering for 
-    # registration; to view raw images, show these images rather than merely 
-    # turning all iterations to 0 since simply running through the filter 
+    # basic info from images just prior to SimpleElastix filtering for
+    # registration; to view raw images, show these images rather than merely
+    # turning all iterations to 0 since simply running through the filter
     # will alter images
     print("fixed image (type {}):\n{}".format(
         fixed_img.GetPixelIDTypeAsString(), fixed_img))
@@ -462,9 +479,6 @@ def register(
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = sitk_io.replace_sitk_with_numpy(fixed_img, img_np)
 
-    # dict of moving images
-    moving_imgs = {}
-
     # load moving intensity image based on registered image suffixes, falling
     # back to atlas volume suffix
     moving_atlas_suffix = config.reg_suffixes[config.RegSuffixes.ATLAS]
@@ -567,9 +581,7 @@ def register(
     if transformix:
         # re-transform using parameters from a prior registration
         transformix_filter = transformix
-        transformix_filter.SetMovingImage(moving_img)
-        transformix_filter.Execute()
-        img_moved = transformix_filter.GetResultImage()
+        img_moved = register_repeat(transformix_filter, moving_img)
         dsc_sample = atlas_refiner.measure_overlap(
             fixed_img_orig, img_moved, thresh_img2=thresh_mov)
         metric_sim = get_similarity_metric()
@@ -633,7 +645,7 @@ def register(
         if transformix_filter is None:
             return lbls_img, None, None, None
         # transform label
-        labels_trans = _transform_labels(transformix_filter, lbls_img)
+        labels_trans = register_repeat(transformix_filter, lbls_img)
         print(labels_trans.GetSpacing())
         
         # WORKAROUND: labels img floating point vals may be more rounded 
@@ -1179,7 +1191,7 @@ def register_labels_to_atlas(path_fixed):
     # apply transformation, manually resetting spacing in case of rounding
     labels_sitk = sitk_io.load_registered_img(
         path_fixed, config.RegNames.IMG_LABELS.value, get_sitk=True)
-    transformed_labels = _transform_labels(transformix_img_filter, labels_sitk)
+    transformed_labels = register_repeat(transformix_img_filter, labels_sitk)
     transformed_labels.SetSpacing(transformed_img.GetSpacing())
     #sitk.Show(transformed_labels)
     

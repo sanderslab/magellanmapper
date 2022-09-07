@@ -600,7 +600,9 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
     return combined_sitk
 
 
-def load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
+def load_numpy_to_sitk(
+        img5d: Union[str, "np_io.Image5d"], rotate: bool = False,
+        channel: Optional[Union[int, Sequence[int]]] = None) -> sitk.Image:
     """Load Numpy image array to SimpleITK Image object.
 
     Use ``channel`` to extract a single channel before generating a
@@ -608,29 +610,39 @@ def load_numpy_to_sitk(numpy_file, rotate=False, channel=None):
     single-channel ("scalar" rather than "vector") images.
     
     Args:
-        numpy_file (str): Path to Numpy archive file.
-        rotate (bool): True if the image should be rotated 180 deg; defaults to
+        img5d: Path to Numpy archive file or ``Image5d`` instance.
+        rotate: True if the image should be rotated 180 deg; defaults to
             False.
-        channel (int, Tuple[int]): Integer or sequence of integers specifying
+        channel: Integer or sequence of integers specifying
             channels to keep.
     
     Returns:
-        :obj:`sitk.Image`: The image in SimpleITK format.
+        The image in SimpleITK format.
     
     """
-    img5d = importer.read_file(numpy_file, config.series)
+    if isinstance(img5d, str):
+        # load path
+        img5d = importer.read_file(img5d, config.series)
+    
+    # get np array without time dimension
     image5d = img5d.img
-    roi = image5d[0, ...]  # not using time dimension
+    roi = image5d[0]
+    
     if channel is not None and len(roi.shape) >= 4:
         roi = roi[..., channel]
-        print("extracted channel(s) for SimpleITK image:", channel)
+        _logger.debug("Extracted channel(s) for SimpleITK image: %s", channel)
+    
     if rotate:
+        # rotate 180 deg
+        # TODO: consider deprecating, deferring to atlas_refier.transpose_img
         roi = np.rot90(roi, 2, (1, 2))
+    
+    # get sitk image and transfer metadata to it
     sitk_img = sitk.GetImageFromArray(roi)
     spacing = config.resolutions[0]
     sitk_img.SetSpacing(spacing[::-1])
-    # TODO: consider setting z-origin to 0 since image generally as 
-    # tightly bound to subject as possible
+    # TODO: consider setting z-origin to 0 since image generally as
+    #   tightly bound to subject as possible
     #sitk_img.SetOrigin([0, 0, 0])
     sitk_img.SetOrigin([0, 0, -roi.shape[0] // 2])
     #sitk_img.SetOrigin([0, 0, -roi.shape[0]])

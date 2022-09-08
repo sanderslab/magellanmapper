@@ -1069,6 +1069,54 @@ def make_isotropic(roi, scale):
         anti_aliasing=True)
 
 
+def rescale_resize(
+        roi: np.ndarray, rescale: Optional[float] = None,
+        target_size: Optional[Sequence[int]] = None,
+        multichannel: bool = False) -> np.ndarray:
+    """Rescale or resize an array.
+    
+    Args:
+        roi: Array to rescale or resize, in ``z, y, x, [c]` order.
+        rescale: Rescaling factor. Defaults to None, in which case
+            ``target_size`` will be used instead.
+        target_size: Target rescaling size for the given sub-ROI in
+           ``z, y, x``. Defaults to None and ignored if ``rescale`` is given
+        multichannel: True if the final dimension is for channels; defaults
+            to False.
+
+    Returns:
+        Rescaled array.
+
+    """
+    rescaled = None
+    if rescale is not None:
+        # rescale the image by a given factor
+        args = {
+            "image": roi,
+            "scale": rescale,
+            "mode": "reflect",
+        }
+        if multichannel:
+            # rescale multichannel image
+            try:
+                # Scikit-image >= v0.19
+                rescaled = transform.rescale(
+                    **args, channel_axis=roi.ndim - 1)
+            except TypeError:
+                # Scikit-image < v0.19
+                rescaled = transform.rescale(
+                    **args, multichannel=multichannel)
+        else:
+            # rescale single channel image
+            rescaled = transform.rescale(**args)
+    
+    elif target_size is not None:
+        # resize the image to a custom shape
+        rescaled = transform.resize(
+            roi, target_size, mode="reflect", anti_aliasing=True)
+    return rescaled
+
+
 def get_selem(ndim):
     """Get structuring element appropriate for the number of dimensions.
     

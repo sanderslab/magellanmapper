@@ -1072,7 +1072,8 @@ def make_isotropic(roi, scale):
 def rescale_resize(
         roi: np.ndarray, rescale: Optional[float] = None,
         target_size: Optional[Sequence[int]] = None,
-        multichannel: bool = False) -> np.ndarray:
+        multichannel: bool = False, preserve_range: bool = False, **kwargs
+) -> np.ndarray:
     """Rescale or resize an array.
     
     Args:
@@ -1083,37 +1084,47 @@ def rescale_resize(
            ``z, y, x``. Defaults to None and ignored if ``rescale`` is given
         multichannel: True if the final dimension is for channels; defaults
             to False.
+        preserve_range: True to preserve the range of ``roi``; defaults to
+            False.
+        kwargs: Additional arguments passed to :meth:`transform.rescale`
+            or :meth:`transform.resize`.
 
     Returns:
         Rescaled array.
 
     """
     rescaled = None
+    dtype = roi.dtype
+    args = {
+        "image": roi,
+        "mode": "reflect",
+        "preserve_range": preserve_range,
+    }
+    args.update(kwargs)
     if rescale is not None:
         # rescale the image by a given factor
-        args = {
-            "image": roi,
-            "scale": rescale,
-            "mode": "reflect",
-        }
+        args["scale"] = rescale
         if multichannel:
             # rescale multichannel image
             try:
                 # Scikit-image >= v0.19
-                rescaled = transform.rescale(
-                    **args, channel_axis=roi.ndim - 1)
+                rescaled = transform.rescale(**args, channel_axis=roi.ndim - 1)
             except TypeError:
                 # Scikit-image < v0.19
-                rescaled = transform.rescale(
-                    **args, multichannel=multichannel)
+                rescaled = transform.rescale(**args, multichannel=multichannel)
         else:
             # rescale single channel image
             rescaled = transform.rescale(**args)
     
     elif target_size is not None:
         # resize the image to a custom shape
-        rescaled = transform.resize(
-            roi, target_size, mode="reflect", anti_aliasing=True)
+        args["output_shape"] = target_size
+        args["anti_aliasing"] = True
+        rescaled = transform.resize(**args)
+    
+    if preserve_range:
+        rescaled = rescaled.astype(dtype)
+    
     return rescaled
 
 

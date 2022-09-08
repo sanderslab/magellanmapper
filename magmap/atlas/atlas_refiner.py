@@ -5,7 +5,7 @@
 from collections import OrderedDict
 from enum import Enum
 import os
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, List, Optional, Sequence, Tuple, Union, Any
 
 import SimpleITK as sitk
 import numpy as np
@@ -1083,8 +1083,10 @@ def aggr_smoothing_metrics(df_pxs):
 def transpose_img(
         img_sitk: sitk.Image, plane: Optional[str] = None,
         rotate: Optional[int] = None,
-        flip: Optional[int] = None
+        rotate_deg: Optional[Sequence[Union[
+            Dict[str, Any], Sequence[Any]]]] = None,
         target_size: Optional[Union[float, Sequence[int]]] = None,
+        flip: Optional[int] = None,
         order: Optional[int] = None
 ) -> sitk.Image:
     """Transpose an image to a different plane or rotation.
@@ -1101,6 +1103,9 @@ def transpose_img(
         rotate: Number of times to rotate by 90 degrees; defaults to None, in
             which case the value will be automatically determined based on
             :attr:`config.transform` and ``plane``.
+        rotate_deg: Rotations by arbitrary number of degrees. Given as a
+            nested sequence, where each element is another sequence or dict
+            given to :meth:`magmap.cv_nd.rotate_nd`. Defaults to None.
         target_size: Size of target in `z, y, x` order, or a single rescaling
             factor. Defaults to None.
         flip: Axis to flip after transposition;
@@ -1139,8 +1144,8 @@ def transpose_img(
         "Image transformation settings: plane: %s, num of rotations: %s, "
         "target_size: %s, flip axis: %s",
         plane, rotate, target_size, flip)
-    if ((not plane or plane == config.PLANE[0]) and not rotate
-            and target_size is None and flip is None):
+    if ((not plane or plane == config.PLANE[0]) and not rotate and
+            not rotate_deg and target_size is None and flip is None):
         _logger.info("No transformations to apply, skipping")
         return img_sitk
     
@@ -1170,6 +1175,19 @@ def transpose_img(
             spacing = libmag.swap_elements(spacing, 1, 2)
             origin = libmag.swap_elements(origin, 1, 2)
     
+    if rotate_deg is not None:
+        # rotate by arbitrary degrees along each set of axes
+        for rot in rotate_deg:
+            if isinstance(rot, dict):
+                # rotation arguments given as dict
+                if "order" not in rot:
+                    # default to use given order
+                    rot["order"] = order
+                transposed = cv_nd.rotate_nd(transposed, **rot)
+            else:
+                # rotation arguments given positionally
+                transposed = cv_nd.rotate_nd(transposed, *rot)
+        
     if target_size is not None:
         # rescale or resize
         shape = transposed.shape

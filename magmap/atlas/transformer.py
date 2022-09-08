@@ -50,53 +50,29 @@ class Downsampler(object):
         """Rescale or resize a sub-ROI.
         
         Args:
-            coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the 
+            coord: Coordinates as a tuple of (z, y, x) of the sub-ROI within the
                 chunked ROI.
             slices: Sequence of slices within :attr:``img`` defining the
                 sub-ROI.
-            rescale: Rescaling factor. Can be None, in which case 
+            rescale: Rescaling factor. Can be None, in which case
                 ``target_size`` will be used instead.
-            target_size: Target rescaling size for the given sub-ROI in 
-               (z, y, x). If ``rescale`` is not None, ``target_size`` 
+            target_size: Target rescaling size for the given sub-ROI in
+               (z, y, x). If ``rescale`` is not None, ``target_size``
                will be ignored.
             multichannel: True if the final dimension is for channels.
             sub_roi: Array chunk to rescale/resize;
                 defaults to None to extract from :attr:`img` if available.
         
         Return:
-            Tuple of ``coord`` and the rescaled sub-ROI, where 
-            ``coord`` is the same as the given parameter to identify 
+            Tuple of ``coord`` and the rescaled sub-ROI, where
+            ``coord`` is the same as the given parameter to identify
             where the sub-ROI is located during multiprocessing tasks.
         """
         if sub_roi is None and cls.img is not None:
             sub_roi = cls.img[slices]
         
-        rescaled = None
-        if rescale is not None:
-            # rescale the image by a given factor
-            args = {
-                "image": sub_roi,
-                "scale": rescale,
-                "mode": "reflect",
-            }
-            if multichannel:
-                # rescale multichannel image
-                try:
-                    # Scikit-image >= v0.19
-                    rescaled = transform.rescale(
-                        **args, channel_axis=sub_roi.ndim-1)
-                except TypeError:
-                    # Scikit-image < v0.19
-                    rescaled = transform.rescale(
-                        **args, multichannel=multichannel)
-            else:
-                # rescale single channel image
-                rescaled = transform.rescale(**args)
-        
-        elif target_size is not None:
-            # resize the image to a custom shape
-            rescaled = transform.resize(
-                sub_roi, target_size, mode="reflect", anti_aliasing=True)
+        rescaled = cv_nd.rescale_resize(
+            sub_roi, rescale, target_size, multichannel)
         
         return coord, rescaled
 

@@ -42,7 +42,6 @@ class Downsampler(object):
     def rescale_sub_roi(
             cls, coord: Sequence[int],
             slices: Sequence[slice],
-            rescale: Optional[float],
             target_size: Optional[Sequence[int]],
             multichannel: bool,
             sub_roi: Optional[np.ndarray] = None
@@ -54,8 +53,6 @@ class Downsampler(object):
                 chunked ROI.
             slices: Sequence of slices within :attr:``img`` defining the
                 sub-ROI.
-            rescale: Rescaling factor. Can be None, in which case
-                ``target_size`` will be used instead.
             target_size: Target rescaling size for the given sub-ROI in
                (z, y, x). If ``rescale`` is not None, ``target_size``
                will be ignored.
@@ -72,7 +69,7 @@ class Downsampler(object):
             sub_roi = cls.img[slices]
         
         rescaled = cv_nd.rescale_resize(
-            sub_roi, rescale, target_size, multichannel)
+            sub_roi, target_size, multichannel)
         
         return coord, rescaled
 
@@ -153,25 +150,28 @@ def get_transposed_image_path(
     return img_path_modified
 
 
-def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
-    """Transpose Numpy NPY saved arrays into new planar orientations and 
-    rescaling or resizing.
+def transpose_img(
+        filename: str, series: Optional[int], plane: Optional[str] = None,
+        rescale: Optional[float] = None,
+        target_size: Optional[Sequence[int]] = None):
+    """Transpose large NumPy saved arrays, including rescaling or resizing.
     
-    Rescaling/resizing take place in multiprocessing. Files are saved
+    Loads a saved array to tranpose its planar orientation. Supports large
+    arrays, with rescaling/resizing performed in multiprocessing and file saving
     through memmap-based arrays to minimize RAM usage. Output filenames
-    are based on the ``make_modifer_[task]`` functions. Currently transposes
-    all channels, ignoring :attr:``config.channel`` parameter.
+    are based on the ``make_modifer_[task]`` functions. Currently, transposes
+    all channels, ignoring :attr:``magmap.settings.config.channel`` parameter.
     
     Args:
         filename: Full file path in :attribute:cli:`filename` format.
         series: Series within multi-series file.
-        plane: Planar orientation (see :attribute:plot_2d:`PLANES`). Defaults 
-            to None, in which case no planar transformation will occur.
+        plane: Planar orientation (see :attr:`magmap.settings.config.PLANES`).
+            Defaults to None, in which case no planar transformation will occur.
         rescale: Rescaling factor; defaults to None. Takes precedence over
             ``target_size``.
-        target_size (List[int]): Target shape in x,y,z; defaults to None,
+        target_size: Target shape in x,y,z; defaults to None,
             in which case the target size will be extracted from the register
-            profile if available if available.
+            profile if available.
 
     """
     if target_size is None:
@@ -196,7 +196,7 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
     if rescale is not None:
         modifier += make_modifier_scale(rescale)
     elif target_size:
-        # target size may differ from final output size but allows a known 
+        # target size may differ from final output size but allows a known
         # size to be used for finding the file later
         modifier += make_modifier_resized(target_size)
     filename_image5d_npz, filename_info_npz = importer.make_filenames(
@@ -259,7 +259,7 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
                 for x in range(sub_roi_slices.shape[2]):
                     coord = (z, y, x)
                     slices = sub_roi_slices[coord]
-                    args = [coord, slices, rescale, sub_roi_size,
+                    args = [coord, slices, rescale if rescale else sub_roi_size,
                             multichannel]
                     if not is_fork:
                         # pickle chunk if img not directly available
@@ -298,7 +298,7 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
     else:
         # transfer directly to memmap-backed array
         image5d_transposed = np.lib.format.open_memmap(
-            filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype, 
+            filename_image5d_npz, mode="w+", dtype=image5d_swapped.dtype,
             shape=image5d_swapped.shape)
         if plane == config.PLANE[1] or plane == config.PLANE[2]:
             # flip upside-down if re-orienting planes
@@ -315,8 +315,8 @@ def transpose_img(filename, series, plane=None, rescale=None, target_size=None):
     print("sizes: {}".format(sizes))
     image5d.flush()
     importer.save_image_info(
-        filename_info_npz, info["names"], sizes, config.resolutions, 
-        info["magnification"], info["zoom"], 
+        filename_info_npz, info["names"], sizes, config.resolutions,
+        info["magnification"], info["zoom"],
         *importer.calc_intensity_bounds(image5d_transposed), scaling, plane)
     print("saved transposed file to {} with shape {}".format(
         filename_image5d_npz, image5d_transposed.shape))

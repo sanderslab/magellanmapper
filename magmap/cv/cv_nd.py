@@ -3,7 +3,7 @@
 """Computer vision library functions for n-dimensions.
 """
 
-from typing import List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from scipy import interpolate
@@ -1070,18 +1070,16 @@ def make_isotropic(roi, scale):
 
 
 def rescale_resize(
-        roi: np.ndarray, rescale: Optional[float] = None,
-        target_size: Optional[Sequence[int]] = None,
+        roi: np.ndarray,
+        target_size: Optional[Union[float, Sequence[int]]] = None,
         multichannel: bool = False, preserve_range: bool = False, **kwargs
 ) -> np.ndarray:
     """Rescale or resize an array.
     
     Args:
         roi: Array to rescale or resize, in ``z, y, x, [c]` order.
-        rescale: Rescaling factor. Defaults to None, in which case
-            ``target_size`` will be used instead.
         target_size: Target rescaling size for the given sub-ROI in
-           ``z, y, x``. Defaults to None and ignored if ``rescale`` is given
+           ``z, y, x``, or a single number by which to rescale.
         multichannel: True if the final dimension is for channels; defaults
             to False.
         preserve_range: True to preserve the range of ``roi``; defaults to
@@ -1093,7 +1091,6 @@ def rescale_resize(
         Rescaled array.
 
     """
-    rescaled = None
     dtype = roi.dtype
     args = {
         "image": roi,
@@ -1101,9 +1098,15 @@ def rescale_resize(
         "preserve_range": preserve_range,
     }
     args.update(kwargs)
-    if rescale is not None:
+    
+    if libmag.is_seq(target_size):
+        # resize the image to a custom shape
+        args["output_shape"] = target_size
+        rescaled = transform.resize(**args)
+    
+    else:
         # rescale the image by a given factor
-        args["scale"] = rescale
+        args["scale"] = target_size
         if multichannel:
             # rescale multichannel image
             try:
@@ -1115,12 +1118,6 @@ def rescale_resize(
         else:
             # rescale single channel image
             rescaled = transform.rescale(**args)
-    
-    elif target_size is not None:
-        # resize the image to a custom shape
-        args["output_shape"] = target_size
-        args["anti_aliasing"] = True
-        rescaled = transform.resize(**args)
     
     if preserve_range:
         rescaled = rescaled.astype(dtype)

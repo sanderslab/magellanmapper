@@ -1080,40 +1080,46 @@ def aggr_smoothing_metrics(df_pxs):
     return df_io.dict_to_data_frame(metrics)
 
 
-def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
-                  flipud=None):
+def transpose_img(
+        img_sitk: sitk.Image, plane: Optional[str] = None,
+        rotate: Optional[int] = None,
+        target_size: Optional[Sequence[int]] = None,
+        flipud: Optional[bool] = None) -> sitk.Image:
     """Transpose an image to a different plane or rotation.
     
     Supports the `ROTATE` and `FLIP` settings in
     :attr:`magmap.settings.config.transform` for additional transformations.
     
     Args:
-        img_sitk (:obj:`sitk.Image`): Image in SimpleITK format.
-        plane (str): One of :attr:`config.PLANES` elements, specifying the
-            planar orientation in which to transpose the image. The current 
+        img_sitk: Image in SimpleITK format.
+        plane: One of :attr:`magmap.settings.config.PLANES`, specifying the
+            planar orientation in which to transpose the image. The current
             orientation is taken to be "xy". Defaults to None, in which case
-            the value from :attr:`config.plane` will be taken.
+            the value from :attr:`magmap.settings.config.plane` will be taken.
         rotate: Number of times to rotate by 90 degrees; defaults to None, in
             which case the value will be automatically determined based on
             :attr:`config.transform` and ``plane``.
-        target_size (List[int]): Size of target image, typically one to which
+        target_size: Size of target image, typically one to which
             ``img_sitk`` will be registered, in (x,y,z, SimpleITK standard)
             ordering.
-        flipud (bool): True to invert the z-axis after transposition;
+        flipud: True to invert the z-axis after transposition;
             defaults to None, in which case it will be based on ``plane``.
     
     Returns:
-        :obj:`sitk.Image`: The transposed image. If the original image
+        The transposed image. If the original image
         will undergo no transformations, ``img_sitk`` is simply returned.
 
     """
     if plane is None:
+        # default to using config plane
         plane = config.plane
+    
     if rotate is None:
-        # default to getting first rotation number
+        # default to getting first rotation val from config
         rotate = libmag.get_if_within(
             config.transform[config.Transforms.ROTATE], 0)
     rotate_num = rotate if rotate else 0
+    
     if plane in config.PLANE[1:]:
         # assume rotation and inversion based on planar transposition
         # TODO: check if holds generally true for these planar transforms
@@ -1123,6 +1129,7 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
             flipud = True
     if flipud is None:
         flipud = False
+    
     # flip along any axis
     flip = config.transform[config.Transforms.FLIP]
     rotate = rotate_num
@@ -1134,37 +1141,43 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
             and target_size is None and not flipud and flip is None):
         _logger.info("No transformations to apply, skipping")
         return img_sitk
-
+    
+    # transform as a np array
     img = sitk.GetArrayFromImage(img_sitk)
     img_dtype = img.dtype
     spacing = img_sitk.GetSpacing()[::-1]
     origin = img_sitk.GetOrigin()[::-1]
     transposed = img
+    
     if plane is not None and plane != config.PLANE[0]:
         # transpose planes and metadata
         arrs_3d, arrs_1d = plot_support.transpose_images(
             plane, [transposed], [spacing, origin])
         transposed = arrs_3d[0]
         spacing, origin = arrs_1d
+    
     if flipud:
         # invert along z-axis
         transposed = np.flipud(transposed)
+    
     if flip is not None:
         # flip along given axis
         transposed = np.flip(transposed, flip)
+    
     if rotate:
         # rotate the final output image by 90 deg
-        # TODO: need to change origin? make axes accessible (eg (0, 2) for 
-        # horizontal rotation)
+        # TODO: need to change origin? make axes accessible (eg (0, 2) for
+        #   horizontal rotation)
         transposed = np.rot90(transposed, rotate, (1, 2))
         if rotate % 2 != 0:
             spacing = libmag.swap_elements(spacing, 1, 2)
             origin = libmag.swap_elements(origin, 1, 2)
+    
     resize_factor = config.atlas_profile["resize_factor"]
     if target_size is not None and resize_factor:
         # rescale based on xy dimensions of given and target image so that
-        # they are not so far off from one another that scaling does not occur; 
-        # assume that size discrepancies in z don't affect registration and 
+        # they are not so far off from one another that scaling does not occur;
+        # assume that size discrepancies in z don't affect registration and
         # for some reason may even prevent registration
         size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
         rescale = np.mean(size_diff) * resize_factor
@@ -1173,10 +1186,12 @@ def transpose_img(img_sitk, plane=None, rotate=None, target_size=None,
                 f"Rescaling image by {rescale}x after applying resize factor "
                 f"of {resize_factor}")
             transposed = transform.rescale(
-                transposed, rescale, mode="constant", preserve_range=True, 
-                multichannel=False, anti_aliasing=False, 
+                transposed, rescale, mode="constant", preserve_range=True,
+                multichannel=False, anti_aliasing=False,
                 order=0).astype(img_dtype)
             spacing = np.divide(spacing, rescale)
+    
+    # convert back to sitk image
     transposed = sitk.GetImageFromArray(transposed)
     transposed.SetSpacing(spacing[::-1])
     transposed.SetOrigin(origin[::-1])

@@ -151,13 +151,21 @@ On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 20
 
 ### Update the MagellanMapper package
 
-- From a cloned Git repository: run `git pull` to pull in all software updates
+If installed from a Python package, enter your virtual environment and run:
+
+```shell
+pip install -U magellanmapper  --extra-index-url https://pypi.fury.io/dd8/
+```
+
+If installed from source:
+- For a cloned Git repo: run `git pull` to pull in all software updates
 - From a source code release: download the desired [release](https://github.com/sanderslab/magellanmapper/releases), extract it, and run MagellanMapper from there
 
-### Update the Conda environment
+### Update the Conda or Venv environment
 
-- Typically, the existing Conda environment can be used without updating, but sometimes an update is required for new depdendencies
-- To update the environment, rerun the `setup_conda` script (`bin/setup_conda` for Mac/Linux or `bin\setup_conda.bat` for Windows)
+Sometimes a virtual environment update is required for new depdendencies.
+- To update a Conda environment, rerun the `bin/setup_conda` (macOS/Linux) or `bin\setup_conda.bat` (Windows) script
+- To update a Venv environment, rerun the `bin/setup_venv.sh` (macOS/Linux) or `bin\setup_venv.bat` (Windows) script
 
 ## Dependencies
 
@@ -318,7 +326,6 @@ qt.qpa.xcb: could not connect to display
 - As of at least 2018-01-05, Mayavi installation requires a GUI so will not work directly in headless cloud instances
 - For servers, use RDP or an X11 forwarding instead
 - For non-graphical setups such as WSL, start an X11 server (eg in Windows)
-- `setup_conda.sh -s envs/environment_light.yml` will setup a lightweight environment without Mayavi, which allows non-interactive whole image processing
 
 ```
 qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.

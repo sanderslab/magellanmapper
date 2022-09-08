@@ -1084,7 +1084,8 @@ def transpose_img(
         img_sitk: sitk.Image, plane: Optional[str] = None,
         rotate: Optional[int] = None,
         target_size: Optional[Sequence[int]] = None,
-        flipud: Optional[bool] = None) -> sitk.Image:
+        flip: Optional[int] = None
+) -> sitk.Image:
     """Transpose an image to a different plane or rotation.
     
     Supports the `ROTATE` and `FLIP` settings in
@@ -1102,7 +1103,7 @@ def transpose_img(
         target_size: Size of target image, typically one to which
             ``img_sitk`` will be registered, in (x,y,z, SimpleITK standard)
             ordering.
-        flipud: True to invert the z-axis after transposition;
+        flip: Axis to flip after transposition;
             defaults to None, in which case it will be based on ``plane``.
     
     Returns:
@@ -1120,25 +1121,25 @@ def transpose_img(
             config.transform[config.Transforms.ROTATE], 0)
     rotate_num = rotate if rotate else 0
     
+    if flip is None:
+        # default to transform config
+        flip = config.transform[config.Transforms.FLIP]
+
     if plane in config.PLANE[1:]:
         # assume rotation and inversion based on planar transposition
         # TODO: check if holds generally true for these planar transforms
         if rotate is None:
             rotate_num += 1
-        if flipud is None:
-            flipud = True
-    if flipud is None:
-        flipud = False
+        if flip is None:
+            flip = 0
     
-    # flip along any axis
-    flip = config.transform[config.Transforms.FLIP]
     rotate = rotate_num
     _logger.info(
         "Image transformation settings: plane: %s, num of rotations: %s, "
-        "target_size: %s, z-axis inversion: %s, flip axis: %s",
-        plane, rotate, target_size, flipud, flip)
+        "target_size: %s, flip axis: %s",
+        plane, rotate, target_size, flip)
     if ((not plane or plane == config.PLANE[0]) and not rotate
-            and target_size is None and not flipud and flip is None):
+            and target_size is None and flip is None):
         _logger.info("No transformations to apply, skipping")
         return img_sitk
     
@@ -1155,10 +1156,6 @@ def transpose_img(
             plane, [transposed], [spacing, origin])
         transposed = arrs_3d[0]
         spacing, origin = arrs_1d
-    
-    if flipud:
-        # invert along z-axis
-        transposed = np.flipud(transposed)
     
     if flip is not None:
         # flip along given axis

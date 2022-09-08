@@ -1083,8 +1083,9 @@ def aggr_smoothing_metrics(df_pxs):
 def transpose_img(
         img_sitk: sitk.Image, plane: Optional[str] = None,
         rotate: Optional[int] = None,
-        target_size: Optional[Sequence[int]] = None,
         flip: Optional[int] = None
+        target_size: Optional[Union[float, Sequence[int]]] = None,
+        order: Optional[int] = None
 ) -> sitk.Image:
     """Transpose an image to a different plane or rotation.
     
@@ -1100,15 +1101,15 @@ def transpose_img(
         rotate: Number of times to rotate by 90 degrees; defaults to None, in
             which case the value will be automatically determined based on
             :attr:`config.transform` and ``plane``.
-        target_size: Size of target image, typically one to which
-            ``img_sitk`` will be registered, in (x,y,z, SimpleITK standard)
-            ordering.
+        target_size: Size of target in `z, y, x` order, or a single rescaling
+            factor. Defaults to None.
         flip: Axis to flip after transposition;
             defaults to None, in which case it will be based on ``plane``.
+        order: Spline interpolation order; defaults to None.
     
     Returns:
-        The transposed image. If the original image
-        will undergo no transformations, ``img_sitk`` is simply returned.
+        The transposed image. If the original image will undergo no
+        transformations, ``img_sitk`` is simply returned.
 
     """
     if plane is None:
@@ -1145,7 +1146,6 @@ def transpose_img(
     
     # transform as a np array
     img = sitk.GetArrayFromImage(img_sitk)
-    img_dtype = img.dtype
     spacing = img_sitk.GetSpacing()[::-1]
     origin = img_sitk.GetOrigin()[::-1]
     transposed = img
@@ -1170,23 +1170,14 @@ def transpose_img(
             spacing = libmag.swap_elements(spacing, 1, 2)
             origin = libmag.swap_elements(origin, 1, 2)
     
-    resize_factor = config.atlas_profile["resize_factor"]
-    if target_size is not None and resize_factor:
-        # rescale based on xy dimensions of given and target image so that
-        # they are not so far off from one another that scaling does not occur;
-        # assume that size discrepancies in z don't affect registration and
-        # for some reason may even prevent registration
-        size_diff = np.divide(target_size[::-1][1:3], transposed.shape[1:3])
-        rescale = np.mean(size_diff) * resize_factor
-        if rescale > 0.5:
-            _logger.info(
-                f"Rescaling image by {rescale}x after applying resize factor "
-                f"of {resize_factor}")
-            transposed = transform.rescale(
-                transposed, rescale, mode="constant", preserve_range=True,
-                multichannel=False, anti_aliasing=False,
-                order=0).astype(img_dtype)
-            spacing = np.divide(spacing, rescale)
+    if target_size is not None:
+        # rescale or resize
+        shape = transposed.shape
+        transposed = cv_nd.rescale_resize(
+            transposed, target_size, preserve_range=True, order=order)
+        scaling = np.divide(transposed.shape, shape)
+        spacing = np.multiply(spacing, scaling)
+        origin = np.multiply(origin, scaling)
     
     # convert back to sitk image
     transposed = sitk.GetImageFromArray(transposed)

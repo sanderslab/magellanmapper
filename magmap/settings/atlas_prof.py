@@ -72,7 +72,6 @@ class AtlasProfile(profiles.SettingsDict):
         # where metric will be used if the DSC falls below the threshold
         self["metric_sim_fallback"] = None
         self["groupwise_iter_max"] = "1024"
-        self["resize_factor"] = 0.7
         self["preprocess"] = False
         self["curate"] = True  # carve image; in-paint if generating atlas
 
@@ -349,23 +348,16 @@ class AtlasProfile(profiles.SettingsDict):
                 "target_size": (50, 50, 50),
             },
 
-            # atlas is big relative to the experimental image, so need to
-            # more aggressively downsize the atlas
-            "big": {
-                "resize_factor": 0.625,
-            },
-
             # new atlas generation: turn on preprocessing
             # TODO: likely remove since not using preprocessing currently
             "new": {
                 "preprocess": True,
             },
 
-            # registration to new atlas assumes images are roughly same size and
+            # registration to new atlas assumes images are roughly same
             # orientation (ie transposed) and already have mirrored labels aligned
             # with the fixed image toward the bottom of the z-dimension
             "generated": {
-                "resize_factor": 1.0,
                 "truncate_labels": (None, (0.18, 1.0), (0.2, 1.0)),
                 "labels_mirror": {RegKeys.ACTIVE: False},
                 "labels_edge": None,
@@ -380,7 +372,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA E11pt5 specific settings
             "abae11pt5": {
                 "target_size": (345, 371, 158),
-                "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.52},
                 "labels_edge": {RegKeys.ACTIVE: False, "start": None},
                 "log_atlas_thresh": True,
@@ -415,7 +406,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA E13pt5 specific settings
             "abae13pt5": {
                 "target_size": (552, 673, 340),
-                "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
                 # small, default surr size to avoid capturing 3rd labeled area
                 # that becomes an artifact
@@ -441,7 +431,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA E15pt5 specific settings
             "abae15pt5": {
                 "target_size": (704, 982, 386),
-                "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.49},
                 "labels_edge": {
                     RegKeys.ACTIVE: True,
@@ -469,7 +458,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA E18pt5 specific settings
             "abae18pt5": {
                 "target_size": (278, 581, 370),
-                "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.525},
                 # start from smallest BG; remove spurious label pxs around
                 # medial pallium by smoothing
@@ -492,7 +480,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA P4 specific settings
             "abap4": {
                 "target_size": (724, 403, 398),
-                "resize_factor": None,  # turn off resizing
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.487},
                 "labels_edge": {
                     RegKeys.ACTIVE: True,
@@ -518,7 +505,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA P14 specific settings
             "abap14": {
                 "target_size": (390, 794, 469),
-                "resize_factor": None,  # turn off resizing
                 # will still cross midline since some regions only have labels
                 # past midline
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
@@ -543,7 +529,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA P28 specific settings
             "abap28": {
                 "target_size": (863, 480, 418),
-                "resize_factor": None,  # turn off resizing
                 # will still cross midline since some regions only have labels
                 # past midline
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
@@ -573,7 +558,6 @@ class AtlasProfile(profiles.SettingsDict):
             # ABA P56 (developing mouse) specific settings
             "abap56": {
                 "target_size": (528, 320, 456),
-                "resize_factor": None,  # turn off resizing
                 # stained sections and labels almost but not symmetric
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "labels_edge": {
@@ -596,7 +580,6 @@ class AtlasProfile(profiles.SettingsDict):
             "abap56adult": {
                 # same atlas image as ABA P56dev
                 "target_size": (528, 320, 456),
-                "resize_factor": None,  # turn off resizing
                 # same stained sections as for P56dev;
                 # labels are already mirrored starting at z=228, but atlas is
                 # not here, so mirror starting at the same z-plane to make both
@@ -611,7 +594,6 @@ class AtlasProfile(profiles.SettingsDict):
             "abaccfv3": {
                 # for "25" image, which has same shape as ABA P56dev, P56adult
                 "target_size": (456, 528, 320),
-                "resize_factor": None,  # turn off resizing
                 # atlas is almost (though not perfectly) symmetric, so turn
                 # off mirroring but specify midline (z=228) to make those
                 # labels negative; no need to extend lateral edges
@@ -624,7 +606,6 @@ class AtlasProfile(profiles.SettingsDict):
             "whsrat": {
                 "target_size": (441, 1017, 383),
                 "pre_plane": config.PLANE[2],
-                "resize_factor": None,  # turn off resizing
                 # mirror, but no need to extend lateral edges
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.48},
                 "crop_to_labels": True,  # much extraneous, unlabeled tissue
@@ -636,7 +617,6 @@ class AtlasProfile(profiles.SettingsDict):
             "ahra": {
                 "target_size": (193, 229, 193),
                 "pre_plane": config.PLANE[2],
-                "resize_factor": None,  # turn off resizing
                 # mirror, but no need to extend lateral edges
                 "labels_mirror": {RegKeys.ACTIVE: True, "start": 0.5},
                 "crop_to_labels": True,  # strip skull

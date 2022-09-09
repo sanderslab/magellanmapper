@@ -1180,8 +1180,8 @@ def transpose_img(
             # or flipped rotation (eg 90 or 180 deg)
             dtype = transposed.dtype
             transposed = cv_nd.make_isotropic(
-                transposed, 1, spacing).astype(dtype)
-            iso_factor = cv_nd.calc_isotropic_factor(1, spacing)
+                transposed, res=spacing).astype(dtype)
+            iso_factor = cv_nd.calc_isotropic_factor(res=spacing)
             spacing = np.divide(spacing, iso_factor)
             origin = np.divide(origin, iso_factor)
         

@@ -1029,7 +1029,7 @@ def filter_adaptive_size(mask, fn_filter, filter_size, min_filter_size=1,
 
 
 def calc_isotropic_factor(
-        scale: Union[float, Sequence[float]],
+        scale: Union[float, Sequence[float]] = 1,
         res: Optional[Sequence[float]] = None) -> np.ndarray:
     """Calculate the isotropic factor based on the current image resolutions.
     
@@ -1040,6 +1040,7 @@ def calc_isotropic_factor(
     Args:
         scale: Float scalar or sequence of scaling factors in ``z, y, x`` by
             which to multiply the currently loaded image's resolutions.
+            Defaults to 1.
         res: Resolutions in the same order as for ``scale``. Default to None,
             in which case :attr:`magmap.settings.config.resolutions` will be
             used instead.
@@ -1057,7 +1058,7 @@ def calc_isotropic_factor(
 
 
 def make_isotropic(
-        roi: np.ndarray, scale: Union[float, Sequence[float]],
+        roi: np.ndarray, scale: Union[float, Sequence[float]] = 1,
         res: Optional[Sequence[float]] = None
 ) -> np.ndarray:
     """Make an array isotropic.
@@ -1066,6 +1067,7 @@ def make_isotropic(
         roi: Region of interest array in ``z, y, x`` format.
         scale: Float scalar or sequence of scaling factors in ``z, y, x`` by
             which to multiply the currently loaded image's resolutions.
+            Defaults to 1.
         res: Resolutions in the same order as for ``scale``. Default to None,
             in which case :attr:`magmap.settings.config.resolutions` will be
             used instead.
@@ -1086,9 +1088,7 @@ def make_isotropic(
         # causes multiprocessing Pool to hang since the exception isn't
         # raised), so need to change mode in this case
         mode = "edge"
-    return transform.resize(
-        roi, isotropic_shape, preserve_range=True, mode=mode,
-        anti_aliasing=True)
+    return rescale_resize(roi, isotropic_shape, preserve_range=True, mode=mode)
 
 
 def rescale_resize(

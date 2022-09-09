@@ -1193,7 +1193,11 @@ def transpose_img(
         shape = transposed.shape
         transposed = cv_nd.rescale_resize(
             transposed, target_size, preserve_range=True, order=order)
-        scaling = np.divide(transposed.shape, shape)
+        
+        # update spacing/origin by scaling factor or resize ratio
+        scaling = target_size
+        if libmag.is_seq(target_size):
+            scaling = np.divide(transposed.shape, shape)
         spacing = np.multiply(spacing, scaling)
         origin = np.multiply(origin, scaling)
     

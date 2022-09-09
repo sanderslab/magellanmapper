@@ -1028,7 +1028,9 @@ def filter_adaptive_size(mask, fn_filter, filter_size, min_filter_size=1,
     return filtered, chosen_selem_size
 
 
-def calc_isotropic_factor(scale):
+def calc_isotropic_factor(
+        scale: Union[float, Sequence[float]],
+        res: Optional[Sequence[float]] = None) -> np.ndarray:
     """Calculate the isotropic factor based on the current image resolutions.
     
     The resolutions are divided by their minimum value and multiplied by
@@ -1036,36 +1038,56 @@ def calc_isotropic_factor(scale):
     images or coordinates to be isotropic.
     
     Args:
-        scale (Union[float, Sequence[float]]): Float scalar or sequence of
-            scaling factors in ``z,y,x`` by which to multiply the currently
-            loaded image's resolutions.
+        scale: Float scalar or sequence of scaling factors in ``z, y, x`` by
+            which to multiply the currently loaded image's resolutions.
+        res: Resolutions in the same order as for ``scale``. Default to None,
+            in which case :attr:`magmap.settings.config.resolutions` will be
+            used instead.
 
     Returns:
-        :class:`numpy.ndarray`: Isotropic factor.
+        Isotropic factor.
 
     """
-    res = config.resolutions[0]
+    if res is None:
+        res = config.resolutions[0]
     resize_factor = np.divide(res, np.amin(res))
     resize_factor *= scale
     #print("isotropic resize factor: {}".format(resize_factor))
     return resize_factor
 
 
-def make_isotropic(roi, scale):
-    resize_factor = calc_isotropic_factor(scale)
+def make_isotropic(
+        roi: np.ndarray, scale: Union[float, Sequence[float]],
+        res: Optional[Sequence[float]] = None
+) -> np.ndarray:
+    """Make an array isotropic.
+    
+    Args:
+        roi: Region of interest array in ``z, y, x`` format.
+        scale: Float scalar or sequence of scaling factors in ``z, y, x`` by
+            which to multiply the currently loaded image's resolutions.
+        res: Resolutions in the same order as for ``scale``. Default to None,
+            in which case :attr:`magmap.settings.config.resolutions` will be
+            used instead.
+
+    Returns:
+        Isotropic version of ``roi``.
+
+    """
+    resize_factor = calc_isotropic_factor(scale, res)
     isotropic_shape = np.array(roi.shape)
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
     libmag.printv("original ROI shape: {}, isotropic: {}"
                   .format(roi.shape, isotropic_shape))
     mode = "reflect"
     if np.any(np.array(roi.shape) == 1):
-        # may crash with floating point exception if 1px thick (see 
-        # https://github.com/scikit-image/scikit-image/issues/3001, which 
-        # causes multiprocessing Pool to hang since the exception isn't 
+        # may crash with floating point exception if 1px thick (see
+        # https://github.com/scikit-image/scikit-image/issues/3001, which
+        # causes multiprocessing Pool to hang since the exception isn't
         # raised), so need to change mode in this case
         mode = "edge"
     return transform.resize(
-        roi, isotropic_shape, preserve_range=True, mode=mode, 
+        roi, isotropic_shape, preserve_range=True, mode=mode,
         anti_aliasing=True)
 
 

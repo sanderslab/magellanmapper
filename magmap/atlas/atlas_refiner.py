@@ -1083,8 +1083,7 @@ def aggr_smoothing_metrics(df_pxs):
 def transpose_img(
         img_sitk: sitk.Image, plane: Optional[str] = None,
         rotate: Optional[int] = None,
-        rotate_deg: Optional[Sequence[Union[
-            Dict[str, Any], Sequence[Any]]]] = None,
+        rotate_deg: Optional[Sequence[Dict[str, Any]]] = None,
         target_size: Optional[Union[float, Sequence[int]]] = None,
         flip: Optional[int] = None,
         order: Optional[int] = None
@@ -1104,8 +1103,8 @@ def transpose_img(
             which case the value will be automatically determined based on
             :attr:`config.transform` and ``plane``.
         rotate_deg: Rotations by arbitrary number of degrees. Given as a
-            nested sequence, where each element is another sequence or dict
-            given to :meth:`magmap.cv_nd.rotate_nd`. Defaults to None.
+            sequence of dicts with args for :meth:`magmap.cv_nd.rotate_nd`.
+            Defaults to None.
         target_size: Size of target in `z, y, x` order, or a single rescaling
             factor. Defaults to None.
         flip: Axis to flip after transposition;
@@ -1176,17 +1175,35 @@ def transpose_img(
             origin = libmag.swap_elements(origin, 1, 2)
     
     if rotate_deg is not None:
+        if any([r["angle"] % 90 != 0 for r in rotate_deg]):
+            # make isotropic to avoid skew from rotation unless right-angle
+            # or flipped rotation (eg 90 or 180 deg)
+            dtype = transposed.dtype
+            transposed = cv_nd.make_isotropic(
+                transposed, 1, spacing).astype(dtype)
+            iso_factor = cv_nd.calc_isotropic_factor(1, spacing)
+            spacing = np.divide(spacing, iso_factor)
+            origin = np.divide(origin, iso_factor)
+        
         # rotate by arbitrary degrees along each set of axes
         for rot in rotate_deg:
-            if isinstance(rot, dict):
-                # rotation arguments given as dict
-                if "order" not in rot:
-                    # default to use given order
-                    rot["order"] = order
-                transposed = cv_nd.rotate_nd(transposed, **rot)
-            else:
-                # rotation arguments given positionally
-                transposed = cv_nd.rotate_nd(transposed, *rot)
+            # rotation arguments given as dict
+            if "order" not in rot:
+                # default to use given order
+                rot["order"] = order
+            transposed = cv_nd.rotate_nd(transposed, **rot)
+            
+            if rot["angle"] % 90 == 0 and rot["angle"] % 180 != 0:
+                # swap spacing in rotated plane for right-angle rotations
+                if transposed.ndim == 2:
+                    axes = [0, 1]
+                else:
+                    axes = [0, 1, 2]
+                    axes.remove(
+                        rot["axis"] if "axis" in rot and rot["axis"] is not None
+                        else 0)
+                spacing = libmag.swap_elements(spacing, *axes)
+                origin = libmag.swap_elements(origin, *axes)
         
     if target_size is not None:
         # rescale or resize

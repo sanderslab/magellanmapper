@@ -600,7 +600,8 @@ class RegSuffixes(Enum):
 
 
 #: Dictionary of registered suffix names for each suffix type.
-reg_suffixes: Dict[RegSuffixes, Union[str, Sequence[str]]] = dict.fromkeys(
+reg_suffixes: Dict[
+    RegSuffixes, Optional[Union[str, Sequence[str]]]] = dict.fromkeys(
     RegSuffixes, None)
 
 

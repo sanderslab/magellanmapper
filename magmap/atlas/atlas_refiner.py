@@ -1206,17 +1206,10 @@ def transpose_img(
                 origin = libmag.swap_elements(origin, *axes)
         
     if target_size is not None:
-        # rescale or resize
-        shape = transposed.shape
+        # rescale or resize, without updating spacing/origin since the size
+        # change is often to alter the physical dimensions
         transposed = cv_nd.rescale_resize(
             transposed, target_size, preserve_range=True, order=order)
-        
-        # update spacing/origin by scaling factor or resize ratio
-        scaling = target_size
-        if libmag.is_seq(target_size):
-            scaling = np.divide(transposed.shape, shape)
-        spacing = np.multiply(spacing, scaling)
-        origin = np.multiply(origin, scaling)
     
     # convert back to sitk image
     transposed = sitk.GetImageFromArray(transposed)

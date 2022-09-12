@@ -26,6 +26,9 @@ _EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
 # optional dependencies for Jupyter notebooks
 _EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
 
+# optional dependencies for classification
+_EXTRAS_CLASSIFER = ["tensorflow"]
+
 # installation configuration
 config = {
     "name": "magellanmapper",
@@ -73,6 +76,7 @@ config = {
         "pandas_plus": _EXTRAS_PANDAS,
         "docs": _EXTRAS_DOCS,
         "jupyter": _EXTRAS_JUPYTER,
+        "classifier": _EXTRAS_CLASSIFER,
         
         # dependencies for most common tasks
         "most": [

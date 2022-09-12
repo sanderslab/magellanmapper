@@ -35,7 +35,7 @@ mayavi==4.8.0
 meshio==4.4.6
 multidict==5.2.0
 networkx==2.5.1
-numpy==1.19.5
+numpy==1.23.3
 pandas==1.1.5
 Pillow==8.4.0
 pyamg==4.2.3

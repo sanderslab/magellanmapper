@@ -113,11 +113,17 @@ class VerifierEditor(plot_support.ImageSyncMixin):
     
     def _setup_blobs(self):
         """Set up blobs."""
-        # get blobs with confirmation flags set by user (ie non-neg)
         blobs = self.blobs.blobs
-        self._blobs_show = self.blobs.get_blob_confirmed(blobs) >= 0
-        self._blob_flags = sorted(np.unique(
-            self.blobs.get_blob_confirmed(blobs[self._blobs_show]).astype(int)))
+        if blobs is None:
+            # reset blobs setup
+            self._blobs_show = []
+            self._blob_flags = []
+        else:
+            # get blobs with confirmation flags set by user (ie non-neg)
+            self._blobs_show = self.blobs.get_blob_confirmed(blobs) >= 0
+            self._blob_flags = sorted(np.unique(
+                self.blobs.get_blob_confirmed(
+                    blobs[self._blobs_show]).astype(int)))
     
     def show_views(self):
         """Show blob views."""

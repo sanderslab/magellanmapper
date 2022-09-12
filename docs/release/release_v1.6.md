@@ -18,6 +18,7 @@
 - Available as binary wheel to install without requiring the source code (#166)
 - Entry point added to launch the app by: `mm` (#166)
 - Conda install simplified to use Pip primarily, which reduces disk space usage (#166)
+- Removed Conda `environment_light.yml` and OS-specific specs (#187)
 
 #### GUI
 

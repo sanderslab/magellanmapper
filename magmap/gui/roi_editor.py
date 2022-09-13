@@ -271,8 +271,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
         ZLevels (:obj:`Enum`): Enum denoting the possible positions of the
             z-plane shown in the overview plots.
         fig (:obj:`figure.figure`): Matplotlib figure.
-        image5d (:obj:`np.ndarray`): Main image array in ``t,z,y,x[,c]``
-            format; defaults to None.
         labels_img (:obj:`np.ndarray`): Atlas labels image in ``z,y,x`` format;
             defaults to None.
         img_region (:obj:`np.ndarray`): 3D boolean or binary array with the
@@ -335,7 +333,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
         """Initialize the editor."""
         super().__init__(img5d)
         print("Initiating ROI Editor")
-        self.image5d = self.img5d.img if self.img5d else None
+        #: Image instance to display.
+        self.image5d: Optional[
+            "np_io.Image5d"] = None if self.img5d is None else self.img5d.img
         self.labels_img: Optional[np.ndarray] = labels_img
         if img_region is not None:
             # invert region selection image to opacify areas outside of the

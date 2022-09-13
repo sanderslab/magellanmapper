@@ -212,9 +212,9 @@ def _get_args_dict_help(msg: str, keys: Type[Enum]) -> str:
         Help message with available keys.
 
     """
-    return ("{} Available keys follow this order until the first "
-            "key=value pair is given: {}".format(
-                msg, libmag.enum_names_aslist(keys)))
+    return (f"{msg} Available keys, which follow this order positionally "
+            f"until the first key=value pair is given: "
+            f"{libmag.enum_names_aslist(keys)}")
 
 
 def process_cli_args():
@@ -353,6 +353,11 @@ def process_cli_args():
     parser.add_argument(
         "--set_meta", nargs="*",
         help="Set metadata values; see config.MetaKeys for settings")
+    parser.add_argument(
+        "--classifier", nargs="*",
+        help=_get_args_dict_help(
+            "Classifier values; see config.ClassifierKeys for settings.",
+            config.ClassifierKeys))
 
     # image and figure display arguments
     parser.add_argument(
@@ -727,6 +732,12 @@ def process_cli_args():
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
     
+    if args.classifier is not None:
+        # classifier settings
+        config.classifier = args_to_dict(
+            args.classifier, config.ClassifierKeys, config.classifier)
+        print("Set classifier to {}".format(config.classifier))
+
     if args.db:
         # set main database path to user arg
         config.db_path = args.db

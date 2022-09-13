@@ -364,6 +364,16 @@ class Transforms(Enum):
 transform = dict.fromkeys(Transforms, None)
 
 
+class ClassifierKeys(Enum):
+    """Classifier keys."""
+    #: Path to pre-trained classifier model.
+    MODEL = auto()
+
+
+#: Classifier settings.
+classifier: Dict["ClassifierKeys", Any] = dict.fromkeys(ClassifierKeys, None)
+
+
 # extensions for saving figures.
 
 #: tuple[str, ...]: Extension for 3D renderings.

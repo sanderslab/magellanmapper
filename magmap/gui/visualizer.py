@@ -60,7 +60,8 @@ import vtk
 
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
-from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
+from magmap.cv import classifier, colocalizer, cv_nd, detector, segmenter, \
+    verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
     roi_editor, verifier_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
@@ -2661,6 +2662,18 @@ class Visualization(HasTraits):
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
+        
+        model_path = config.classifier[config.ClassifierKeys.MODEL]
+        if model_path:
+            # classify blobs using model
+            offset_class = np.subtract(offset, 8)
+            roi_size_class = np.add(roi_size, 16)
+            roi_class = plot_3d.prepare_roi(
+                config.image5d, offset_class, roi_size_class)
+            patches = classifier.extract_patches(roi_class[..., 1], self.blobs)
+            y_pred, y_score = classifier.classify(model_path, patches)
+            self.blobs.set_blob_confirmed(self.blobs.blobs, y_pred)
+            # self.blobs.set_blob_truth(self.blobs.blobs, y_score)
         
         if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
                 self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and

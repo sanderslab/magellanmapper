@@ -161,9 +161,10 @@ def export_rois(
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
             sitk.WriteImage(img3d_sitk, path_img_nifti, False)
-            roi_ed = roi_editor.ROIEditor(img5d.img)
+            roi_ed = roi_editor.ROIEditor(img5d)
+            print("shape", img3d.shape)
             roi_ed.plot_roi(
-                img3d, blobs, channel, show=False,
+                img3d, blobs, [channel], show=False,
                 title=os.path.splitext(path_img)[0])
             libmag.show_full_arrays()
             

@@ -4,7 +4,7 @@
 
 Prepare volumetric image stacks for plotting.
 """
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 import numpy as np
 from skimage import draw
@@ -19,22 +19,24 @@ from magmap.cv import cv_nd
 from magmap.cv import segmenter
 
 
-def setup_channels(roi, channel, dim_channel):
+def setup_channels(
+        roi: np.ndarray, channel: Sequence[int], dim_channel: int
+) -> Tuple[bool, Sequence[int]]:
     """Setup channels array for the given ROI dimensions.
     
     Args:
-        roi (:obj:`np.ndarray`): Region of interest, which is either a 3D
-            or 4D array in the formate ``[[z, y, x, (c)], ...]``.
-        channel (List[int]): Channels to select, which can be None to indicate
-            all channels.
-        dim_channel (int): Index of the channel dimension.
+        roi: Region of interest, a 3/4D array in the order, ``z, y, x, [c]``.
+        channel: Channels to select, which can be None to indicate all channels.
+        dim_channel: Index of the channel dimension.
     
     Returns:
-        bool, List[int]: A boolean value where True indicates that
-        the ROI is multichannel (ie 4D) and an array of the channel indices
-        of ``roi`` to include, which is the same as ``channel`` for
-        multichannel ROIs or only the first element if ``roi`` is single
-        channel.
+        A tuple of:
+        - ``multichannel``: boolean value where True indicates that the
+          ROI is multichannel (ie 4D)
+        - ``channels``: an array of the channel indices of ``roi`` to include,
+          which is the same as ``channel`` for multichannel ROIs or only the
+          first element if ``roi`` is single channel
+    
     """
     multichannel = roi.ndim > dim_channel
     channels = channel

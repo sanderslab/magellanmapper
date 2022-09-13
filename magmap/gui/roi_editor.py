@@ -1011,6 +1011,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 and only used if :attr:``config.savefig`` is set to a file
                 extension.
         """
+        # TODO: replace with modularized version from plot_2d_stack?
         fig = plt.figure()
         # fig.suptitle(title)
         # total number of z-planes
@@ -1024,11 +1025,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
             zoom_plot_cols += 1
             zoom_plot_rows = math.ceil(z_planes / zoom_plot_cols)
             col_remainder = z_planes % zoom_plot_cols
-        roi_size = roi.shape[::-1]
+        roi_size = roi.shape[:3][::-1]
         zoom_offset = [0, 0, 0]
         gs = gridspec.GridSpec(
             zoom_plot_rows, zoom_plot_cols, wspace=0.1, hspace=0.1)
-        image5d = importer.roi_to_image5d(roi)
 
         # plot the fully zoomed plots
         for i in range(zoom_plot_rows):

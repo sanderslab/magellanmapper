@@ -324,7 +324,7 @@ class ImageOverlayer:
     
     def imshow_multichannel(
             self, img2d: np.ndarray,
-            channel: Optional[Union[int, Sequence[int]]],
+            channel: Optional[Sequence[int]],
             cmaps: Sequence[Union[str, "colors.Colormap"]],
             alpha: Optional[Union[float, Sequence[float]]] = None,
             vmin: Optional[Union[float, Sequence[float]]] = None,
@@ -345,7 +345,8 @@ class ImageOverlayer:
     
         Args:
             img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
-            channel: Channel to display; if None, all channels will be shown.
+            channel: Sequence of channels to display; if None, all channels
+                will be shown.
             cmaps: List of colormaps corresponding to each channel. Colormaps 
                 can be the names of specific maps in :mod:``config``.
             alpha: Transparency level for all channels or 

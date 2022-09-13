@@ -300,7 +300,13 @@ class Blobs:
             it is an array of blobs.
 
         """
-        if blob.ndim > 1:
+        is_multi_d = blob.ndim > 1
+        if col is None:
+            # no column indicates that this column has not been set up for the
+            # blob, so return None or an empty ndarray
+            return np.array([]) if is_multi_d else None
+        
+        if is_multi_d:
             return blob[..., col]
         return blob[col]
     

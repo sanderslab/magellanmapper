@@ -399,7 +399,9 @@ class Blobs:
     @classmethod
     def set_blob_col(
             cls, blob: np.ndarray, col: Union[int, Sequence[int]],
-            val: Union[float, Sequence[float]]
+            val: Union[float, Sequence[float]],
+            mask: Union[
+                np.ndarray, np.lib.index_tricks.IndexExpression] = np.s_[:], **kwargs
     ) -> np.ndarray:
         """Set the value for the given column of a blob or blobs.
 
@@ -408,68 +410,75 @@ class Blobs:
             col: Column index in ``blob``.
             val: New value. If ``blob`` is 2D, can be an array the length
                 of ``blob``.
+            mask: Mask for the first axis; defaults to an index expression
+                for all values. Only used for multidimensional arrays.
 
         Returns:
             ``blob`` after modifications.
 
         """
         if blob.ndim > 1:
-            blob[..., col] = val
+            # set value for col in last axis, applying mask for first axis
+            blob[mask, ..., col] = val
         else:
             blob[col] = val
         return blob
     
     @classmethod
     def set_blob_confirmed(
-            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+            cls, blob: np.ndarray, *args, **kwargs) -> np.ndarray:
         """Set the confirmed flag of a blob or blobs.
 
         Args:
             blob: 1D blob array or 2D array of blobs.
-            val: Confirmed value. If ``blob`` is 2D, can be an array the length
-                of ``blob``.
+            args: Positional arguments passed to :meth:`set_blob_col`.
+            kwargs: Named arguments passed to :meth:`set_blob_col`.
 
         Returns:
             ``blob`` after modifications.
 
         """
-        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CONFIRMED], val)
+        return cls.set_blob_col(
+            blob, cls.col_inds[cls.Cols.CONFIRMED], *args, **kwargs)
     
     @classmethod
     def set_blob_truth(
-            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+            cls, blob: np.ndarray, *args, **kwargs) -> np.ndarray:
         """Set the truth flag of a blob or blobs.
 
         Args:
             blob: 1D blob array or 2D array of blobs.
-            val: Truth value. If ``blob`` is 2D, can be an array the length
-                of ``blob``.
+            args: Positional arguments passed to :meth:`set_blob_col`.
+            kwargs: Named arguments passed to :meth:`set_blob_col`.
 
         Returns:
             ``blob`` after modifications.
 
         """
-        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.TRUTH], val)
+        return cls.set_blob_col(
+            blob, cls.col_inds[cls.Cols.TRUTH], *args, **kwargs)
     
     @classmethod
     def set_blob_channel(
-            cls, blob: np.ndarray, val: Union[int, np.ndarray]) -> np.ndarray:
+            cls, blob: np.ndarray, *args, **kwargs) -> np.ndarray:
         """Set the channel of a blob or blobs.
 
         Args:
             blob: 1D blob array or 2D array of blobs.
-            val: Channel value. If ``blob`` is 2D, can be an array the length
-                of ``blob``.
+            args: Positional arguments passed to :meth:`set_blob_col`.
+            kwargs: Named arguments passed to :meth:`set_blob_col`.
 
         Returns:
             ``blob`` after modifications.
 
         """
-        return cls.set_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL], val)
+        return cls.set_blob_col(
+            blob, cls.col_inds[cls.Cols.CHANNEL], *args, **kwargs)
     
     @classmethod
     def set_blob_abs_coords(
-            cls, blobs: np.ndarray, coords: Sequence[int]) -> np.ndarray:
+            cls, blobs: np.ndarray, coords: Sequence[int], *args, **kwargs
+    ) -> np.ndarray:
         """Set blob absolute coordinates.
         
         Args:
@@ -481,7 +490,7 @@ class Blobs:
             Modified ``blobs``.
 
         """
-        cls.set_blob_col(blobs, cls._get_abs_inds(), coords)
+        cls.set_blob_col(blobs, cls._get_abs_inds(), coords, *args, **kwargs)
         return blobs
     
     @classmethod

@@ -2666,11 +2666,13 @@ class Visualization(HasTraits):
         model_path = config.classifier[config.ClassifierKeys.MODEL]
         if model_path:
             # classify blobs using model
-            offset_class = np.subtract(offset, 8)
-            roi_size_class = np.add(roi_size, 16)
+            patch_size = 16
+            border = (0, patch_size // 2, patch_size // 2)
             roi_class = plot_3d.prepare_roi(
-                config.image5d, offset_class, roi_size_class)
-            patches = classifier.extract_patches(roi_class[..., 1], self.blobs)
+                config.image5d, offset, roi_size, border=border)
+            blobs_class = np.add(self.blobs.blobs[:, :3], border)
+            patches = classifier.extract_patches(
+                roi_class[..., 1], blobs_class, patch_size)
             y_pred, y_score = classifier.classify(model_path, patches)
             self.blobs.set_blob_confirmed(self.blobs.blobs, y_pred)
             # self.blobs.set_blob_truth(self.blobs.blobs, y_score)

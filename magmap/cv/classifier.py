@@ -4,10 +4,8 @@ from typing import Tuple
 import numpy as np
 from tensorflow.keras.models import load_model
 
-from magmap.cv import detector
 
-
-def extract_patches(roi: np.ndarray, blobs: "detector.Blobs", size: int = 16):
+def extract_patches(roi: np.ndarray, blobs: np.ndarray, size: int = 16):
     """Extract image patches for blobs.
     
     Patches are 2D, centered on each blob but offset by one pixel in width
@@ -15,7 +13,7 @@ def extract_patches(roi: np.ndarray, blobs: "detector.Blobs", size: int = 16):
     
     Args:
         roi: Image region of interst as a 3/4D array (``z, y, x, [c]``).
-        blobs: Blobs instance.
+        blobs: 2D blobs array with each blob as a row in ``z, y, x, ...``.
         size: Patch size as an int for both width and height; defaults to 16.
 
     Returns:
@@ -26,13 +24,8 @@ def extract_patches(roi: np.ndarray, blobs: "detector.Blobs", size: int = 16):
     # px forward
     size_fwd = -(size // -2)
     
-    # get blob relative coordinates as ints and shift to account for image
-    # padding
-    blobs_shifted = blobs.blobs[:, :3].astype(int)
-    blobs_shifted += size_back
-    
     patches = []
-    for blob in blobs_shifted:
+    for blob in blobs[:, :3].astype(int):
         # extract 2D patch around blob
         blob = blob
         z = blob[0]

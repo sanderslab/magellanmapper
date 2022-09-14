@@ -60,8 +60,7 @@ import vtk
 
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
-from magmap.cv import classifier, colocalizer, cv_nd, detector, segmenter, \
-    verifier
+from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
     roi_editor, verifier_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
@@ -346,6 +345,8 @@ class Visualization(HasTraits):
         ["-1"],
         tooltip="All blob labels will be set to this value when running Detect",
     )
+    _segs_model_path = Str  # blobs classifier model path
+    _segs_model_btn = Button("Browse")  # button to select model file
     _segs_visible = List  # blob visibility options
     _colocalize = List  # blob co-localization options
     _blob_color_style = List  # blob coloring
@@ -735,6 +736,10 @@ class Visualization(HasTraits):
             Item("_btn_verifier", show_label=False),
         ),
         HGroup(
+            Item("_segs_model_path", label="Classifier model", style="simple"),
+            Item("_segs_model_btn", show_label=False),
+        ),
+        HGroup(
             Item("_segs_visible", style="custom", show_label=False,
                  editor=CheckListEditor(
                      values=[e.value for e in BlobsVisibilityOptions],
@@ -1038,6 +1043,8 @@ class Visualization(HasTraits):
         # set up blobs
         self.blobs = detector.Blobs()
         self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
+        model = config.classifier[config.ClassifierKeys.MODEL]
+        self._segs_model_path = model if model else ""
 
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
@@ -2663,9 +2670,9 @@ class Visualization(HasTraits):
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
         
-        model_path = config.classifier[config.ClassifierKeys.MODEL]
-        if model_path:
+        if self._segs_model_path and self.blobs.blobs is not None:
             # classify blobs using model
+            from magmap.cv import classifier
             patch_size = 16
             border = (0, patch_size // 2, patch_size // 2)
             roi_class = plot_3d.prepare_roi(
@@ -2673,7 +2680,8 @@ class Visualization(HasTraits):
             blobs_class = np.add(self.blobs.blobs[:, :3], border)
             patches = classifier.extract_patches(
                 roi_class[..., 1], blobs_class, patch_size)
-            y_pred, y_score = classifier.classify(model_path, patches)
+            y_pred, y_score = classifier.classify(
+                self._segs_model_path, patches)
             self.blobs.set_blob_confirmed(self.blobs.blobs, y_pred)
             # self.blobs.set_blob_truth(self.blobs.blobs, y_score)
         
@@ -2732,7 +2740,17 @@ class Visualization(HasTraits):
         if self.roi_ed:
             self.roi_ed.show_colocalized_blobs(
                 ColocalizeOptions.INTENSITY.value in self._colocalize)
-        
+    
+    @on_trait_change("_segs_model_btn")
+    def _segs_model_path_updated(self):
+        """Open a Pyface file dialog with path set to the classifer model path.
+        """
+        open_dialog = FileDialog(
+            action="open", default_path=os.path.dirname(self._filename))
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._segs_model_path = open_dialog.path
+    
     @on_trait_change("_segs_visible")
     def _update_blob_visibility(self):
         """Change blob visibilty based on toggle check box."""

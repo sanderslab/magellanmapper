@@ -117,7 +117,8 @@ class Blobs:
         self.basename: Optional[str] = None
         self.scaling: np.ndarray = np.ones(3)
         
-        # blobs have first 6 columns by default
+        #: Blob columns loaded from metadata. Defaults to the first 6 columns
+        #: in :class:`Cols`.
         self.cols: Sequence[str] = [c.value for c in self.Cols][:6]
 
     def load_blobs(self, path: str = None) -> "Blobs":
@@ -221,7 +222,11 @@ class Blobs:
                 Blobs.Keys.ROI_OFFSET.value: self.roi_offset,
                 Blobs.Keys.ROI_SIZE.value: self.roi_size,
                 Blobs.Keys.COLOCS.value: self.colocalizations,
-                Blobs.Keys.COLS.value: self.cols,
+                
+                # save columns ordered by the col indices
+                Blobs.Keys.COLS.value: [
+                    k.value for k, v in sorted(
+                        self.col_inds.items(), key=lambda e: e[1])],
             }
         else:
             blobs_arc = to_add
@@ -275,6 +280,11 @@ class Blobs:
         extra_cols = len(cls.Cols) - shape[1]
         extras = np.ones((shape[0], extra_cols)) * -1
         blobs = np.concatenate((blobs, extras), axis=1)
+        
+        # map added col names to indices, assumed to be ordered as in Cols
+        for i, col in enumerate(cls.Cols):
+            if i < shape[1]: continue
+            Blobs.col_inds[cls.Cols(col)] = i
         
         # copy relative to absolute coords
         blobs[:, cls._get_abs_inds()] = blobs[:, cls._get_rel_inds()]

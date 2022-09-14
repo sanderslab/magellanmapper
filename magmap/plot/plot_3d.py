@@ -4,7 +4,7 @@
 
 Prepare volumetric image stacks for plotting.
 """
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 from skimage import draw
@@ -322,61 +322,69 @@ def get_isotropic_vis(settings):
     return isotropic
 
 
-def prepare_subimg(image5d, offset, size, ndim_base=5):
+def prepare_subimg(
+        image5d: np.ndarray, offset: Sequence[int], size: Sequence[int],
+        ndim_base: int = 5, border: Optional[Union[int, Sequence[int]]] = None
+) -> np.ndarray:
     """Extracts a subimage from a larger image.
     
     Args:
-        image5d (:obj:`np.ndarray`): 5D image array in the order,
-            ``t,z,y,x[,c]``, where the final dimension is optional as with
-            many one channel images.
-        offset (List[int]): Tuple of offset given as ``z,y,x`` for the region
-            of interest. Defaults to ``(0, 0, 0)``.
-        size (List[int]): Size of the region of interest as ``z,y,x``.
-        ndim_base (int): Number of dimensions on which ``image5d`` is based.
-            Typically 3 or 5, defaulting to 5 as ``t,z,y,x[,c]``.
-            If 3, the ``t`` dimension is removed.
+        image5d: 5D image array in the order, ``t, z, y, x, [c]`` unless
+            ``ndim_base`` is given.
+        offset: Tuple of offset given as ``z, y, x`` for the region of interest.
+        size: Size of the region of interest as ``z, y, x``.
+        ndim_base: Number of dimensions in ``image5d``. Defaults to 5 for
+            `t, z, y, x, [c]``; if fewer, the ``t`` dimension is removed.
+        border: Border size as either a scalar for all dimensions of values
+            for ``z, y, x``. The resulting subimage will be expanded to
+            include this border outside ``offset``, with the same extra size
+            on opposite sides along each axis.
     
     Returns:
-        :obj:`np.ndarray`: The sub-imge without separate time dimension as
-        a 3D (or 4-D array if channel dimension exists) array.
+        The sub-imge without separate time dimension as a 3D (or 4-D array
+        if channel dimension exists) array.
     
     """
-    cube_slices = [slice(o, o + s) for o, s in zip(offset, size)]
-    libmag.printv("preparing sub-image at offset: {}, size: {}, slices: {}"
-                  .format(offset, size, cube_slices))
+    if border is not None:
+        # add border outside offset with same extra space on opposite sides
+        offset = np.subtract(offset, border)
+        size = np.add(size, np.multiply(border, 2))
+
+    # ROI with corner at offset and shape given by size
+    roi_slices = [slice(o, o + s) for o, s in zip(offset, size)]
     
-    # cube with corner at offset and shape given by size
     img = image5d
     if ndim_base >= 5:
         # remove time axis
         img = image5d[0]
-    return img[cube_slices[0], cube_slices[1], cube_slices[2]]
+    return img[roi_slices[0], roi_slices[1], roi_slices[2]]
 
 
-def prepare_roi(image5d, roi_offset, roi_size, ndim_base=5):
+def prepare_roi(
+        image5d: np.ndarray, roi_offset: Sequence[int],
+        roi_size: Sequence[int], *args, **kwargs) -> np.ndarray:
     """Extracts a region of interest (ROI).
 
     Calls :meth:`prepare_subimage` but expects size and offset variables to
     be in x,y,z order following this software's legacy convention.
 
     Args:
-        image5d (:obj:`np.ndarray`): 5D image array in the order,
+        image5d: 5D image array in the order,
             ``t,z,y,x[,c]``, where the final dimension is optional as with
             many one channel images.
-        roi_offset (List[int]): Tuple of offset given as ``x,y,z`` for the region
+        roi_offset: Tuple of offset given as ``x,y,z`` for the region
             of interest. Defaults to ``(0, 0, 0)``.
-        roi_size (List[int]): Size of the region of interest as ``x,y,z``.
-        ndim_base (int): Number of dimensions on which ``image5d`` is based.
-            Typically 3 or 5, defaulting to 5 as ``t,z,y,x[,c]``.
-            If 3, the ``t`` dimension is removed.
+        roi_size: Size of the region of interest as ``x,y,z``.
+        args: Positional arguments to :meth:`prepare_subroi`.
+        kwargs: Named arguments to :meth:`prepare_subroi`.
 
     Returns:
-        :obj:`np.ndarray`: The region of interest without separate time
+        The region of interest without separate time
         dimension as a 3D (or 4-D array if channel dimension exists) array.
     
     """
-    libmag.printv("preparing ROI at x,y,z:")
-    return prepare_subimg(image5d, roi_offset[::-1], roi_size[::-1], ndim_base)
+    return prepare_subimg(
+        image5d, roi_offset[::-1], roi_size[::-1], *args, **kwargs)
 
 
 def roi_center_to_offset(

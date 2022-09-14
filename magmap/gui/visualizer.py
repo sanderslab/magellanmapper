@@ -2639,11 +2639,11 @@ class Visualization(HasTraits):
             
             else:
                 # default to color by channel
-                chls = detector.Blobs.get_blobs_channel(
+                blob_chls = detector.Blobs.get_blobs_channel(
                     segs_all[self.segs_in_mask]).astype(np.int)
                 cmap = colormaps.discrete_colormap(
-                    max(chls) + 1, alpha, True, config.seed)
-                self.segs_cmap = cmap[chls]
+                    max(blob_chls) + 1, alpha, True, config.seed)
+                self.segs_cmap = cmap[blob_chls]
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
@@ -2677,13 +2677,21 @@ class Visualization(HasTraits):
             border = (0, patch_size // 2, patch_size // 2)
             roi_class = plot_3d.prepare_roi(
                 config.image5d, offset, roi_size, border=border)
-            blobs_class = np.add(self.blobs.blobs[:, :3], border)
-            patches = classifier.extract_patches(
-                roi_class[..., 1], blobs_class, patch_size)
-            y_pred, y_score = classifier.classify(
-                self._segs_model_path, patches)
-            self.blobs.set_blob_confirmed(self.blobs.blobs, y_pred)
-            # self.blobs.set_blob_truth(self.blobs.blobs, y_score)
+            for chl in chls:
+                _logger.debug("Classifying blobs in channel: %s", chl)
+                blobs_chl, blobs_mask = self.blobs.blobs_in_channel(
+                    self.blobs.blobs, chl, True)
+                if len(blobs_chl) < 1: continue
+                blobs_chl = np.add(blobs_chl[:, :3], border)
+                roi_chl = (roi_class if roi_class.ndim < 4
+                           else roi_class[..., chl])
+                patches = classifier.extract_patches(
+                    roi_chl, blobs_chl, patch_size)
+                y_pred, y_score = classifier.classify(
+                    self._segs_model_path, patches)
+                self.blobs.set_blob_confirmed(
+                    self.blobs.blobs, y_pred, mask=blobs_mask)
+                # self.blobs.set_blob_truth(self.blobs.blobs, y_score)
         
         if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
                 self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and

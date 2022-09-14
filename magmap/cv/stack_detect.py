@@ -559,6 +559,25 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
              if b.colocalizations is not None])
+
+        model_path = config.classifier[config.ClassifierKeys.MODEL]
+        if model_path:
+            # classify blobs using model
+            from magmap.cv import classifier
+            patch_size = 16
+            offset_class = (0, patch_size // 2, patch_size // 2)
+            
+            # exclude blobs along the x/y edges since patches would be
+            # truncated; assumes that image5d has undergone any subsetting
+            size_class = np.subtract(
+                config.image5d.shape[1:4], np.multiply(offset_class, 2))
+            blobs_roi, blobs_mask = detector.get_blobs_in_roi(
+                blobs_all.blobs, offset_class, size_class, reverse=False)
+            patches = classifier.extract_patches(
+                config.image5d[0, ..., 1], blobs_roi, patch_size)
+            y_pred, y_score = classifier.classify(model_path, patches)
+            blobs_all.set_blob_confirmed(blobs_all.blobs, y_pred, blobs_mask)
+        
         blobs_all.save_archive()
         print()
         

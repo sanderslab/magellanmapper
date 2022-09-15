@@ -60,7 +60,8 @@ import vtk
 
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
-from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
+from magmap.cv import classifier, colocalizer, cv_nd, detector, segmenter, \
+    verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
     roi_editor, verifier_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
@@ -2671,8 +2672,7 @@ class Visualization(HasTraits):
         #detector.show_blob_surroundings(self.segments, self.roi)
         
         if self._segs_model_path and self.blobs.blobs is not None:
-            # classify blobs using model
-            from magmap.cv import classifier
+            # classify blobs if model is set
             classifier.classify_blobs(
                 self._segs_model_path, config.image5d, offset[::-1],
                 roi_size[::-1], chls, self.blobs)

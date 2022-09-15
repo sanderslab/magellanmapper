@@ -2,7 +2,6 @@
 from typing import Tuple, Sequence
 
 import numpy as np
-from tensorflow.keras.models import load_model
 
 from magmap.cv import detector
 from magmap.plot import plot_3d
@@ -53,15 +52,14 @@ def extract_patches(roi: np.ndarray, blobs: np.ndarray, size: int = 16):
     return x
 
 
-def classify(
-        path: str, x: np.ndarray, thresh: float = 0.5
+def classify_patches(model, x: np.ndarray, thresh: float = 0.5
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Classify patches with a model.
     
     Args:
-        path: Path to model.
+        model: Keras model.
         x: 2D array of image patches, each in ``y, x, c`` format.
-        thresh: Score threshold to classify as 1, otherwise 0. Defaults to 0.5
+        thresh: Score threshold to classify as 1, otherwise 0. Defaults to 0.5.
 
     Returns:
         Tuple of:
@@ -69,9 +67,6 @@ def classify(
         - ``y_score``: Float array of raw prediction scores.
 
     """
-    # load model with Keras
-    model = load_model(path)
-    
     # calculate prediction scores and assign predictions based on threshold
     y_score = model.predict(x).squeeze()
     y_pred = (y_score > thresh).astype(int).squeeze()
@@ -148,6 +143,10 @@ def classify_blobs(
     print("blobs_size", blobs_size)
     print("blobs_shift", blobs_shift)
 
+    # load model with Keras
+    from tensorflow.keras.models import load_model
+    model = load_model(path)
+
     for chl in channels:
         _logger.debug("Classifying blobs in channel: %s", chl)
         
@@ -164,6 +163,6 @@ def classify_blobs(
         roi_chl = (roi_class if roi_class.ndim < 4
                    else roi_class[..., chl])
         patches = extract_patches(roi_chl, blobs_chl, patch_size)
-        y_pred, y_score = classify_patches(path, patches)
+        y_pred, y_score = classify_patches(model, patches)
         blobs.set_blob_confirmed(blobs.blobs, y_pred, mask=blobs_mask)
         # blobs.set_blob_truth(blobs.blobs, y_score)

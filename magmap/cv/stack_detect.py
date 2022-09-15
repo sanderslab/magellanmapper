@@ -13,7 +13,7 @@ from typing import NamedTuple, Sequence, TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from magmap.cv import chunking, colocalizer, detector, verifier
+from magmap.cv import chunking, classifier, colocalizer, detector, verifier
 from magmap.io import cli, df_io, importer, libmag, naming
 from magmap.plot import plot_3d
 from magmap.settings import config, roi_prof
@@ -561,7 +561,6 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         model_path = config.classifier[config.ClassifierKeys.MODEL]
         if model_path:
             # classify blobs using model
-            from magmap.cv import classifier
             classifier.classify_blobs(
                 model_path, config.image5d, (0, 0, 0),
                 config.image5d.shape[1:4], channels, blobs_all)

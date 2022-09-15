@@ -358,7 +358,6 @@ def get_split_stack_total_shape(sub_rois, overlap=None):
     channel_dim = 3
     if len(shape_sub_roi) > channel_dim:
         final_shape[channel_dim] = shape_sub_roi[channel_dim]
-    libmag.printv("final_shape: {}".format(final_shape))
     return final_shape
 
 

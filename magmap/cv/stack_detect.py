@@ -110,9 +110,8 @@ class StackDetector(object):
             cli.process_cli_args()
             _, orig_info = importer.make_filenames(img_path)
             importer.load_metadata(orig_info)
-        print("detecting blobs in sub-ROI at {} of {}, offset {}, shape {}..."
-              .format(coord, last_coord, tuple(offset.astype(int)),
-                      sub_roi.shape))
+        _logger.info(
+            "Detecting blobs in sub-ROI at %s of %s", coord, last_coord)
         
         if denoise_max_shape is not None:
             # further split sub-ROI for preprocessing locally
@@ -124,10 +123,8 @@ class StackDetector(object):
                         denoise_coord = (z, y, x)
                         denoise_roi = sub_roi[denoise_roi_slices[denoise_coord]]
                         _logger.debug(
-                            f"preprocessing sub-sub-ROI {denoise_coord} of "
-                            f"{np.subtract(denoise_roi_slices.shape, 1)} "
-                            f"(shape {denoise_roi.shape} within sub-ROI shape "
-                            f"{sub_roi.shape})")
+                            f"Preprocessing sub-sub-ROI {denoise_coord} of "
+                            f"{np.subtract(denoise_roi_slices.shape, 1)}")
                         denoise_roi = plot_3d.saturate_roi(
                             denoise_roi, channel=channel)
                         denoise_roi = plot_3d.denoise_roi(

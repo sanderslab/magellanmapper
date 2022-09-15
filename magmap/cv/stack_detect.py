@@ -518,11 +518,12 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
     if roi_prof.ROIProfile.is_identical_settings(
             [config.get_roi_profile(c) for c in channels],
             roi_prof.ROIProfile.BLOCK_SIZES):
-        print("Will process channels together in the same blocks")
-        channels = [channels]
+        _logger.info("Will process channels together in the same blocks")
+        if not libmag.is_seq(channels):
+            channels = [channels]
     else:
-        print("Will process channels in separate blocks defined by their "
-              "profiles")
+        _logger.info(
+            "Will process channels in separate blocks defined by profiles")
     
     cols = ("stats", "fdbk", "blobs")
     detection_out = {}
@@ -561,19 +562,9 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         if model_path:
             # classify blobs using model
             from magmap.cv import classifier
-            patch_size = 16
-            offset_class = (0, patch_size // 2, patch_size // 2)
-            
-            # exclude blobs along the x/y edges since patches would be
-            # truncated; assumes that image5d has undergone any subsetting
-            size_class = np.subtract(
-                config.image5d.shape[1:4], np.multiply(offset_class, 2))
-            blobs_roi, blobs_mask = detector.get_blobs_in_roi(
-                blobs_all.blobs, offset_class, size_class, reverse=False)
-            patches = classifier.extract_patches(
-                config.image5d[0, ..., 1], blobs_roi, patch_size)
-            y_pred, y_score = classifier.classify(model_path, patches)
-            blobs_all.set_blob_confirmed(blobs_all.blobs, y_pred, blobs_mask)
+            classifier.classify_blobs(
+                model_path, config.image5d, (0, 0, 0),
+                config.image5d.shape[1:4], channels, blobs_all)
         
         blobs_all.save_archive()
         print()

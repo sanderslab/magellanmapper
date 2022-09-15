@@ -2673,25 +2673,9 @@ class Visualization(HasTraits):
         if self._segs_model_path and self.blobs.blobs is not None:
             # classify blobs using model
             from magmap.cv import classifier
-            patch_size = 16
-            border = (0, patch_size // 2, patch_size // 2)
-            roi_class = plot_3d.prepare_roi(
-                config.image5d, offset, roi_size, border=border)
-            for chl in chls:
-                _logger.debug("Classifying blobs in channel: %s", chl)
-                blobs_chl, blobs_mask = self.blobs.blobs_in_channel(
-                    self.blobs.blobs, chl, True)
-                if len(blobs_chl) < 1: continue
-                blobs_chl = np.add(blobs_chl[:, :3], border)
-                roi_chl = (roi_class if roi_class.ndim < 4
-                           else roi_class[..., chl])
-                patches = classifier.extract_patches(
-                    roi_chl, blobs_chl, patch_size)
-                y_pred, y_score = classifier.classify(
-                    self._segs_model_path, patches)
-                self.blobs.set_blob_confirmed(
-                    self.blobs.blobs, y_pred, mask=blobs_mask)
-                # self.blobs.set_blob_truth(self.blobs.blobs, y_score)
+            classifier.classify_blobs(
+                self._segs_model_path, config.image5d, offset[::-1],
+                roi_size[::-1], chls, self.blobs)
         
         if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
                 self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and

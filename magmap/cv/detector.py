@@ -13,7 +13,6 @@ Attributes:
 from enum import Enum
 import math
 import pprint
-from time import time
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
@@ -774,13 +773,13 @@ def detect_blobs(
     Returns:
         Array of detected blobs, each given as
         ``z, row, column, radius, confirmation``.
+    
     """
-    time_start = time()
     shape = roi.shape
     multichannel, channels = plot_3d.setup_channels(roi, channel, 3)
     isotropic = config.get_roi_profile(channels[0])["isotropic"]
     if isotropic is not None:
-        # interpolate for (near) isotropy during detection, using only the 
+        # interpolate for (near) isotropy during detection, using only the
         # first process settings since applies to entire ROI
         roi = cv_nd.make_isotropic(roi, isotropic)
     
@@ -788,15 +787,15 @@ def detect_blobs(
     for chl in channels:
         roi_detect = roi[..., chl] if multichannel else roi
         settings = config.get_roi_profile(chl)
-        # scaling as a factor in pixel/um, where scaling of 1um/pixel  
+        # scaling as a factor in pixel/um, where scaling of 1um/pixel
         # corresponds to factor of 1, and 0.25um/pixel corresponds to
-        # 1 / 0.25 = 4 pixels/um; currently simplified to be based on 
+        # 1 / 0.25 = 4 pixels/um; currently simplified to be based on
         # x scaling alone
         scale = calc_scaling_factor()
         scaling_factor = scale[2]
         
-        # find blobs; sigma factors can be sequences by axes for anisotropic 
-        # detection in skimage >= 0.15, or images can be interpolated to 
+        # find blobs; sigma factors can be sequences by axes for anisotropic
+        # detection in skimage >= 0.15, or images can be interpolated to
         # isotropy using the "isotropic" MagellanMapper setting
         min_sigma = settings["min_sigma_factor"] * scaling_factor
         max_sigma = settings["max_sigma_factor"] * scaling_factor
@@ -806,13 +805,8 @@ def detect_blobs(
         blobs_log = blob_log(
             roi_detect, min_sigma=min_sigma, max_sigma=max_sigma,
             num_sigma=num_sigma, threshold=threshold, overlap=overlap)
-        if config.verbose:
-            print("detecting blobs with min size {}, max {}, num std {}, "
-                  "threshold {}, overlap {}"
-                  .format(min_sigma, max_sigma, num_sigma, threshold, overlap))
-            print("time for 3D blob detection: {}".format(time() - time_start))
         if blobs_log.size < 1:
-            libmag.printv("no blobs detected")
+            _logger.debug("No blobs detected")
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
         blobs = Blobs.format_blobs(blobs_log, chl)
@@ -822,12 +816,13 @@ def detect_blobs(
         return None
     blobs_all = np.vstack(blobs_all)
     if isotropic is not None:
-        # if detected on isotropic ROI, need to reposition blob coordinates 
+        # if detected on isotropic ROI, need to reposition blob coordinates
         # for original, non-isotropic ROI
         isotropic_factor = cv_nd.calc_isotropic_factor(isotropic)
         blobs_all = Blobs.multiply_blob_rel_coords(
             blobs_all, 1 / isotropic_factor)
-        blobs_all = Blobs.multiply_blob_abs_coords(blobs_all, 1 / isotropic_factor)
+        blobs_all = Blobs.multiply_blob_abs_coords(
+            blobs_all, 1 / isotropic_factor)
     
     if exclude_border is not None:
         # exclude blobs from the border in x,y,z

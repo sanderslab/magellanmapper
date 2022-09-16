@@ -765,18 +765,58 @@ def process_cli_args():
             f"ignored: {args_unknown}")
 
 
+def setup_image(
+        path: str, series: Optional[int] = None,
+        proc_tasks: Optional[Dict["config.ProcessTypes", Any]] = None):
+    """Set up the main image from CLI args and process any tasks.
+    
+    Args:
+        path: Image path.
+        series: Image series, such as a tile; defaults to None.
+        proc_tasks: Dictionary of processing tasks; defaults to None.
+
+    """
+    # deconstruct user-supplied image filename
+    filename, offset, size, reg_suffixes = importer.deconstruct_img_name(path)
+    set_subimg, _ = importer.parse_deconstructed_name(
+        filename, offset, size, reg_suffixes)
+    
+    if not set_subimg:
+        # sub-image parameters set in filename takes precedence for
+        # the loaded image, but fall back to user-supplied args
+        offset = config.subimg_offsets[0] if config.subimg_offsets else None
+        size = config.subimg_sizes[0] if config.subimg_sizes else None
+    
+    if proc_tasks:
+        for proc_task, proc_val in proc_tasks.items():
+            # set up image for the given task
+            np_io.setup_images(
+                filename, series, offset, size, proc_task,
+                fallback_main_img=False)
+            process_file(
+                filename, proc_task, proc_val, series, offset, size,
+                config.roi_offsets[0] if config.roi_offsets else None,
+                config.roi_sizes[0] if config.roi_sizes else None)
+        
+    else:
+        # set up image without a task specified, eg for display
+        np_io.setup_images(filename, series, offset, size)
+    
+
 def process_proc_tasks(
         path: Optional[str] = None,
         series_list: Optional[Sequence[int]] = None
-) -> Optional[Dict[config.ProcessTypes, Any]]:
+) -> Optional[Dict["config.ProcessTypes", Any]]:
     """Apply processing tasks.
     
     Args:
         path: Base path to main image file; defaults to None, in which case
             :attr:`config.filename` will be used.
-        series_list: 
+        series_list: Sequence of images series, such as tiles; defaults
+            to None.
 
     Returns:
+        Dictionary of set processing types.
 
     """
     if path is None:
@@ -792,30 +832,8 @@ def process_proc_tasks(
     for series in series_list:
         # process files for each series, typically a tile within a
         # microscopy image set or a single whole image
-        filename, offset, size, reg_suffixes = \
-            importer.deconstruct_img_name(path)
-        set_subimg, _ = importer.parse_deconstructed_name(
-            filename, offset, size, reg_suffixes)
-        if not set_subimg:
-            # sub-image parameters set in filename takes precedence for
-            # the loaded image, but fall back to user-supplied args
-            offset = (config.subimg_offsets[0] if config.subimg_offsets
-                      else None)
-            size = (config.subimg_sizes[0] if config.subimg_sizes
-                    else None)
-        if proc_tasks:
-            for proc_task, proc_val in proc_tasks.items():
-                # set up image for the given task
-                np_io.setup_images(
-                    filename, series, offset, size, proc_task,
-                    fallback_main_img=False)
-                process_file(
-                    filename, proc_task, proc_val, series, offset, size,
-                    config.roi_offsets[0] if config.roi_offsets else None,
-                    config.roi_sizes[0] if config.roi_sizes else None)
-        else:
-            # set up image without a task specified, eg for display
-            np_io.setup_images(filename, series, offset, size)
+        setup_image(path, series, proc_tasks)
+    
     return proc_tasks
     
 

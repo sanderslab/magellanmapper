@@ -35,7 +35,7 @@ import numpy as np
 
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
-from magmap.cv import chunking, colocalizer, stack_detect
+from magmap.cv import chunking, classifier, colocalizer, stack_detect
 from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, \
     sqlite
 from magmap.plot import colormaps, plot_2d
@@ -1127,7 +1127,7 @@ def process_file(
     Assumes that the image has already been set up.
     
     Args:
-        path: Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will
             be generated.
         proc_type: Processing type, which should be a one of
             :class:`config.ProcessTypes`.
@@ -1142,8 +1142,9 @@ def process_file(
             ``(x, y, z)``; defaults to None.
     
     Returns:
-        Tuple of stats from processing, or None if no stats, and 
+        Tuple of stats from processing, or None if no stats, and
         text feedback from the processing, or None if no feedback.
+    
     """
     # PROCESS BY TYPE
     stats = None
@@ -1160,9 +1161,8 @@ def process_file(
         print("imported {}, will exit".format(path))
     
     elif proc_type is config.ProcessTypes.EXPORT_ROIS:
-        # export ROIs; assumes that info_proc was already loaded to 
-        # give smaller region from which smaller ROIs from the truth DB 
-        # will be extracted
+        # export ROIs; assumes that metadata was already loaded to give smaller
+        # region from which smaller ROIs from the truth DB will be extracted
         from magmap.io import export_rois
         db = config.db if config.truth_db is None else config.truth_db
         export_path = naming.make_subimage_name(
@@ -1176,7 +1176,7 @@ def process_file(
     elif proc_type is config.ProcessTypes.TRANSFORM:
         # transpose, rescale, and/or resize whole large image
         transformer.transpose_img(
-            path, series, plane=config.plane, 
+            path, series, plane=config.plane,
             rescale=config.transform[config.Transforms.RESCALE],
             target_size=config.roi_size)
         
@@ -1216,6 +1216,14 @@ def process_file(
             colocalizer.insert_matches(config.db, matches)
         else:
             print("No blobs loaded to colocalize, skipping")
+    
+    elif proc_type is config.ProcessTypes.CLASSIFY:
+        # classify blobs
+        try:
+            classifier.classify_whole_image()
+            config.blobs.save_archive()
+        except FileNotFoundError as e:
+            _logger.debug(e)
 
     elif proc_type in (config.ProcessTypes.EXPORT_PLANES,
                        config.ProcessTypes.EXPORT_PLANES_CHANNELS):

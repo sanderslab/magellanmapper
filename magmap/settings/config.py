@@ -257,6 +257,8 @@ class ProcessTypes(Enum):
     DETECT_COLOC = auto()
     #: Detect blobs along with match-based colocalization.
     COLOC_MATCH = auto()
+    #: Classify blobs.
+    CLASSIFY = auto()
     #: Load previously processed images and blobs. DEPRECATED: use ``--load``
     #: CLI parameter instead.
     LOAD = auto()

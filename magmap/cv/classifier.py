@@ -74,6 +74,71 @@ def classify_patches(model, x: np.ndarray, thresh: float = 0.5
     return y_pred, y_score
 
 
+def setup_classification_roi(
+        image5d: np.ndarray, subimg_offset: Sequence[int],
+        subimg_size: Sequence[int],
+        blobs: "detector.Blobs", patch_size: int
+) -> Tuple[np.ndarray, np.ndarray, Sequence[int]]:
+    """Set up ROI for blob classification.
+    
+    Sets up an image ROI with a border to provide uniformly sized image
+    patches around blobs, including blobs on the ROI edge. If the border
+    would exceed an edge of the image, a padding area is created where
+    blobs are excluded so that edge blobs can still have the full-sized
+    patches.
+    
+    Args:
+        subimg_offset: Subimage offset in ``z, y, x``.
+        subimg_size: Subimage size in ``z, y, x``.
+        blobs: Blobs instance.
+        patch_size: Patch size as an int for both width and height.
+    
+    Returns:
+        Tuple of:
+        - ``roi``: region of interest as ``z, y, x, [c]``
+        - ``blobs_roi_mask``: mask for ``blobs`` in the ROI.
+        - ``blobs_shift``: Offset of blobs relative to ``subimg_offset``.
+
+    """
+    
+    # reduce subimage size if it would exceed image boundaries
+    img_shape = image5d.shape[1:4]
+    border_far_roi = np.add(subimg_offset, subimg_size)
+    border_far_roi = np.where(
+        np.greater_equal(border_far_roi, img_shape), img_shape, border_far_roi)
+    subimg_size = border_far_roi - subimg_offset
+    border_far_roi = np.add(subimg_offset, subimg_size)
+    
+    # initialize size of ROI border along each axis and offset
+    border = (0, patch_size // 2, patch_size // 2)
+    border_offset = np.subtract(subimg_offset, border)
+    
+    # set ROI bounding box by defining opposite corners, preventing them from
+    # exceeding image boundaries
+    border_near = np.where(border_offset < 0, 0, border_offset)
+    border_far_full = border_far_roi + border
+    border_far = np.where(
+        border_far_full > img_shape, img_shape, border_far_full)
+    roi = plot_3d.prepare_subimg(
+        image5d, border_near, np.subtract(border_far, border_near))
+    
+    # blobs ROI defaults to ROI without border, but any ROI border truncation
+    # is converted to blob ROI padding to make up for the border loss
+    blobs_near = np.where(border_offset < 0, -border_offset, subimg_offset)
+    blobs_far = np.where(
+        border_far_full > img_shape,
+        np.multiply(img_shape, 2) - border_far_full, border_far_roi)
+    
+    # convert blob offsets to positions relative to ROI without border
+    blobs_rel_offset = np.subtract(blobs_near, subimg_offset)
+    blobs_size = np.subtract(blobs_far, blobs_near)
+    blobs_shift = np.subtract(subimg_offset, border_near)
+    blobs_roi, blobs_roi_mask = detector.get_blobs_in_roi(
+        blobs.blobs, blobs_rel_offset, blobs_size, reverse=False)
+    
+    return roi, blobs_roi_mask, blobs_shift
+
+
 def classify_blobs(
         path: str, image5d: np.ndarray, subimg_offset: Sequence[int],
         subimg_size: Sequence[int], channels: Sequence[int],
@@ -92,57 +157,10 @@ def classify_blobs(
 
     """
     
-    # reduce subimage size if it would exceed image boundaries
-    img_shape = image5d.shape[1:4]
-    border_far_roi = np.add(subimg_offset, subimg_size)
-    border_far_roi = np.where(
-        np.greater_equal(border_far_roi, img_shape), img_shape, border_far_roi)
-    subimg_size = border_far_roi - subimg_offset
+    # set up image and blobs ROIs
+    roi_class, blobs_roi_mask, blobs_shift = setup_classification_roi(
+        image5d, subimg_offset, subimg_size, blobs, patch_size)
     
-    # initialize size of ROI border along each axis and offset
-    border = (0, patch_size // 2, patch_size // 2)
-    border_offset = np.subtract(subimg_offset, border)
-
-    print("img_shape", img_shape)
-    print("subimg_offset", subimg_offset)
-    print("subimg_size", subimg_size)
-    print("border", border)
-    print("border_offset", border_offset)
-    
-    # set ROI bounding box by defining opposite corners, preventing them from
-    # exceeding image boundaries
-    border_near = np.where(border_offset < 0, 0, border_offset)
-    border_far_full = border_far_roi + border
-    border_far = np.where(
-        border_far_full > img_shape, img_shape, border_far_full)
-    roi_class = plot_3d.prepare_subimg(
-        image5d, border_near, np.subtract(border_far, border_near))
-
-    print("border_near", border_near)
-    print("border_far_full", border_far_full)
-    print("border_far", border_far)
-    print("roi_class", roi_class.shape)
-    
-    # blobs ROI defaults to ROI without border, but any ROI border truncation
-    # is converted to blob ROI padding to make up for the border loss
-    blobs_near = np.where(border_offset < 0, -border_offset, subimg_offset)
-    blobs_far = np.where(
-        border_far_full > img_shape,
-        np.multiply(img_shape, 2) - border_far_full, border_far_roi)
-    
-    # convert blob offsets to positions relative to ROI without border
-    blobs_rel_offset = np.subtract(blobs_near, subimg_offset)
-    blobs_size = np.subtract(blobs_far, blobs_near)
-    blobs_shift = np.subtract(subimg_offset, border_near)
-    blobs_roi, blobs_roi_mask = detector.get_blobs_in_roi(
-        blobs.blobs, blobs_rel_offset, blobs_size, reverse=False)
-
-    print("blobs_near", blobs_near)
-    print("blobs_far", blobs_far)
-    print("blobs_rel_offset", blobs_rel_offset)
-    print("blobs_size", blobs_size)
-    print("blobs_shift", blobs_shift)
-
     # load model with Keras
     from tensorflow.keras.models import load_model
     model = load_model(path)

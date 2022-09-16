@@ -10,14 +10,25 @@ from magmap.cv import detector
 
 class TestDetector(unittest.TestCase):
     
-    def test_blob_accessors(self):
-        # set up random blobs
+    @staticmethod
+    def make_random_blobs() -> "detector.Blobs":
+        """Make blobs with random coordinates.
+        
+        Returns:
+            Blobs instance.
+
+        """
         blobs = np.random.rand(20).reshape((5, 4))
-        blobs[:, 0:3] = np.multiply(blobs[:, 0:3], 100).astype(int)
+        blobs[:, :3] = np.multiply(blobs[:, :3], 100).astype(int)
         blobs[:, 3] = blobs[:, 3] * 10
         bl = detector.Blobs(blobs)
         bl.blobs = bl.format_blobs(bl.blobs)
         print(f"Blobs:\n{bl.blobs}")
+        return bl
+    
+    def test_blob_accessors(self):
+        # set up random blobs
+        bl = self.make_random_blobs()
 
         # test blob confirmation flag
         np.testing.assert_array_equal(

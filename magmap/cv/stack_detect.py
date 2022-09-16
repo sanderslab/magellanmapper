@@ -571,17 +571,8 @@ def detect_blobs_stack(
         if channels:
             try:
                 # classify blobs if model is set in config
-                
-                # TODO: config.image5d is != config.img5.img when subimg was
-                #   set to be loaded; consider making more consistent
-                # image5d = config.img5d.img
-                # if config.img5d.subimg_offset is None:
-                #     image5d = plot_3d.prepare_subimg(
-                #         image5d, subimg_offset, subimg_size)[None]
-                
                 classifier.ClassifyImage.classify_whole_image(
-                    image5d=config.image5d, channels=channels[0],
-                    blobs=blobs_all)
+                    channels=channels[0], blobs=blobs_all)
             except FileNotFoundError as e:
                 _logger.debug(e)
         

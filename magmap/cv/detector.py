@@ -201,6 +201,8 @@ class Blobs:
     def save_archive(self, to_add=None, update=False):
         """Save the blobs Numpy archive file to :attr:`path`.
         
+        Backs up any existing file before saving.
+        
         Args:
             to_add (dict): Dictionary of items to add; defaults to None
                 to use the current attributes.
@@ -235,6 +237,9 @@ class Blobs:
                 # load archive, convert to dict, and update dict
                 blobs_arc = np_io.read_np_archive(archive)
                 blobs_arc.update(to_add)
+        
+        # back up any existing file
+        libmag.backup_file(self.path)
         
         with open(self.path, "wb") as archive:
             # save as uncompressed zip Numpy archive file

@@ -2501,7 +2501,7 @@ class Visualization(HasTraits):
         # are relative to offset
         colocs = None
         if config.blobs is None or config.blobs.blobs is None:
-            # on-the-fly blob detection, which includes border but not 
+            # on-the-fly blob detection, which includes border but not
             # padding region; already in relative coordinates
             roi = self.roi
             if config.roi_profile["thresholding"]:
@@ -2521,7 +2521,7 @@ class Visualization(HasTraits):
                     # TODO: include all channel combos
                     self.blobs.blob_matches = matches[tuple(matches.keys())[0]]
         else:
-            # get all previously processed blobs in ROI plus additional 
+            # get all previously processed blobs in ROI plus additional
             # padding region to show surrounding blobs
             # TODO: set segs_all to None rather than empty list if no blobs?
             print("Selecting blobs in ROI from loaded blobs")
@@ -2581,7 +2581,7 @@ class Visualization(HasTraits):
             segs = detector.Blobs.blobs_in_channel(segs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
             
-        if segs_all is not None:
+        if segs_all is not None and len(segs_all) > 0:
             # set confirmation flag to user-selected label for any
             # un-annotated blob
             confirmed = detector.Blobs.get_blob_confirmed(segs_all)

@@ -166,6 +166,9 @@ def classify_blobs(
         Tuple of:
         - ``blobs_mask``: row mask for blobs in sub-image.
         - ``classifications``: corresponding blob classifications.
+    
+    Raises:
+        `ModuleNotFoundError` if Tensorflow is not installed.
 
     """
     
@@ -175,7 +178,12 @@ def classify_blobs(
         image5d, subimg_offset, subimg_size, blobs, patch_size, blobs_relative)
     
     # load model with Keras
-    from tensorflow.keras.models import load_model
+    try:
+        from tensorflow.keras.models import load_model
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            "Tensorflow is required for classification. Please install, eg "
+            "with 'pip install tensorflow'.")
     model = load_model(path)
 
     for chl in channels:

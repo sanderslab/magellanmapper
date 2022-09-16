@@ -2675,10 +2675,14 @@ class Visualization(HasTraits):
         #detector.show_blob_surroundings(self.segments, self.roi)
         
         if self._segs_model_path and self.blobs.blobs is not None:
-            # classify blobs if model is set
-            classifier.classify_blobs(
-                self._segs_model_path, config.image5d, offset[::-1],
-                roi_size[::-1], chls, self.blobs, blobs_relative=True)
+            try:
+                # classify blobs if model is set
+                classifier.classify_blobs(
+                    self._segs_model_path, config.image5d, offset[::-1],
+                    roi_size[::-1], chls, self.blobs, blobs_relative=True)
+            except ModuleNotFoundError as e:
+                _logger.exception(e)
+                self.segs_feedback += f"\n{e.msg}"
         
         if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
                 self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and

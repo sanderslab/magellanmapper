@@ -1238,7 +1238,7 @@ def process_file(
     elif proc_type is config.ProcessTypes.CLASSIFY:
         # classify blobs
         try:
-            classifier.classify_whole_image()
+            classifier.ClassifyImage.classify_whole_image()
             config.blobs.save_archive()
         except FileNotFoundError as e:
             _logger.debug(e)

@@ -1,9 +1,12 @@
 """Blob classifier."""
+from enum import Enum, auto
+from time import time
 from typing import Tuple, Sequence, Optional
 
 import numpy as np
 
-from magmap.cv import detector
+from magmap.cv import chunking, detector
+from magmap.io import cli
 from magmap.plot import plot_3d
 from magmap.settings import config
 
@@ -77,7 +80,7 @@ def classify_patches(model, x: np.ndarray, thresh: float = 0.5
 def setup_classification_roi(
         image5d: np.ndarray, subimg_offset: Sequence[int],
         subimg_size: Sequence[int],
-        blobs: "detector.Blobs", patch_size: int
+        blobs: "detector.Blobs", patch_size: int, blobs_relative: bool
 ) -> Tuple[np.ndarray, np.ndarray, Sequence[int]]:
     """Set up ROI for blob classification.
     
@@ -130,7 +133,8 @@ def setup_classification_roi(
         np.multiply(img_shape, 2) - border_far_full, border_far_roi)
     
     # convert blob offsets to positions relative to ROI without border
-    blobs_rel_offset = np.subtract(blobs_near, subimg_offset)
+    blobs_rel_offset = np.subtract(
+        blobs_near, subimg_offset) if blobs_relative else blobs_near
     blobs_size = np.subtract(blobs_far, blobs_near)
     blobs_shift = np.subtract(subimg_offset, border_near)
     blobs_roi, blobs_roi_mask = detector.get_blobs_in_roi(
@@ -142,7 +146,8 @@ def setup_classification_roi(
 def classify_blobs(
         path: str, image5d: np.ndarray, subimg_offset: Sequence[int],
         subimg_size: Sequence[int], channels: Sequence[int],
-        blobs: "detector.Blobs", patch_size: int = 16):
+        blobs: "detector.Blobs", patch_size: int = 16, blobs_relative=False
+) -> Tuple[np.ndarray, Sequence[int]]:
     """Classify blobs based on surrounding image patches.
     
     Args:
@@ -154,28 +159,41 @@ def classify_blobs(
         blobs: Blobs instance.
         patch_size: Patch size as an int for both width and height; defaults
             to 16.
+        blobs_relative: True to treat blob coordinates as relative to
+            ``subimg_offset``; defaults to False.
+        
+    Returns:
+        Tuple of:
+        - ``blobs_mask``: row mask for blobs in sub-image.
+        - ``classifications``: corresponding blob classifications.
 
     """
     
     # set up image and blobs ROIs
+    _logger.info("Setting up classification ROI")
     roi_class, blobs_roi_mask, blobs_shift = setup_classification_roi(
-        image5d, subimg_offset, subimg_size, blobs, patch_size)
+        image5d, subimg_offset, subimg_size, blobs, patch_size, blobs_relative)
     
     # load model with Keras
     from tensorflow.keras.models import load_model
     model = load_model(path)
 
     for chl in channels:
-        _logger.debug("Classifying blobs in channel: %s", chl)
+        _logger.info("Classifying blobs in channel: %s", chl)
         
         # get blobs in channel for mask and to ensure blobs are present
         blobs_chl, blobs_chl_mask = blobs.blobs_in_channel(
             blobs.blobs, chl, True)
-        if len(blobs_chl) < 1: continue
         
         # combine masks to set blobs array view without intermediate copy
         blobs_mask = np.logical_and(blobs_roi_mask, blobs_chl_mask)
+        if np.sum(blobs_mask) < 1: continue
+        
+        # shift blob coordinates by border or padding
         blobs_chl = np.add(blobs.blobs[blobs_mask, :3], blobs_shift)
+        if not blobs_relative:
+            # convert absolute to relative coordinates
+            blobs_chl -= subimg_offset
         
         # classify blobs based on surrounding image patches
         roi_chl = (roi_class if roi_class.ndim < 4
@@ -184,55 +202,141 @@ def classify_blobs(
         y_pred, y_score = classify_patches(model, patches)
         blobs.set_blob_confirmed(blobs.blobs, y_pred, mask=blobs_mask)
         # blobs.set_blob_truth(blobs.blobs, y_score)
+    
+    classifications = blobs.get_blob_confirmed(blobs.blobs)[blobs_roi_mask]
+    return blobs_roi_mask, classifications
 
 
-def classify_whole_image(
-        model_path: Optional[str] = None, image5d: Optional[np.ndarray] = None,
-        channels: Optional[Sequence[int]] = None,
-        blobs: Optional["detector.Blobs"] = None, **kwargs):
-    """Classify blobs in the whole image.
-    
-    Args:
-        model_path: Path to Keras model. Defaults to None, in which case
-            :attr:`magmap.settings.config.classifier` is accessed.
-        image5d: Image in ``t, z, y, x, [c]`` order. Defaults to None, in which
-            case :attr:`magmap.settings.config.img5d.img` is accessed.
-        channels: Sequence of channels in ``image5d``. Defaults to None, in
-            which case :attr:`magmap.settings.config.chanel` is accessed.
-        blobs: Blobs instance. Defaults to None, in which case
-            :attr:`magmap.settings.config.blobs` is accessed.
-        kwargs: Additional arguments to :meth:`classify_blobs`.
-    
-    Raises:
-        `FileNotFoundError` if a classifier model, image, or blobs are not
-        found.
+class ClassifyImage:
+    """Convert a label to an edge with class methods as an encapsulated 
+    way to use in multiprocessing without requirement for global variables.
 
     """
+    image5d = None
+    blobs = None
     
-    if not model_path:
-        # get model path from config
-        model_path = config.classifier[config.ClassifierKeys.MODEL]
+    @classmethod
+    def classify_whole_image(
+            cls, model_path: Optional[str] = None,
+            image5d: Optional[np.ndarray] = None,
+            channels: Optional[Sequence[int]] = None,
+            blobs: Optional["detector.Blobs"] = None, **kwargs):
+        """Classify blobs in the whole image through multiprocessing
+        
+        Args:
+            model_path: Path to Keras model. Defaults to None, in which case
+                :attr:`magmap.settings.config.classifier` is accessed.
+            image5d: Image in ``t, z, y, x, [c]`` order. Defaults to None, in which
+                case :attr:`magmap.settings.config.img5d.img` is accessed.
+            channels: Sequence of channels in ``image5d``. Defaults to None, in
+                which case :attr:`magmap.settings.config.chanel` is accessed.
+            blobs: Blobs instance. Defaults to None, in which case
+                :attr:`magmap.settings.config.blobs` is accessed.
+            kwargs: Additional arguments to :meth:`classify_blobs`.
+        
+        Raises:
+            `FileNotFoundError` if a classifier model, image, or blobs are not
+            found.
+    
+        """
+        
         if not model_path:
-            raise FileNotFoundError("No classifier model found")
-    
-    if image5d is None and config.img5d is not None:
-        # get main image from config
-        image5d = config.img5d.img
-        if image5d is None:
-            raise FileNotFoundError("No image found")
-    
-    if channels is None:
-        # set up channels from config
-        channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
-    
-    if blobs is None:
-        # get blobs from config
-        blobs = config.blobs
+            # get model path from config
+            model_path = config.classifier[config.ClassifierKeys.MODEL]
+            if not model_path:
+                raise FileNotFoundError("No classifier model found")
+        
+        if image5d is None and config.img5d is not None:
+            # get main image from config
+            image5d = config.img5d.img
+            if image5d is None:
+                raise FileNotFoundError("No image found")
+        
+        if channels is None:
+            # set up channels from config
+            channels = plot_3d.setup_channels(
+                config.image5d, config.channel, 4)[1]
+        
         if blobs is None:
-            raise FileNotFoundError("No blobs found")
+            # get blobs from config
+            blobs = config.blobs
+            if blobs is None:
+                raise FileNotFoundError("No blobs found")
+
+        is_fork = chunking.is_fork()
+        if is_fork:
+            # share large objects as class variables in forked processes
+            cls.image5d = image5d
+            cls.blobs = blobs
+        
+        # set up multiprocessing
+        start_time = time()
+        pool = chunking.get_mp_pool()
+        pool_results = []
+        
+        # chunk image simply by planes
+        step = 100
+        img_shape = image5d.shape[1:4]
+        size = list(img_shape)
+        size[0] = step
+        nsteps = -(img_shape[0] // -step)
+        
+        _logger.info("Classifying whole image in %s steps", nsteps)
+        for i in range(nsteps):
+            # increment offset z-plane by step size
+            offset = (i * step, 0, 0)
+            pool_results.append(
+                pool.apply_async(
+                    cls.classify_chunk,
+                    args=(model_path, offset, size, channels), kwds=kwargs))
+        
+        for result in pool_results:
+            offset, blobs_mask, predictions = result.get()
+            _logger.info(
+                "Classified blobs at offset %s of %s", offset, img_shape)
+            
+            # update blobs since modifications in separate processes are lost
+            blobs.set_blob_confirmed(blobs.blobs, predictions, blobs_mask)
+            print(blobs.blobs[blobs_mask][:5])
+        pool.close()
+        pool.join()
+
+        _logger.debug(
+            "Time elapsed to classify whole image: %s", time() - start_time)
     
-    # classify blobs using model
-    classify_blobs(
-        model_path, image5d, (0, 0, 0), image5d.shape[1:4], channels, blobs,
-        **kwargs)
+    @classmethod
+    def classify_chunk(
+            cls, model_path: str, subimg_offset: Sequence[int],
+            subimg_size: Sequence[int], channels: Sequence[int], **kwargs):
+        """Classify blobs in an image chunk.
+        
+        Args:
+            model_path: Path to Keras model
+            subimg_offset: Subimage offset in ``z, y, x``.
+            subimg_size: Subimage size in ``z, y, x``.
+            channels: Sequence of channels in :attr:`image5d`.
+            kwargs: Additional arguments to :meth:`classify_blobs`.
+        
+        Returns:
+            Tuple of:
+            - ``subimg_offset``: the ``subimg_offset`` argument to track
+              during multiprocessing.
+            - ``blobs_mask``: row mask for blobs in sub-image.
+            - ``classifications``: corresponding blob classifications.
+    
+        """
+        
+        if cls.image5d is None:
+            # reopen main image in each spawned process
+            cli.process_cli_args()
+            cli.setup_image(config.filename)
+            cls.image5d = config.img5d.img
+            cls.blobs = config.blobs
+        
+        # classify blobs using model
+        blobs_mask, classifications = classify_blobs(
+            model_path, cls.image5d, subimg_offset, subimg_size, channels,
+            cls.blobs, **kwargs)
+        
+        return subimg_offset, blobs_mask, classifications
         

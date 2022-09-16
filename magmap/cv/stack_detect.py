@@ -8,7 +8,7 @@ processing.
 from enum import Enum
 import os
 from time import time
-from typing import NamedTuple, Sequence, TYPE_CHECKING
+from typing import NamedTuple, Sequence, TYPE_CHECKING, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -320,9 +320,13 @@ def setup_blocks(
         exclude_border, tol, overlap_base, overlap, overlap_padding, max_pixels)
 
 
-def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
-                        verify=False, save_dfs=True, full_roi=False,
-                        coloc=False):
+def detect_blobs_blocks(
+        filename_base: str, image5d: np.ndarray,
+        offset: Optional[Sequence[int]] = None,
+        size: Optional[Sequence[int]] = None,
+        channels: Optional[Sequence[int]] = None, verify: bool = False,
+        save_dfs: bool = True, full_roi: bool = False, coloc: bool = False
+) -> Tuple[Tuple[int, int, int], str, "detector.Blobs"]:
     """Detect blobs by block processing of a large image.
     
     All channels are processed in the same blocks.
@@ -332,19 +336,20 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
         image5d: Large image to process as a Numpy array of t,z,y,x,[c]
         offset: Sub-image offset given as coordinates in z,y,x.
         size: Sub-image shape given in z,y,x.
-        channels (Sequence[int]): Sequence of channels, where None detects
+        channels: Sequence of channels, where None detects
             in all channels.
         verify: True to verify detections against truth database; defaults 
             to False.
         save_dfs: True to save data frames to file; defaults to True.
-        full_roi (bool): True to treat ``image5d`` as the full ROI; defaults
-            to False.
-        coloc (bool): True to perform blob co-localizations; defaults to False.
+        full_roi: True to treat ``image5d`` as the full ROI; defaults to False.
+        coloc: True to perform blob co-localizations; defaults to False.
     
     Returns:
-        tuple[int, int, int], str, :class:`magmap.cv.detector.Blobs`:
-        Accuracy metrics from :class:`magmap.cv.detector.verify_rois`,
-        feedback message from this same function, and detected blobs.
+        Tuple of:
+        - ``stats_detection``: accuracy metrics from
+          :class:`magmap.cv.detector.verify_rois`
+        - ``fdbk``: feedback message from this same function
+        - ``blobs``: detected blobs
     
     """
     time_start = time()
@@ -489,14 +494,17 @@ def detect_blobs_blocks(filename_base, image5d, offset, size, channels,
     return stats_detection, fdbk, blobs
 
 
-def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
+def detect_blobs_stack(
+        filename_base: str, subimg_offset: Optional[Sequence[int]] = None,
+        subimg_size: Optional[Sequence[int]] = None, coloc: bool = False
+) -> Tuple[Tuple[int, int, int], str, "detector.Blobs"]:
     """Detect blobs in a full stack, such as a whole large image.
     
     Process channels in separate sets of blocks if their profiles specify
     different block sizes.
     
     Args:
-        filename_base (str): 
+        filename_base (str): Base image filename, for saving files.
         subimg_offset (Sequence[int]): Sub-image offset as ``z,y,x`` to load
             from :attr:`config.image5d`; defaults to None.
         subimg_size (Sequence[int]): Sub-image size as ``z,y,x`` to load
@@ -506,12 +514,14 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
             use the ``coloc_match`` task
             (:meth:`magmap.colocalizer.StackColocalizer.colocalize_stack`)
             instead.
-
+    
     Returns:
-        tuple[int, int, int], str, :class:`magmap.cv.detector.Blobs`:
-        Combined ccuracy metrics from :class:`magmap.cv.detector.verify_rois`,
-        feedback message from this same function, and detected blobs across
-        all channels in :attr:`magmap.settings.config.channel`.
+        Tuple of:
+        - ``stats_detection``: combined accuracy metrics from
+          :class:`magmap.cv.detector.verify_rois`
+        - ``fdbk``: feedback message from this same function
+        - ``blobs``: detected blobs across all channels in
+          :attr:`magmap.settings.config.channel`
 
     """
     channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
@@ -519,8 +529,8 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
             [config.get_roi_profile(c) for c in channels],
             roi_prof.ROIProfile.BLOCK_SIZES):
         _logger.info("Will process channels together in the same blocks")
-        if not libmag.is_seq(channels):
-            channels = [channels]
+        # combine channels into nested list
+        channels = [channels]
     else:
         _logger.info(
             "Will process channels in separate blocks defined by profiles")
@@ -557,12 +567,23 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
              if b.colocalizations is not None])
-        
-        try:
-            # classify blobs if model is set in config
-            classifier.classify_whole_image(channels=channels, blobs=blobs_all)
-        except FileNotFoundError as e:
-            _logger.debug(e)
+
+        if channels:
+            try:
+                # classify blobs if model is set in config
+                
+                # TODO: config.image5d is != config.img5.img when subimg was
+                #   set to be loaded; consider making more consistent
+                # image5d = config.img5d.img
+                # if config.img5d.subimg_offset is None:
+                #     image5d = plot_3d.prepare_subimg(
+                #         image5d, subimg_offset, subimg_size)[None]
+                
+                classifier.ClassifyImage.classify_whole_image(
+                    image5d=config.image5d, channels=channels[0],
+                    blobs=blobs_all)
+            except FileNotFoundError as e:
+                _logger.debug(e)
         
         blobs_all.save_archive()
         print()

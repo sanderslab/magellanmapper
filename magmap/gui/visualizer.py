@@ -2675,7 +2675,7 @@ class Visualization(HasTraits):
             # classify blobs if model is set
             classifier.classify_blobs(
                 self._segs_model_path, config.image5d, offset[::-1],
-                roi_size[::-1], chls, self.blobs)
+                roi_size[::-1], chls, self.blobs, blobs_relative=True)
         
         if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
                 self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and

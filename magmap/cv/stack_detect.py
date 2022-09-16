@@ -557,13 +557,12 @@ def detect_blobs_stack(filename_base, subimg_offset, subimg_size, coloc=False):
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
              if b.colocalizations is not None])
-
-        model_path = config.classifier[config.ClassifierKeys.MODEL]
-        if model_path:
-            # classify blobs using model
-            classifier.classify_blobs(
-                model_path, config.image5d, (0, 0, 0),
-                config.image5d.shape[1:4], channels, blobs_all)
+        
+        try:
+            # classify blobs if model is set in config
+            classifier.classify_whole_image(channels=channels, blobs=blobs_all)
+        except FileNotFoundError as e:
+            _logger.debug(e)
         
         blobs_all.save_archive()
         print()

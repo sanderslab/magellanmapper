@@ -1,5 +1,5 @@
 """Blob classifier."""
-from typing import Tuple, Sequence
+from typing import Tuple, Sequence, Optional
 
 import numpy as np
 
@@ -184,3 +184,55 @@ def classify_blobs(
         y_pred, y_score = classify_patches(model, patches)
         blobs.set_blob_confirmed(blobs.blobs, y_pred, mask=blobs_mask)
         # blobs.set_blob_truth(blobs.blobs, y_score)
+
+
+def classify_whole_image(
+        model_path: Optional[str] = None, image5d: Optional[np.ndarray] = None,
+        channels: Optional[Sequence[int]] = None,
+        blobs: Optional["detector.Blobs"] = None, **kwargs):
+    """Classify blobs in the whole image.
+    
+    Args:
+        model_path: Path to Keras model. Defaults to None, in which case
+            :attr:`magmap.settings.config.classifier` is accessed.
+        image5d: Image in ``t, z, y, x, [c]`` order. Defaults to None, in which
+            case :attr:`magmap.settings.config.img5d.img` is accessed.
+        channels: Sequence of channels in ``image5d``. Defaults to None, in
+            which case :attr:`magmap.settings.config.chanel` is accessed.
+        blobs: Blobs instance. Defaults to None, in which case
+            :attr:`magmap.settings.config.blobs` is accessed.
+        kwargs: Additional arguments to :meth:`classify_blobs`.
+    
+    Raises:
+        `FileNotFoundError` if a classifier model, image, or blobs are not
+        found.
+
+    """
+    
+    if not model_path:
+        # get model path from config
+        model_path = config.classifier[config.ClassifierKeys.MODEL]
+        if not model_path:
+            raise FileNotFoundError("No classifier model found")
+    
+    if image5d is None and config.img5d is not None:
+        # get main image from config
+        image5d = config.img5d.img
+        if image5d is None:
+            raise FileNotFoundError("No image found")
+    
+    if channels is None:
+        # set up channels from config
+        channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
+    
+    if blobs is None:
+        # get blobs from config
+        blobs = config.blobs
+        if blobs is None:
+            raise FileNotFoundError("No blobs found")
+    
+    # classify blobs using model
+    classify_blobs(
+        model_path, image5d, (0, 0, 0), image5d.shape[1:4], channels, blobs,
+        **kwargs)
+        

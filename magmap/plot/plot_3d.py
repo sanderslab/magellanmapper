@@ -20,7 +20,7 @@ from magmap.cv import segmenter
 
 
 def setup_channels(
-        roi: np.ndarray, channel: Sequence[int], dim_channel: int
+        roi: np.ndarray, channel: Optional[Sequence[int]], dim_channel: int
 ) -> Tuple[bool, Sequence[int]]:
     """Setup channels array for the given ROI dimensions.
     

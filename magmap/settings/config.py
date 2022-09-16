@@ -120,8 +120,8 @@ metadatas = None
 series = None
 #: list[int]: List of image series/tiles.
 series_list = None
-#: int: Channel of interest, where None specifies all channels.
-channel = None
+#: Channel(s) of interest, where None specifies all channels.
+channel: Optional[Sequence[int]] = None
 
 #: CLI flag to open images in RGB(A) mode if True; defaults to False.
 rgb: bool = False

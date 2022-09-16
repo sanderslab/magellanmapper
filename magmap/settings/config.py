@@ -249,21 +249,37 @@ class PreProcessKeys(Enum):
 
 class ProcessTypes(Enum):
     """Whole image processing task enumerations."""
-    IMPORT_ONLY = auto()  # imports image stack
-    DETECT = auto()  # whole image blob detection
-    DETECT_COLOC = auto()  # detection with colocalization by intensity
-    COLOC_MATCH = auto()  # colocalization by blob matching
-    LOAD = auto()  # DEPRECATED: load previously processed images and blobs
-    EXTRACT = auto()  # extract single plane using the z-val from offset
-    EXPORT_ROIS = auto()  # export ROIs from current database to serial 2D plots
-    TRANSFORM = auto()  # transform image (see transformer.transpose_img)
-    ANIMATED = auto()  # generate an animated GIF
-    EXPORT_BLOBS = auto()  # export blob coordinates/radii to compressed CSV
-    EXPORT_PLANES = auto()  # export a 3D+ image to individual planes
-    EXPORT_PLANES_CHANNELS = auto()  # also export channels to separate files
-    EXPORT_RAW = auto()  # export an array as a raw data file
-    EXPORT_TIF = auto()  # export an array as TIF files for each channel
-    PREPROCESS = auto()  # pre-process whole image
+    #: Import image stack to NumPy format.
+    IMPORT_ONLY = auto()
+    #: Detect blobs in the whole image.
+    DETECT = auto()
+    #: Detect blobs along with intensity-based colocalization.
+    DETECT_COLOC = auto()
+    #: Detect blobs along with match-based colocalization.
+    COLOC_MATCH = auto()
+    #: Load previously processed images and blobs. DEPRECATED: use ``--load``
+    #: CLI parameter instead.
+    LOAD = auto()
+    #: Extract a single plane defined by the z-value in ``--offset``.
+    EXTRACT = auto()
+    #: Export ROIs from the database to serial 2D plots.
+    EXPORT_ROIS = auto()
+    #: Transform an image (see :meth:`magmap.atlas.transformer.transpose_img``).
+    TRANSFORM = auto()
+    #: Generate an animated GIF of successive planes in an image.
+    ANIMATED = auto()
+    #: Export blobs to a CSV file.
+    EXPORT_BLOBS = auto()
+    #: Export a 3/4D image to individual planes.
+    EXPORT_PLANES = auto()
+    # Export image planes to separate files for each channel.
+    EXPORT_PLANES_CHANNELS = auto()
+    #: Export an array as a raw data file.
+    EXPORT_RAW = auto()
+    #: Export an array as TIF files for each channel.
+    EXPORT_TIF = auto()
+    #: Pre-process the whole image.
+    PREPROCESS = auto()
 
 
 #: Processing tasks.

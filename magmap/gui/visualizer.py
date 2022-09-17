@@ -279,9 +279,10 @@ class Visualization(HasTraits):
 
     # File selection
 
-    _filename = File(
+    _filename = Str(
         tooltip="Load an image. If the file format requires import, the\n"
                 "Import tab will open automatically.")
+    _filename_btn = Button("Browse")
     _channel_names = Instance(TraitsList)
     _channel = List  # selected channels, 0-based
     _rgb = Bool(config.rgb, tooltip="Show image as RGB(A)")
@@ -568,9 +569,8 @@ class Visualization(HasTraits):
     panel_roi_selector = VGroup(
         VGroup(
             HGroup(
-                Item("_filename", show_label=False, style="simple",
-                     editor=FileEditor(entries=10, allow_dir=False)),
-                label="Image path",
+                Item("_filename", label="Image path", style="simple"),
+                Item("_filename_btn", show_label=False),
             ),
             HGroup(
                 Item("_channel", label="Channels", style="custom",
@@ -2099,6 +2099,15 @@ class Visualization(HasTraits):
             # load the image in the empty current app window
             self.update_filename(filename)
     
+    @observe("_filename_btn")
+    def _filename_updated(self, evt):
+        """Open a Pyface file dialog to set the main image path."""
+        open_dialog = FileDialog(
+            action="open", default_path=os.path.dirname(self._filename))
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._filename = open_dialog.path
+
     @on_trait_change("_filename")
     def _image_path_updated(self):
         """Update the selected filename and load the corresponding image.

@@ -41,13 +41,13 @@ except AttributeError:
 
 # import PyFace components after HiDPI adjustment
 from pyface import confirmation_dialog
-from pyface.api import FileDialog, OK, YES, CANCEL
+from pyface.api import DirectoryDialog, FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource
-from traits.api import Any, Array, Bool, Button, Event, File, Float, Instance, \
+from traits.api import Any, Array, Bool, Button, Event, Float, Instance, \
     Int, List, observe, on_trait_change, Property, push_exception_handler, \
     Str, HasTraits
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
-    EnumEditor, FileEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
+    EnumEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
     StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
@@ -431,7 +431,13 @@ class Visualization(HasTraits):
 
     # Image import panel
 
-    _import_browser = File
+    _import_browser = Str(
+        tooltip="Select a file a file or directory to import:\n"
+                "- File: typically multiplane images; all matching files will"
+                "  also be added\n"
+                "- Dir: a directory of single plane images")
+    _import_file_btn = Button("File")
+    _import_dir_btn = Button("Dir")
     _import_table = TabularEditor(
         adapter=ImportFilesArrayAdapter(), editable=True, auto_resize_rows=True,
         stretch_last_section=False)
@@ -857,10 +863,10 @@ class Visualization(HasTraits):
     panel_import = VGroup(
         VGroup(
             HGroup(
-                # prevent label from squeezing the width of rest of controls
-                Item("_import_browser", label="Select first file to import",
-                     style="simple",
-                     editor=FileEditor(entries=10, allow_dir=True)),
+                Item("_import_browser", label="File/dir to import",
+                     style="simple"),
+                Item("_import_file_btn", show_label=False),
+                Item("_import_dir_btn", show_label=False),
             ),
             Item("_import_paths", editor=_import_table, show_label=False),
             label="Import File Selection"
@@ -3709,6 +3715,29 @@ class Visualization(HasTraits):
         # reset preferences profile
         config.prefs = prefs_prof.PrefsProfile()
     
+    @observe("_import_file_btn")
+    @observe("_import_dir_btn")
+    def _import_file_dir_btn_updated(self, evt):
+        """Open a Pyface file/dir dialog to import files."""
+        # open a file browser, defaulting to last opened location
+        is_dir = evt.name == "_import_dir_btn"
+        if is_dir:
+            # open a dialog for selecting a directory
+            open_dialog = DirectoryDialog(default_path=config.prefs.import_dir)
+        else:
+            # open a dialog for selecting a file
+            open_dialog = FileDialog(default_path=config.prefs.import_dir)
+        
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._import_browser = open_dialog.path
+            
+            # save selected path in prefs
+            config.prefs.import_dir = open_dialog.path
+            if not is_dir:
+                config.prefs.import_dir = os.path.dirname(
+                    config.prefs.import_dir)
+
     @on_trait_change("_import_browser")
     def _add_import_file(self):
         """Add a file or directory to import and populate the import table

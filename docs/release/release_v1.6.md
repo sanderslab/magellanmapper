@@ -22,7 +22,7 @@
 
 #### GUI
 
-- More preferences are saved, such as the figure save location and ROI Editor layout (#138)
+- More preferences are saved, such as the figure save location and ROI Editor layout (#138, #201)
 - "Blend" option in the image adjustment panel to visualize alignment in overlaid images
 - Drag and remove loaded profiles in the Profiles tab table
 - "Help" buttons added to open the online documentation (#109)
@@ -40,6 +40,8 @@
 - Fixed error window when moving the atlas level slider before a 3D image has been rendered (#139)
 - Fixed saving blobs in an ROI using the first displayed ROI or after moving the sliders without redrawing (#139)
 - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
+- Fixed browsing for files or directories in some environments (#201)
+- Fixed clearing the import path (#201)
 
 #### CLI
 
@@ -96,6 +98,7 @@
 - Better 2D image support
   - Extended zero-crossing detection to 2D cases (#142)
   - Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
+- Multiple multiplane image files can be selected directly instead of relying on file auto-detection (#201)
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 

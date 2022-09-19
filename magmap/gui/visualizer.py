@@ -3927,7 +3927,11 @@ class Visualization(HasTraits):
                 lambda: self.update_filename(self._import_prefix))
             self._import_thread.start()
     
-    @on_trait_change("_import_clear_btn")
+    @observe("_import_clear_btn")
+    def _clear_import_files_fired(self, evt):
+        """Handle clearing import fields."""
+        self._clear_import_files()
+    
     def _clear_import_files(self, clear_import_browser=True):
         """Reset import setup.
         

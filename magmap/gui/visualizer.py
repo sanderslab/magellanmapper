@@ -433,10 +433,12 @@ class Visualization(HasTraits):
 
     _import_browser = Str
     _import_file_btn = Button(
-        "File",
+        "File(s)",
         tooltip="Select a file to import, typically a multiplane image.\n"
-                "Files with matching names but '_ch_x' before the end will\n"
-                "also be added (eg 'img_ch_0.tif', 'img_ch_1.tif').")
+                "Channels are determined by names ending with '_ch_x'\n"
+                "(eg 'img_ch_0.tif', 'img_ch_1.tif'). If only one file is\n"
+                "selected, all files with matching names except for the\n"
+                "channel will also be added.")
     _import_dir_btn = Button(
         "Dir",
         tooltip="Select a directory of single-plane images to import.\n"
@@ -1047,6 +1049,7 @@ class Visualization(HasTraits):
         self._profiles_reset_prefs = False
 
         # set up image import
+        self._import_browser_paths: Optional[Sequence[str]] = None
         self._clear_import_files(False)
         
         # set up BrainGlobe atlases
@@ -3729,17 +3732,25 @@ class Visualization(HasTraits):
             open_dialog = DirectoryDialog(default_path=config.prefs.import_dir)
         else:
             # open a dialog for selecting a file
-            open_dialog = FileDialog(default_path=config.prefs.import_dir)
+            open_dialog = FileDialog(
+                action="open files", default_path=config.prefs.import_dir)
         
         if open_dialog.open() == OK:
-            # get user selected path
-            self._import_browser = open_dialog.path
-            
             # save selected path in prefs
             config.prefs.import_dir = open_dialog.path
-            if not is_dir:
+            if is_dir:
+                self._import_browser_paths = None
+            else:
+                # set _import_browser_paths before triggering Trait when
+                # setting import_browser
+                self._import_browser_paths = open_dialog.paths
+                
+                # store file's parent dir
                 config.prefs.import_dir = os.path.dirname(
                     config.prefs.import_dir)
+            
+            # trigger update for user selected path
+            self._import_browser = open_dialog.path
 
     @on_trait_change("_import_browser")
     def _add_import_file(self):
@@ -3799,15 +3810,15 @@ class Visualization(HasTraits):
                     "format. Please enter at least image output and data type "
                     "before importing.")
         
+        import_path = self._import_browser
         for suffix in (config.SUFFIX_IMAGE5D, config.SUFFIX_META,
                        config.SUFFIX_SUBIMG):
-            if self._import_browser.endswith(suffix):
+            if import_path.endswith(suffix):
                 # file already imported; initiate load and change to ROI panel
                 self._update_roi_feedback(
-                    "{} is already imported, loading image"
-                    .format(self._import_browser))
+                    f"{import_path} is already imported, loading image")
                 # must assign before tab change or else _import_browser is empty
-                self._filename = self._import_browser
+                self._filename = import_path
                 self.select_controls_tab = ControlsTabs.ROI.value
                 return
         
@@ -3817,27 +3828,29 @@ class Visualization(HasTraits):
         base_path = None
 
         try:
-            if os.path.isdir(self._import_browser):
+            if os.path.isdir(import_path):
                 # gather files within the directory to import
                 self._import_mode = ImportModes.DIR
-                chl_paths, import_md = importer.setup_import_dir(
-                    self._import_browser)
+                chl_paths, import_md = importer.setup_import_dir(import_path)
                 setup_import(import_md)
                 base_path = os.path.join(
-                    os.path.dirname(self._import_browser),
+                    os.path.dirname(import_path),
                     importer.DEFAULT_IMG_STACK_NAME)
             
-            elif self._import_browser:
-                # gather files matching the pattern of the selected file to import
+            elif import_path:
+                # gather files matching the pattern of the selected single
+                # path, or give list when multiple paths are selected
                 self._import_mode = ImportModes.MULTIPAGE
+                import_paths = self._import_browser_paths
                 chl_paths, base_path = importer.setup_import_multipage(
-                    self._import_browser)
+                    import_paths if import_paths and len(import_paths) >= 2
+                    else import_path)
                 
                 # extract metadata in separate thread given delay from Java
                 # initialization for Bioformats
                 self._update_import_feedback(
-                    "Gathering metadata related to {}, please wait"
-                    "...".format(self._import_browser))
+                    f"Gathering metadata related to {import_path}, please "
+                    f"wait...")
                 self._import_thread = import_threads.SetupImportThread(
                     chl_paths, setup_import)
                 self._import_thread.start()
@@ -3852,8 +3865,8 @@ class Visualization(HasTraits):
                 self._import_prefix = base_path
         except FileNotFoundError:
             self._update_import_feedback(
-                "File to import does not exist: {}\nPlease try another file"
-                .format(self._import_browser))
+                f"File to import does not exist: {import_path}\n"
+                f"Please try another file")
     
     @on_trait_change("_import_shape")
     def _validate_import_readiness(self):

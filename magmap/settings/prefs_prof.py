@@ -20,7 +20,10 @@ class PrefsProfile(profiles.SettingsDict):
     
     #: Figure save directory path.
     fig_save_dir: str = ""
-    
+
+    #: Import directory path.
+    import_dir: str = ""
+
     def __init__(self, *args, **kwargs):
         """Initialize a preferences profile dictionary.
         

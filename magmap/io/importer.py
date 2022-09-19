@@ -766,7 +766,9 @@ def read_file(
     return img5d
 
 
-def setup_import_multipage(filename):
+def setup_import_multipage(
+        filename: Union[str, Sequence[str]]
+) -> Tuple[Dict[Union[int, str], List[str]], str]:
     """Find matching files for multipage image import.
 
     Multiple channels are assumed to be stored in separate files with
@@ -775,22 +777,25 @@ def setup_import_multipage(filename):
     If any such file is found, only files with these channel designators
     will be taken. If none are found, ``filename`` will be taken directly.
 
-
     Args:
-        filename (str): Path to image file to import. Files for separate
-        channels with names based on this path will first be checked,
-        falling back to use this name directly.
+        filename: Path(s) to image file to import. If a non-sequence,
+        any matching paths for different channels will also be added.
 
     Returns:
-        dict[Any, List[str]], str: Ordered dictionary of channel numbers to
-        sequences of image file paths to import, and the base path of the
-        extracted files.
+        Ordered dictionary of channel numbers to sequences of image file paths
+        to import, and the base path of the extracted files.
     
     Raises:
         FileNotFoundError: No existing files related to ``filename`` could
         be found.
     
     """
+    # set up paths
+    filenames = None
+    if filename and libmag.is_seq(filename):
+        # use sequence of paths instead of searching additional matches
+        filenames = filename
+        filename = filenames[0]
     path_split = libmag.splitext(filename)
     ext = path_split[1].lower()
     base_path = path_split[0]
@@ -802,20 +807,20 @@ def setup_import_multipage(filename):
     if len(iter_ind) > 0:
         base_path = base_path[:iter_ind[-1]]
     
-    # get all files matching channel format
     path_base = "{}{}*".format(base_path, CHANNEL_SEPARATOR)
-    filenames = []
-    print("Looking for files for multi-channel images matching "
-          "the format: {}{}".format(path_base, ext))
-    matches = glob.glob(path_base)
+    if filenames is None:
+        # get all files matching channel format
+        print("Looking for files for multi-channel images matching "
+              "the format: {}{}".format(path_base, ext))
+        matches = glob.glob(path_base)
+        filenames = []
+        for match in matches:
+            # prune files to matching extensions
+            match_split = os.path.splitext(match)
+            if match_split[1].lower() == ext:
+                filenames.append(match)
     
-    for match in matches:
-        # prune files to matching extensions
-        match_split = os.path.splitext(match)
-        if match_split[1].lower() == ext:
-            filenames.append(match)
     filenames = sorted(filenames)
-    
     if filenames:
         # get dict of channels by files
         print("Found matching file(s), where each file will be imported "

@@ -431,13 +431,18 @@ class Visualization(HasTraits):
 
     # Image import panel
 
-    _import_browser = Str(
-        tooltip="Select a file a file or directory to import:\n"
-                "- File: typically multiplane images; all matching files will"
-                "  also be added\n"
-                "- Dir: a directory of single plane images")
-    _import_file_btn = Button("File")
-    _import_dir_btn = Button("Dir")
+    _import_browser = Str
+    _import_file_btn = Button(
+        "File",
+        tooltip="Select a file to import, typically a multiplane image.\n"
+                "Files with matching names but '_ch_x' before the end will\n"
+                "also be added (eg 'img_ch_0.tif', 'img_ch_1.tif').")
+    _import_dir_btn = Button(
+        "Dir",
+        tooltip="Select a directory of single-plane images to import.\n"
+                "Files will be sorted alphabetically, and files ending with\n"
+                "'_ch_x' are sorted into the given channel. Any file that\n"
+                "cannot be loaded will be simply ignored.")
     _import_table = TabularEditor(
         adapter=ImportFilesArrayAdapter(), editable=True, auto_resize_rows=True,
         stretch_last_section=False)
@@ -862,14 +867,12 @@ class Visualization(HasTraits):
     # import panel
     panel_import = VGroup(
         VGroup(
-            HGroup(
-                Item("_import_browser", label="File/dir to import",
-                     style="simple"),
-                Item("_import_file_btn", show_label=False),
-                Item("_import_dir_btn", show_label=False),
-            ),
-            Item("_import_paths", editor=_import_table, show_label=False),
+            Item("_import_file_btn", label="Multiplane file(s) to import"),
+            Item("_import_dir_btn", label="Directory of single-plane images"),
             label="Import File Selection"
+        ),
+        VGroup(
+            Item("_import_paths", editor=_import_table, show_label=False),
         ),
         VGroup(
             Item("_import_res", label="Resolutions (x,y,z)", format_str="%.4g"),

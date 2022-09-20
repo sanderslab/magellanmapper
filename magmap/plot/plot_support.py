@@ -285,6 +285,42 @@ class ImageOverlayer:
         #: Labels annotation text artists; defaults to empty list.
         self.labels_annots: List["axes.Axes.Text"] = []
         
+        #: Matplotlib transform object.
+        self._transform: Optional[transforms.Transform] = None
+    
+    def setup_transform(
+            self, img2d: np.ndarray, rotate: Optional[int] = None
+    ) -> transforms.Transform:
+        """Set up transformation from config settings.
+        
+        Args:
+            img2d: 2D+/-channel array.
+            rotate: Counter-clockwise rotation in degrees.
+
+        Returns:
+            :attr:`self._transform` for chained calls.
+
+        """
+        if rotate is None:
+            # rotate in increments of 90 deg counter-clockwise
+            rotate_n = config.transform[config.Transforms.ROTATE]
+            rotate = rotate_n * 90 if rotate_n else 0
+            
+            # rotate by specific deg counter-clockwise
+            rotate_deg = config.transform[config.Transforms.ROTATE_DEG]
+            if rotate_deg:
+                rotate += rotate_deg
+        
+        # rotate around the center of the image in data coords
+        shape = np.divide(img2d.shape[:2], 2)
+        self._transform = transforms.Affine2D().rotate_deg_around(
+            *shape[::-1], rotate)
+        
+        # convert to display coordinates
+        self._transform += self.ax.transData
+        
+        return self._transform
+    
     def imshow_multichannel(
             self, img2d: np.ndarray,
             channel: Optional[Union[int, Sequence[int]]],
@@ -349,11 +385,7 @@ class ImageOverlayer:
                 # if alphas not explicitly set per channel, make all channels more
                 # translucent at a fixed value that is higher with more channels
                 alpha /= np.sqrt(num_chls + 1)
-    
-        # transform image based on config parameters
-        rotate = config.transform[config.Transforms.ROTATE]
-        img2d = cv_nd.rotate90(img2d, rotate, multichannel=multichannel)
-    
+        
         for chl in channels:
             if rgb:
                 # Matplotlib requires 0-1 float or 0-255 int range
@@ -382,6 +414,12 @@ class ImageOverlayer:
                     alpha=alpha_plane, vmin=vmin_plane, vmax=vmax_plane, 
                     origin=self.origin, interpolation=interpolation)
             img.append(img_chl)
+        
+        # apply transformation such as rotation to main axes components
+        if self._transform is None:
+            self.setup_transform(img2d)
+        for n in self.ax.images + self.ax.lines + self.ax.collections:
+            n.set_transform(self._transform)
         
         # flip horizontally or vertically by inverting axes
         if config.transform[config.Transforms.FLIP_HORIZ]:
@@ -611,7 +649,7 @@ class ImageOverlayer:
                 *label, color="k", fontsize="x-small", clip_on=True,
                 horizontalalignment="center", verticalalignment="center",
                 bbox=dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
-                          linewidth=0, alpha=0.3))
+                          linewidth=0, alpha=0.3), transform=self._transform)
             self.labels_annots.append(text)
     
     def remove_labels(self):

@@ -348,6 +348,8 @@ class Transforms(Enum):
     """Image transformation keys for command-line parsing."""
     #: Rotate by 90 deg the number of specified times.
     ROTATE = auto()
+    #: Rotate by specific degrees clockwise.
+    ROTATE_DEG = auto()
     #: Flip the image vertically if 1, no flip if 0.
     FLIP_VERT = auto()
     #: Flip the image horizontally if 1, no flip if 0.

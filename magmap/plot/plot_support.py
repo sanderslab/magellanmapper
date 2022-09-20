@@ -2,12 +2,13 @@
 # Author: David Young, 2018, 2020
 """Shared plotting functions with the MagellanMapper package.
 """
-
+import pathlib
 from collections import OrderedDict
 import math
 import os
 import warnings
-from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, \
+    Union
 
 import numpy as np
 from matplotlib import backend_bases, gridspec, pyplot as plt
@@ -1249,7 +1250,10 @@ def setup_images_for_plane(plane, arrs_3d):
     return arrs_3d_tr, aspect, origin, scaling
 
 
-def save_fig(path, ext=None, modifier="", fig=None):
+def save_fig(
+        path: Union[str, pathlib.Path], ext: Optional[str] = None,
+        modifier: str = "", fig: Optional["figure.Figure"] = None, **kwargs
+) -> Optional[str]:
     """Save figure with support for backup and alternative file formats.
     
     Dots per inch is set by :attr:`config.plot_labels[config.PlotLabels.DPI]`.
@@ -1258,20 +1262,30 @@ def save_fig(path, ext=None, modifier="", fig=None):
     saved.
 
     Args:
-        path (str): Base path to use.
-        ext (str): File format extension for saving, without period. Defaults
+        path: Base path to use.
+        ext: File format extension for saving, without period. Defaults
             to None to use the extension in ``path`` if available, or ``png``
             ``path`` does not have an extension. If extension is in
             :const:`config.FORMATS_3D`, the figure will not be saved.
-        modifier (str): Modifier string to append before the extension;
+        modifier: Modifier string to append before the extension;
             defaults to an empty string.
-        fig (:obj:`matplotlib.figure.Figure`): Figure; defaults to None
-            to use the current figure.
+        fig: Figure; defaults to None to use the current figure.
+        kwargs: Additional arguments to :meth:`matplotlib.figure.savefig`.
     
     Returns:
-        str: The output path, or None if the file was not saved.
+        The output path, or None if the file was not saved.
     
     """
+    # convert potential pathlib path to str
+    path = str(path)
+    
+    # set up additional args to savefig
+    if kwargs is None:
+        kwargs = {}
+    if "dpi" not in kwargs:
+        # save the current or given figure with config DPI
+        kwargs["dpi"] = config.plot_labels[config.PlotLabels.DPI]
+    
     if fig is None:
         # default to using the current figure
         fig = plt.gcf()
@@ -1294,12 +1308,10 @@ def save_fig(path, ext=None, modifier="", fig=None):
         return None
     
     # backup any existing file
-    plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
+    plot_path = f"{os.path.splitext(path)[0]}{modifier}.{ext}"
     libmag.backup_file(plot_path)
     
-    # save the current or given figure with config DPI
-    dpi = config.plot_labels[config.PlotLabels.DPI]
-    fig.savefig(plot_path, dpi=dpi)
+    fig.savefig(plot_path, **kwargs)
     _logger.info(f"Exported figure to {plot_path}")
     return plot_path
 

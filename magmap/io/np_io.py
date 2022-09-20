@@ -247,7 +247,7 @@ def setup_images(
     config.labels_img_sitk = None
     config.labels_img_orig = None
     config.borders_img = None
-    config.labels_meta = None
+    config.labels_metadata = None
     config.labels_ref = None
     
     # reset blobs

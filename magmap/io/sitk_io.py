@@ -64,7 +64,8 @@ def reg_out_path(file_path, reg_name, match_ext=False):
         return file_path_base + "_" + reg_name
 
 
-def replace_sitk_with_numpy(img_sitk, img_np):
+def replace_sitk_with_numpy(
+        img_sitk: sitk.Image, img_np: np.ndarray) -> sitk.Image:
     """Generate a :class:``sitk.Image`` object based on another Image object,
     but replace its array with a new Numpy array.
     
@@ -75,11 +76,18 @@ def replace_sitk_with_numpy(img_sitk, img_np):
     Returns:
         New :class:``sitk.Image`` object with same spacing, origin, and 
         direction as that of ``img_sitk`` and array replaced with ``img_np``.
+    
     """
+    # get original settings
     spacing = img_sitk.GetSpacing()
     origin = img_sitk.GetOrigin()
     direction = img_sitk.GetDirection()
-    img_sitk_back = sitk.GetImageFromArray(img_np)
+    
+    # treat as vector (multichannel) image if source is multichannel
+    img_sitk_back = sitk.GetImageFromArray(
+        img_np, True if img_sitk.GetNumberOfComponentsPerPixel() > 1 else None)
+    
+    # transfer original settings to new sitk Image
     img_sitk_back.SetSpacing(spacing)
     img_sitk_back.SetOrigin(origin)
     img_sitk_back.SetDirection(direction)

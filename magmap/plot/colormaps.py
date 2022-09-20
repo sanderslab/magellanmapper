@@ -4,6 +4,7 @@
 """
 
 from enum import Enum, auto
+from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
 from matplotlib import cm
@@ -65,18 +66,18 @@ class DiscreteColormap(colors.ListedColormap):
             more values than in ``labels`` such as mirrored negative values.
             None if ``index_direct`` is False.
     """
-    def __init__(self, labels=None, seed=None, alpha=150, index_direct=True, 
-                 min_val=0, max_val=255, min_any=0, background=None,
-                 dup_for_neg=False, symmetric_colors=False, cmap_labels=None):
-        """Generate discrete colormap for labels using 
-        :func:``discrete_colormap``.
+    def __init__(
+            self, labels: Optional[Sequence[int]] = None,
+            alpha: int = 150, index_direct: bool = True, max_val: int = 255,
+            background: Optional[Tuple[int, Tuple[int, int, int, int]]] = None,
+            dup_for_neg: bool = False, symmetric_colors: bool = False,
+            cmap_labels: Optional[Sequence[str]] = None, **kwargs):
+        """Generate discrete colormap for labels.
         
         Args:
             labels: Labels of integers for which a distinct color should be 
                 mapped to each unique label. Defults to None, in which case 
                 no colormap will be generated.
-            seed: Seed for randomizer to allow consistent colormap between 
-                runs; defaults to None.
             alpha: Transparency leve; defaults to 150 for semi-transparent.
             index_direct: True if the colormap will be indexed directly, which 
                 assumes that the labels will serve as indexes to the colormap 
@@ -85,10 +86,7 @@ class DiscreteColormap(colors.ListedColormap):
                 range of integers between the lowest and highest label values, 
                 inclusive, with a :obj:`colors.BoundaryNorm`, which may
                 incur performance cost.
-            min_val (int): Minimum value for random numbers; defaults to 0.
-            max_val (int): Maximum value for random numbers; defaults to 255.
-            min_any (int, float): Minimum value above which at least one value
-                must be in each set of RGB values; defaults to 0
+            max_val: Maximum value for random numbers; defaults to 255.
             background: Tuple of (backround_label, (R, G, B, A)), where 
                 background_label is the label value specifying the background, 
                 and RGBA value will replace the color corresponding to that 
@@ -96,10 +94,11 @@ class DiscreteColormap(colors.ListedColormap):
             dup_for_neg: True to duplicate positive labels as negative 
                 labels to recreate the same set of labels as for a 
                 mirrored labels map. Defaults to False.
-            symmetric_colors (bool): True to make symmetric colors, assuming
+            symmetric_colors: True to make symmetric colors, assuming
                 symmetric labels centered on 0; defaults to False.
-            cmap_labels (List[str]): Sequence of colors as Matplotlib color
+            cmap_labels: Sequence of colors as Matplotlib color
                 strings or RGB(A) hex (eg "#0fab24ff") strings.
+        
         """
         self.norm = None
         self.cmap_labels = None
@@ -139,14 +138,18 @@ class DiscreteColormap(colors.ListedColormap):
             # TODO: may have occasional colormap inaccuracies from this bug:
             # https://github.com/matplotlib/matplotlib/issues/9937;
             self.norm = colors.BoundaryNorm(bounds, num_colors)
+        
         if cmap_labels is None:
             # auto-generate colors for the number of labels
-            self.cmap_labels = discrete_colormap(
-                num_colors, alpha, False, seed, min_val, max_val, min_any,
-                symmetric_colors, jitter=20, mode=DiscreteModes.RANDOMN)
+            args = dict(
+                alpha=alpha, prioritize_default=False, max_val=max_val,
+                symmetric_colors=symmetric_colors)
+            args.update(kwargs)
+            self.cmap_labels = discrete_colormap(num_colors, **args)
         else:
             # generate RGBA colors from supplied color strings
             self.cmap_labels = colors.to_rgba_array(cmap_labels) * max_val
+        
         if background is not None:
             # replace background label color with given color
             bkgdi = np.where(labels_unique == background[0] - labels_offset)
@@ -225,55 +228,58 @@ class DiscreteColormap(colors.ListedColormap):
         return conv
 
 
-def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
-                      seed=None, min_val=0, max_val=255, min_any=0,
-                      symmetric_colors=False, dup_offset=0, jitter=0,
-                      mode=DiscreteModes.RANDOMN):
+def discrete_colormap(
+        num_colors: int, alpha: int = 255,
+        prioritize_default: Union[bool, str] = True,
+        seed: Optional[int] = None, min_val: Union[int, float] = 0,
+        max_val: Union[int, float] = 255, min_any: Union[int, float] = 0,
+        symmetric_colors: bool = False, dup_offset: int = 0, jitter: int = 0,
+        mode: "DiscreteModes" = DiscreteModes.RANDOMN) -> np.ndarray:
     """Make a discrete colormap using :attr:``config.colors`` as the 
     starting colors and filling in the rest with randomly generated RGB values.
     
     Args:
-        num_colors (int): Number of discrete colors to generate.
-        alpha (int): Transparency level, from 0-255; defaults to 255.
-        prioritize_default (bool, str): If True, the default colors from 
+        num_colors: Number of discrete colors to generate.
+        alpha: Transparency level, from 0-255; defaults to 255.
+        prioritize_default: If True, the default colors from 
             :attr:``config.colors`` will replace the initial colormap elements; 
             defaults to True. Alternatively, `cn` can be given to use 
             the "CN" color spec instead.
-        seed (int): Random number seed; defaults to None, in which case no seed 
+        seed: Random number seed; defaults to None, in which case no seed 
             will be set.
-        min_val (int, float): Minimum value for random numbers; defaults to 0.
-        max_val (int, float): Maximum value for random numbers; defaults to 255.
+        min_val: Minimum value for random numbers; defaults to 0.
+        max_val: Maximum value for random numbers; defaults to 255.
             For floating point ranges such as 0.0-1.0, set as a float.
-        min_any (int, float): Minimum value above which at least one value
+        min_any: Minimum value above which at least one value
             must be in each set of RGB values; defaults to 0. If all
             values in an RGB set are below this value, the lowest
             RGB value will be scaled up by the ratio ``max_val:min_any``.
             Assumes a range of ``min_val < min_any < max_val``; defaults to
             0 to ignore.
-        symmetric_colors (bool): True to create a symmetric set of colors,
+        symmetric_colors: True to create a symmetric set of colors,
             assuming the first half of ``num_colors`` mirror those of
             the second half; defaults to False.
-        dup_offset (int): Amount by which to offset duplicate color values
+        dup_offset: Amount by which to offset duplicate color values
             if ``dup_for_neg`` is enabled; defaults to 0.
-        jitter (int): In :obj:`DiscreteModes.GRID` mode, coordinates are
+        jitter: In :obj:`DiscreteModes.GRID` mode, coordinates are
             randomly shifted by half this value above or below their original
             value; defaults to 0.
-        mode (:obj:`DiscreteModes`): Mode given as an enumeration; defaults
-            to :obj:`DiscreteModes.RANDOMN` mode.
+        mode: Mode given as an enumeration; defaults to
+            :obj:`DiscreteModes.RANDOMN` mode.
     
     Returns:
-        :obj:`np.ndaarry`: 2D Numpy array in the format 
-        ``[[R, G, B, alpha], ...]`` on a 
+        2D Numpy array in the format ``[[R, G, B, alpha], ...]`` on a 
         scale of 0-255. This colormap will need to be converted into a 
         Matplotlib colormap using ``LinearSegmentedColormap.from_list`` 
         to generate a map that can be used directly in functions such 
         as ``imshow``.
+    
     """
     if symmetric_colors:
         # make room for offset when duplicating colors
         max_val -= dup_offset
 
-    # generate random combination of RGB values for each number of colors, 
+    # generate random combination of RGB values for each number of colors,
     # where each value ranges from min-max
     if mode is DiscreteModes.GRID:
         # discrete colors taken from an evenly spaced grid for min separation
@@ -339,26 +345,26 @@ def discrete_colormap(num_colors, alpha=255, prioritize_default=True,
     return cmap
 
 
-def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False, 
-                                 use_orig_labels=False, symmetric_colors=False):
-    """Get a default discrete colormap for a labels image, assuming that 
-    background is 0, and the seed is determined by :attr:``config.seed``.
+def get_labels_discrete_colormap(
+        labels_img: Optional[np.ndarray], alpha_bkgd: int = 255,
+        use_orig_labels: bool = False, **kwargs) -> "DiscreteColormap":
+    """Get a default discrete colormap for a labels image.
+     
+    Assumes that background is 0, and the seed is determined by
+    :attr:``config.seed``.
     
     Args:
-        labels_img: Labels image as a Numpy array.
-        alpha_bkgd: Background alpha level from 0 to 255; defaults to 255 
+        labels_img: Labels image as a Numpy array. Can be None, in which
+            case ``use_orig_labels`` should be True.
+        alpha_bkgd: Background alpha level from 0 to 255; defaults to 255
             to turn on background fully.
-        dup_for_neg: True to duplicate positive labels as negative 
-            labels; defaults to False.
-        use_orig_labels (bool): True to use original labels from 
-            :attr:`config.labels_img_orig` if available, falling back to 
+        use_orig_labels: True to use original labels from
+            :attr:`config.labels_img_orig` if available, falling back to
             ``labels_img``. Defaults to False.
-        symmetric_colors (bool): True to create a symmetric set of colors;
-            defaults to False.
     
     Returns:
-        :class:``DiscreteColormap`` object with a separate color for 
-        each unique value in ``labels_img``.
+        A colormap with separate color for each unique value in ``labels_img``.
+    
     """
     lbls = labels_img
     if use_orig_labels:
@@ -370,10 +376,11 @@ def get_labels_discrete_colormap(labels_img, alpha_bkgd=255, dup_for_neg=False,
         elif config.labels_img_orig is not None:
             # fallback to use labels from original image if available
             lbls = config.labels_img_orig
-    return DiscreteColormap(
-        lbls, config.seed, 255, min_any=160, min_val=10,
-        background=(0, (0, 0, 0, alpha_bkgd)), dup_for_neg=dup_for_neg,
-        symmetric_colors=symmetric_colors)
+    args = dict(
+        seed=config.seed, alpha=255, min_any=160, min_val=10,
+        background=(0, (0, 0, 0, alpha_bkgd)))
+    args.update(kwargs)
+    return DiscreteColormap(lbls, **args)
 
 
 def get_borders_colormap(borders_img, labels_img, cmap_labels):
@@ -430,28 +437,34 @@ def make_binary_cmap(binary_colors):
     return DiscreteColormap([0, 1], cmap_labels=binary_colors)
 
 
-def setup_labels_cmap(labels_img):
-    """Set up a colormap for a labels image.
-    
-    If :attr:`config.atlas_labels[config.AtlasLabels.BINARY]` is set,
-    its value will be used to construct a binary colormap, where 0 is assumed
-    to be background, and 1 is foreground.
+def setup_labels_cmap(
+        labels_img: np.ndarray, binary_colors: Optional[Sequence[str]] = None,
+        **kwargs) -> "DiscreteColormap":
+    """Wrapper to set up a colormap for a labels image.
     
     Args:
-        labels_img (:obj:`np.ndarray`): Labels image.
+        labels_img: Labels image.
+        binary_colors: Sequence of colors as strings; defaults to None, in
+            which case :attr:`config.atlas_labels[config.AtlasLabels.BINARY]`
+            is used. 0 is assumed to be background, and 1 is foreground.
 
     Returns:
-        :obj:`DiscreteColormap`: Discrete colormap for the given labels.
+        Discrete colormap for the given labels.
 
     """
-    binary_colors = config.atlas_labels[config.AtlasLabels.BINARY]
+    # TODO: consider merging with get_labels_discrete_colormap
+    if binary_colors is None:
+        binary_colors = config.atlas_labels[config.AtlasLabels.BINARY]
+    
     if binary_colors:
         cmap_labels = make_binary_cmap(binary_colors)
     else:
-        cmap_labels = get_labels_discrete_colormap(
-            labels_img, 0, dup_for_neg=True, use_orig_labels=True,
+        args = dict(
+            dup_for_neg=True, use_orig_labels=True,
             symmetric_colors=config.atlas_labels[
                 config.AtlasLabels.SYMMETRIC_COLORS])
+        args.update(kwargs)
+        cmap_labels = get_labels_discrete_colormap(labels_img, 0, **args)
     return cmap_labels
 
 

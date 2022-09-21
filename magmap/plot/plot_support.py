@@ -1262,11 +1262,12 @@ def save_fig(
     saved.
 
     Args:
-        path: Base path to use.
-        ext: File format extension for saving, without period. Defaults
-            to None to use the extension in ``path`` if available, or ``png``
-            ``path`` does not have an extension. If extension is in
-            :const:`config.FORMATS_3D`, the figure will not be saved.
+        path: Base path to use, with or without extension.
+        ext: File format extension for saving, with or without period. Defaults
+            to None, in which case any extension in ``path`` is used. If no
+            extension is found, :const:`magmap.settings.config.DEFAULT_SAVEFIG`
+            is used. If the extension is in :const:`config.FORMATS_3D` or
+            not supported by Matplotlib, the figure will not be saved.
         modifier: Modifier string to append before the extension;
             defaults to an empty string.
         fig: Figure; defaults to None to use the current figure.
@@ -1290,16 +1291,29 @@ def save_fig(
         # default to using the current figure
         fig = plt.gcf()
     
+    # set up output path
+    if ext is None:
+        # extract extension from path if not given directly
+        path_no_ext, ext = os.path.splitext(path)
+        if ext:
+            # use path without extension
+            path = path_no_ext
+        else:
+            # default to PNG
+            ext = config.DEFAULT_SAVEFIG
+    if ext.startswith("."):
+        # remove preceding period
+        ext = ext[1:]
+    if path.endswith("."):
+        # remove ending period since it will be added later
+        path = path[:-1]
+    
     if ext in config.FORMATS_3D:
+        # skip saving if 3D extension
         _logger.warn(
             f"Extension '{ext}' is a 3D type, will skip saving 2D figure")
         return
     
-    # set up output path and backup any existing file
-    if ext is None:
-        # extract extension from path if not given directly, defaulting to PNG
-        ext = os.path.splitext(path)[1]
-        ext = ext[1:] if ext else config.DEFAULT_SAVEFIG
     if ext not in fig.canvas.get_supported_filetypes().keys():
         # avoid saving if the figure backend does not support the output format
         _logger.warn(
@@ -1308,7 +1322,7 @@ def save_fig(
         return None
     
     # backup any existing file
-    plot_path = f"{os.path.splitext(path)[0]}{modifier}.{ext}"
+    plot_path = f"{path}{modifier}.{ext}"
     libmag.backup_file(plot_path)
     
     fig.savefig(plot_path, **kwargs)

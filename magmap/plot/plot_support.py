@@ -1252,7 +1252,8 @@ def setup_images_for_plane(plane, arrs_3d):
 
 def save_fig(
         path: Union[str, pathlib.Path], ext: Optional[str] = None,
-        modifier: str = "", fig: Optional["figure.Figure"] = None, **kwargs
+        modifier: str = "", fig: Optional["figure.Figure"] = None,
+        backup: bool = True, **kwargs
 ) -> Optional[str]:
     """Save figure with support for backup and alternative file formats.
     
@@ -1272,6 +1273,7 @@ def save_fig(
             defaults to an empty string.
         fig: Figure; defaults to None to use the current figure.
         kwargs: Additional arguments to :meth:`matplotlib.figure.savefig`.
+        backup: True (default) to back up any existing file before saving.
     
     Returns:
         The output path, or None if the file was not saved.
@@ -1321,9 +1323,10 @@ def save_fig(
             f"save extension")
         return None
     
-    # backup any existing file
     plot_path = f"{path}{modifier}.{ext}"
-    libmag.backup_file(plot_path)
+    if backup:
+        # backup any existing file
+        libmag.backup_file(plot_path)
     
     fig.savefig(plot_path, **kwargs)
     _logger.info(f"Exported figure to {plot_path}")

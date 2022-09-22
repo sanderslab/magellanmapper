@@ -70,7 +70,11 @@ class LabelsMeta:
                 labels_ref_out = libmag.combine_paths(
                     self.prefix, labels_ref_name, check_dir=True)
                 labels_ref_name = pathlib.Path(labels_ref_out).name
-            libmag.copy_backup(self.path_ref, labels_ref_out)
+            
+            if not pathlib.Path(labels_ref_out).exists():
+                # copy file only if not already present; assumes that any
+                # existing file is correct and does not back it up
+                libmag.copy_backup(self.path_ref, labels_ref_out)
         
         # save metadata as YAML file
         meta = {

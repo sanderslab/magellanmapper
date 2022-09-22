@@ -594,18 +594,20 @@ def read_tif(
     # extract metadata
     tif = tifffile.TiffFile(path)
     md = dict.fromkeys(config.MetaKeys)
-    axes = tif.series[0].axes
+    axes = tif.series[0].axes.lower()
     if tif.ome_metadata:
         # read OME-XML metadata
         names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
         res = np.array(md[config.MetaKeys.RESOLUTIONS])
-        print(tif.ome_metadata)
+        _logger.debug("OME-TIF metadata: %s", tif.ome_metadata)
     else:
         # parse resolutions
         res = np.ones((1, 3))
-        if tif.imagej_metadata and "spacing" in tif.imagej_metadata:
-            # ImageJ format holds z-resolution as spacing
-            res[0, 0] = tif.imagej_metadata["spacing"]
+        if tif.imagej_metadata:
+            _logger.debug("ImageJ TIF metadata: %s", tif.imagej_metadata)
+            if "spacing" in tif.imagej_metadata:
+                # ImageJ format holds z-resolution as spacing
+                res[0, 0] = tif.imagej_metadata["spacing"]
         for i, name in enumerate(("YResolution", "XResolution")):
             # parse x/y-resolution from standard TIF metadata
             axis_res = tif.pages[0].tags[name].value
@@ -616,9 +618,16 @@ def read_tif(
     # load TIFF by memory mapping
     tif_memmap = tifffile.memmap(path)
     ndim = len(tif_memmap.shape)
-    if ndim < 4 or ndim == 4 and "c" in axes.lower():
+    if ndim < 4 or ndim == 4 and "c" in axes:
         # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
+        # TODO: add any time "t" axis is absent?
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
+    if "z" not in axes:
+        # add a z-axis for 2D images
+        tif_memmap = np.expand_dims(tif_memmap, axis=0)
+    
+    _logger.debug("Parsed TIF metadata: %s", md)
+    _logger.debug("Loaded TIF into shape: %s", tif_memmap.shape)
     
     # add image to Image5d instance
     img5d.img = tif_memmap

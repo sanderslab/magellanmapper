@@ -1085,6 +1085,7 @@ def transpose_img(
         rotate: Optional[int] = None,
         rotate_deg: Optional[Sequence[Dict[str, Any]]] = None,
         target_size: Optional[Union[float, Sequence[int]]] = None,
+        target_size_res: Optional[Union[float, Sequence[int]]] = None,
         flip: Optional[int] = None,
         order: Optional[int] = None
 ) -> sitk.Image:
@@ -1107,6 +1108,9 @@ def transpose_img(
             Defaults to None.
         target_size: Size of target in `z, y, x` order, or a single rescaling
             factor. Defaults to None.
+        target_size_res: Same as ``target_size``, but applied to the image
+            resolutions instead of changing the image itself. Defaults to
+            None.
         flip: Axis to flip after transposition;
             defaults to None, in which case it will be based on ``plane``.
         order: Spline interpolation order; defaults to None.
@@ -1210,6 +1214,12 @@ def transpose_img(
         # change is often to alter the physical dimensions
         transposed = cv_nd.rescale_resize(
             transposed, target_size, preserve_range=True, order=order)
+    
+    if target_size_res is not None:
+        # rescale or resize by adjusting resolution, without changing the image
+        if libmag.is_seq(target_size_res):
+            target_size_res = target_size_res
+        spacing = np.multiply(spacing, target_size_res)
     
     # convert back to sitk image
     transposed = sitk.GetImageFromArray(transposed)

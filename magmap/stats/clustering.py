@@ -23,10 +23,6 @@ from magmap.settings import profiles
 from magmap.io import sitk_io
 from magmap.io import df_io
 
-_SKLEARN_ERR = (
-    "Scikit-learn is not installed. Please install, eg with "
-    "'pip install scikit-learn'")
-
 
 def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):
     """Measure the k-nearest-neighbors distance.
@@ -65,7 +61,8 @@ def knn_dist(blobs, n, max_dist=None, max_pts=None, show=True):
         return df
     
     if not neighbors:
-        raise ImportError(_SKLEARN_ERR)
+        raise ImportError(
+            config.format_import_err("scikit-learn", task="kNN distances"))
 
     #blobs = blobs[::int(len(blobs) / 1000)]  # TESTING: small num of blobs
     knn = neighbors.NearestNeighbors(n, n_jobs=-1).fit(blobs)
@@ -268,7 +265,8 @@ def cluster_blobs(img_path, suffix=None):
 
     """
     if not cluster:
-        raise ImportError(_SKLEARN_ERR)
+        raise ImportError(
+            config.format_import_err("scikit-learn", task="blob clustering"))
     
     mod_path = img_path
     if suffix is not None:

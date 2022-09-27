@@ -1145,10 +1145,11 @@ def transpose_img(
     rotate = rotate_num
     _logger.info(
         "Image transformation settings: plane: %s, num of rotations: %s, "
-        "target_size: %s, flip axis: %s",
-        plane, rotate, target_size, flip)
+        "rotate_deg: %s, target_size: %s, target_size_res: %s, flip axis: %s",
+        plane, rotate, rotate_deg, target_size, target_size_res, flip)
     if ((not plane or plane == config.PLANE[0]) and not rotate and
-            not rotate_deg and target_size is None and flip is None):
+            not rotate_deg and target_size is None and target_size_res is None
+            and flip is None):
         _logger.info("No transformations to apply, skipping")
         return img_sitk
     
@@ -1184,7 +1185,7 @@ def transpose_img(
             # or flipped rotation (eg 90 or 180 deg)
             dtype = transposed.dtype
             transposed = cv_nd.make_isotropic(
-                transposed, res=spacing).astype(dtype)
+                transposed, res=spacing, order=order).astype(dtype)
             iso_factor = cv_nd.calc_isotropic_factor(res=spacing)
             spacing = np.divide(spacing, iso_factor)
             origin = np.divide(origin, iso_factor)
@@ -1192,8 +1193,8 @@ def transpose_img(
         # rotate by arbitrary degrees along each set of axes
         for rot in rotate_deg:
             # rotation arguments given as dict
-            if "order" not in rot:
-                # default to use given order
+            if "order" not in rot or rot["order"] is None:
+                # default to use order from main parameter
                 rot["order"] = order
             transposed = cv_nd.rotate_nd(transposed, **rot)
             

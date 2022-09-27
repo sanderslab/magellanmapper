@@ -1059,7 +1059,7 @@ def calc_isotropic_factor(
 
 def make_isotropic(
         roi: np.ndarray, scale: Union[float, Sequence[float]] = 1,
-        res: Optional[Sequence[float]] = None
+        res: Optional[Sequence[float]] = None, **kwargs
 ) -> np.ndarray:
     """Make an array isotropic.
     
@@ -1071,6 +1071,7 @@ def make_isotropic(
         res: Resolutions in the same order as for ``scale``. Default to None,
             in which case :attr:`magmap.settings.config.resolutions` will be
             used instead.
+        kwargs: Additional arguments to :meth:`rescale_resize`.
 
     Returns:
         Isotropic version of ``roi``.
@@ -1081,6 +1082,7 @@ def make_isotropic(
     isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
     libmag.printv("original ROI shape: {}, isotropic: {}"
                   .format(roi.shape, isotropic_shape))
+    
     mode = "reflect"
     if np.any(np.array(roi.shape) == 1):
         # may crash with floating point exception if 1px thick (see
@@ -1088,7 +1090,11 @@ def make_isotropic(
         # causes multiprocessing Pool to hang since the exception isn't
         # raised), so need to change mode in this case
         mode = "edge"
-    return rescale_resize(roi, isotropic_shape, preserve_range=True, mode=mode)
+    
+    # additional args override defaults
+    args = dict(preserve_range=True, mode=mode)
+    args.update(kwargs)
+    return rescale_resize(roi, isotropic_shape, **args)
 
 
 def rescale_resize(
@@ -1107,7 +1113,7 @@ def rescale_resize(
         preserve_range: True to preserve the range of ``roi``; defaults to
             False.
         kwargs: Additional arguments passed to :meth:`transform.rescale`
-            or :meth:`transform.resize`.
+            or :meth:`transform.resize`, such as ``order`` for label images.
 
     Returns:
         Rescaled array.

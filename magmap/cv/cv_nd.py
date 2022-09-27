@@ -1121,6 +1121,11 @@ def rescale_resize(
     }
     args.update(kwargs)
     
+    if "order" in args and args["order"] == 0 and "anti_aliasing" not in args:
+        # default to turn off anti-aliasing when order is 0 to preserve the
+        # exact original values
+        args["anti_aliasing"] = False
+    
     if libmag.is_seq(target_size):
         # resize the image to a custom shape
         args["output_shape"] = target_size

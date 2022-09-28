@@ -401,8 +401,9 @@ def _mirror_label_ids(
     
     Args:
         label_ids: Single ID or sequence of IDs.
-        combine: True to return a list of ``label_ids`` along with
-            their mirrored IDs; defaults to False to return on the mirrored IDs.
+        combine: True to return a list of ``label_ids`` along with their
+            mirrored IDs. Defaults to False, where only the mirrored IDs
+            are returned.
 
     Returns:
         A single mirrored ID if ``label_ids`` is one ID and ``combine`` is
@@ -410,12 +411,18 @@ def _mirror_label_ids(
 
     """
     if libmag.is_seq(label_ids):
+        # sequence of IDs
         mirrored = [-1 * n for n in label_ids]
         if combine:
-            mirrored = list(label_ids).extend(mirrored)
+            # combine mirrored with original IDs
+            labels = list(label_ids)
+            labels.extend(mirrored)
+            mirrored = labels
     else:
+        # single ID
         mirrored = -1 * label_ids
         if combine:
+            # combine IDs
             mirrored = [label_ids, mirrored]
     return mirrored
 

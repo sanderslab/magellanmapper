@@ -79,20 +79,20 @@ class DiscreteColormap(colors.ListedColormap):
                 mapped to each unique label. Defults to None, in which case 
                 no colormap will be generated.
             alpha: Transparency leve; defaults to 150 for semi-transparent.
-            index_direct: True if the colormap will be indexed directly, which 
-                assumes that the labels will serve as indexes to the colormap 
-                and should span sequentially from 0, 1, 2, ...; defaults to 
-                True. If False, a colormap will be generated for the full 
-                range of integers between the lowest and highest label values, 
+            index_direct: True if the colormap will be indexed directly, which
+                assumes that the labels will serve as indexes to the colormap
+                and should span sequentially from 0, 1, 2, ...; defaults to
+                True. If False, a colormap will be generated for the full
+                range of integers between the lowest and highest label values,
                 inclusive, with a :obj:`colors.BoundaryNorm`, which may
                 incur performance cost.
             max_val: Maximum value for random numbers; defaults to 255.
-            background: Tuple of (backround_label, (R, G, B, A)), where 
-                background_label is the label value specifying the background, 
-                and RGBA value will replace the color corresponding to that 
+            background: Tuple of ``(background_label, (R, G, B, A))``, where
+                ``background_label`` is the label value specifying the
+                background, and ``RGBA`` will replace the color for that
                 label. Defaults to None.
-            dup_for_neg: True to duplicate positive labels as negative 
-                labels to recreate the same set of labels as for a 
+            dup_for_neg: True to duplicate positive labels as negative
+                labels to recreate the same set of labels as for a
                 mirrored labels map. Defaults to False.
             symmetric_colors: True to make symmetric colors, assuming
                 symmetric labels centered on 0; defaults to False.
@@ -108,7 +108,7 @@ class DiscreteColormap(colors.ListedColormap):
         if labels is None: return
         labels_unique = np.unique(labels)
         if dup_for_neg and np.sum(labels_unique < 0) == 0:
-            # for labels that are only >= 0, duplicate the pos portion 
+            # for labels that are only >= 0, duplicate the pos portion
             # as neg so that images with or without negs use the same colors
             labels_unique = np.append(
                 -1 * labels_unique[labels_unique > 0][::-1], labels_unique)
@@ -235,17 +235,17 @@ def discrete_colormap(
         max_val: Union[int, float] = 255, min_any: Union[int, float] = 0,
         symmetric_colors: bool = False, dup_offset: int = 0, jitter: int = 0,
         mode: "DiscreteModes" = DiscreteModes.RANDOMN) -> np.ndarray:
-    """Make a discrete colormap using :attr:``config.colors`` as the 
+    """Make a discrete colormap using :attr:``config.colors`` as the
     starting colors and filling in the rest with randomly generated RGB values.
     
     Args:
         num_colors: Number of discrete colors to generate.
         alpha: Transparency level, from 0-255; defaults to 255.
-        prioritize_default: If True, the default colors from 
-            :attr:``config.colors`` will replace the initial colormap elements; 
-            defaults to True. Alternatively, `cn` can be given to use 
+        prioritize_default: If True, the default colors from
+            :attr:``config.colors`` will replace the initial colormap elements;
+            defaults to True. Alternatively, `cn` can be given to use
             the "CN" color spec instead.
-        seed: Random number seed; defaults to None, in which case no seed 
+        seed: Random number seed; defaults to None, in which case no seed
             will be set.
         min_val: Minimum value for random numbers; defaults to 0.
         max_val: Maximum value for random numbers; defaults to 255.
@@ -268,10 +268,10 @@ def discrete_colormap(
             :obj:`DiscreteModes.RANDOMN` mode.
     
     Returns:
-        2D Numpy array in the format ``[[R, G, B, alpha], ...]`` on a 
-        scale of 0-255. This colormap will need to be converted into a 
-        Matplotlib colormap using ``LinearSegmentedColormap.from_list`` 
-        to generate a map that can be used directly in functions such 
+        2D Numpy array in the format ``[[R, G, B, alpha], ...]`` on a
+        scale of 0-255. This colormap will need to be converted into a
+        Matplotlib colormap using ``LinearSegmentedColormap.from_list``
+        to generate a map that can be used directly in functions such
         as ``imshow``.
     
     """
@@ -326,13 +326,6 @@ def discrete_colormap(
             cmap[below_offset, axes] = np.multiply(
                 cmap[below_offset, axes], max_val / min_any)
     
-    if symmetric_colors:
-        # invert latter half onto former half, assuming that corresponding
-        # labels are mirrored (eg -5, 3, 0, 3, 5), with background centered as 0
-        cmap_len = len(cmap)
-        mid = cmap_len // 2
-        cmap[:mid] = cmap[:cmap_len-mid-1:-1] + dup_offset
-    cmap[:, -1] = alpha  # set transparency
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones
         colors_default = config.colors
@@ -342,6 +335,16 @@ def discrete_colormap(
                 [colors.to_rgb("C{}".format(i)) for i in range(10)], 255)
         end = min((num_colors, len(colors_default)))
         cmap[:end, :3] = colors_default[:end]
+    
+    if symmetric_colors:
+        # invert latter half onto former half, assuming that corresponding
+        # labels are mirrored (eg -5, 3, 0, 3, 5), with background centered as 0
+        cmap_len = len(cmap)
+        mid = cmap_len // 2
+        cmap[:mid] = cmap[:cmap_len-mid-1:-1] + dup_offset
+    
+    cmap[:, -1] = alpha  # set transparency
+    
     return cmap
 
 

@@ -597,7 +597,7 @@ class ImageOverlayer:
             labels_annots: Optional[Dict[int, "axes.Axes.Text"]] = None,
             over_label: bool = True,
             cmap: Optional["colormaps.DiscreteColormap"] = None,
-            bbox_kwargs: Dict[str, Any] = None):
+            kwargs: Dict[str, Any] = None):
         """Annotate labels with acronyms.
         
         Args:
@@ -613,8 +613,8 @@ class ImageOverlayer:
                 useful for label edges.
             cmap: Discrete colormap to color the label based on its ID.
                 Defaults to None, in which case the color will be black.
-            bbox_kwargs: Dictionary of additional arguments for the bounding
-                box of each label. Defaults to None.
+            kwargs: Dictionary of additional arguments for the text artist.
+                Defaults to None.
 
         """
         if self.labels_annots:
@@ -657,16 +657,20 @@ class ImageOverlayer:
         # set args for artist bounding box
         bbox = dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
                     linewidth=0, alpha=0.3)
-        if bbox_kwargs is not None:
-            bbox.update(bbox_kwargs)
+        if kwargs is not None and "bbox" in kwargs:
+            # update from kwargs and remove from kwargs copy
+            bbox.update(kwargs["bbox"])
+            kwargs = {k: v for k, v in kwargs.items() if k != "bbox"}
         
+        args = dict(
+            fontsize="x-small", clip_on=True, horizontalalignment="center",
+            verticalalignment="center", bbox=bbox, transform=self._transform)
         for label_id, label in labels.items():
             # small annotations with subtle background in case label is dark
             color = cmap(cmap.convert_img_labels(label_id)) if cmap else "k"
-            text = self.ax.text(
-                *label, color=color, fontsize="x-small", clip_on=True,
-                horizontalalignment="center", verticalalignment="center",
-                bbox=bbox, transform=self._transform)
+            args["color"] = color
+            args.update(kwargs)
+            text = self.ax.text(*label, **args)
             self.labels_annots[label_id] = text
     
     def remove_labels(self):

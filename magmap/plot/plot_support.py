@@ -1260,7 +1260,7 @@ def save_fig(
     Dots per inch is set by :attr:`config.plot_labels[config.PlotLabels.DPI]`.
     Backs up any existing file before saving. If the found extension is
     not for a supported format for the figure's backend, the figure is not
-    saved.
+    saved. Any non-existing parents folders will be created.
 
     Args:
         path: Base path to use, with or without extension.
@@ -1327,6 +1327,9 @@ def save_fig(
     if backup:
         # backup any existing file
         libmag.backup_file(plot_path)
+    
+    # make parent directories if necessary
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     
     fig.savefig(plot_path, **kwargs)
     _logger.info(f"Exported figure to {plot_path}")

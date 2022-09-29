@@ -830,8 +830,9 @@ class PlotEditor:
             PlotEditor.change_brightness_contrast(
                 plot_ax_img, brightness, contrast)
         if alpha is not None:
-            # adjust opacity
+            # adjust and store opacity
             plot_ax_img.ax_img.set_alpha(alpha)
+            plot_ax_img.alpha = alpha
         return plot_ax_img
 
     def update_alpha_blend(
@@ -867,7 +868,7 @@ class PlotEditor:
             maximum: float = np.nan, brightness: Optional[float] = None,
             contrast: Optional[float] = None, alpha: Optional[float] = None,
             alpha_blend: Optional[float] = None) -> PlotAxImg:
-        """Update dislayed image settings.
+        """Update displayed image settings.
 
         Args:
             imgi: Index of image group.

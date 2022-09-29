@@ -2,12 +2,13 @@
 # Author: David Young, 2018, 2020
 """Shared plotting functions with the MagellanMapper package.
 """
-
+import pathlib
 from collections import OrderedDict
 import math
 import os
 import warnings
-from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, \
+    Union
 
 import numpy as np
 from matplotlib import backend_bases, gridspec, pyplot as plt
@@ -285,6 +286,42 @@ class ImageOverlayer:
         #: Labels annotation text artists; defaults to empty list.
         self.labels_annots: List["axes.Axes.Text"] = []
         
+        #: Matplotlib transform object.
+        self._transform: Optional[transforms.Transform] = None
+    
+    def setup_transform(
+            self, img2d: np.ndarray, rotate: Optional[int] = None
+    ) -> transforms.Transform:
+        """Set up transformation from config settings.
+        
+        Args:
+            img2d: 2D+/-channel array.
+            rotate: Counter-clockwise rotation in degrees.
+
+        Returns:
+            :attr:`self._transform` for chained calls.
+
+        """
+        if rotate is None:
+            # rotate in increments of 90 deg counter-clockwise
+            rotate_n = config.transform[config.Transforms.ROTATE]
+            rotate = rotate_n * 90 if rotate_n else 0
+            
+            # rotate by specific deg counter-clockwise
+            rotate_deg = config.transform[config.Transforms.ROTATE_DEG]
+            if rotate_deg:
+                rotate += rotate_deg
+        
+        # rotate around the center of the image in data coords
+        shape = np.divide(img2d.shape[:2], 2)
+        self._transform = transforms.Affine2D().rotate_deg_around(
+            *shape[::-1], rotate)
+        
+        # convert to display coordinates
+        self._transform += self.ax.transData
+        
+        return self._transform
+    
     def imshow_multichannel(
             self, img2d: np.ndarray,
             channel: Optional[Sequence[int]],
@@ -350,11 +387,7 @@ class ImageOverlayer:
                 # if alphas not explicitly set per channel, make all channels more
                 # translucent at a fixed value that is higher with more channels
                 alpha /= np.sqrt(num_chls + 1)
-    
-        # transform image based on config parameters
-        rotate = config.transform[config.Transforms.ROTATE]
-        img2d = cv_nd.rotate90(img2d, rotate, multichannel=multichannel)
-    
+        
         for chl in channels:
             if rgb:
                 # Matplotlib requires 0-1 float or 0-255 int range
@@ -383,6 +416,12 @@ class ImageOverlayer:
                     alpha=alpha_plane, vmin=vmin_plane, vmax=vmax_plane, 
                     origin=self.origin, interpolation=interpolation)
             img.append(img_chl)
+        
+        # apply transformation such as rotation to main axes components
+        if self._transform is None:
+            self.setup_transform(img2d)
+        for n in self.ax.images + self.ax.lines + self.ax.collections:
+            n.set_transform(self._transform)
         
         # flip horizontally or vertically by inverting axes
         if config.transform[config.Transforms.FLIP_HORIZ]:
@@ -612,7 +651,7 @@ class ImageOverlayer:
                 *label, color="k", fontsize="x-small", clip_on=True,
                 horizontalalignment="center", verticalalignment="center",
                 bbox=dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
-                          linewidth=0, alpha=0.3))
+                          linewidth=0, alpha=0.3), transform=self._transform)
             self.labels_annots.append(text)
     
     def remove_labels(self):
@@ -1212,43 +1251,72 @@ def setup_images_for_plane(plane, arrs_3d):
     return arrs_3d_tr, aspect, origin, scaling
 
 
-def save_fig(path, ext=None, modifier="", fig=None):
+def save_fig(
+        path: Union[str, pathlib.Path], ext: Optional[str] = None,
+        modifier: str = "", fig: Optional["figure.Figure"] = None,
+        backup: bool = True, **kwargs
+) -> Optional[str]:
     """Save figure with support for backup and alternative file formats.
     
     Dots per inch is set by :attr:`config.plot_labels[config.PlotLabels.DPI]`.
     Backs up any existing file before saving. If the found extension is
     not for a supported format for the figure's backend, the figure is not
-    saved.
+    saved. Any non-existing parents folders will be created.
 
     Args:
-        path (str): Base path to use.
-        ext (str): File format extension for saving, without period. Defaults
-            to None to use the extension in ``path`` if available, or ``png``
-            ``path`` does not have an extension. If extension is in
-            :const:`config.FORMATS_3D`, the figure will not be saved.
-        modifier (str): Modifier string to append before the extension;
+        path: Base path to use, with or without extension.
+        ext: File format extension for saving, with or without period. Defaults
+            to None, in which case any extension in ``path`` is used. If no
+            extension is found, :const:`magmap.settings.config.DEFAULT_SAVEFIG`
+            is used. If the extension is in :const:`config.FORMATS_3D` or
+            not supported by Matplotlib, the figure will not be saved.
+        modifier: Modifier string to append before the extension;
             defaults to an empty string.
-        fig (:obj:`matplotlib.figure.Figure`): Figure; defaults to None
-            to use the current figure.
+        fig: Figure; defaults to None to use the current figure.
+        kwargs: Additional arguments to :meth:`matplotlib.figure.savefig`.
+        backup: True (default) to back up any existing file before saving.
     
     Returns:
-        str: The output path, or None if the file was not saved.
+        The output path, or None if the file was not saved.
     
     """
+    # convert potential pathlib path to str
+    path = str(path)
+    
+    # set up additional args to savefig
+    if kwargs is None:
+        kwargs = {}
+    if "dpi" not in kwargs:
+        # save the current or given figure with config DPI
+        kwargs["dpi"] = config.plot_labels[config.PlotLabels.DPI]
+    
     if fig is None:
         # default to using the current figure
         fig = plt.gcf()
     
+    # set up output path
+    if ext is None:
+        # extract extension from path if not given directly
+        path_no_ext, ext = os.path.splitext(path)
+        if ext:
+            # use path without extension
+            path = path_no_ext
+        else:
+            # default to PNG
+            ext = config.DEFAULT_SAVEFIG
+    if ext.startswith("."):
+        # remove preceding period
+        ext = ext[1:]
+    if path.endswith("."):
+        # remove ending period since it will be added later
+        path = path[:-1]
+    
     if ext in config.FORMATS_3D:
+        # skip saving if 3D extension
         _logger.warn(
             f"Extension '{ext}' is a 3D type, will skip saving 2D figure")
         return
     
-    # set up output path and backup any existing file
-    if ext is None:
-        # extract extension from path if not given directly, defaulting to PNG
-        ext = os.path.splitext(path)[1]
-        ext = ext[1:] if ext else config.DEFAULT_SAVEFIG
     if ext not in fig.canvas.get_supported_filetypes().keys():
         # avoid saving if the figure backend does not support the output format
         _logger.warn(
@@ -1256,13 +1324,15 @@ def save_fig(path, ext=None, modifier="", fig=None):
             f"save extension")
         return None
     
-    # backup any existing file
-    plot_path = "{}{}.{}".format(os.path.splitext(path)[0], modifier, ext)
-    libmag.backup_file(plot_path)
+    plot_path = f"{path}{modifier}.{ext}"
+    if backup:
+        # backup any existing file
+        libmag.backup_file(plot_path)
     
-    # save the current or given figure with config DPI
-    dpi = config.plot_labels[config.PlotLabels.DPI]
-    fig.savefig(plot_path, dpi=dpi)
+    # make parent directories if necessary
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    
+    fig.savefig(plot_path, **kwargs)
     _logger.info(f"Exported figure to {plot_path}")
     return plot_path
 

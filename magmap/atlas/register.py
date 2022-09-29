@@ -465,6 +465,17 @@ def register(
     if name_prefix is None:
         name_prefix = fixed_file
     settings = config.atlas_profile
+    rescale = config.atlas_profile["rescale"]
+    
+    # set up rotation by arbitrary degrees
+    rotate = config.atlas_profile["rotate"]
+    rotate_deg = None
+    if rotate and rotate["rotation"]:
+        # convert profile dict to kwargs for transpose fn; skip order field
+        # since it depends on whether image is a label type
+        rotate_deg = [
+            dict(angle=a, axis=x, resize=rotate["resize"])
+            for a, x in rotate["rotation"]]
     
     # load fixed image, assumed to be experimental image
     chl = config.channel[0] if config.channel else 0
@@ -492,10 +503,12 @@ def register(
     if not moving_labels_suffix:
         moving_labels_suffix = [config.RegNames.IMG_LABELS.value]
     if libmag.is_seq(moving_labels_suffix):
+        # load all label images and set first as the labels_img
         moving_imgs = sitk_io.load_registered_imgs(
             moving_img_path, moving_labels_suffix, get_sitk=True)
         labels_img = tuple(moving_imgs.values())[0]
     else:
+        # load single labels image
         labels_img = sitk_io.load_registered_img(
             moving_img_path, moving_labels_suffix, get_sitk=True)
         moving_imgs = {moving_labels_suffix: labels_img}
@@ -512,7 +525,9 @@ def register(
     if moving_mask_suffix:
         moving_mask = sitk_io.load_registered_img(
             name_prefix, moving_mask_suffix, get_sitk=True)
-        moving_mask = atlas_refiner.transpose_img(moving_mask)
+        moving_mask = atlas_refiner.transpose_img(
+            moving_mask, target_size_res=rescale, rotate_deg=rotate_deg,
+            order=0)
     
     truncate_labels = settings["truncate_labels"]
     if truncate_labels is not None:
@@ -525,14 +540,18 @@ def register(
     
     for key, img in moving_imgs.items():
         _logger.info("Transposing image: %s", key)
-        moving_imgs[key] = atlas_refiner.transpose_img(img)
+        moving_imgs[key] = atlas_refiner.transpose_img(
+            img, target_size_res=rescale, rotate_deg=rotate_deg, order=0)
     
     # transform and preprocess moving images
 
     # transpose moving images
-    # TODO: transpose rest of moving_imgs together
-    moving_img = atlas_refiner.transpose_img(moving_img)
-    labels_img = atlas_refiner.transpose_img(labels_img)
+    # TODO: track all images in moving_imgs and transpose together for
+    #   simplicity and to avoid redundant transformations
+    moving_img = atlas_refiner.transpose_img(
+        moving_img, target_size_res=rescale, rotate_deg=rotate_deg)
+    labels_img = atlas_refiner.transpose_img(
+        labels_img, target_size_res=rescale, rotate_deg=rotate_deg, order=0)
 
     # get Numpy arrays of moving images for preprocessing
     moving_img_np = sitk.GetArrayFromImage(moving_img)
@@ -551,14 +570,6 @@ def register(
         labels_img_np, moving_img_np, _ = cv_nd.crop_to_labels(
             labels_img_np, moving_img_np, mask, 0, 0)
 
-    rotate = config.atlas_profile["rotate"]
-    if rotate and rotate["rotation"] is not None:
-        # more granular 3D rotation than in prior transposition
-        moving_img_np = transformer.rotate_img(moving_img_np, rotate)
-        labels_img_np = transformer.rotate_img(labels_img_np, rotate, 0)
-        if moving_mask_np is not None:
-            moving_mask_np = transformer.rotate_img(moving_mask_np, rotate, 0)
-
     # convert images back to sitk format
     labels_img = sitk_io.replace_sitk_with_numpy(labels_img, labels_img_np)
     moving_img = sitk_io.replace_sitk_with_numpy(moving_img, moving_img_np)
@@ -568,14 +579,6 @@ def register(
         moving_mask = sitk_io.replace_sitk_with_numpy(
             moving_mask, moving_mask_np)
         moving_imgs["mask"] = moving_mask
-
-    rescale = config.atlas_profile["rescale"]
-    if rescale:
-        # rescale images as a factor of their spacing in case the scaling
-        # transformation in the affine-based registration is insufficient
-        moving_img_spacing = np.multiply(moving_img.GetSpacing(), rescale)
-        for img in moving_imgs.values():
-            img.SetSpacing(moving_img_spacing)
 
     thresh_mov = settings["atlas_threshold"]
     if transformix:

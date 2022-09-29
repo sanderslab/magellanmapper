@@ -23,7 +23,6 @@
 #### GUI
 
 - More preferences are saved, such as the figure save location and ROI Editor layout (#138, #201)
-- "Blend" option in the image adjustment panel to visualize alignment in overlaid images
 - Drag and remove loaded profiles in the Profiles tab table
 - "Help" buttons added to open the online documentation (#109)
 - Default confirmation labels can be set before detection (#115)
@@ -34,12 +33,15 @@
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
 - Atlas Editor planes can be reordered or turned off (#180)
 - New viewer that displays each blob separately to verify blob classifications (#193)
+- Image adjustment
+  - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89)
+  - Image adjustment channels are radio buttons for easier selection (#212)
+  - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
 - Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 
 - Fixed error window when moving the atlas level slider before a 3D image has been rendered (#139)
 - Fixed saving blobs in an ROI using the first displayed ROI or after moving the sliders without redrawing (#139)
-- Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
 - Fixed browsing for files or directories in some environments (#201)
 - Fixed clearing the import path (#201)
 
@@ -49,11 +51,12 @@
 - the `--transform interpolation=<n>` configures the type of interpolation when resizing images during stack export (#127)
 - Any axis can be flipped through `--transform flip=<axis>`, where `axis = 0` for the z-axis, 1 for the y-axis, and 2 for the x-axis (#147)
 - Density/heat maps can be specified through `--reg_suffixes density=<suffix>` (#129)
-- The atlas transformer handles more transformations, such as rotation to any angle, flipping along any axis, and resizing (#195)
 - Write point files for corresponding-point-based registration (#195)
 - Fixed to only remove the final extension from image paths, and paths given by the `--prefix <path>` CLI argument do not undergo any stripping (#115)
 
 #### Atlas refinement
+
+- The atlas transformer (`atlas_refiner.transpose_img`) provides a more comprehensive set of typical transformations before atlas refinement or registration, such as rotation to any angle, flipping along any axis, and resizing (#195, #214)
 
 #### Atlas registration
 
@@ -69,11 +72,13 @@
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
 - Added a slider to choose the fraction of 3D blobs to display (#121)
 - Improved blob size slider range and readability (#121)
-- Blob columns can be customized, including excluding or reordering columns (#133)
+- Blob columns can be customized, including excluding or reordering columns (#133, #216)
+- Existing blob archives are backed up before saving (#216) 
 - Fixed to scale blobs' radii when viewing blobs detections on a downsampled image (#121)
 - Fixed getting atlas colors for blobs for ROIs inside the main image (#121)
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
 - Fixed verifying and resaving blobs
+- Fixed loading blobs in the GUI with no blobs in the ROI or channels selected (#216)
 
 ##### Colocalization
 
@@ -92,7 +97,7 @@
 #### I/O
 
 - Images can be viewed as RGB(A) using the `RGB` button or the `--rgb` CLI argument (#142)
-- Some TIF files can be loaded directly, without importing the file first (#90)
+- Some TIF files can be loaded directly, without importing the file first (#90, #213)
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
 - Better 2D image support
@@ -112,6 +117,7 @@
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
   - `--plot_labels vspan_col=<col> vspan_format=<str>`: column denoting vertical span groups and string format for them, respectively (#135, 137)
+- The figure save wrapper (`plot_support.save_fig`) is more flexible (#215)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 

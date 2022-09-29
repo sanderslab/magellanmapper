@@ -832,9 +832,10 @@ class Visualization(HasTraits):
             Item("_imgadj_name", label="Image",
                  editor=CheckListEditor(
                      name="object._imgadj_names.selections")),
-            Item("_imgadj_chls", label="Channel",
-                 editor=CheckListEditor(
-                     name="object._imgadj_chls_names.selections")),
+            # use EnumEditor for radio buttons
+            Item("_imgadj_chls", label="Channel", style="custom",
+                 editor=EnumEditor(
+                     name="object._imgadj_chls_names.selections", cols=8)),
         ),
         HGroup(
             Item("_imgadj_min", label="Minimum", editor=RangeEditor(

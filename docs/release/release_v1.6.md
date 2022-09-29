@@ -23,7 +23,6 @@
 #### GUI
 
 - More preferences are saved, such as the figure save location and ROI Editor layout (#138, #201)
-- "Blend" option in the image adjustment panel to visualize alignment in overlaid images
 - Drag and remove loaded profiles in the Profiles tab table
 - "Help" buttons added to open the online documentation (#109)
 - Default confirmation labels can be set before detection (#115)
@@ -34,12 +33,15 @@
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
 - Atlas Editor planes can be reordered or turned off (#180)
 - New viewer that displays each blob separately to verify blob classifications (#193)
+- Image adjustment
+  - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89)
+  - Image adjustment channels are radio buttons for easier selection (#212)
+  - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
 - Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 
 - Fixed error window when moving the atlas level slider before a 3D image has been rendered (#139)
 - Fixed saving blobs in an ROI using the first displayed ROI or after moving the sliders without redrawing (#139)
-- Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
 - Fixed browsing for files or directories in some environments (#201)
 - Fixed clearing the import path (#201)
 

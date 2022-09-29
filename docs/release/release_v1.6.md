@@ -94,7 +94,7 @@
 #### I/O
 
 - Images can be viewed as RGB(A) using the `RGB` button or the `--rgb` CLI argument (#142)
-- Some TIF files can be loaded directly, without importing the file first (#90)
+- Some TIF files can be loaded directly, without importing the file first (#90, #213)
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
 - Better 2D image support

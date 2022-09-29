@@ -115,6 +115,7 @@
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
   - `--plot_labels vspan_col=<col> vspan_format=<str>`: column denoting vertical span groups and string format for them, respectively (#135, 137)
+- The figure save wrapper (`plot_support.save_fig`) is more flexible (#215)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 

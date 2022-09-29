@@ -51,11 +51,12 @@
 - the `--transform interpolation=<n>` configures the type of interpolation when resizing images during stack export (#127)
 - Any axis can be flipped through `--transform flip=<axis>`, where `axis = 0` for the z-axis, 1 for the y-axis, and 2 for the x-axis (#147)
 - Density/heat maps can be specified through `--reg_suffixes density=<suffix>` (#129)
-- The atlas transformer handles more transformations, such as rotation to any angle, flipping along any axis, and resizing (#195)
 - Write point files for corresponding-point-based registration (#195)
 - Fixed to only remove the final extension from image paths, and paths given by the `--prefix <path>` CLI argument do not undergo any stripping (#115)
 
 #### Atlas refinement
+
+- The atlas transformer (`atlas_refiner.transpose_img`) provides a more comprehensive set of typical transformations before atlas refinement or registration, such as rotation to any angle, flipping along any axis, and resizing (#195, #214)
 
 #### Atlas registration
 

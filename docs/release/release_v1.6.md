@@ -72,11 +72,13 @@
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
 - Added a slider to choose the fraction of 3D blobs to display (#121)
 - Improved blob size slider range and readability (#121)
-- Blob columns can be customized, including excluding or reordering columns (#133)
+- Blob columns can be customized, including excluding or reordering columns (#133, #216)
+- Existing blob archives are backed up before saving (#216) 
 - Fixed to scale blobs' radii when viewing blobs detections on a downsampled image (#121)
 - Fixed getting atlas colors for blobs for ROIs inside the main image (#121)
 - Fixed blob segmentation for newer versions of Scikit-image (#91)
 - Fixed verifying and resaving blobs
+- Fixed loading blobs in the GUI with no blobs in the ROI or channels selected (#216)
 
 ##### Colocalization
 

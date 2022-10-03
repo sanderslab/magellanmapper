@@ -23,7 +23,7 @@ frozenlist==1.2.0
 future==0.18.2
 idna==3.3
 idna-ssl==1.1.0
-imageio==2.15.0
+imageio==2.22.1
 importlib-metadata==4.8.3
 importlib-resources==5.4.0
 javabridge==1.0.19.post4+gbebed64

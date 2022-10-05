@@ -77,66 +77,83 @@ kStatsPathOut <- "vols_stats" # output stats
 config.env <- new.env()
 
 
+#' Fit data with the given regression model.
+#'
+#' @param model Model to use, corresponding to one of kModel.
+#' @param vals Main independent variable.
+#' @param genos Genotypes vector.
+#' @param sides Vector corresponding to the side of vals, eg left or right.
+#' @param ids Vector of sample IDs; defaults to NULL.
+#'
+#' @return Coefficients of the summary statistics. The first row of coefficients 
+#'   is removed if it is a non-intercept row. The colums are assumed to have 
+#'   effect size in the 2nd column and p-value in the 4th.
 fitModel <- function(model, vals, genos, sides, ids=NULL) {
-  # Fit data with the given regression model.
-  #
-  # Args:
-  #   model: Model to use, corresponding to one of kModel.
-  #   vals: Main independent variable.
-  #   genos: Genotypes vector.
-  #   sides: Vector corresponding to the side of vals, eg left or right.
-  #   ids: Vector of sample IDs; defaults to NULL.
-  #
-  # Returns:
-  #   Coefficients of the summary statistics. The first row of coefficients 
-  #   is removed if it is a non-intercept row. The colums are assumed to have 
-  #   effect size in the 2nd column and p-value in the 4th.
   
   result <- NULL
   col.effect <- "Estimate"
   num.sides <- length(unique(sides))
-  if (model == kModel[1]) {
-    # logistic regression
-    if (num.sides > 1) {
-      fit <- glm(genos ~ vals * sides, family=binomial)
-    } else {
-      fit <- glm(genos ~ vals, family=binomial)
-    }
-    result <- summary.glm(fit)$coefficients
-    # remove first ("non-intercept") row
-    result <- result[-(1:1), ]
-  } else if (model == kModel[2]) {
-    # linear regression
-    # TODO: see whether need to factorize genos
-    fit <- lm(vals ~ genos * sides)
-    result <- summary.lm(fit)$coefficients
-    # remove first ("non-intercept") row
-    result <- result[-(1:1), ]
-  } else if (model == kModel[3]) {
-    # generalized estimating equations
-    # TODO: fix model prob "fitted value very close to 1" error
-    fit <- gee::gee(
-      genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
-    result <- summary(fit)$coefficients
-  } else if (model == kModel[4]) {
-    # ordered logistic regression
-    vals <- scale(vals)
-    genos <- factor(genos, levels=kGenoLevels)
-    fit <- tryCatch({
-      fit <- MASS::polr(genos ~ vals * sides, Hess=TRUE)
-      result <- coef(summary(fit))
-      # calculate p-vals and incorporate into coefficients
-      p.vals <- pnorm(abs(result[, "t value"]), lower.tail=FALSE) * 2
-      result <- cbind(result, "p value"=p.vals)
-    },
-      error=function(e) {
-        print(paste("Could not calculate ordered logistic regression", 
-              e, "skipping"))
+  result <- tryCatchLog::tryCatchLog({
+    if (model == kModel[1]) {
+      # logistic regression
+      if (num.sides > 1) {
+        fit <- glm(genos ~ vals * sides, family=binomial)
+      } else {
+        fit <- glm(genos ~ vals, family=binomial)
       }
-    )
-  } else {
-    cat("Sorry, model", model, "not found\n")
-  }
+      result <- summary.glm(fit)$coefficients
+      # remove first ("non-intercept") row
+      result <- result[-(1:1), ]
+      
+    } else if (model == kModel[2]) {
+      # linear regression
+      # TODO: see whether need to factorize genos
+      fit <- lm(vals ~ genos * sides)
+      result <- summary.lm(fit)$coefficients
+      # remove first ("non-intercept") row
+      result <- result[-(1:1), ]
+      
+    } else if (model == kModel[3]) {
+      # generalized estimating equations
+      # TODO: fix model prob "fitted value very close to 1" error
+      fit <- gee::gee(
+        genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
+      result <- summary(fit)$coefficients
+      
+    } else if (model == kModel[4]) {
+      # ordered logistic regression
+      vals <- scale(vals)
+      genos <- factor(genos, levels=kGenoLevels)
+      fit <- tryCatch({
+        fit <- MASS::polr(genos ~ vals * sides, Hess=TRUE)
+        result <- coef(summary(fit))
+        # calculate p-vals and incorporate into coefficients
+        p.vals <- pnorm(abs(result[, "t value"]), lower.tail=FALSE) * 2
+        result <- cbind(result, "p value"=p.vals)
+      },
+        error=function(e) {
+          print(paste("Could not calculate ordered logistic regression", 
+                e, "skipping"))
+        }
+      )
+      
+    } else {
+      cat("Sorry, model", model, "not found\n")
+    }
+    
+    # return result from try block
+    result <- as.data.frame(result)
+    print(result)
+    result
+    
+  }, error=function(e) {
+    message("Unable to generate stat, skipping")
+    return(NULL)
+  }, finally={
+  }, include.full.call.stack=FALSE, include.compact.call.stack=FALSE)
+  
+  # return if no stats
+  if (is.null(result)) return(NULL)
   
   # basic stats data frame in format for filterStats
   coef.tab <- setupBasicStats()

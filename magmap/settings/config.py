@@ -388,6 +388,8 @@ class ClassifierKeys(Enum):
     """Classifier keys."""
     #: Path to pre-trained classifier model.
     MODEL = auto()
+    #: Classification flags (confirmed column) to include.
+    INCLUDE = auto()
 
 
 #: Classifier settings.

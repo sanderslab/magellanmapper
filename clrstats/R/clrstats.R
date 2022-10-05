@@ -155,19 +155,23 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   # return if no stats
   if (is.null(result)) return(NULL)
   
-  # basic stats data frame in format for filterStats
-  coef.tab <- setupBasicStats()
-  effect <- result[[col.effect]]
-  coef.tab$Value <- c(effect)
+  # basic stats data frame in format for filterStats; default to save only
+  # first row since rest of stats expect a single row
+  # TODO: allow saving all rows
+  rows <- 1
+  coef.tab <- setupBasicStats(length(rows))
+  effect <- result[rows, col.effect]
+  coef.tab$Value <- effect
   stderr <- "Std. Error"
+  
   if (is.element(stderr, names(result))) {
     # use SEM for the "CI" values
-    ci <- result[[stderr]]
-    coef.tab$CI.low <- c(effect - ci)
-    coef.tab$CI.hi <- c(ci - effect)
+    ci <- result[rows, stderr]
+    coef.tab$CI.low <- effect - ci
+    coef.tab$CI.hi <- ci - effect
   }
-  coef.tab$P <- c(result[4])
-  coef.tab$N <- c(length(vals))
+  coef.tab$P <- result[rows, 4]
+  coef.tab$N <- length(vals)
   print(coef.tab)
   return(coef.tab)
 }
@@ -323,15 +327,23 @@ meansModel <- function(vals, conditions, model, paired=FALSE, reverse=FALSE) {
 }
 
 #' Setup a data frame for basic stats.
+#' 
+#' @param nrows Number of rows.
+#' @param cols Sequence of columns. Defaults to NULL, in which case a
+#'   set of columns for basic stats will be given.
 #'
 #' @return Data frame with columns for basic statistics such as mean and 
 #'   confidence intervals and a single empty row.
-setupBasicStats <- function() {
+setupBasicStats <- function(nrows=1, cols=NULL) {
   
-  cols <- c(
-    "N", "Value", "CI.low", "CI.hi", "Value.raw", "CI.low.raw", "CI.hi.raw",
-    "P")
-  coef.tab <- data.frame(matrix(nrow=1, ncol=length(cols)))
+  if (is.null(cols)) {
+    # default to basic stats columns
+    cols <- c(
+      "N", "Value", "CI.low", "CI.hi", "Value.raw", "CI.low.raw", "CI.hi.raw",
+      "P")
+  }
+  
+  coef.tab <- data.frame(matrix(nrow=nrows, ncol=length(cols)))
   names(coef.tab) <- cols
   rownames(coef.tab) <- "vals"
   return(coef.tab)

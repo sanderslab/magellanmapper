@@ -4,7 +4,8 @@
 """Plot 2D views of imaging data and graphs."""
 
 import os
-from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union
+import textwrap
+from typing import Callable, Optional, Sequence, TYPE_CHECKING, Tuple, Union, Dict, Any
 
 import numpy as np
 from matplotlib import colors as mat_colors, gridspec, pylab, pyplot as plt
@@ -1097,6 +1098,88 @@ def plot_swarm(
     return ax
 
 
+def plot_catplot(
+        df: pd.DataFrame, x_cols: Union[str, Sequence[str]],
+        y_cols: Union[str, Sequence[str]], group_col: Optional[str] = None,
+        x_label: Optional[str] = None, y_label: Optional[str] = None,
+        x_unit: Optional[str] = None, y_unit: Optional[str] = None,
+        legend_names: Optional[Sequence[str]] = None, size=None,
+        title: Optional[str] = None, legend_title: Optional[str] = None,
+        kwargs_plot: Optional[Dict[str, Any]] = None, **kwargs
+) -> "sns.FacetGrid":
+    """Generate a category plot in Seaborn.
+
+    Args:
+        df: Data frame, assumed to be in melted format.
+        x_cols: Column for x-values, typically categorical.
+        y_cols: Column for y-values, typically continuous.
+        group_col: Column for groups plotted across x-vals and shown in
+            the legend. Defaults to None.
+        x_label: Label for the x-axis; defaults to None.
+        y_label: Label for the y-axis; defaults to None.
+        x_unit: Unit for the x-axis; defaults to None.
+        y_unit: Unit for the y-axis; defaults to None.
+        legend_names: Legend names. Defaults to None to use those from
+            ``group_col``
+        size: Figure size in ``width, height`` as inches; defaults to None.
+        title: Figure title; defaults to None.
+        legend_title: Legened title; defaults to None.
+        kwargs_plot: Dictionary of arguments to :meth:`sns.catplot`; defaults
+            to None.
+        **kwargs: Additional arguments, passed to :meth:`decorate_plot`.
+
+    Returns:
+        Seaborn grid of facets containing the plots by category.
+
+    Raises:
+        `ImportError` if Seaborn is not available.
+
+    """
+    
+    if sns is None:
+        raise ImportError("Seaborn is required for swarm plots, please install")
+
+    if kwargs_plot is None:
+        kwargs_plot = {}
+    
+    # plot in seaborn
+    facets = sns.catplot(
+        x=x_cols, y=y_cols, hue=libmag.get_if_within(group_col, 0),
+        hue_order=legend_names, data=df,
+        col=libmag.get_if_within(group_col, 1),
+        aspect=libmag.get_if_within(size, 0, 1),
+        height=libmag.get_if_within(size, 1, 5), **kwargs_plot)
+    facets.set_titles(col_template="{col_name}")
+    
+    for facet_ax in facets.axes:
+        # wrap subplot titles to avoid horizontal overlap
+        facet_ax.set_title(textwrap.fill(
+            facet_ax.get_title(), width=10, break_long_words=False))
+        
+        # add additional decorations for each subplot axes
+        decorate_plot(
+            facet_ax, xlabel=x_label, ylabel=y_label, xunit=x_unit,
+            yunit=y_unit, **kwargs)
+
+        if x_label is None:
+            # remove x-label if None
+            facet_ax.set_xlabel(x_label)
+    
+    legend = facets.legend
+    if legend:
+        # set legend title or remove if it is empty
+        legend.set_title(legend_title if legend_title else None)
+
+    if title:
+        # set figure title and add top space so it fits above subplot labels
+        facets.figure.suptitle(title)
+    
+    # tighten or widen layout to avoid title overlap and plot clipping
+    facets.tight_layout()
+    
+    return facets
+
+
 def plot_histogram(df, path, col_x, ax=None, size=None, save=True, suffix=None,
                    show=False, **kwargs):
     """Geneate a histogram plot.
@@ -1277,11 +1360,20 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
         plt.show()
 
 
-def main(ax=None):
+def main(
+        ax: Optional["axes.Axes"] = None, df: Optional[pd.DataFrame] = None,
+        kwargs_plot: Optional[Dict[str, Any]] = None, **kwargs):
     """Perform 2D plot tasks.
     
     Args:
         ax (:class:`matplotlib.image.Axes`): Matplotlib plot.
+        df: Data frame; defaults to None.
+        kwargs_plot: Dictionary of args to the underlying plot function;
+            defaults to None.
+        kwargs: Additional args to :meth:`decorate_plot`.
+    
+    Returns:
+        The generated axes, or ``ax`` if given.
     
     """
     # collect config settings
@@ -1324,7 +1416,8 @@ def main(ax=None):
             size=size, show=False, groups=config.groups,
             col_vspan=col_vspan, vspan_fmt=vspan_fmt,
             prefix=config.prefix, save=False,
-            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45, err_cols_abs=err_col_abs)
+            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45,
+            err_cols_abs=err_col_abs)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
         # barplot for data frame from R stats test effect sizes and CIs
@@ -1347,7 +1440,7 @@ def main(ax=None):
                 err_col = ("vals.ci.low", "vals.ci.hi")
             args["err_cols"] = (err_col,)
         
-        # assume stat is just before the extension in the filename, and 
+        # assume stat is just before the extension in the filename, and
         # determine weighting column based on stat
         stat = os.path.splitext(config.filename)[0].split("_")[-1]
         col_wt = vols.get_metric_weight_col(stat)
@@ -1412,10 +1505,21 @@ def main(ax=None):
             vspan_fmt, size, title=title)
         base_out_path = "swarm"
     
+    elif plot_2d_type is config.Plot2DTypes.CAT_PLOT:
+        # category plot
+        df_plot = pd.read_csv(config.filename) if df is None else df
+        ax = plot_catplot(
+            df_plot, x_cols, data_cols, group_col, x_lbl, y_lbl, x_unit,
+            y_unit, legend_names, size, title, kwargs_plot=kwargs_plot,
+            **kwargs)
+        base_out_path = "catplot"
+
     if ax is not None:
         # perform plot post-processing tasks, including file save unless
         # savefig is None
-        post_plot(ax, libmag.make_out_path(base_out_path), config.savefig, config.show)
+        post_plot(
+            ax, libmag.make_out_path(base_out_path), config.savefig,
+            config.show)
     
     return ax
 

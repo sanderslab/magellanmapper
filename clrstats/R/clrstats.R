@@ -678,14 +678,16 @@ filterStats <- function(stats, corr=NULL) {
   }
   
   for (interact in interactions) {
-    # only correct/adjust means stats with >= 2 vals
+    # only correct/adjust means stats with >= 2 vals and filter NAs from
+    # basic stats and p-vals
     filt.n <- filtered[[paste0(interact, ".n")]]
-    mask.corr <- filt.n > 1 & !is.na(filt.n) # eg NA from basic stats
+    col <- paste0(interact, ".p")
+    mask.corr <- filt.n > 1 & !is.na(filt.n) & !is.na(filtered[[col]])
     num.regions <- nrow(filtered[mask.corr, ])
+    
     col.for.log <- paste0(interact, ".pcorr")
     if (!is.null(corr) && num.regions > 0) {
       # apply correction based on number of comparisons
-      col <- paste0(interact, ".p")
       cat("correcting", col, "by", corr, "for", num.regions, "regions\n")
       filtered[mask.corr, col.for.log] <- p.adjust(
         filtered[mask.corr, col], method=corr, n=num.regions)

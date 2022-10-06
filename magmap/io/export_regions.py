@@ -390,7 +390,7 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None,
             make_density_image,
             args=(img_path, scale, shape, suffix, None, channel, matches,
                   config.atlas_profile,
-                  config.classifier[config.ClassifierKeys.INCLUDE])))
+                  config.classifier.include)))
     for result in pool_results:
         _, path = result.get()
         print("finished {}".format(path))

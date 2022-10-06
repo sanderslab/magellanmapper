@@ -250,7 +250,7 @@ class ClassifyImage:
         
         if not model_path:
             # get model path from config
-            model_path = config.classifier[config.ClassifierKeys.MODEL]
+            model_path = config.classifier.model
             if not model_path:
                 raise FileNotFoundError("No classifier model found")
         

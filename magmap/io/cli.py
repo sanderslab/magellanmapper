@@ -385,7 +385,7 @@ def process_cli_args():
         "--classifier", nargs="*",
         help=_get_args_dict_help(
             "Classifier values; see config.ClassifierKeys for settings.",
-            config.ClassifierKeys))
+            config.ClassifierData))
 
     # image and figure display arguments
     parser.add_argument(
@@ -762,8 +762,7 @@ def process_cli_args():
     
     if args.classifier is not None:
         # classifier settings
-        config.classifier = args_to_dict(
-            args.classifier, config.ClassifierKeys, config.classifier)
+        args_to_dict(args.classifier, config.classifier)
         print("Set classifier to {}".format(config.classifier))
 
     if args.db:

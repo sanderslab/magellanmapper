@@ -1045,7 +1045,7 @@ class Visualization(HasTraits):
         # set up blobs
         self.blobs = detector.Blobs()
         self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
-        model = config.classifier[config.ClassifierKeys.MODEL]
+        model = config.classifier.model
         self._segs_model_path = model if model else ""
 
         # set up profiles selectors

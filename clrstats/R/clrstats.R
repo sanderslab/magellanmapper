@@ -168,7 +168,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
     # use SEM for the "CI" values
     ci <- result[rows, stderr]
     coef.tab$CI.low <- effect - ci
-    coef.tab$CI.hi <- ci - effect
+    coef.tab$CI.hi <- effect + ci
   }
   coef.tab$P <- result[rows, 4]
   coef.tab$N <- length(vals)

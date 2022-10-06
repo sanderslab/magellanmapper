@@ -318,6 +318,8 @@ class Plot2DTypes(Enum):
     SCATTER_PLOT = auto()
     LINE_PLOT = auto()
     SWARM_PLOT = auto()
+    #: Generate a category plot through Seaborn.
+    CAT_PLOT = auto()
     
 
 plot_2d_type = None

@@ -24,7 +24,8 @@ https://github.com/sanderslab/magellanmapper/blob/master/docs/cli.md
 """
 
 import argparse
-from enum import Enum 
+import dataclasses
+from enum import Enum
 import logging
 import os
 import sys
@@ -119,24 +120,27 @@ def args_with_dict(args: List[str]) -> List[Union[Dict[str, Any], str, int]]:
     return parsed
 
 
-def args_to_dict(args: List[str], keys_enum: Type[Enum],
-                 args_dict: Optional[Dict[Enum, Any]] = None,
-                 sep_args: str = "=", sep_vals: str = ",",
-                 default: Optional[Any] = None) -> Dict[Enum, Any]:
+def args_to_dict(
+        args: List[str], keys: Union[Type[Enum], Type["config.DataClass"]],
+        args_dict: Optional[Dict[Enum, Any]] = None, sep_args: str = "=",
+        sep_vals: str = ",", default: Optional[Any] = None
+) -> Union[Dict[Enum, Any], Type["config.DataClass"]]:
     """Parse positional and keyword-based arguments to an enum-keyed dictionary.
     
     Args:
         args: List of arguments with positional values followed by
             ``sep_args``-delimited values. Positional values will be entered
-            in the existing order of ``keys_enum`` based on member values, 
-            while keyword-based values will be entered if an enum 
-            member corresponding to the keyword exists.
-            Entries can also be ``sep_vals``-delimited to specify lists.
-        keys_enum: Enum class to use as keys for dictionary. Values are
-            assumed to range from 1 to number of members as output 
-            by the default Enum functional API.
+            in the existing order of ``keys`` based on member values,
+            while keyword-based values will be entered if a member
+            corresponding to the keyword exists. Entries can also be
+            ``sep_vals``-delimited to specify lists.
+        keys: Enum class or data class instance whose fields will be used as
+            keys for dictionary. Enum values are assumed to range from 1 to
+            number of members as output by the default Enum functional API.
         args_dict: Dictionary to be filled or updated with keys from
-            ``keys_enum``; defaults to None, which will assign an empty dict.
+            ``keys_enum``. Defaults to None, which will assign an empty dict.
+            Ignored if ``keys_class`` is a data class instance, which will
+            be updated instead.
         sep_args: Separator between arguments and values; defaults to "=".
         sep_vals: Separator within values; defaults to ",".
         default: Default value for each argument. Effectively turns off
@@ -145,48 +149,61 @@ def args_to_dict(args: List[str], keys_enum: Type[Enum],
             undergo splitting by ``sep_vals``.
     
     Returns:
-        Dictionary filled with arguments. Values that contain commas
-        will be split into comma-delimited lists. All values will be 
-        converted to ints if possible.
+        Dictionary or data class corresponding to ``keys``, filled with
+        arguments. Values that contain commas will be split into
+        comma-delimited lists. All values will be converted to ints if possible.
     
     """
-    if args_dict is None:
-        args_dict = {}
+    is_data = dataclasses.is_dataclass(keys)
+    if is_data:
+        # use fields as keys
+        keys_data = [f.name for f in dataclasses.fields(keys)]
+        nkeys = len(keys_data)
+        out = keys
+    else:
+        # use Enum members as keys
+        keys_data = None
+        nkeys = len(keys)
+        out = {} if args_dict is None else args_dict
+    
     by_position = True
-    num_enums = len(keys_enum)
     for i, arg in enumerate(args):
         arg_split = arg.split(sep_args)
         if default and len(arg_split) < 2:
             # add default value unless another value is given
             arg_split.append(default)
         len_arg_split = len(arg_split)
+        
         # assume by position until any keyword given
         by_position = by_position and len_arg_split < 2
         key = None
         vals = arg
         if by_position:
-            # positions are based on enum vals, assumed to range from 
+            # positions are based on enum vals, assumed to range from
             # 1 to num of members
             n = i + 1
-            if n > num_enums:
+            if n > nkeys:
                 _logger.warn(
-                    "No further parameters in {} to assign \"{}\" by "
-                    "position, skipping".format(keys_enum, arg))
+                    "No further parameters in '%s' to assign '%s' by "
+                    "position, skipping", keys, arg)
                 continue
-            key = keys_enum(n)
+            key = keys_data[n] if is_data else keys(n)
+        
         elif len_arg_split < 2:
-            _logger.warn("parameter {} does not contain a keyword, skipping"
-                         .format(arg))
+            _logger.warn(
+                "Parameter '%s' does not contain a keyword, skipping", arg)
+        
         else:
             # assign based on keyword if its equivalent enum exists
+            key_str = arg_split[0]
             vals = arg_split[1]
-            key_str = arg_split[0].upper()
             try:
-                key = keys_enum[key_str]
+                key = key_str.lower() if is_data else keys[key_str.upper()]
             except KeyError:
-                _logger.warn("Unable to find '{}' in {}, skipping".format(
-                    key_str, keys_enum))
+                _logger.warn(
+                    "Unable to find '%s' in %s, skipping", key_str, keys)
                 continue
+        
         if key:
             if isinstance(vals, str):
                 # split delimited strings
@@ -195,12 +212,17 @@ def args_to_dict(args: List[str], keys_enum: Type[Enum],
                     vals = vals_split
                 # cast to numeric type if possible
                 vals = libmag.get_int(vals)
-            # assign to found enum
-            args_dict[key] = vals
-    return args_dict
+            # assign to found enum to data class
+            if is_data:
+                setattr(out, key, vals)
+            else:
+                out[key] = vals
+    
+    return out
 
 
-def _get_args_dict_help(msg: str, keys: Type[Enum]) -> str:
+def _get_args_dict_help(
+        msg: str, keys: Union[Type[Enum], Type["config.DataClass"]]) -> str:
     """Get the help message for command-line arguments that are converted
     to a dictionary.
     
@@ -212,9 +234,15 @@ def _get_args_dict_help(msg: str, keys: Type[Enum]) -> str:
         Help message with available keys.
 
     """
+    if dataclasses.is_dataclass(keys):
+        # get all fields from data class
+        names = [f.name for f in dataclasses.fields(keys)]
+    else:
+        # use enum names
+        names = libmag.enum_names_aslist(keys)
+    
     return (f"{msg} Available keys, which follow this order positionally "
-            f"until the first key=value pair is given: "
-            f"{libmag.enum_names_aslist(keys)}")
+            f"until the first key=value pair is given: {names}")
 
 
 def process_cli_args():

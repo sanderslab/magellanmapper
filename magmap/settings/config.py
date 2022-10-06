@@ -9,9 +9,11 @@ for program access.
 
 """
 
+import dataclasses
 from enum import Enum, auto
 import pathlib
-from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING, Union
+from typing import Any, Dict, Optional, Protocol, Sequence, TypeVar, \
+    TYPE_CHECKING, Union
 
 try:
     from appdirs import AppDirs
@@ -40,6 +42,15 @@ APP_NAME = "MagellanMapper"
 URI_SCHEME = "magmap"
 #: str: Reverse Domain Name System identifier.
 DNS_REVERSE = f"io.github.sanderslab.{APP_NAME}"
+
+
+class DataClassProtocol(Protocol):
+    """Typing protocol for data classes."""
+    __dataclass_fields__: Dict[str, Any]
+
+
+#: Type hint for data classes.
+DataClass = TypeVar("DataClass", bound=DataClassProtocol)
 
 
 class DocsURLs(Enum):
@@ -384,16 +395,17 @@ class Transforms(Enum):
 transform = dict.fromkeys(Transforms, None)
 
 
-class ClassifierKeys(Enum):
-    """Classifier keys."""
+@dataclasses.dataclass
+class ClassifierData:
+    """Classifier data class for CLI arguments."""
     #: Path to pre-trained classifier model.
-    MODEL = auto()
+    model: Optional[str] = None
     #: Classification flags (confirmed column) to include.
-    INCLUDE = auto()
+    include: Optional[Union[int, Sequence[int]]] = None
 
 
 #: Classifier settings.
-classifier: Dict["ClassifierKeys", Any] = dict.fromkeys(ClassifierKeys, None)
+classifier: ClassifierData = ClassifierData()
 
 
 # extensions for saving figures.

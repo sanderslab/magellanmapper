@@ -414,29 +414,32 @@ setupPairing <- function(df.region, col, split.col) {
   return(df.filtered)
 }
 
-statsByRegion <- function(df, col, model, split.by.side=TRUE, 
-                          regions.ignore=NULL, cond=NULL, group.col=NULL) {
-  # Calculate statistics given by region for columns starting with the given 
-  # string using the selected model.
-  #
-  # NaN values will be ignored. If all values for a given vector are NaN, 
-  # statistics will not be computed.
-  #
-  # Groups for comparison will be defined by "group.col" if set. If not,
-  # non-paired stats default to compare groups specified in the "Geno" column,
-  # while paired stats compare based on the "Condition" column.
-  #
-  # Args:
-  #   df: Data frame with at least columns for "Sample" and "Region".
-  #   col: Column from which to find main stats.
-  #   model: Model to use, corresponding to one of kModel.
-  #   split.by.side: True to keep data split by sides, False to combine 
-  #     corresponding regions from opposite sides into single regions; 
-  #     defaults to True.
-  #   regions.ignore: Vector of regions to ignore; default to NULL.
-  #   cond: Filter df to keep only this condition; defaults to NULL.
-  #   group.col: Name of group column; defaults to NULL, which uses "Condition"
-  #     for means models and "Geno" otherwise.
+#' Calculate statistics given by region for columns starting with the given 
+#' string using the selected model.
+#'
+#' NaN values will be ignored. If all values for a given vector are NaN, 
+#' statistics will not be computed.
+#'
+#' Groups for comparison will be defined by "group.col" if set. If not,
+#' non-paired stats default to compare groups specified in the "Geno" column,
+#' while paired stats compare based on the "Condition" column.
+#'
+#' @param df Data frame with at least columns for "Sample" and "Region".
+#' @param col Column from which to find main stats.
+#' @param model Model to use, corresponding to one of kModel.
+#' @param split.by.side True to keep data split by sides, False to combine 
+#'   corresponding regions from opposite sides into single regions; 
+#'   defaults to True.
+#' @param regions.ignored: Vector of regions to ignore; default to NULL.
+#' @param condd: Filter df to keep only this condition; defaults to NULL.
+#' @param group.col Name of group column; defaults to NULL, which uses
+#'   "Condition" for means models and "Geno" otherwise.
+#' @param split.col Name of column for within-group splitting. Defaults to
+#'   NULL, in which case "Side" is used for fit models, or `group.col`
+#'   for means models.
+statsByRegion <- function(
+    df, col, model, split.by.side=TRUE, regions.ignore=NULL, cond=NULL,
+    group.col=NULL, split.col=NULL) {
   
   mean_model_inds <- c(5:9, 11)
   if (is.null(group.col)) {
@@ -479,7 +482,6 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
     if (any(nonnan)) {
       cat("\nRegion", region, "\n")
       df.region.nonnan <- df.region
-      split.col <- NULL
       paired <- is.element(model, kModel[7:9])
       
       if (!paired) {
@@ -491,7 +493,9 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
         # filter for means tests, which compare groups specified in group.col
         # TODO: reconsider aggregating sides but need way to properly
         # average variations in a weighted manner
-        split.col <- group.col
+        if (is.null(split.col)) {
+          split.col <- group.col
+        }
         if (paired) {
           # sort by sample and condition, matching saved condition order,
           # split by condition, and filter out pairs where either sample
@@ -509,7 +513,6 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       
       # apply stats and store in stats data frame, using list to allow 
       # arbitrary size and storing mean volume as well
-      coef.tab <- NULL
       if (is.element(model, kModel[mean_model_inds])) {
         # means tests
         coef.tab <- meansModel(
@@ -526,7 +529,8 @@ statsByRegion <- function(df, col, model, split.by.side=TRUE,
       } else {
         # regression tests
         genos <- df.region.nonnan[[group.col]]
-        sides <- df.region.nonnan$Side
+        side.col <- if (is.null(split.col)) "Side" else split.col
+        sides <- df.region.nonnan[[side.col]]
         ids <- df.region.nonnan$Sample
         coef.tab <- fitModel(model, vals, genos, sides, ids)
       }
@@ -747,7 +751,8 @@ calcVolStats <- function(
   stats <- statsByRegion(
     df, meas, model, split.by.side=split.by.side,
     regions.ignore=config.env$Regions.Ignore,
-    cond=config.env$Condition, group.col=config.env$GroupCol)
+    cond=config.env$Condition, group.col=config.env$GroupCol,
+    split.col=config.env$SplitCol)
   stats.filtered <- filterStats(stats, corr=corr)
   if (is.null(stats.filtered)) {
     message("No stats were generated. Please check input file, regions,",
@@ -849,7 +854,8 @@ setupConfig <- function(name=NULL) {
     config.env$Axes.In.Range <- FALSE
     config.env$ReverseConditions <- FALSE
     config.env$SummaryStats <- kSummaryStats[2]
-    config.env$GroupCol <- NULL
+    config.env$GroupCol <- NULL # group column
+    config.env$SplitCol <- NULL # column to split within groups
     config.env$Sort.Groups <- TRUE
     config.env$Condition <- NULL
     config.env$P.Corr <- "bonferroni"

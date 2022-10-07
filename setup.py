@@ -69,6 +69,7 @@ config = {
         "dataclasses ; python_version < '3.7'",
         # BrainGlobe dependencies for access to cloud-hosted atlases
         "bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip",
+        "typing_extensions",
     ],
     "extras_require": {
         "import": _EXTRAS_IMPORT,

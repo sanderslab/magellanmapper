@@ -12,8 +12,10 @@ for program access.
 import dataclasses
 from enum import Enum, auto
 import pathlib
-from typing import Any, Dict, Optional, Protocol, Sequence, TypeVar, \
-    TYPE_CHECKING, Union
+from typing import Any, Dict, Optional, Sequence, TypeVar, TYPE_CHECKING, Union
+
+# imports from typing directly if available
+from typing_extensions import Protocol
 
 try:
     from appdirs import AppDirs

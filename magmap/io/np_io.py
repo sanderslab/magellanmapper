@@ -4,6 +4,7 @@
 """
 import os
 import pathlib
+import pprint
 from typing import Any, Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
 import numpy as np
@@ -606,7 +607,10 @@ def read_tif(
         # parse resolutions
         res = np.ones((1, 3))
         if tif.imagej_metadata:
-            _logger.debug("ImageJ TIF metadata: %s", tif.imagej_metadata)
+            if config.verbose:
+                _logger.debug(
+                    "ImageJ TIF metadata:\n%s",
+                    pprint.pformat(tif.imagej_metadata))
             if "spacing" in tif.imagej_metadata:
                 # ImageJ format holds z-resolution as spacing
                 res[0, 0] = tif.imagej_metadata["spacing"]
@@ -631,8 +635,9 @@ def read_tif(
         # move channel dimension to end
         tif_memmap = np.swapaxes(tif_memmap, 2, -1)
     
-    _logger.debug("Parsed TIF metadata: %s", md)
-    _logger.debug("Loaded TIF into shape: %s", tif_memmap.shape)
+    if config.verbose:
+        _logger.debug("Parsed TIF metadata:\n%s", pprint.pformat(md))
+        _logger.debug("Loaded TIF into shape: %s", tif_memmap.shape)
     
     # add image to Image5d instance
     img5d.img = tif_memmap

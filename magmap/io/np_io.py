@@ -596,6 +596,7 @@ def read_tif(
     tif = tifffile.TiffFile(path)
     md = dict.fromkeys(config.MetaKeys)
     axes = tif.series[0].axes.lower()
+    _logger.debug("TIF axes: %s", axes)
     if tif.ome_metadata:
         # read OME-XML metadata
         names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
@@ -626,6 +627,9 @@ def read_tif(
     if "z" not in axes:
         # add a z-axis for 2D images
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
+    if axes[0] == "c":
+        # move channel dimension to end
+        tif_memmap = np.swapaxes(tif_memmap, 2, -1)
     
     _logger.debug("Parsed TIF metadata: %s", md)
     _logger.debug("Loaded TIF into shape: %s", tif_memmap.shape)

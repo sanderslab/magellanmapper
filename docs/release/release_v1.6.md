@@ -139,6 +139,7 @@
 - Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)
 - Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
+- Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225)
 
 ### Dependency Updates
 

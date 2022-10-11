@@ -21,7 +21,12 @@ _EXTRAS_PANDAS = [
 _EXTRAS_AWS = ["boto3", "awscli"]
 
 # optional dependencies to build API documentation
-_EXTRAS_DOCS = ["sphinx", "sphinx-autodoc-typehints", "myst-parser"]
+_EXTRAS_DOCS = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "myst-parser",
+    "furo",  # theme
+]
 
 # optional dependencies for Jupyter notebooks
 _EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]

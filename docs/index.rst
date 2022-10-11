@@ -16,6 +16,7 @@ Welcome to MagellanMapper's documentation!
    settings.md
    pipelines.md
    cloud_aws.md
+   release/index
    API documentation <genindex>
 
 

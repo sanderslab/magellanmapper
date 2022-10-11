@@ -79,12 +79,12 @@ def carve(roi, thresh=None, holes_area=None, return_unfilled=False):
 
 
 def rotate_nd(
-        img_np: np.ndarray, angle, axis: int = 0, order: int = 1,
+        img_np: np.ndarray, angle: float, axis: int = 0, order: int = 1,
         resize: bool = False) -> np.ndarray:
     """Rotate an image of arbitrary dimensions along a given axis.
     
-    This function is essentially a wrapper of 
-    :func:`skimage.transform.rotate`, applied to each 2D plane along a 
+    This function is essentially a wrapper of
+    :func:`skimage.transform.rotate`, applied to each 2D plane along a
     given axis for volumetric rotation.
     
     Args:
@@ -98,6 +98,7 @@ def rotate_nd(
     
     Returns:
         The rotated image.
+    
     """
     is_2d = img_np.ndim == 2
     if is_2d:

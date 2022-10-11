@@ -18,6 +18,8 @@ from magmap.io import libmag
 from magmap.cv import cv_nd
 from magmap.cv import segmenter
 
+_logger = config.logger.getChild(__name__)
+
 
 def setup_channels(
         roi: np.ndarray, channel: Optional[Sequence[int]], dim_channel: int
@@ -265,40 +267,53 @@ def deconvolve(roi):
     return roi_deconvolved
 
 
-def remap_intensity(roi, channel=None):
-    """Remap intensities, currently using adaptive histogram equalization
-    but potentially plugging in alternative methods in the future.
+def remap_intensity(
+        roi: np.ndarray, channel: Optional[Sequence[int]] = None, **kwargs
+) -> np.ndarray:
+    """Remap intensities, currently using adaptive histogram equalization.
+    
+    May allow plugging in alternative methods in the future.
 
     Args:
-        roi (:obj:`np.ndarray`): Region of interest as a 3D or 3D+channel array.
-        channel (int): Channel index of ``roi`` to saturate. Defaults to None
+        roi: Region of interest as a 3D or 3D+channel array.
+        channel: Channel index of ``roi`` to saturate. Defaults to None
             to use all channels. If a specific channel is given, all other
             channels remain unchanged.
+        kwargs: Additional arguments to
+            :meth:`skimage.exposure.equalize_adapthist`. Values can be given
+            as sequences, where each element corresponds to channels in
+            ``channel``.
 
     Returns:
-        :obj:`np.ndarray`: Remapped region of interest as a new array.
+        Remapped region of interest as a new array.
 
     """
+    # set up channels and copy ROI
     multichannel, channels = setup_channels(roi, channel, 3)
     roi_out = np.copy(roi)
+    
     for chl in channels:
-        roi_show = roi[..., chl] if multichannel else roi
-        settings = config.get_roi_profile(chl)
-        lim = settings["adapt_hist_lim"]
-        print("Performing adaptive histogram equalization on channel {}, "
-              "clip limit {}".format(chl, lim))
-        equalized = []
-        for plane in roi_show:
-            # workaround for lack of current nD support in scikit-image CLAHE
-            # implementation (but this PR looks promising:
-            # https://github.com/scikit-image/scikit-image/pull/2761 )
-            equalized.append(
-                exposure.equalize_adapthist(plane, clip_limit=lim))
-        equalized = np.stack(equalized)
+        # extract single channel
+        roi_chl = roi[..., chl] if multichannel else roi
+        
+        if "clip_limit" not in kwargs:
+            # default to ROI profile setting
+            settings = config.get_roi_profile(chl)
+            kwargs["clip_limit"] = settings["adapt_hist_lim"]
+        
+        # build CLAHE args
+        args = {k: libmag.get_if_within(v, chl) for k, v in kwargs.items()}
+        _logger.debug(
+            f"Performing adaptive histogram equalization on channel {chl} "
+            f"with settings: {args}")
+        
+        # perform CLAHE
+        equalized = exposure.equalize_adapthist(roi_chl, **args)
         if multichannel:
             roi_out[..., chl] = equalized
         else:
             roi_out = equalized
+    
     return roi_out
 
 

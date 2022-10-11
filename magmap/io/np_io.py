@@ -5,13 +5,14 @@
 import os
 import pathlib
 import pprint
+import re
 from typing import Any, Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
 import numpy as np
 import tifffile
 
 from magmap.atlas import labels_meta, ontology, transformer
-from magmap.cv import detector
+from magmap.cv import cv_nd, detector
 from magmap.io import importer, libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
@@ -598,6 +599,7 @@ def read_tif(
     md = dict.fromkeys(config.MetaKeys)
     axes = tif.series[0].axes.lower()
     _logger.debug("TIF axes: %s", axes)
+    nrot = 0
     if tif.ome_metadata:
         # read OME-XML metadata
         names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
@@ -611,9 +613,19 @@ def read_tif(
                 _logger.debug(
                     "ImageJ TIF metadata:\n%s",
                     pprint.pformat(tif.imagej_metadata))
+            
             if "spacing" in tif.imagej_metadata:
                 # ImageJ format holds z-resolution as spacing
                 res[0, 0] = tif.imagej_metadata["spacing"]
+            
+            if "Info" in tif.imagej_metadata:
+                # extract rotation info
+                info = tif.imagej_metadata["Info"]
+                rotate = re.search(r"Rotate=[0-9]*", info)
+                if rotate:
+                    # TODO: use arbitrary degree rotation?
+                    nrot = int(rotate.group().split("=")[1]) // -90
+                    
         for i, name in enumerate(("YResolution", "XResolution")):
             # parse x/y-resolution from standard TIF metadata
             axis_res = tif.pages[0].tags[name].value
@@ -634,6 +646,12 @@ def read_tif(
     if axes[0] == "c":
         # move channel dimension to end
         tif_memmap = np.swapaxes(tif_memmap, 2, -1)
+    
+    if nrot:
+        # apply 90 deg rotations; appears to need flipping; both return views
+        # TODO: check scenarios requiring flipping
+        tif_memmap = cv_nd.rotate90(tif_memmap, nrot, (2, 3), ndim >= 5)
+        tif_memmap = np.fliplr(tif_memmap)
     
     if config.verbose:
         _logger.debug("Parsed TIF metadata:\n%s", pprint.pformat(md))

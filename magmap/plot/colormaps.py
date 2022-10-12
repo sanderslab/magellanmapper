@@ -330,6 +330,7 @@ def discrete_colormap(
         # prioritize default colors by replacing first colors with default ones
         colors_default = config.colors
         colors_mplot = dict(
+            base=colors.BASE_COLORS,
             xkcd=colors.XKCD_COLORS,
             css4=colors.CSS4_COLORS,
             tableau=colors.TABLEAU_COLORS,

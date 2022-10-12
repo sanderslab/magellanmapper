@@ -1159,6 +1159,41 @@ def rescale_resize(
     return rescaled
 
 
+def angle_indices(
+        shape: Sequence[int], offset: Sequence[int], size: Sequence[int],
+        nsteps: Optional[int] = None):
+    """Generate indices for an angled plane or other shape.
+    
+    Can be used to construct a polygon mask with angled faces. Indices
+    co-vary so that as ``offset_z`` -> ``offset_z + size_z``,
+    ``offset_y`` -> ``offset_y + size_y``, etc.
+    
+    Args:
+        shape: Shape of object containing the desired plane.
+        offset: Offset within the object in the orderr ``z, y, x``.
+        size: Size within the object corresponding to elements in ``offset``.
+        nsteps: Number of steps to interpolate. Defaults to None, where
+            the max of ``shape`` x 10 is used to reduce chance of gaps.
+
+    Returns:
+        Indices in the same order as for ``shape``.
+    
+    Examples:
+        See :meth:`magmap.tests.test_cv_nd.test_angle_indices`.
+
+    """
+    if nsteps is None:
+        # default to more steps than max dimension to minimize chance of gaps
+        nsteps = max(shape) * 10
+    
+    inds = [np.s_[:]] * len(shape)
+    for i, (off, siz) in enumerate(zip(offset, size)):
+        # make indices for given dimension with consistent step count
+        inds[i] = np.linspace(off, siz, nsteps, False).astype(int)
+    
+    return inds
+
+
 def get_selem(ndim):
     """Get structuring element appropriate for the number of dimensions.
     

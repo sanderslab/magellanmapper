@@ -10,7 +10,6 @@ import numpy as np
 from matplotlib import cm
 from matplotlib import colors
 
-from magmap.atlas import labels_meta
 from magmap.settings import config
 from magmap.io import libmag
 
@@ -230,21 +229,22 @@ class DiscreteColormap(colors.ListedColormap):
 
 def discrete_colormap(
         num_colors: int, alpha: int = 255,
-        prioritize_default: Union[bool, str] = True,
+        prioritize_default: Union[bool, str, Sequence[Sequence[int]]] = True,
         seed: Optional[int] = None, min_val: Union[int, float] = 0,
         max_val: Union[int, float] = 255, min_any: Union[int, float] = 0,
         symmetric_colors: bool = False, dup_offset: int = 0, jitter: int = 0,
         mode: "DiscreteModes" = DiscreteModes.RANDOMN) -> np.ndarray:
-    """Make a discrete colormap using :attr:``config.colors`` as the
-    starting colors and filling in the rest with randomly generated RGB values.
+    """Make a discrete colormap using randomly generated RGB values.
     
     Args:
         num_colors: Number of discrete colors to generate.
         alpha: Transparency level, from 0-255; defaults to 255.
-        prioritize_default: If True, the default colors from
-            :attr:``config.colors`` will replace the initial colormap elements;
-            defaults to True. Alternatively, `cn` can be given to use
-            the "CN" color spec instead.
+        prioritize_default: If True (default), the default colors from
+            :attr:``config.colors`` will replace the initial colormap elements.
+            Can alternatively be a string for Matplotlib color specs, where
+            `cn` = "CN" color spec, `css4` = CSS4/X11 spec, and "tableau" =
+            Tableau spec. Can also be a sequence of colors, where each
+            colors is in ``r, g, b, a``, ranging from 0-255.
         seed: Random number seed; defaults to None, in which case no seed
             will be set.
         min_val: Minimum value for random numbers; defaults to 0.
@@ -329,10 +329,35 @@ def discrete_colormap(
     if prioritize_default is not False:
         # prioritize default colors by replacing first colors with default ones
         colors_default = config.colors
+        colors_mplot = dict(
+            xkcd=colors.XKCD_COLORS,
+            css4=colors.CSS4_COLORS,
+            tableau=colors.TABLEAU_COLORS,
+        )
+        
         if prioritize_default == "cn":
             # "CN" color spec
             colors_default = np.multiply(
                 [colors.to_rgb("C{}".format(i)) for i in range(10)], 255)
+        
+        elif prioritize_default in colors_mplot.keys():
+            # Matplotlib colors group
+            colors_default = colors_mplot[prioritize_default].values()
+            colors_default = np.multiply(
+                colors.to_rgba_array(colors_default)[:, :3], 255)
+            
+            ncolors_default = len(colors_default)
+            if num_colors < ncolors_default:
+                # increase distinctiveness by picking evenly spaced colors,
+                # assuming color list is sorted by similarity
+                colors_default = colors_default[np.linspace(
+                    0, ncolors_default - 1, num_colors).astype(int)]
+        
+        elif libmag.is_seq(prioritize_default):
+            # use given color dictionary directly
+            colors_default = prioritize_default
+        
+        # keep only required or available number of colors
         end = min((num_colors, len(colors_default)))
         cmap[:end, :3] = colors_default[:end]
     

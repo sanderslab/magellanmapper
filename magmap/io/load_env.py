@@ -125,6 +125,9 @@ def launch_magmap():
     remains alive, the GUI will be launched.
 
     """
+    # set up uncaught exception handler in case this function is the entry point
+    sys.excepthook = log_uncaught_exception
+    
     if sys.path and sys.path[0].endswith(os.path.dirname(__file__)):
         # remove this module's sub-package from path as may occur when the
         # module is launched directly, eg from a subprocess in Visualization,

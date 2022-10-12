@@ -1366,7 +1366,9 @@ def save_fig(
         libmag.backup_file(plot_path)
     
     # make parent directories if necessary
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    out_dir = os.path.dirname(path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     
     fig.savefig(plot_path, **kwargs)
     _logger.info(f"Exported figure to {plot_path}")

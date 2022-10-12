@@ -669,7 +669,8 @@ class ImageOverlayer:
             # small annotations with subtle background in case label is dark
             color = cmap(cmap.convert_img_labels(label_id)) if cmap else "k"
             args["color"] = color
-            args.update(kwargs)
+            if kwargs is not None:
+                args.update(kwargs)
             text = self.ax.text(*label, **args)
             self.labels_annots[label_id] = text
     

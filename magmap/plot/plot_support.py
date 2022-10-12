@@ -597,6 +597,7 @@ class ImageOverlayer:
             labels_annots: Optional[Dict[int, "axes.Axes.Text"]] = None,
             over_label: bool = True,
             cmap: Optional["colormaps.DiscreteColormap"] = None,
+            color_bbox: bool = True,
             kwargs: Dict[str, Any] = None):
         """Annotate labels with acronyms.
         
@@ -613,6 +614,8 @@ class ImageOverlayer:
                 useful for label edges.
             cmap: Discrete colormap to color the label based on its ID.
                 Defaults to None, in which case the color will be black.
+            color_bbox: True (default) to color the label bounding box instead
+                of the text. Only used if ``cmap`` is given.
             kwargs: Dictionary of additional arguments for the text artist.
                 Defaults to None.
 
@@ -655,20 +658,33 @@ class ImageOverlayer:
                 labels[label_id] = (x, y, name)
         
         # set args for artist bounding box
-        bbox = dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
-                    linewidth=0, alpha=0.3)
+        bbox = dict(boxstyle="Round,pad=0.1", linewidth=0, alpha=0.3)
         if kwargs is not None and "bbox" in kwargs:
             # update from kwargs and remove from kwargs copy
             bbox.update(kwargs["bbox"])
             kwargs = {k: v for k, v in kwargs.items() if k != "bbox"}
         
+        # small annotations with subtle background in case label is dark
         args = dict(
             fontsize="x-small", clip_on=True, horizontalalignment="center",
             verticalalignment="center", bbox=bbox, transform=self._transform)
+        text_color = "k"
+        facecolor = "xkcd:silver"
         for label_id, label in labels.items():
-            # small annotations with subtle background in case label is dark
-            color = cmap(cmap.convert_img_labels(label_id)) if cmap else "k"
-            args["color"] = color
+            if cmap:
+                # get color for label in colormap
+                color = cmap(cmap.convert_img_labels(label_id))
+                if color_bbox:
+                    # color bounding box with white text
+                    text_color = "w"
+                    facecolor = color
+                else:
+                    # color text
+                    text_color = color
+            args["color"] = text_color
+            bbox["facecolor"] = facecolor
+            
+            # add label
             if kwargs is not None:
                 args.update(kwargs)
             text = self.ax.text(*label, **args)

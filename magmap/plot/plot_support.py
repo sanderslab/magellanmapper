@@ -598,6 +598,7 @@ class ImageOverlayer:
             over_label: bool = True,
             cmap: Optional["colormaps.DiscreteColormap"] = None,
             color_bbox: bool = True,
+            label_names: Optional[Dict[int, str]] = None,
             kwargs: Dict[str, Any] = None):
         """Annotate labels with acronyms.
         
@@ -616,6 +617,8 @@ class ImageOverlayer:
                 Defaults to None, in which case the color will be black.
             color_bbox: True (default) to color the label bounding box instead
                 of the text. Only used if ``cmap`` is given.
+            label_names: Dictionary of label IDs to names; defaults to None.
+                If given, only these labels and names will be shown.
             kwargs: Dictionary of additional arguments for the text artist.
                 Defaults to None.
 
@@ -632,7 +635,11 @@ class ImageOverlayer:
                 labels[label_id] = (x, y, annot.get_text())
        
         else:
-            for label_id in np.unique(labels_2d):
+            # get given label IDs, defaulting to labels image
+            label_ids = (np.unique(labels_2d) if label_names is None
+                         else label_names.keys())
+            
+            for label_id in label_ids:
                 if over_label:
                     # position label acronym at middle of coordinate list
                     # to ensure that text is over a label pixel
@@ -646,15 +653,19 @@ class ImageOverlayer:
                     if not props: continue
                     y, x = props[0].centroid[:2]
                 
-                # get name at the given ontology level
-                atlas_label = ontology.get_label_at_level(
-                    label_id, ref_lookup, level)
-                name = ontology.get_label_name(
-                    atlas_label, aba_key=config.ABAKeys.ACRONYM)
-                if not name:
-                    # make acronym if not in reference
-                    name = ontology.get_label_name(atlas_label)
-                    name = libmag.make_acronym(name)
+                if label_names is None:
+                    # get name at the given ontology level
+                    atlas_label = ontology.get_label_at_level(
+                        label_id, ref_lookup, level)
+                    name = ontology.get_label_name(
+                        atlas_label, aba_key=config.ABAKeys.ACRONYM)
+                    if not name:
+                        # make acronym if not in reference
+                        name = ontology.get_label_name(atlas_label)
+                        name = libmag.make_acronym(name)
+                else:
+                    # get provided name
+                    name = label_names[label_id]
                 labels[label_id] = (x, y, name)
         
         # set args for artist bounding box

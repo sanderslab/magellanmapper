@@ -466,17 +466,18 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
 
 
 def make_labels_level_img(
-        img_path: str, level: int, prefix: Optional[str] = None,
+        img_path: Optional[str], level: int, prefix: Optional[str] = None,
         show: bool = False) -> Dict[str, sitk.Image]:
     """Replace labels in an image with their parents at the given level.
     
     Labels that do not fall within a parent at that level will remain in place.
     
     Args:
-        img_path: Path to the base image from which the corresponding 
-            registered image will be found.
-        level: Ontological level at which to group child labels. 
-        prefix: Start of path for output image; defaults to None to 
+        img_path: Path to the base image from which the corresponding
+            registered image will be found. Can be None, where the globally
+            set up image stored in ``config`` will be used instead.
+        level: Ontological level at which to group child labels.
+        prefix: Start of path for output image; defaults to None to
             use ``img_path`` instead.
         show: True to show the images after generating them; defaults to False.
     
@@ -484,11 +485,16 @@ def make_labels_level_img(
         Dictionary of registered image suffix to SimpleITK image.
     
     """
-    # load original labels image and setup ontology dictionary
-    labels_sitk = sitk_io.load_registered_img(
-        img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
+    if img_path is None:
+        # use the globally set up image stored in config
+        labels_sitk = config.labels_img_sitk
+        ref = config.labels_ref
+    else:
+        # load original labels image and setup ontology dictionary
+        labels_sitk = sitk_io.load_registered_img(
+            img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
+        ref = ontology.LabelsRef(config.load_labels).load()
     labels_np = sitk.GetArrayFromImage(labels_sitk)
-    ref = ontology.LabelsRef(config.load_labels).load()
     
     # remap labels to given level
     labels_np = ontology.make_labels_level(labels_np, ref, level)
@@ -500,9 +506,9 @@ def make_labels_level_img(
     
     # write and optionally display labels level image
     imgs_write = {
-        config.RegNames.IMG_LABELS_LEVEL.value.format(level): labels_level_sitk, 
-        config.RegNames.IMG_LABELS_EDGE_LEVEL.value.format(level): 
-            labels_edge_sitk, 
+        config.RegNames.IMG_LABELS_LEVEL.value.format(level): labels_level_sitk,
+        config.RegNames.IMG_LABELS_EDGE_LEVEL.value.format(level):
+            labels_edge_sitk,
     }
     out_path = prefix if prefix else img_path
     sitk_io.write_reg_images(imgs_write, out_path)

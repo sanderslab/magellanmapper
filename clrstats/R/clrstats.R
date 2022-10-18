@@ -94,6 +94,7 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   col.effect <- "Estimate"
   num.sides <- length(unique(sides))
   result <- tryCatchLog::tryCatchLog({
+    result.summary <- NULL
     if (model == kModel[1]) {
       # logistic regression
       if (num.sides > 1) {
@@ -101,7 +102,9 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       } else {
         fit <- glm(genos ~ vals, family=binomial)
       }
-      result <- summary.glm(fit)$coefficients
+      result.summary <- summary.glm(fit)
+      result <- result.summary$coefficients
+      
       # remove first ("non-intercept") row
       result <- result[-(1:1), ]
       
@@ -109,7 +112,9 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       # linear regression
       # TODO: see whether need to factorize genos
       fit <- lm(vals ~ genos * sides)
-      result <- summary.lm(fit)$coefficients
+      result.summary <- summary.lm(fit)
+      result <- result.summary$coefficients
+      
       # remove first ("non-intercept") row
       result <- result[-(1:1), ]
       
@@ -118,7 +123,8 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       # TODO: fix model prob "fitted value very close to 1" error
       fit <- gee::gee(
         genos ~ vals * sides, ids, corstr="exchangeable", family=binomial())
-      result <- summary(fit)$coefficients
+      result.summary <- summary(fit)
+      result <- result.summary$coefficients
       
     } else if (model == kModel[4]) {
       # ordered logistic regression
@@ -126,7 +132,9 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       genos <- factor(genos, levels=kGenoLevels)
       fit <- tryCatch({
         fit <- MASS::polr(genos ~ vals * sides, Hess=TRUE)
-        result <- coef(summary(fit))
+        result.summary <- summary(fit)
+        result <- coef(result.summary)
+        
         # calculate p-vals and incorporate into coefficients
         p.vals <- pnorm(abs(result[, "t value"]), lower.tail=FALSE) * 2
         result <- cbind(result, "p value"=p.vals)
@@ -139,6 +147,11 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       
     } else {
       cat("Sorry, model", model, "not found\n")
+    }
+    
+    if (!is.null(result.summary)) {
+      # show raw summary of model results
+      print(result.summary)
     }
     
     # return result from try block

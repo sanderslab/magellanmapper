@@ -158,6 +158,7 @@
 - The AWS-related dependencies (`boto3`, `awscli`) are also no longer installed in Conda environments (#150)
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
+- Python 3.6 and 3.7 have separate pinned dependencies (`envs/requirements_py3<n>`) (#232)
 
 #### R Dependency Changes
 

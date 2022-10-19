@@ -181,6 +181,15 @@ The main required and optional dependencies in MagellanMapper are:
 
 ### Optional Dependency Build and Runtime Requirements
 
+#### Pinned packages
+
+We've provided a few sets of pinned dependency versions:
+- Python >= 3.8: `envs/requirements.txt`
+- Python 3.7: `envs/requirements_py37`
+- Python 3.6: `envs/requirements_py36`
+
+These package versions are used for automated testing (continuous integration).
+
 #### Custom packages
 
 In most cases MagellanMapper can be installed without a compiler by using custom dependency packages that we have pre-built and hosted.
@@ -260,10 +269,10 @@ For more details on uninstalling Conda, see the [Conda uninstallation directions
 
 ## Build Documentation
 
-API documentation can be built using Sphinx. To install Sphinx, run:
+API documentation can be built using Sphinx. To install docs dependencies, run:
 
 ```
-pip install sphinx
+pip install -e .[docs]
 ```
 
 We have provided a convenience Bash script to generate HTML files with Sphinx. To build all required files, run:

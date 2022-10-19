@@ -54,7 +54,7 @@ rich==12.6.0
 s3transfer==0.6.0
 scikit-image==0.19.3
 scipy==1.9.2
-SimpleITK==2.0.2rc2.dev785+g8ac4f
+SimpleITK==2.2.0
 six==1.16.0
 tifffile==2022.10.10
 traits==6.4.1

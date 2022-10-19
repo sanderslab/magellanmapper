@@ -912,3 +912,28 @@ colors = np.array(
      [240, 228, 66],  # yellow
      [0, 0, 0]]  # black
 )
+
+
+def format_import_err(
+        dist_name: str, name: Optional[str] = None, task: Optional[str] = None
+) -> str:
+    """Format import error message.
+    
+    Args:
+        dist_name: Distribution name of package to install.
+        name: More descriptive name; if None (default), ``dist_name`` is
+            used with capitalization.
+        task: Description of task where this package is required; defaults
+            to None.
+
+    Returns:
+        Message to display for error.
+
+    """
+    
+    if name is None:
+        name = dist_name.capitalize()
+    task = "" if task is None else f"for {task}"
+    msg = f"{name} is required {task} but not installed. Please install, " \
+          f"eg with 'pip install {dist_name}'."
+    return msg

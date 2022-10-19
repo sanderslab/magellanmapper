@@ -190,10 +190,11 @@ def make_density_image(
 ) -> Tuple[np.ndarray, str]:
     """Make a density image based on associated blobs.
     
-    Uses the size and resolutions of the original image stores in the blobs
+    Uses the size and/or resolutions of the original image stored in the blobs
     if available to determine scaling between the blobs and the output image.
-    Otherwise, uses the shape of the registered labels image to set
-    the voxel sizes for the blobs.
+    Otherwise, attempts to load the original image or at least its metadata.
+    The voxel sizes for the blobs is determined by giving an output image
+    or shape.
     
     If ``matches`` is given, a heat map will be generated for each set
     of channels given in the dictionary. Otherwise, if the loaded blobs
@@ -205,12 +206,13 @@ def make_density_image(
         scale: Scaling factor between the blobs' space and the output space;
             defaults to None to use the register. Scaling is found by
             :meth:`magmap.np_io.find_scaling`.
-        shape: Output shape, used for scaling; defaults to None.
+        shape: Output shape. Defaults to None, in which case the shape will
+            match ``labels_img_sitk``.
         suffix: Modifier to append to end of ``img_path`` basename for
             registered image files that were output to a modified name;
             defaults to None.
-        labels_img_sitk: Labels image; defaults to None to load from a
-            registered labels image.
+        labels_img_sitk: Labels image. Defaults to None, in which case a
+            registered labels image will be loaded.
         channel: Sequence of channels to include in density image. For
             multiple channels, blobs from all these channels are combined
             into one heatmap.  Defaults to None to use all channels.
@@ -242,10 +244,12 @@ def make_density_image(
     # load blobs
     blobs = detector.Blobs().load_blobs(np_io.img_to_blobs_path(img_path))
     
+    # prepare output image
     is_2d = False
     if (shape is not None and blobs.roi_size is not None
             and blobs.resolutions is not None):
-        # prepare output image and scaling factor from it to the blobs
+        # use target shape provided directly; extract image size stored in
+        # blobs archive, assuming ROI size is full the full image
         scaling = np.divide(shape, blobs.roi_size)
         labels_spacing = np.divide(blobs.resolutions[0], scaling)
         labels_img = np.zeros(shape, dtype=np.uint8)
@@ -260,22 +264,29 @@ def make_density_image(
         labels_img = sitk.GetArrayFromImage(labels_img_sitk)
         
         is_2d = labels_img.ndim == 2
+        labels_res = list(labels_img_sitk.GetSpacing()[::-1])
         if is_2d:
             # temporarily convert 2D images to 3D
             labels_img = labels_img[None]
+            labels_res.insert(0, 1)
         
-        # find the scaling between the blobs and the labels image
-        target_size = (
-            None if atlas_profile is None else atlas_profile["target_size"])
-        scaling = np_io.find_scaling(
-            img_path, labels_img.shape, scale, target_size)[0]
+        if blobs.resolutions is not None:
+            # find scaling based on blob to labels image resolution ratio
+            scaling = np.divide(blobs.resolutions[0], labels_res)
+        
+        else:
+            # find the scaling between the blobs and the labels image
+            # TODO: remove target_size since it can be set by shape?
+            target_size = (
+                None if atlas_profile is None else atlas_profile["target_size"])
+            scaling = np_io.find_scaling(
+                img_path, labels_img.shape, scale, target_size)[0]
         
         if shape is not None:
             # scale blob coordinates and heat map to an alternative final shape
             scaling = np.divide(shape, np.divide(labels_img.shape, scaling))
             labels_spacing = np.multiply(
-                labels_img_sitk.GetSpacing()[::-1],
-                np.divide(labels_img.shape, shape))
+                labels_res, np.divide(labels_img.shape, shape))
             labels_img = np.zeros(shape, dtype=labels_img.dtype)
             labels_img_sitk.SetSpacing(labels_spacing[::-1])
     _logger.debug("Using image scaling: {}".format(scaling))

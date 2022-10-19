@@ -5,6 +5,7 @@
 ### Highlights
 
 - Available as binary wheel to install without requiring the source code
+- Simpler entry point to launch MagellanMapper: `mm`
 - Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
 - Atlas regions can be searched (see "Atlases > Region")
 - Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
@@ -90,7 +91,7 @@
 #### Volumetric image processing
 
 - Match-based colocalizations use larger processing blocks to avoid gaps (#120)
-- Voxel density maps no longer require a registered image (#125)
+- Voxel density maps no longer require a registered image, or it can be used in place of full-size image metadata (#125, #226)
 - Grid search profiles are now layered on top of one another rather than applied in sequential runs for consistency with ROI and atlas profiles (#138)
 - Fixed 3D surface area measurement with Scikit-image >= v0.19
 
@@ -118,6 +119,7 @@
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
   - `--plot_labels vspan_col=<col> vspan_format=<str>`: column denoting vertical span groups and string format for them, respectively (#135, 137)
 - The figure save wrapper (`plot_support.save_fig`) is more flexible (#215)
+- Discrete colormaps can use [Matplotlib named colors](https://matplotlib.org/stable/gallery/color/named_colors.html) and use them for symmetric colors (#226)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 
@@ -139,6 +141,7 @@
 - Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)
 - Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
+- Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225)
 
 ### Dependency Updates
 
@@ -154,6 +157,7 @@
 - Scikit-learn is an optional rather than a required dependency (#150)
 - The AWS-related dependencies (`boto3`, `awscli`) are also no longer installed in Conda environments (#150)
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
+- Missing dependencies are starting to use more consistent error messages and instructions (#226)
 
 #### R Dependency Changes
 

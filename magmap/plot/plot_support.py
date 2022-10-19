@@ -283,8 +283,9 @@ class ImageOverlayer:
         #: True to show images as RGB(A); defaults to False.
         self.rgb: bool = rgb
         
-        #: Labels annotation text artists; defaults to empty list.
-        self.labels_annots: List["axes.Axes.Text"] = []
+        #: Dictionary of label IDs to annotation text artists; defaults to an
+        #: empty dictionary.
+        self.labels_annots: Dict[int, "axes.Axes.Text"] = {}
         
         #: Matplotlib transform object.
         self._transform: Optional[transforms.Transform] = None
@@ -593,8 +594,11 @@ class ImageOverlayer:
     def annotate_labels(
             self, labels_2d: np.ndarray, ref_lookup: Dict[int, Any],
             level: Optional[int] = None,
-            labels_annots: Optional[List["axes.Axes.Text"]] = None,
-            over_label: bool = True):
+            labels_annots: Optional[Dict[int, "axes.Axes.Text"]] = None,
+            over_label: bool = True,
+            cmap: Optional["colormaps.DiscreteColormap"] = None,
+            color_bbox: bool = True,
+            kwargs: Dict[str, Any] = None):
         """Annotate labels with acronyms.
         
         Args:
@@ -608,17 +612,25 @@ class ImageOverlayer:
                 a label pixel. Otherwise, places the annotation at the label's
                 centroid, whether or not it is a label pixel, which may be
                 useful for label edges.
+            cmap: Discrete colormap to color the label based on its ID.
+                Defaults to None, in which case the color will be black.
+            color_bbox: True (default) to color the label bounding box instead
+                of the text. Only used if ``cmap`` is given.
+            kwargs: Dictionary of additional arguments for the text artist.
+                Defaults to None.
 
         """
         if self.labels_annots:
             # reset any existing labels
             self.remove_labels()
         
-        labels = []
+        labels = {}
         if labels_annots:
-            for annot in labels_annots:
+            # use existing annotation artists to build dict
+            for label_id, annot in labels_annots.items():
                 x, y = annot.get_position()
-                labels.append((x, y, annot.get_text()))
+                labels[label_id] = (x, y, annot.get_text())
+       
         else:
             for label_id in np.unique(labels_2d):
                 if over_label:
@@ -643,22 +655,46 @@ class ImageOverlayer:
                     # make acronym if not in reference
                     name = ontology.get_label_name(atlas_label)
                     name = libmag.make_acronym(name)
-                labels.append((x, y, name))
+                labels[label_id] = (x, y, name)
         
-        for label in labels:
-            # small annotations with subtle background in case label is dark
-            text = self.ax.text(
-                *label, color="k", fontsize="x-small", clip_on=True,
-                horizontalalignment="center", verticalalignment="center",
-                bbox=dict(boxstyle="Round,pad=0.1", facecolor="xkcd:silver",
-                          linewidth=0, alpha=0.3), transform=self._transform)
-            self.labels_annots.append(text)
+        # set args for artist bounding box
+        bbox = dict(boxstyle="Round,pad=0.1", linewidth=0, alpha=0.3)
+        if kwargs is not None and "bbox" in kwargs:
+            # update from kwargs and remove from kwargs copy
+            bbox.update(kwargs["bbox"])
+            kwargs = {k: v for k, v in kwargs.items() if k != "bbox"}
+        
+        # small annotations with subtle background in case label is dark
+        args = dict(
+            fontsize="x-small", clip_on=True, horizontalalignment="center",
+            verticalalignment="center", bbox=bbox, transform=self._transform)
+        text_color = "k"
+        facecolor = "xkcd:silver"
+        for label_id, label in labels.items():
+            if cmap:
+                # get color for label in colormap
+                color = cmap(cmap.convert_img_labels(label_id))
+                if color_bbox:
+                    # color bounding box with white text
+                    text_color = "w"
+                    facecolor = color
+                else:
+                    # color text
+                    text_color = color
+            args["color"] = text_color
+            bbox["facecolor"] = facecolor
+            
+            # add label
+            if kwargs is not None:
+                args.update(kwargs)
+            text = self.ax.text(*label, **args)
+            self.labels_annots[label_id] = text
     
     def remove_labels(self):
         """Remove label annotations."""
-        for text in self.labels_annots:
+        for text in self.labels_annots.values():
             text.remove()
-        self.labels_annots = []
+        self.labels_annots = {}
 
 
 def alpha_blend_intersection(
@@ -1330,7 +1366,9 @@ def save_fig(
         libmag.backup_file(plot_path)
     
     # make parent directories if necessary
-    os.makedirs(os.path.dirname(path), exist_ok=True)
+    out_dir = os.path.dirname(path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
     
     fig.savefig(plot_path, **kwargs)
     _logger.info(f"Exported figure to {plot_path}")

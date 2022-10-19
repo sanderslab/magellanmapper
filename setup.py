@@ -31,6 +31,9 @@ _EXTRAS_DOCS = [
 # optional dependencies for Jupyter notebooks
 _EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
 
+# optional dependencies for classification
+_EXTRAS_CLASSIFER = ["tensorflow"]
+
 # installation configuration
 config = {
     "name": "magellanmapper",
@@ -71,6 +74,7 @@ config = {
         "dataclasses ; python_version < '3.7'",
         # BrainGlobe dependencies for access to cloud-hosted atlases
         "bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip",
+        "typing_extensions",
     ],
     "extras_require": {
         "import": _EXTRAS_IMPORT,
@@ -78,6 +82,7 @@ config = {
         "pandas_plus": _EXTRAS_PANDAS,
         "docs": _EXTRAS_DOCS,
         "jupyter": _EXTRAS_JUPYTER,
+        "classifier": _EXTRAS_CLASSIFER,
         
         # dependencies for most common tasks
         "most": [

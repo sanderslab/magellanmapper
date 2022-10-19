@@ -185,7 +185,8 @@ def make_density_image(
         labels_img_sitk: Optional[sitk.Image] = None,
         channel: Optional[Sequence[int]] = None,
         matches: Dict[Tuple[int, int], "colocalizer.BlobMatch"] = None,
-        atlas_profile: Optional["atlas_prof.AtlasProfile"] = None
+        atlas_profile: Optional["atlas_prof.AtlasProfile"] = None,
+        include: Sequence[int] = None
 ) -> Tuple[np.ndarray, str]:
     """Make a density image based on associated blobs.
     
@@ -218,6 +219,8 @@ def make_density_image(
         matches: Dictionary of channel combinations to blob matches; defaults
             to None.
         atlas_profile: Atlas profile, used for scaling; defaults to None.
+        include: Sequence of blob ``confirmed`` flags to include; defaults
+            to None, in which case all flags will be included.
     
     Returns:
         Tuple of the density image as a Numpy array in the
@@ -288,14 +291,25 @@ def make_density_image(
             labels_img_sitk.SetSpacing(labels_spacing[::-1])
     _logger.debug("Using image scaling: {}".format(scaling))
     
-    # annotate blobs based on position
     blobs_chl = blobs.blobs
+    _logger.info("Initial number of blobs: %s", len(blobs_chl))
     if channel is not None:
+        # filter blobs by channel
         _logger.info(
             "Using blobs from channel(s), combining if multiple channels: %s",
             channel)
         blobs_chl = blobs_chl[np.isin(detector.Blobs.get_blobs_channel(
             blobs_chl), channel)]
+        _logger.info("Number of remaining blobs: %s", len(blobs_chl))
+
+    if include is not None:
+        # filter blobs by confirmation flag
+        _logger.info("Using blobs with confirmed flag(s): %s", include)
+        blobs_chl = blobs_chl[np.isin(detector.Blobs.get_blob_confirmed(
+            blobs_chl), include)]
+        _logger.info("Number of remaining blobs: %s", len(blobs_chl))
+    
+    # annotate blobs based on position
     heat_map = make_heat_map()
     if is_2d:
         # convert back to 3D
@@ -386,7 +400,8 @@ def make_density_images_mp(img_paths, scale=None, shape=None, suffix=None,
         pool_results.append(pool.apply_async(
             make_density_image,
             args=(img_path, scale, shape, suffix, None, channel, matches,
-                  config.atlas_profile)))
+                  config.atlas_profile,
+                  config.classifier.include)))
     for result in pool_results:
         _, path = result.get()
         print("finished {}".format(path))

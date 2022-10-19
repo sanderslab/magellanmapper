@@ -9,9 +9,13 @@ for program access.
 
 """
 
+import dataclasses
 from enum import Enum, auto
 import pathlib
-from typing import Any, Dict, Optional, Sequence, TYPE_CHECKING, Union
+from typing import Any, Dict, Optional, Sequence, TypeVar, TYPE_CHECKING, Union
+
+# imports from typing directly if available
+from typing_extensions import Protocol
 
 try:
     from appdirs import AppDirs
@@ -40,6 +44,15 @@ APP_NAME = "MagellanMapper"
 URI_SCHEME = "magmap"
 #: str: Reverse Domain Name System identifier.
 DNS_REVERSE = f"io.github.sanderslab.{APP_NAME}"
+
+
+class DataClassProtocol(Protocol):
+    """Typing protocol for data classes."""
+    __dataclass_fields__: Dict[str, Any]
+
+
+#: Type hint for data classes.
+DataClass = TypeVar("DataClass", bound=DataClassProtocol)
 
 
 class DocsURLs(Enum):
@@ -257,6 +270,8 @@ class ProcessTypes(Enum):
     DETECT_COLOC = auto()
     #: Detect blobs along with match-based colocalization.
     COLOC_MATCH = auto()
+    #: Classify blobs.
+    CLASSIFY = auto()
     #: Load previously processed images and blobs. DEPRECATED: use ``--load``
     #: CLI parameter instead.
     LOAD = auto()
@@ -380,6 +395,19 @@ class Transforms(Enum):
 
 
 transform = dict.fromkeys(Transforms, None)
+
+
+@dataclasses.dataclass
+class ClassifierData:
+    """Classifier data class for CLI arguments."""
+    #: Path to pre-trained classifier model.
+    model: Optional[str] = None
+    #: Classification flags (confirmed column) to include.
+    include: Optional[Union[int, Sequence[int]]] = None
+
+
+#: Classifier settings.
+classifier: ClassifierData = ClassifierData()
 
 
 # extensions for saving figures.

@@ -60,7 +60,8 @@ import vtk
 
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
-from magmap.cv import colocalizer, cv_nd, detector, segmenter, verifier
+from magmap.cv import classifier, colocalizer, cv_nd, detector, segmenter, \
+    verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
     roi_editor, verifier_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
@@ -345,6 +346,8 @@ class Visualization(HasTraits):
         ["-1"],
         tooltip="All blob labels will be set to this value when running Detect",
     )
+    _segs_model_path = Str  # blobs classifier model path
+    _segs_model_btn = Button("Browse")  # button to select model file
     _segs_visible = List  # blob visibility options
     _colocalize = List  # blob co-localization options
     _blob_color_style = List  # blob coloring
@@ -734,6 +737,10 @@ class Visualization(HasTraits):
             Item("_btn_verifier", show_label=False),
         ),
         HGroup(
+            Item("_segs_model_path", label="Classifier model", style="simple"),
+            Item("_segs_model_btn", show_label=False),
+        ),
+        HGroup(
             Item("_segs_visible", style="custom", show_label=False,
                  editor=CheckListEditor(
                      values=[e.value for e in BlobsVisibilityOptions],
@@ -1038,6 +1045,8 @@ class Visualization(HasTraits):
         # set up blobs
         self.blobs = detector.Blobs()
         self._blob_color_style = [BlobColorStyles.ATLAS_LABELS.value]
+        model = config.classifier.model
+        self._segs_model_path = model if model else ""
 
         # set up profiles selectors
         self._profiles_cats = [ProfileCats.ROI.value]
@@ -2635,11 +2644,11 @@ class Visualization(HasTraits):
             
             else:
                 # default to color by channel
-                chls = detector.Blobs.get_blobs_channel(
+                blob_chls = detector.Blobs.get_blobs_channel(
                     segs_all[self.segs_in_mask]).astype(np.int)
                 cmap = colormaps.discrete_colormap(
-                    max(chls) + 1, alpha, True, config.seed)
-                self.segs_cmap = cmap[chls]
+                    max(blob_chls) + 1, alpha, True, config.seed)
+                self.segs_cmap = cmap[blob_chls]
         
         if self._DEFAULTS_2D[2] in self._check_list_2d:
             blobs = self.segments[self.segs_in_mask]
@@ -2665,6 +2674,16 @@ class Visualization(HasTraits):
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)
+        
+        if self._segs_model_path and self.blobs.blobs is not None:
+            try:
+                # classify blobs if model is set
+                classifier.classify_blobs(
+                    self._segs_model_path, config.image5d, offset[::-1],
+                    roi_size[::-1], chls, self.blobs, blobs_relative=True)
+            except ModuleNotFoundError as e:
+                _logger.exception(e)
+                self.segs_feedback += f"\n{e.msg}"
         
         if (self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED or
                 self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI and
@@ -2721,7 +2740,17 @@ class Visualization(HasTraits):
         if self.roi_ed:
             self.roi_ed.show_colocalized_blobs(
                 ColocalizeOptions.INTENSITY.value in self._colocalize)
-        
+    
+    @on_trait_change("_segs_model_btn")
+    def _segs_model_path_updated(self):
+        """Open a Pyface file dialog with path set to the classifer model path.
+        """
+        open_dialog = FileDialog(
+            action="open", default_path=os.path.dirname(self._filename))
+        if open_dialog.open() == OK:
+            # get user selected path
+            self._segs_model_path = open_dialog.path
+    
     @on_trait_change("_segs_visible")
     def _update_blob_visibility(self):
         """Change blob visibilty based on toggle check box."""

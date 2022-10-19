@@ -24,7 +24,8 @@ https://github.com/sanderslab/magellanmapper/blob/master/docs/cli.md
 """
 
 import argparse
-from enum import Enum 
+import dataclasses
+from enum import Enum
 import logging
 import os
 import sys
@@ -35,7 +36,7 @@ import numpy as np
 
 from magmap.atlas import register, transformer
 from magmap.cloud import notify
-from magmap.cv import chunking, colocalizer, stack_detect
+from magmap.cv import chunking, classifier, colocalizer, stack_detect
 from magmap.io import df_io, export_stack, importer, libmag, naming, np_io, \
     sqlite
 from magmap.plot import colormaps, plot_2d
@@ -119,24 +120,27 @@ def args_with_dict(args: List[str]) -> List[Union[Dict[str, Any], str, int]]:
     return parsed
 
 
-def args_to_dict(args: List[str], keys_enum: Type[Enum],
-                 args_dict: Optional[Dict[Enum, Any]] = None,
-                 sep_args: str = "=", sep_vals: str = ",",
-                 default: Optional[Any] = None) -> Dict[Enum, Any]:
+def args_to_dict(
+        args: List[str], keys: Union[Type[Enum], Type["config.DataClass"]],
+        args_dict: Optional[Dict[Enum, Any]] = None, sep_args: str = "=",
+        sep_vals: str = ",", default: Optional[Any] = None
+) -> Union[Dict[Enum, Any], Type["config.DataClass"]]:
     """Parse positional and keyword-based arguments to an enum-keyed dictionary.
     
     Args:
         args: List of arguments with positional values followed by
             ``sep_args``-delimited values. Positional values will be entered
-            in the existing order of ``keys_enum`` based on member values, 
-            while keyword-based values will be entered if an enum 
-            member corresponding to the keyword exists.
-            Entries can also be ``sep_vals``-delimited to specify lists.
-        keys_enum: Enum class to use as keys for dictionary. Values are
-            assumed to range from 1 to number of members as output 
-            by the default Enum functional API.
+            in the existing order of ``keys`` based on member values,
+            while keyword-based values will be entered if a member
+            corresponding to the keyword exists. Entries can also be
+            ``sep_vals``-delimited to specify lists.
+        keys: Enum class or data class instance whose fields will be used as
+            keys for dictionary. Enum values are assumed to range from 1 to
+            number of members as output by the default Enum functional API.
         args_dict: Dictionary to be filled or updated with keys from
-            ``keys_enum``; defaults to None, which will assign an empty dict.
+            ``keys_enum``. Defaults to None, which will assign an empty dict.
+            Ignored if ``keys_class`` is a data class instance, which will
+            be updated instead.
         sep_args: Separator between arguments and values; defaults to "=".
         sep_vals: Separator within values; defaults to ",".
         default: Default value for each argument. Effectively turns off
@@ -145,48 +149,61 @@ def args_to_dict(args: List[str], keys_enum: Type[Enum],
             undergo splitting by ``sep_vals``.
     
     Returns:
-        Dictionary filled with arguments. Values that contain commas
-        will be split into comma-delimited lists. All values will be 
-        converted to ints if possible.
+        Dictionary or data class corresponding to ``keys``, filled with
+        arguments. Values that contain commas will be split into
+        comma-delimited lists. All values will be converted to ints if possible.
     
     """
-    if args_dict is None:
-        args_dict = {}
+    is_data = dataclasses.is_dataclass(keys)
+    if is_data:
+        # use fields as keys
+        keys_data = [f.name for f in dataclasses.fields(keys)]
+        nkeys = len(keys_data)
+        out = keys
+    else:
+        # use Enum members as keys
+        keys_data = None
+        nkeys = len(keys)
+        out = {} if args_dict is None else args_dict
+    
     by_position = True
-    num_enums = len(keys_enum)
     for i, arg in enumerate(args):
         arg_split = arg.split(sep_args)
         if default and len(arg_split) < 2:
             # add default value unless another value is given
             arg_split.append(default)
         len_arg_split = len(arg_split)
+        
         # assume by position until any keyword given
         by_position = by_position and len_arg_split < 2
         key = None
         vals = arg
         if by_position:
-            # positions are based on enum vals, assumed to range from 
+            # positions are based on enum vals, assumed to range from
             # 1 to num of members
             n = i + 1
-            if n > num_enums:
+            if n > nkeys:
                 _logger.warn(
-                    "No further parameters in {} to assign \"{}\" by "
-                    "position, skipping".format(keys_enum, arg))
+                    "No further parameters in '%s' to assign '%s' by "
+                    "position, skipping", keys, arg)
                 continue
-            key = keys_enum(n)
+            key = keys_data[n] if is_data else keys(n)
+        
         elif len_arg_split < 2:
-            _logger.warn("parameter {} does not contain a keyword, skipping"
-                         .format(arg))
+            _logger.warn(
+                "Parameter '%s' does not contain a keyword, skipping", arg)
+        
         else:
             # assign based on keyword if its equivalent enum exists
+            key_str = arg_split[0]
             vals = arg_split[1]
-            key_str = arg_split[0].upper()
             try:
-                key = keys_enum[key_str]
+                key = key_str.lower() if is_data else keys[key_str.upper()]
             except KeyError:
-                _logger.warn("Unable to find '{}' in {}, skipping".format(
-                    key_str, keys_enum))
+                _logger.warn(
+                    "Unable to find '%s' in %s, skipping", key_str, keys)
                 continue
+        
         if key:
             if isinstance(vals, str):
                 # split delimited strings
@@ -195,12 +212,17 @@ def args_to_dict(args: List[str], keys_enum: Type[Enum],
                     vals = vals_split
                 # cast to numeric type if possible
                 vals = libmag.get_int(vals)
-            # assign to found enum
-            args_dict[key] = vals
-    return args_dict
+            # assign to found enum to data class
+            if is_data:
+                setattr(out, key, vals)
+            else:
+                out[key] = vals
+    
+    return out
 
 
-def _get_args_dict_help(msg: str, keys: Type[Enum]) -> str:
+def _get_args_dict_help(
+        msg: str, keys: Union[Type[Enum], Type["config.DataClass"]]) -> str:
     """Get the help message for command-line arguments that are converted
     to a dictionary.
     
@@ -212,9 +234,15 @@ def _get_args_dict_help(msg: str, keys: Type[Enum]) -> str:
         Help message with available keys.
 
     """
-    return ("{} Available keys follow this order until the first "
-            "key=value pair is given: {}".format(
-                msg, libmag.enum_names_aslist(keys)))
+    if dataclasses.is_dataclass(keys):
+        # get all fields from data class
+        names = [f.name for f in dataclasses.fields(keys)]
+    else:
+        # use enum names
+        names = libmag.enum_names_aslist(keys)
+    
+    return (f"{msg} Available keys, which follow this order positionally "
+            f"until the first key=value pair is given: {names}")
 
 
 def process_cli_args():
@@ -353,6 +381,11 @@ def process_cli_args():
     parser.add_argument(
         "--set_meta", nargs="*",
         help="Set metadata values; see config.MetaKeys for settings")
+    parser.add_argument(
+        "--classifier", nargs="*",
+        help=_get_args_dict_help(
+            "Classifier values; see config.ClassifierKeys for settings.",
+            config.ClassifierData))
 
     # image and figure display arguments
     parser.add_argument(
@@ -727,6 +760,11 @@ def process_cli_args():
     # set up Matplotlib styles/themes
     plot_2d.setup_style()
     
+    if args.classifier is not None:
+        # classifier settings
+        args_to_dict(args.classifier, config.classifier)
+        print("Set classifier to {}".format(config.classifier))
+
     if args.db:
         # set main database path to user arg
         config.db_path = args.db
@@ -754,18 +792,58 @@ def process_cli_args():
             f"ignored: {args_unknown}")
 
 
+def setup_image(
+        path: str, series: Optional[int] = None,
+        proc_tasks: Optional[Dict["config.ProcessTypes", Any]] = None):
+    """Set up the main image from CLI args and process any tasks.
+    
+    Args:
+        path: Image path.
+        series: Image series, such as a tile; defaults to None.
+        proc_tasks: Dictionary of processing tasks; defaults to None.
+
+    """
+    # deconstruct user-supplied image filename
+    filename, offset, size, reg_suffixes = importer.deconstruct_img_name(path)
+    set_subimg, _ = importer.parse_deconstructed_name(
+        filename, offset, size, reg_suffixes)
+    
+    if not set_subimg:
+        # sub-image parameters set in filename takes precedence for
+        # the loaded image, but fall back to user-supplied args
+        offset = config.subimg_offsets[0] if config.subimg_offsets else None
+        size = config.subimg_sizes[0] if config.subimg_sizes else None
+    
+    if proc_tasks:
+        for proc_task, proc_val in proc_tasks.items():
+            # set up image for the given task
+            np_io.setup_images(
+                filename, series, offset, size, proc_task,
+                fallback_main_img=False)
+            process_file(
+                filename, proc_task, proc_val, series, offset, size,
+                config.roi_offsets[0] if config.roi_offsets else None,
+                config.roi_sizes[0] if config.roi_sizes else None)
+        
+    else:
+        # set up image without a task specified, eg for display
+        np_io.setup_images(filename, series, offset, size)
+    
+
 def process_proc_tasks(
         path: Optional[str] = None,
         series_list: Optional[Sequence[int]] = None
-) -> Optional[Dict[config.ProcessTypes, Any]]:
+) -> Optional[Dict["config.ProcessTypes", Any]]:
     """Apply processing tasks.
     
     Args:
         path: Base path to main image file; defaults to None, in which case
             :attr:`config.filename` will be used.
-        series_list: 
+        series_list: Sequence of images series, such as tiles; defaults
+            to None.
 
     Returns:
+        Dictionary of set processing types.
 
     """
     if path is None:
@@ -781,30 +859,8 @@ def process_proc_tasks(
     for series in series_list:
         # process files for each series, typically a tile within a
         # microscopy image set or a single whole image
-        filename, offset, size, reg_suffixes = \
-            importer.deconstruct_img_name(path)
-        set_subimg, _ = importer.parse_deconstructed_name(
-            filename, offset, size, reg_suffixes)
-        if not set_subimg:
-            # sub-image parameters set in filename takes precedence for
-            # the loaded image, but fall back to user-supplied args
-            offset = (config.subimg_offsets[0] if config.subimg_offsets
-                      else None)
-            size = (config.subimg_sizes[0] if config.subimg_sizes
-                    else None)
-        if proc_tasks:
-            for proc_task, proc_val in proc_tasks.items():
-                # set up image for the given task
-                np_io.setup_images(
-                    filename, series, offset, size, proc_task,
-                    fallback_main_img=False)
-                process_file(
-                    filename, proc_task, proc_val, series, offset, size,
-                    config.roi_offsets[0] if config.roi_offsets else None,
-                    config.roi_sizes[0] if config.roi_sizes else None)
-        else:
-            # set up image without a task specified, eg for display
-            np_io.setup_images(filename, series, offset, size)
+        setup_image(path, series, proc_tasks)
+    
     return proc_tasks
     
 
@@ -1116,7 +1172,7 @@ def process_file(
     Assumes that the image has already been set up.
     
     Args:
-        path: Path to image from which MagellanMapper-style paths will 
+        path: Path to image from which MagellanMapper-style paths will
             be generated.
         proc_type: Processing type, which should be a one of
             :class:`config.ProcessTypes`.
@@ -1131,8 +1187,9 @@ def process_file(
             ``(x, y, z)``; defaults to None.
     
     Returns:
-        Tuple of stats from processing, or None if no stats, and 
+        Tuple of stats from processing, or None if no stats, and
         text feedback from the processing, or None if no feedback.
+    
     """
     # PROCESS BY TYPE
     stats = None
@@ -1149,9 +1206,8 @@ def process_file(
         print("imported {}, will exit".format(path))
     
     elif proc_type is config.ProcessTypes.EXPORT_ROIS:
-        # export ROIs; assumes that info_proc was already loaded to 
-        # give smaller region from which smaller ROIs from the truth DB 
-        # will be extracted
+        # export ROIs; assumes that metadata was already loaded to give smaller
+        # region from which smaller ROIs from the truth DB will be extracted
         from magmap.io import export_rois
         db = config.db if config.truth_db is None else config.truth_db
         export_path = naming.make_subimage_name(
@@ -1165,7 +1221,7 @@ def process_file(
     elif proc_type is config.ProcessTypes.TRANSFORM:
         # transpose, rescale, and/or resize whole large image
         transformer.transpose_img(
-            path, series, plane=config.plane, 
+            path, series, plane=config.plane,
             rescale=config.transform[config.Transforms.RESCALE],
             target_size=config.roi_size)
         
@@ -1205,6 +1261,14 @@ def process_file(
             colocalizer.insert_matches(config.db, matches)
         else:
             print("No blobs loaded to colocalize, skipping")
+    
+    elif proc_type is config.ProcessTypes.CLASSIFY:
+        # classify blobs
+        try:
+            classifier.ClassifyImage.classify_whole_image()
+            config.blobs.save_archive()
+        except FileNotFoundError as e:
+            _logger.debug(e)
 
     elif proc_type in (config.ProcessTypes.EXPORT_PLANES,
                        config.ProcessTypes.EXPORT_PLANES_CHANNELS):

@@ -44,7 +44,7 @@ pyparsing==3.0.9
 PyQt5==5.15.7
 PyQt5-Qt5==5.15.2
 PyQt5-sip==12.11.0
-python-bioformats==4.0.5.post2+g51eb88a
+python-bioformats==4.0.6
 python-dateutil==2.8.2
 pytz==2022.5
 PyWavelets==1.4.1

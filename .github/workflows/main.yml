@@ -46,7 +46,7 @@ jobs:
           # python environment path from setup-python
           path: ${{ env.pythonLocation }}
           # check for cache from the corresponding requirements file
-          key: ${{ env.pythonLocation }}-pip-${{ hashFiles($env.REQS) }}
+          key: ${{ env.pythonLocation }}-pip-${{ hashFiles(env.REQS) }}
       - name: Install dependencies
         env:
           QT_QPA_PLATFORM: offscreen

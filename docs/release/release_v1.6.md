@@ -135,6 +135,7 @@
 - The Shapiro-Wilks test has been implemented in `meansModel` for consistent table output (#164)
 - Fixed t-test, which also provides Cohen's d as a standardized effect size through the `effectsize` package (#135)
 - Fixed jitter plot box plots to avoid covering labels (#147)
+- Fixed model fitting (#240)
 
 #### Code base and docs
 

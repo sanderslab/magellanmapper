@@ -12,3 +12,7 @@ updates:
     directory: "/envs/" # Location of package manifests
     schedule:
       interval: "daily"
+    ignore:
+      - dependency-name: "python-bioformats"
+      - dependency-name: "javabridge"
+      - dependency-name: "SimpleITK"

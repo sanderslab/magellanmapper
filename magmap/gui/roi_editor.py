@@ -829,20 +829,34 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 ax, level, zoom_levels, arrs_3d, config.cmap_labels, aspect,
                 origin, scaling, max_size)
         
-        # attach overview plot navigation handlers: 1) mouse scroll, 2) arrow
-        # key, and 3) right-click in zoomed plot to jump to that plane in the
-        # overview plots; note that fig/axes lose focus sporadically in lower
+        # attach overview plot navigation handlers
+        
+        # mouse scroll to scroll these overview planes
+        self._listeners.append(
+            fig.canvas.mpl_connect("scroll_event", scroll_overview))
+        
+        # arrow keys to scroll plane-by-plane
+        self._listeners.append(
+            fig.canvas.mpl_connect("key_press_event", key_press))
+        
+        # right-click on zoomed plot to jump to corresponding plane in
+        # overview plots; fig/axes lose focus sporadically in lower
         # right canvas on Mac, at which time axes are not associated with
         # key events but are with mouse events
-        fig.canvas.mpl_connect("scroll_event", scroll_overview)
-        fig.canvas.mpl_connect("key_press_event", key_press)
-        fig.canvas.mpl_connect("close_event", self.on_close)
         fig.canvas.mpl_connect("button_release_event", on_btn_release_scroll)
+        self._listeners.append(fig.canvas.mpl_connect(
+            "button_release_event", on_btn_release_scroll))
+        
+        # disconnect listeners
+        self._listeners.append(
+            fig.canvas.mpl_connect("close_event", self.on_close))
+        
         # fig.canvas.mpl_connect("draw_event", lambda x: print("redraw"))
         
         if self.fn_redraw:
             # handle potential redraws
-            fig.canvas.mpl_connect("button_press_event", self._redraw)
+            self._listeners.append(
+                fig.canvas.mpl_connect("button_press_event", self._redraw))
 
         # zoomed-in views of z-planes spanning from just below to just above ROI
         blobs_in = None
@@ -930,10 +944,13 @@ class ROIEditor(plot_support.ImageSyncMixin):
             # add points that were not segmented by ctrl-clicking on zoom plots
             # as long as not in "no circles" mode
             regex_key_chl = re.compile(r"\+[0-9]+$")
-            
-            fig.canvas.mpl_connect("button_release_event", on_btn_release)
+
+            self._listeners.append(
+                fig.canvas.mpl_connect("button_release_event", on_btn_release))
+
             # reset circles window flag
-            fig.canvas.mpl_connect("close_event", fn_close_listener)
+            self._listeners.append(
+                fig.canvas.mpl_connect("close_event", fn_close_listener))
 
         # show 3D screenshot if available
         if mlab_screenshot is not None:
@@ -1352,7 +1369,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                           else roi[..., tuple(channel)]]
                 ax.format_coord = pixel_display.PixelDisplay(
                     imgs2d, ax_imgs, offset=offset[1::-1])
-                fig.canvas.mpl_connect("motion_notify_event", on_motion)
+                self._listeners.append(
+                    fig.canvas.mpl_connect("motion_notify_event", on_motion))
         plot_ax_imgs = None
         if ax_imgs and ax_imgs[0]:
             plot_ax_imgs = [[plot_editor.PlotAxImg(img) for img in imgs]

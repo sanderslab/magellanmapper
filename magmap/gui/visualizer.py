@@ -1096,7 +1096,7 @@ class Visualization(HasTraits):
         
         # set up ROI and Atlas Editor figures without constrained layout
         # because of performance impact at least as of Matplotlib 3.2
-        self.roi_ed = None
+        self.roi_ed: Optional["roi_editor.ROIEditor"] = None
         self._roi_ed_fig = figure.Figure()
         self._atlas_ed_fig = figure.Figure()
         
@@ -2420,6 +2420,8 @@ class Visualization(HasTraits):
 
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
+            if self.roi_ed:
+                self.roi_ed.on_close()
             self._launch_roi_editor()
         elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
@@ -2830,7 +2832,7 @@ class Visualization(HasTraits):
         if config.image5d is None:
             print("Main image has not been loaded, cannot show ROI Editor")
             return
-
+        
         if (not self._circles_opened_type 
                 or self._circles_opened_type ==
                 roi_editor.ROIEditor.CircleStyles.NO_CIRCLES):

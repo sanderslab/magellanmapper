@@ -972,12 +972,18 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
     return z_overview_new
 
 
-def hide_axes(ax):
+def hide_axes(ax: "axes.Axes", frame_off: bool = False):
     """Hides x- and y-axes and the axes frame.
+    
+    Args:
+        ax: Plot axes.
+        frame_off: True to turn off the frame; defaults to False.
+    
     """
     ax.get_xaxis().set_visible(False)
     ax.get_yaxis().set_visible(False)
-    ax.set_frame_on(False)
+    if frame_off:
+        ax.set_frame_on(False)
 
 
 def scale_axes(ax, scale_x=None, scale_y=None):

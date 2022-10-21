@@ -29,7 +29,7 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 if TYPE_CHECKING:
-    from matplotlib import axes, colors, figure, image
+    from matplotlib import axes, backend_bases, colors, figure, image
     from magmap.gui import plot_editor
     from magmap.io import np_io
     import pandas as pd
@@ -53,6 +53,9 @@ class ImageSyncMixin:
 
         #: Plane(s) for max intensity projections.
         self._max_intens_proj: Optional[Union[int, Sequence[int]]] = None
+        
+        #: Listeners attached to the editor.
+        self._listeners: List["backend_bases.Event"] = []
 
     def get_img_display_settings(self, imgi, chl=None):
         """Get display settings for the given image.
@@ -258,11 +261,17 @@ class ImageSyncMixin:
     def on_close(self):
         """Figure close handler.
         
-        Disconnects all Plot Editors.
+        Disconnects all Plot Editors and listeners.
 
         """
         for plot_ed in self.plot_eds.values():
+            # disconnect listeners in Plot Editor
             plot_ed.disconnect()
+        
+        if self.fig:
+            # disconnect stored listeners
+            for listener in self._listeners:
+                self.fig.canvas.mpl_disconnect(listener)
 
 
 class ImageOverlayer:

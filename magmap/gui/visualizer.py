@@ -2420,15 +2420,28 @@ class Visualization(HasTraits):
 
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
+            # disconnect existing ROI and Verifier Editors, which share the fig
             if self.roi_ed:
                 self.roi_ed.on_close()
+            if self.verifier_ed:
+                self.verifier_ed.on_close()
+            
+            # launch ROI Editor
             self._launch_roi_editor()
+        
         elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
             if self.atlas_eds:
+                # disconnect and reset existing Atlas Editors
                 # TODO: re-support multiple Atlas Editor windows
+                for ed in self.atlas_eds:
+                    ed.on_close()
                 self.atlas_eds = []
+            
+            # launch Atlas Editor
             self.launch_atlas_editor()
+        
         elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
+            # launch 3D Viewer
             self.show_3d()
             self._post_3d_display()
     
@@ -3140,6 +3153,10 @@ class Visualization(HasTraits):
     
     @observe("_btn_verifier")
     def _launch_verifier_editor(self, evt):
+        if self.verifier_ed:
+            # disconnect existing editor since launched outside of refresh btn
+            self.verifier_ed.on_close()
+        
         verifier_ed = verifier_editor.VerifierEditor(
             config.img5d, self.blobs, "Verifier", self._roi_ed_fig,
             # necessary for immediate table refresh rather than after scroll

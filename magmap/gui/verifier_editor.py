@@ -98,8 +98,10 @@ class VerifierEditor(plot_support.ImageSyncMixin):
         self.show_views()
         
         # attach listeners
-        self.fig.canvas.mpl_connect("button_press_event", self._on_mouse_press)
-        self.fig.canvas.mpl_connect("close_event", self.on_close)
+        self._listeners.append(self.fig.canvas.mpl_connect(
+            "button_press_event", self._on_mouse_press))
+        self._listeners.append(self.fig.canvas.mpl_connect(
+            "close_event", self.on_close))
         
         # attach handlers
         self._row_slider.on_changed(self._change_row)

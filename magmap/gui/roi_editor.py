@@ -739,6 +739,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
             else:
                 # default to scrolling commands for up/down/right arrows
                 scroll_overview(event)
+        
+        def on_btn_release_scroll(event):
+            # scroll the overview plot to the selected zoomed plot
+            scroll_overview(event)
 
         def on_btn_release(event):
             # respond to mouse button presses for DraggableCircle management
@@ -832,8 +836,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # key events but are with mouse events
         fig.canvas.mpl_connect("scroll_event", scroll_overview)
         fig.canvas.mpl_connect("key_press_event", key_press)
-        fig.canvas.mpl_connect("button_release_event", key_press)
         fig.canvas.mpl_connect("close_event", self.on_close)
+        fig.canvas.mpl_connect("button_release_event", on_btn_release_scroll)
         # fig.canvas.mpl_connect("draw_event", lambda x: print("redraw"))
         
         if self.fn_redraw:

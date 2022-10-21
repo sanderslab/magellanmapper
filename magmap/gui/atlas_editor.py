@@ -213,10 +213,14 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         self.set_show_crosslines(True)
         
         # attach listeners
-        fig.canvas.mpl_connect("scroll_event", self.scroll_overview)
-        fig.canvas.mpl_connect("key_press_event", self.on_key_press)
-        fig.canvas.mpl_connect("close_event", self._close)
-        fig.canvas.mpl_connect("axes_leave_event", self.axes_exit)
+        self._listeners.append(
+            fig.canvas.mpl_connect("scroll_event", self.scroll_overview))
+        self._listeners.append(
+            fig.canvas.mpl_connect("key_press_event", self.on_key_press))
+        self._listeners.append(
+            fig.canvas.mpl_connect("close_event", self._close))
+        self._listeners.append(
+            fig.canvas.mpl_connect("axes_leave_event", self.axes_exit))
         
         self.alpha_slider.on_changed(self.alpha_update)
         self.alpha_reset_btn.on_clicked(self.alpha_reset)

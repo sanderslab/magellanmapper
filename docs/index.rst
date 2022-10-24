@@ -11,6 +11,7 @@ Welcome to MagellanMapper's documentation!
    :caption: Contents:
 
    install.md
+   load.md
    viewers.md
    cli.md
    settings.md

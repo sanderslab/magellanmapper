@@ -373,20 +373,22 @@ class PlotEditor:
         # refresh view
         self.axes.figure.canvas.draw_idle()
     
-    def _get_img2d(self, i, img, max_intens=0):
-        """Get the 2D image from the given 3D image, scaling and downsampling
-        as necessary.
+    def _get_img2d(
+            self, i: int, img: np.ndarray, max_intens: int = 0) -> np.ndarray:
+        """Get the 2D image from the given 3D image from the current coordinate.
+        
+        Scales and downsamples as necessary.
 
         Args:
-            i (int): Index of 3D image in sequence of 3D images, assuming
+            i: Index of 3D image in sequence of 3D images, assuming
                 order of ``(main_image, labels_img, borders_img)``.
-            img (:obj:`np.ndarray`): 3D image from which to extract a 2D plane.
-            max_intens (int): Number of planes to incorporate for maximum
+            img: 3D image from which to extract a 2D plane.
+            max_intens: Number of planes to incorporate for maximum
                 intensity projection; defaults to 0 to not perform this
                 projection.
 
         Returns:
-            :obj:`np.ndarray`: 2D plane, downsampled if necessary.
+            2D plane, downsampled if necessary.
 
         """
         z = self.coord[0]
@@ -395,22 +397,30 @@ class PlotEditor:
             # rescale z-coordinate based on image scaling to the main image
             z_scale = self._img3d_scales[i][0]
             z = int(z * z_scale)
+        
+        num_z = len(img)
+        if z >= num_z:
+            # keep index within image planes
+            z = num_z - 1
+        
         # downsample to reduce access time; use same factor for both x and y
         # to retain aspect ratio
         downsample = self._downsample[i]
         img = img[:, ::downsample, ::downsample]
+        
         if max_intens:
             # max intensity projection (MIP) across the given number of
             # planes available
             z_stop = z + int(max_intens * z_scale)
-            num_z = len(img)
             if z_stop > num_z:
                 z_stop = num_z
             z_range = np.arange(z, z_stop)
             img2d = plot_support.extract_planes(
                 img[None], z_range, max_intens_proj=True)[0]
         else:
+            # get single plane
             img2d = img[z]
+        
         return img2d
 
     def show_overview(self):

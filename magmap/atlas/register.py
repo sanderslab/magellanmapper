@@ -223,7 +223,7 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
 
 def register_repeat(
         transformix_img_filter: sitk.TransformixImageFilter,
-        img: sitk.Image) -> sitk.Image:
+        img: sitk.Image, preserve_idents: bool = False) -> sitk.Image:
     """Transform labels to match a prior registration.
     
     Uses an Elastix Transformix filter to reproduce a transformation on
@@ -233,6 +233,8 @@ def register_repeat(
     Args:
         transformix_img_filter: Filter generated from a prior registration.
         img: SimpleITK image.
+        preserve_idents: True to ensure that identities in ``img`` are
+            preserved. Typically used for label images. Defaults to False.
 
     Returns:
         Transformed image.
@@ -240,11 +242,37 @@ def register_repeat(
     """
     # apply atlas transformation to labels image
     pixel_id = img.GetPixelID()  # now as signed int
-    transformix_img_filter.SetMovingImage(img)
+    
+    img_sitk = img
+    img_unique = None
+    if preserve_idents:
+        # map values to indices in their unique array to minimize change of
+        # rounding errors for large values
+        img_np = sitk.GetArrayFromImage(img_sitk)
+        img_unique, img_inds = np.unique(img_np, return_inverse=True)
+        
+        # offset by 1 since background will be inserted as 0
+        img_inds = img_inds.reshape(img_np.shape) + 1
+        img_sitk = sitk_io.replace_sitk_with_numpy(img, img_inds)
+    
+    # apply transformation
+    transformix_img_filter.SetMovingImage(img_sitk)
     transformix_img_filter.Execute()
-    transformed_img = transformix_img_filter.GetResultImage()
-    transformed_img = sitk.Cast(transformed_img, pixel_id)
-    _logger.info(f"Transformed image:\n{transformed_img}")
+    transf_img = transformix_img_filter.GetResultImage()
+    transf_img = sitk.Cast(transf_img, pixel_id)
+
+    if preserve_idents:
+        # map indices back to original values
+        transf_inds = sitk.GetArrayFromImage(transf_img)
+        bkgdi = np.nonzero(img_unique == 0)
+        if len(bkgdi) > 0:
+            # convert inserted background (0) to background index
+            transf_inds[transf_inds == 0] = bkgdi[0] + 1
+        transf_inds -= 1
+        transf_np = img_unique[transf_inds]
+        transf_img = sitk_io.replace_sitk_with_numpy(transf_img, transf_np)
+    
+    _logger.info(f"Transformed image:\n{transf_img}")
     '''
     LabelStatistics = sitk.LabelStatisticsImageFilter()
     LabelStatistics.Execute(fixed_img, labels_img)
@@ -253,7 +281,7 @@ def register_repeat(
     variance = LabelStatistics.GetVariance(1)
     print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
     '''
-    return transformed_img
+    return transf_img
 
 
 def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
@@ -648,7 +676,7 @@ def register(
         if transformix_filter is None:
             return lbls_img, None, None, None
         # transform label
-        labels_trans = register_repeat(transformix_filter, lbls_img)
+        labels_trans = register_repeat(transformix_filter, lbls_img, True)
         print(labels_trans.GetSpacing())
         
         # WORKAROUND: labels img floating point vals may be more rounded 
@@ -1194,7 +1222,8 @@ def register_labels_to_atlas(path_fixed):
     # apply transformation, manually resetting spacing in case of rounding
     labels_sitk = sitk_io.load_registered_img(
         path_fixed, config.RegNames.IMG_LABELS.value, get_sitk=True)
-    transformed_labels = register_repeat(transformix_img_filter, labels_sitk)
+    transformed_labels = register_repeat(
+        transformix_img_filter, labels_sitk, True)
     transformed_labels.SetSpacing(transformed_img.GetSpacing())
     #sitk.Show(transformed_labels)
     

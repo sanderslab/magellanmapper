@@ -211,6 +211,13 @@ napoleon_use_param = True
 napoleon_use_rtype = True
 
 
+# -- Options for MyST parsing -------------------------
+
+# auto-generate header anchors, similarly to GitHub anchors for compatibility
+# with viewing Markdown pages in GitHub or RTD
+myst_heading_anchors = 4
+
+
 # automate building API .rst files, necessary for ReadTheDocs, as inspired by:
 # https://github.com/readthedocs/readthedocs.org/issues/1139#issuecomment-398083449
 def run_apidoc(_):

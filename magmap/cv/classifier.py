@@ -80,7 +80,7 @@ def classify_patches(model, x: np.ndarray, thresh: float = 0.5
 def setup_classification_roi(
         image5d: np.ndarray, subimg_offset: Sequence[int],
         subimg_size: Sequence[int],
-        blobs: "detector.Blobs", patch_size: int, blobs_relative: bool
+        blobs: "detector.Blobs", patch_size: int, blobs_relative: bool = False
 ) -> Tuple[np.ndarray, np.ndarray, Sequence[int]]:
     """Set up ROI for blob classification.
     
@@ -91,10 +91,13 @@ def setup_classification_roi(
     patches.
     
     Args:
+        image5d: 4/5D array as ``t, z, y, x[, c]``.
         subimg_offset: Subimage offset in ``z, y, x``.
         subimg_size: Subimage size in ``z, y, x``.
         blobs: Blobs instance.
         patch_size: Patch size as an int for both width and height.
+        blobs_relative: True if ``blobs`` coordinates are relative; defaults
+            to False.
     
     Returns:
         Tuple of:

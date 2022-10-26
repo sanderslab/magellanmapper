@@ -111,7 +111,14 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
     } else if (model == kModel[2]) {
       # linear regression
       # TODO: see whether need to factorize genos
-      fit <- lm(vals ~ genos * sides)
+      if (length(unique(genos)) < 2) {
+        lm.formula <- as.formula(vals ~ sides)
+      } else if (length(unique(sides)) < 2) {
+        lm.formula <- as.formula(vals ~ genos)
+      } else {
+        lm.formula <- as.formula(vals ~ genos * sides)
+      }
+      fit <- lm(lm.formula)
       result.summary <- summary.lm(fit)
       result <- result.summary$coefficients
       
@@ -154,9 +161,15 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       print(result.summary)
     }
     
-    # return result from try block
+    # convert result to dataframe
     result <- as.data.frame(result)
+    if (ncol(result) == 1) {
+      # vector gives single column; transpose to multi-column
+      result <- t(result)
+    }
     print(result)
+    
+    # return result from try block
     result
     
   }, error=function(e) {

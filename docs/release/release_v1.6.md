@@ -113,7 +113,7 @@
 
 #### Python stats and plots
 
-- Generate swarm plots in Seaborn (#137)
+- Generate swarm and category plots in Seaborn (#137, #253)
 - Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
 - New plot label sub-arguments (#135):
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes

@@ -1254,34 +1254,43 @@ def plot_image(img, path=None, show=False):
     plt.close()  # prevent display during next show call
 
 
-def decorate_plot(ax, title=None, xlabel=None, ylabel=None, xunit=None,
-                  yunit=None, xlim=None, ylim=None, xscale=None, yscale=None,
-                  **kwargs):
+def decorate_plot(
+        ax: "axes.Axes", title: Optional[str] = None,
+        xlabel: Optional[str] = None, ylabel: Optional[str] = None,
+        xunit: Optional[str] = None, yunit: Optional[str] = None,
+        xlim: Optional[Sequence[float]] = None,
+        ylim: Optional[Sequence[float]] = None,
+        xscale: Optional[str] = None, yscale: Optional[str] = None,
+        xticks: Optional[Sequence[Any]] = None,
+        yticks: Optional[Sequence[Any]] = None,
+        **kwargs) -> "axes.Axes":
     """Decorate a plot with text and configure limits and scaling.
 
     Args:
-        ax (:class:`matplotlib.image.Axes`): Matplotlib plot.
-        title (str): Title of figure; defaults to None.
-        xlabel (str): X-axis label; defaults to None to use
+        ax: Matplotlib plot.
+        title: Title of figure; defaults to None.
+        xlabel: X-axis label; defaults to None to use
             :attr:`config.plot_labels`. Can explicitly set to None to prevent
             unit display.
-        ylabel (str): Y-axis label; defaults to None to use
+        ylabel: Y-axis label; defaults to None to use
             :attr:`config.plot_labels`. Can explicitly set to None to prevent
             unit display.
-        xunit (str): X-axis label unit; defaults to None.
-        yunit (str): Y-axis label unit; defaults to None.:
-        xlim (Sequence[float]): Sequence of min and max boundaries for the
+        xunit: X-axis label unit; defaults to None.
+        yunit: Y-axis label unit; defaults to None.:
+        xlim: Sequence of min and max boundaries for the
             x-axis; defaults to None.
-        ylim (Sequence[float]): Sequence of min and max boundaries for the
+        ylim: Sequence of min and max boundaries for the
             y-axis; defaults to None.
-        xscale (str): Scale mode for :meth:`plot_support.scale_axes` x-axis;
+        xscale: Scale mode for :meth:`plot_support.scale_axes` x-axis;
             defaults to None to ignore.
-        yscale (str): Scale mode for :meth:`plot_support.scale_axes` y-axis;
+        yscale: Scale mode for :meth:`plot_support.scale_axes` y-axis;
             defaults to None to ignore.
-        **kwargs (Any): Additional arguments, which will be ignored.
+        xticks: Arguments to :meth:`axes.Axes.set_xticks`; defaults to None.
+        yticks: Arguments to :meth:`axes.Axes.set_yticks`; defaults to None.
+        **kwargs: Additional arguments, which will be ignored.
 
     Returns:
-        :class:`matplotlib.image.Axes`: Matplotlib plot.
+        Matplotlib plot.
 
     """
     if kwargs:
@@ -1293,6 +1302,14 @@ def decorate_plot(ax, title=None, xlabel=None, ylabel=None, xunit=None,
     if xlim: ax.set_xlim(xlim)
     if ylim: ax.set_ylim(ylim)
     
+    if xticks:
+        # set x-tick positions and labels
+        ax.set_xticks(*xticks)
+
+    if yticks:
+        # set y-tick positions and labels
+        ax.set_yticks(*yticks)
+
     # axes scaling must follow after scientific notation since non-linear
     # formatters are not compatible with scinot
     plot_support.set_scinot(ax, lbls=(ylabel, xlabel), units=(yunit, xunit))

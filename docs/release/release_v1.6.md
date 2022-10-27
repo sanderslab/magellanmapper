@@ -45,6 +45,7 @@
 - Fixed saving blobs in an ROI using the first displayed ROI or after moving the sliders without redrawing (#139)
 - Fixed browsing for files or directories in some environments (#201)
 - Fixed clearing the import path (#201)
+- Fixed saving additional, old figures when using the save shortcut (#256)
 
 #### CLI
 

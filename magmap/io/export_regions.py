@@ -467,7 +467,8 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
 
 def make_labels_level_img(
         img_path: Optional[str], level: int, prefix: Optional[str] = None,
-        show: bool = False) -> Dict[str, sitk.Image]:
+        show: bool = False
+) -> Dict[str, sitk.Image]:
     """Replace labels in an image with their parents at the given level.
     
     Labels that do not fall within a parent at that level will remain in place.
@@ -501,7 +502,7 @@ def make_labels_level_img(
     labels_level_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_np)
     
     # generate an edge image at this level
-    labels_edge = vols.make_labels_edge(labels_np)
+    labels_edge = vols.LabelToEdge.make_labels_edge(labels_np)
     labels_edge_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_edge)
     
     # write and optionally display labels level image

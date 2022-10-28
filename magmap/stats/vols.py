@@ -147,24 +147,33 @@ class MetricCombos(Enum):
 
 
 class LabelToEdge(chunking.SharedArrsContainer):
-    """Convert a label to an edge with class methods as an encapsulated 
-    way to use in multiprocessing without requirement for global variables.
+    """Convert a labels image to its edge
+    
+    Provides class methods for encapsulation and shared arrays to use in
+    multiprocessing without requirement for global variables.
     
     """
-    labels_img = None
+    #: Labels image.
+    labels_img: np.ndarray = None
+    #: Structuring element footprint for generating the edge, where larger
+    #: footprints given thicker edges.
+    footprint: Sequence[int] = None
     
     @classmethod
-    def find_label_edge(cls, label_id):
+    def find_label_edge(cls, label_id: int) -> Tuple[int, Sequence, np.ndarray]:
         """Convert a label into just its border.
         
         Args:
-            label_id: Integer of the label to extract from 
-                :attr:``labels_img_np``.
+            label_id: Integer of the label to extract from
+                :attr:`labels_img_np`.
         
         Returns:
-            Tuple of the given label ID; list of slices defining the 
-            location of the ROI where the edges can be found; and the 
-            ROI as a volume mask defining where the edges exist.
+            Tuple of:
+            - ``label ID``: the label ID
+            - ``slices``: list of slices defining the location of the ROI
+              where the edges can be found
+            - ``borders``: ROI as a volume mask defining where the edges exist
+        
         """
         _logger.info("Getting edge for %s", label_id)
         borders = None
@@ -175,61 +184,63 @@ class LabelToEdge(chunking.SharedArrsContainer):
         if region is not None:
             # get border of label
             label_mask_region = region == label_id
-            borders = cv_nd.perimeter_nd(label_mask_region)
+            borders = cv_nd.perimeter_nd(
+                label_mask_region, footprint=cls.footprint)
         else:
             _logger.warn(
                 "Could not find region '%s' to generate edge", label_id)
         return label_id, slices, borders
-
-
-def make_labels_edge(labels_img_np):
-    """Convert labels image into label borders image.
     
-    The atlas is assumed to be a sample (eg microscopy) image on which 
-    an edge-detection filter will be applied. 
-    
-    Args:
-        labels_img_np: Image as a Numpy array, assumed to be an 
-            annotated image whose edges will be found by obtaining 
-            the borders of all annotations.
-    
-    Returns:
-        Binary image array the same shape as ``labels_img_np`` with labels 
-        reduced to their corresponding borders.
-    """
-    start_time = time()
-    labels_edge = np.zeros_like(labels_img_np)
-    label_ids = np.unique(labels_img_np)
-    
-    is_fork = chunking.is_fork()
-    initializer = None
-    initargs = None
-    if is_fork:
-        # use a class to set and process the label without having to 
-        # reference the labels image as a global variable
-        LabelToEdge.labels_img = labels_img_np
-    else:
-        # set up labels image as a shared array for spawned mode
-        initializer, initargs = LabelToEdge.build_pool_init({
-            config.RegNames.IMG_LABELS: labels_img_np})
-    
-    pool = chunking.get_mp_pool(initializer, initargs)
-    pool_results = []
-    for label_id in label_ids:
-        pool_results.append(
-            pool.apply_async(
-                LabelToEdge.find_label_edge, args=(label_id, )))
-    for result in pool_results:
-        label_id, slices, borders = result.get()
-        if slices is not None:
-            borders_region = labels_edge[tuple(slices)]
-            borders_region[borders] = label_id
-    pool.close()
-    pool.join()
-    
-    print("time elapsed to make labels edge:", time() - start_time)
-    
-    return labels_edge
+    @classmethod
+    def make_labels_edge(cls, labels_img_np: np.ndarray) -> np.ndarray:
+        """Convert labels image into label borders image.
+        
+        The atlas is assumed to be a sample (eg microscopy) image on which
+        an edge-detection filter will be applied.
+        
+        Args:
+            labels_img_np: Image as a Numpy array, assumed to be an
+                annotated image whose edges will be found by obtaining
+                the borders of all annotations.
+        
+        Returns:
+            Binary image array the same shape as ``labels_img_np`` with labels
+            reduced to their corresponding borders.
+        
+        """
+        start_time = time()
+        labels_edge = np.zeros_like(labels_img_np)
+        label_ids = np.unique(labels_img_np)
+        
+        is_fork = chunking.is_fork()
+        initializer = None
+        initargs = None
+        if is_fork:
+            # use a class to set and process the label without having to
+            # reference the labels image as a global variable
+            cls.labels_img = labels_img_np
+        else:
+            # set up labels image as a shared array for spawned mode
+            initializer, initargs = cls.build_pool_init({
+                config.RegNames.IMG_LABELS: labels_img_np})
+        
+        pool = chunking.get_mp_pool(initializer, initargs)
+        pool_results = []
+        for label_id in label_ids:
+            pool_results.append(
+                pool.apply_async(
+                    cls.find_label_edge, args=(label_id, )))
+        for result in pool_results:
+            label_id, slices, borders = result.get()
+            if slices is not None:
+                borders_region = labels_edge[tuple(slices)]
+                borders_region[borders] = label_id
+        pool.close()
+        pool.join()
+        
+        print("time elapsed to make labels edge:", time() - start_time)
+        
+        return labels_edge
 
 
 class MeasureLabel(chunking.SharedArrsContainer):

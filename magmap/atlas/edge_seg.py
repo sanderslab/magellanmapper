@@ -531,7 +531,7 @@ def edge_distances(labels, atlas_edge=None, path=None, spacing=None):
             path, config.RegNames.IMG_ATLAS_EDGE.value)
     
     # create distance map between edges of original and new segmentations
-    labels_edge = vols.make_labels_edge(labels)
+    labels_edge = vols.LabelToEdge.make_labels_edge(labels)
     dist_to_orig, _, _ = cv_nd.borders_distance(
         atlas_edge != 0, labels_edge != 0, spacing=spacing)
     

@@ -36,7 +36,7 @@ networkx==2.8.7
 numpy==1.23.4
 packaging==21.3
 pandas==1.5.1
-Pillow==9.2.0
+Pillow==9.3.0
 pyamg==4.2.3
 pyface==7.4.2
 Pygments==2.13.0

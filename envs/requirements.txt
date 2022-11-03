@@ -27,7 +27,7 @@ importlib-resources==5.10.0
 javabridge==1.0.19.post4+gbebed64
 jmespath==1.0.1
 kiwisolver==1.4.4
-matplotlib==3.6.1
+matplotlib==3.6.2
 matplotlib-scalebar==0.8.1
 mayavi==4.8.1
 meshio==5.3.4

@@ -63,6 +63,6 @@ treelib==1.6.1
 typing_extensions==4.4.0
 urllib3==1.26.12
 vtk==9.2.2
-wslink==1.9.0
+wslink==1.9.1
 yarl==1.8.1
 zipp==3.10.0

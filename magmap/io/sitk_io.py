@@ -354,7 +354,7 @@ def load_registered_img(
     
     Args:
         img_path: Path as had been given to generate the registered
-            images, with the parent path of the registered images and base name 
+            images, with the parent path of the registered images and base name
             of the original image.
         reg_name: Atlas image suffix to open. Can be an absolute path,
             which will be used directly, ignoring ``img_path``.
@@ -365,9 +365,9 @@ def load_registered_img(
             was loaded; defaults to False.
     
     Returns:
-        Tuple of ``img``, the registered image as a Numpy array, or SimpleITK
-        Image if ``get_sitk`` is True, and ``path``, the loaded path if
-        ``return_path`` is True.
+        - ``reg_img``: the registered image as a Numpy array, or SimpleITK
+          Image if ``get_sitk`` is True
+        - If ``return_path`` is True: the loaded path
     
     Raises:
         ``FileNotFoundError`` if the path cannot be found.
@@ -379,18 +379,23 @@ def load_registered_img(
         # registered image extension matched to that of main image
         reg_img_path = reg_out_path(img_path, reg_name, True)
     reg_img, reg_img_path = read_sitk(reg_img_path)
+    
     if reg_img is None:
         # fallback to loading barren reg_name from img_path's dir
         reg_img_path = os.path.join(
-            os.path.dirname(img_path), 
+            os.path.dirname(img_path),
             libmag.match_ext(img_path, reg_name))
         reg_img, reg_img_path = read_sitk(reg_img_path)
         if reg_img is None:
             raise FileNotFoundError(
                 "could not find registered image from {} and {}"
                 .format(img_path, os.path.splitext(reg_name)[0]))
+    
     if not get_sitk:
+        # convert to ndarray
         reg_img = sitk.GetArrayFromImage(reg_img)
+    
+    # return image, including path if flagged
     return (reg_img, reg_img_path) if return_path else reg_img
 
 

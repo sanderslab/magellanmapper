@@ -1158,6 +1158,7 @@ def transpose_img(
     spacing = img_sitk.GetSpacing()[::-1]
     origin = img_sitk.GetOrigin()[::-1]
     transposed = img
+    is_2d = transposed.ndim == 2
     
     if plane is not None and plane != config.PLANE[0]:
         # transpose planes and metadata
@@ -1177,10 +1178,11 @@ def transpose_img(
         # rotate the final output image by 90 deg
         # TODO: need to change origin? make axes accessible (eg (0, 2) for
         #   horizontal rotation)
-        transposed = np.rot90(transposed, rotate, (1, 2))
+        axes = (0, 1) if is_2d else (1, 2)
+        transposed = np.rot90(transposed, rotate, axes)
         if rotate % 2 != 0:
-            spacing = libmag.swap_elements(spacing, 1, 2)
-            origin = libmag.swap_elements(origin, 1, 2)
+            spacing = libmag.swap_elements(spacing, *axes)
+            origin = libmag.swap_elements(origin, *axes)
     
     if rotate_deg is not None:
         if any([r["angle"] % 90 != 0 for r in rotate_deg]):

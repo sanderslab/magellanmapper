@@ -274,7 +274,7 @@ def get_filename_without_ext(path: str) -> str:
 def combine_paths(
         base_path: str, suffix: str, sep: str = "_", ext: str = None,
         check_dir: bool = False, keep_ext: bool = False):
-    """Merge two paths by appending ``suffix``, replacing the extention 
+    """Merge two paths by appending ``suffix``, replacing the extension
     in ``base_path``.
     
     Args:
@@ -284,7 +284,7 @@ def combine_paths(
             to ``suffix``.
         suffix: Replacement including new extension.
         sep: Separator between ``base_path`` and ``suffix``.
-        ext: Extension to add or substitute; defaults to None to use 
+        ext: Extension to add or substitute; defaults to None to use
             the extension in ``suffix``.
         check_dir: True to check if ``base_path`` is an existing directory,
             in which case it is simply joined to ``suffix``; defaults to False.
@@ -484,36 +484,26 @@ def series_as_str(series):
     return str(series).zfill(5)
 
 
-def splice_before(base, search, splice, post_splice="_"):
+def splice_before(
+        base: str, search: str, splice: str, post_splice: str = "") -> str:
     """Splice in a string before a given substring.
     
     Args:
         base: String in which to splice.
-        search: Splice before this substring.
-        splice: Splice in this string; falls back to a "." if not found.
-        post_splice: String to add after the spliced string if found. If 
-            only a "." is found, ``post_splice`` will be added before 
-            ``splice`` instead. Defaults to "_".
+        search: Splice before this substring. If not found, ``splice`` is
+            simply appended to ``base``.
+        splice: Splice in this string.
+        post_splice: String to add after the spliced string; defaults to "".
     
     Returns:
-        ``base`` with ``splice`` spliced in before ``search`` if found, 
-        separated by ``post_splice``, falling back to splicing before 
-        the first "." with ``post_splice`` placed in front of ``splice`` 
-        instead. If neither ``search`` nor ``.`` are found, simply 
-        returns ``base``.
+        Spliced string.
+    
     """
     i = base.rfind(search)
     if i == -1:
-        # fallback to splicing before extension
-        i = base.rfind(".")
-        if i == -1:
-            return base
-        else:
-            # turn post-splice into pre-splice delimiter, assuming that the 
-            # absence of search string means delimiter is not before the ext
-            splice = post_splice + splice
-            post_splice = ""
-    return base[0:i] + splice + post_splice + base[i:]
+        # default to append
+        i = len(base)
+    return base[:i] + splice + post_splice + base[i:]
 
 
 def str_to_disp(s):

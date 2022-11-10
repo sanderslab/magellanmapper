@@ -1086,7 +1086,7 @@ def transpose_img(
         rotate_deg: Optional[Sequence[Dict[str, Any]]] = None,
         target_size: Optional[Union[float, Sequence[int]]] = None,
         target_size_res: Optional[Union[float, Sequence[int]]] = None,
-        flip: Optional[int] = None,
+        flip: Optional[Union[int, Sequence[int]]] = None,
         order: Optional[int] = None
 ) -> sitk.Image:
     """Transpose an image to a different plane or rotation.
@@ -1111,8 +1111,8 @@ def transpose_img(
         target_size_res: Same as ``target_size``, but applied to the image
             resolutions instead of changing the image itself. Defaults to
             None.
-        flip: Axis to flip after transposition;
-            defaults to None, in which case it will be based on ``plane``.
+        flip: Axis or sequence of axes to flip after transposition. Defaults
+            to None, where it will be based on ``plane``.
         order: Spline interpolation order; defaults to None.
     
     Returns:
@@ -1167,8 +1167,11 @@ def transpose_img(
         spacing, origin = arrs_1d
     
     if flip is not None:
-        # flip along given axis
-        transposed = np.flip(transposed, flip)
+        if not libmag.is_seq(flip):
+            flip = [flip]
+        for flip_ax in flip:
+            # flip along given axis
+            transposed = np.flip(transposed, flip_ax)
     
     if rotate:
         # rotate the final output image by 90 deg

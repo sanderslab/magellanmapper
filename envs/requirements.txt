@@ -38,7 +38,7 @@ packaging==21.3
 pandas==1.5.1
 Pillow==9.3.0
 pyamg==4.2.3
-pyface==7.4.2
+pyface==7.4.3
 Pygments==2.13.0
 pyparsing==3.0.9
 PyQt5==5.15.7

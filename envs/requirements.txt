@@ -7,7 +7,7 @@ async-timeout==4.0.2
 attrs==22.1.0
 bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip
 bg-space==0.6.0
-boto3==1.24.93
+boto3==1.26.11
 botocore==1.27.93
 certifi==2022.9.24
 charset-normalizer==2.1.1

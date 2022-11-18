@@ -482,14 +482,25 @@ openPlotDevice <- function(dev.fn, path.out, plot.size) {
   }, include.full.call.stack=FALSE, include.compact.call.stack=TRUE)
 }
 
-resetDevice <- function() {
-  # Reset all graphics devices, including any stale ones from prior exceptions.
-
-  while (!is.null(dev.list())) {
-    # reset graphics
-    # TODO: calling in close proximity to plot commands appears to prevent
-    # their screen appearance, whether before or after plotting
-    dev.off()
+#' Reset all graphics devices, including any stale ones from prior exceptions.
+#' 
+#' @param keep Device names starting with these strings will not be reset.
+#'   Defaults to NULL, in which case "TheRPlugin" and "quartz" are kept.
+resetDevice <- function(keep=NULL) {
+  
+  if (is.null(keep)) {
+    # default to keep PyCharm R plugin and macOS Quartz devices
+    keep <- c("TheRPlugin", "quartz")
+  }
+  
+  # TODO: calling in close proximity to plot commands appears to prevent
+  # their screen appearance, whether before or after plotting
+  for (dev.name in names(dev.list())) {
+    if (!any(startsWith(dev.name, keep))) {
+      # reset the graphics device not starting with the keep values
+      dev <- dev.list()[dev.name]
+      dev.off(dev)
+    }
   }
 }
 

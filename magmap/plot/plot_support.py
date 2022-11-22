@@ -306,18 +306,18 @@ class ImageOverlayer:
         
         Args:
             img2d: 2D+/-channel array.
-            rotate: Counter-clockwise rotation in degrees.
+            rotate: Clockwise rotation in degrees.
 
         Returns:
             :attr:`self._transform` for chained calls.
 
         """
         if rotate is None:
-            # rotate in increments of 90 deg counter-clockwise
+            # rotate in increments of 90 deg clockwise
             rotate_n = config.transform[config.Transforms.ROTATE]
             rotate = rotate_n * 90 if rotate_n else 0
             
-            # rotate by specific deg counter-clockwise
+            # rotate by specific deg clockwise
             rotate_deg = config.transform[config.Transforms.ROTATE_DEG]
             if rotate_deg:
                 rotate += rotate_deg
@@ -601,7 +601,7 @@ class ImageOverlayer:
         return ax_imgs
     
     def annotate_labels(
-            self, labels_2d: np.ndarray, ref_lookup: Dict[int, Any],
+            self, labels_2d: np.ndarray, ref_lookup: Optional[Dict[int, Any]],
             level: Optional[int] = None,
             labels_annots: Optional[Dict[int, "axes.Axes.Text"]] = None,
             over_label: bool = True,
@@ -614,6 +614,8 @@ class ImageOverlayer:
         Args:
             labels_2d: 2D labels image.
             ref_lookup: Labels lookup dictionary of label IDs to label metadata.
+                Can be None if ``over_label`` is False and ``label_names`` is
+                given.
             level: Ontology level; defaults to None.
             labels_annots: Text artists from which new artists will be
                 re-created with the same name and positions. Takes precedence

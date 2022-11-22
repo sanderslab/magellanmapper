@@ -134,7 +134,7 @@ class PlotEditor:
         self.img3d: np.ndarray = img3d
         #: Labels 3D image.
         self.img3d_labels: np.ndarray = img3d_labels
-        #: Labels  colormap, generally of 
+        #: Labels colormap, generally of
         #: :class:`magmap.plot.colormaps.DiscreteColormap`.
         self.cmap_labels: "colors.ListedColormap" = cmap_labels
         #: One of :attr:`magmap.settings.config.PLANE` specifying the
@@ -197,6 +197,8 @@ class PlotEditor:
         self._show_labels = True  # show atlas labels on mouseover
         self._show_crosslines = False  # show crosslines to orthogonal views
         self._colorbar = None  # colorbar for first main image
+        #: Region label text offset in axes units.
+        self._region_label_offset: float = 0.05
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -471,12 +473,12 @@ class PlotEditor:
             vmins.append(None)
         
         if self.img3d_borders is not None:
-            # prep borders image, which may have an extra channels 
+            # prep borders image, which may have an extra channels
             # dimension for multiple sets of borders
             img2d = self._get_img2d(2, self.img3d_borders)
             channels = img2d.ndim if img2d.ndim >= 3 else 1
             for i, channel in enumerate(range(channels - 1, -1, -1)):
-                # show first (original) borders image last so that its 
+                # show first (original) borders image last so that its
                 # colormap values take precedence to highlight original bounds
                 img_add = img2d[..., channel] if channels > 1 else img2d
                 imgs2d.append(img_add)
@@ -968,7 +970,7 @@ class PlotEditor:
                         self.intensity)
             
             elif event.key not in self._KEY_MODIFIERS:
-                # click without modifiers to update crosshairs and 
+                # click without modifiers to update crosshairs and
                 # corresponding planes
                 self.coord = coord
                 if self.fn_update_coords:
@@ -986,7 +988,7 @@ class PlotEditor:
             self.circle = None
     
     def on_motion(self, event):
-        """Move the editing pen's circle and draw with the chosen intensity 
+        """Move the editing pen's circle and draw with the chosen intensity
         value if set.
         """
         if event.inaxes != self.axes: return
@@ -1021,26 +1023,26 @@ class PlotEditor:
         elif event.button == 3 or (
                 event.button == 1 and event.key == "control"):
             
-            # zooming by right-click or ctrl+click (which coverts 
-            # button event to 3 on Mac at least) while moving mouse up/down in y
+            # zooming by right-click or ctrl+click (which coverts button event
+            # to 3 on Mac at least) while moving mouse up/down in y
             
-            # use figure coordinates since data pixels will scale 
-            # during zoom
+            # use figure coordinates since data pixels will scale during zoom
             zoom_speed = (y_fig - self.last_loc[1]) * 0.01
             xlim = self.axes.get_xlim()
             xlim_update = (
-                xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_speed, 
+                xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_speed,
                 xlim[1] + (self.press_loc_data[0] - xlim[1]) * zoom_speed)
             ylim = self.axes.get_ylim()
             ylim_update = (
-                ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_speed, 
+                ylim[0] + (self.press_loc_data[1] - ylim[0]) * zoom_speed,
                 ylim[1] + (self.press_loc_data[1] - ylim[1]) * zoom_speed)
             
-            # avoid flip by checking that relationship between high and 
-            # low values in updated limits is in the same order as in the 
-            # current limits, which might otherwise flip if zoom speed is high
-            if ((xlim_update[1] - xlim_update[0]) * (xlim[1] - xlim[0]) > 0 and 
-                (ylim_update[1] - ylim_update[0]) * (ylim[1] - ylim[0]) > 0):
+            # avoid flip by checking that relationship between high and low
+            # values in updated limits is in the same order as in the current
+            # limits, which might otherwise flip if zoom speed is high
+            if ((xlim_update[1] - xlim_update[0]) * (xlim[1] - xlim[0]) > 0 and
+                    (ylim_update[1] - ylim_update[0]) *
+                    (ylim[1] - ylim[0]) > 0):
                 
                 self.axes.set_xlim(xlim_update)
                 self.axes.set_ylim(ylim_update)
@@ -1056,9 +1058,8 @@ class PlotEditor:
                     if self.circle:
                         # update pen circle position
                         self.circle.center = x, y
-                        # does not appear to be necessary since text update already
-                        # triggers a redraw, but this would also trigger if no text
-                        # update
+                        # does not appear necessary since text update already
+                        # triggers redraw, but would also trigger if no update
                         self.circle.stale = True
                     else:
                         # generate new circle if not yet present
@@ -1125,23 +1126,29 @@ class PlotEditor:
                             _logger.debug("Found label: %s", name)
                             
                             # minimize chance of text overflowing out of axes by
-                            # word-wrapping and switching sides at midlines
+                            # word-wrapping and switching sides at midlines;
+                            # shift in axes coords for consistent distance
+                            # across zooming
                             name = "\n".join(textwrap.wrap(name, 30))
+                            ax_coords = self.axes.transLimits.transform((x, y))
                             if x > self.img3d_labels.shape[2] / 2:
                                 alignment_x = "right"
-                                label_x = x - 20
+                                ax_coords[0] -= self._region_label_offset
                             else:
                                 alignment_x = "left"
-                                label_x = x + 20
+                                ax_coords[0] += self._region_label_offset
                             if y > self.img3d_labels.shape[1] / 2:
                                 alignment_y = "top"
-                                label_y = y - 20
+                                ax_coords[1] -= self._region_label_offset
                             else:
                                 alignment_y = "bottom"
-                                label_y = y + 20
-                            self.region_label.set_horizontalalignment(alignment_x)
+                                ax_coords[1] += self._region_label_offset
+                            self.region_label.set_horizontalalignment(
+                                alignment_x)
                             self.region_label.set_verticalalignment(alignment_y)
-                            self.region_label.set_position((label_x, label_y))
+                            inv = self.axes.transLimits.inverted()
+                            data_coords = inv.transform(ax_coords)
+                            self.region_label.set_position(data_coords)
                     self.region_label.set_text(name)
 
             # need explicit draw call for figs embedded in TraitsUI

@@ -987,6 +987,59 @@ class PlotEditor:
             self.circle.remove()
             self.circle = None
     
+    def _update_region_label(self, x: int, y: int, coord: Sequence[int]):
+        """Update region label at the given location.
+
+        Args:
+            x: Mouse x-value.
+            y: Mouse y-value
+            coord: Coordinates translated to region space.
+
+        """
+        name = ""
+        if self._show_labels:
+            # get name from labels reference corresponding to
+            # labels image value under mouse pointer
+            atlas_label = ontology.get_label(
+                coord, self.img3d_labels,
+                config.labels_ref.ref_lookup, self.scaling,
+                self.labels_level)
+            if atlas_label is not None:
+                # extract name and ID from label dict
+                name = "{} ({})".format(
+                    ontology.get_label_name(atlas_label),
+                    ontology.get_label_item(
+                        atlas_label, config.ABAKeys.ABA_ID.value))
+                _logger.debug("Found label: %s", name)
+            
+                # minimize chance of text overflowing out of axes by
+                # word-wrapping and switching sides at midlines; shift in axes
+                # coords for consistent distance across zooming
+                name = "\n".join(textwrap.wrap(name, 30))
+                ax_coords = self.axes.transLimits.transform((x, y))
+                if x > self.img3d_labels.shape[2] / 2:
+                    alignment_x = "right"
+                    ax_coords[0] -= self._region_label_offset
+                else:
+                    alignment_x = "left"
+                    ax_coords[0] += self._region_label_offset
+                if y > self.img3d_labels.shape[1] / 2:
+                    alignment_y = "top"
+                    ax_coords[1] -= self._region_label_offset
+                else:
+                    alignment_y = "bottom"
+                    ax_coords[1] += self._region_label_offset
+                
+                # set alignment and convert back to data coordinates
+                self.region_label.set_horizontalalignment(alignment_x)
+                self.region_label.set_verticalalignment(alignment_y)
+                inv = self.axes.transLimits.inverted()
+                data_coords = inv.transform(ax_coords)
+                self.region_label.set_position(data_coords)
+        
+        # update label
+        self.region_label.set_text(name)
+
     def on_motion(self, event):
         """Move the editing pen's circle and draw with the chosen intensity
         value if set.
@@ -1108,48 +1161,7 @@ class PlotEditor:
                 if (self.img3d_labels is not None and
                         config.labels_ref is not None and
                         config.labels_ref.ref_lookup):
-                    # show atlas label description
-                    name = ""
-                    if self._show_labels:
-                        # get name from labels reference corresponding to
-                        # labels image value under mouse pointer
-                        atlas_label = ontology.get_label(
-                            coord, self.img3d_labels,
-                            config.labels_ref.ref_lookup, self.scaling,
-                            self.labels_level)
-                        if atlas_label is not None:
-                            # extract name and ID from label dict
-                            name = "{} ({})".format(
-                                ontology.get_label_name(atlas_label),
-                                ontology.get_label_item(
-                                    atlas_label, config.ABAKeys.ABA_ID.value))
-                            _logger.debug("Found label: %s", name)
-                            
-                            # minimize chance of text overflowing out of axes by
-                            # word-wrapping and switching sides at midlines;
-                            # shift in axes coords for consistent distance
-                            # across zooming
-                            name = "\n".join(textwrap.wrap(name, 30))
-                            ax_coords = self.axes.transLimits.transform((x, y))
-                            if x > self.img3d_labels.shape[2] / 2:
-                                alignment_x = "right"
-                                ax_coords[0] -= self._region_label_offset
-                            else:
-                                alignment_x = "left"
-                                ax_coords[0] += self._region_label_offset
-                            if y > self.img3d_labels.shape[1] / 2:
-                                alignment_y = "top"
-                                ax_coords[1] -= self._region_label_offset
-                            else:
-                                alignment_y = "bottom"
-                                ax_coords[1] += self._region_label_offset
-                            self.region_label.set_horizontalalignment(
-                                alignment_x)
-                            self.region_label.set_verticalalignment(alignment_y)
-                            inv = self.axes.transLimits.inverted()
-                            data_coords = inv.transform(ax_coords)
-                            self.region_label.set_position(data_coords)
-                    self.region_label.set_text(name)
+                    self._update_region_label(x, y, coord)
 
             # need explicit draw call for figs embedded in TraitsUI
             self.axes.figure.canvas.draw_idle()

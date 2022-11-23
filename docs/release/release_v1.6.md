@@ -136,9 +136,11 @@
 - Stats errors are caught rather than stopping the pipeline (#132)
 - The labels reference path has been moved to an environment variable, which can be configured through `--labels <path>` (#147)
 - The Shapiro-Wilks test has been implemented in `meansModel` for consistent table output (#164)
+- A basic `NAMESPACE` file is provided to fix installation and exporting functions (#303)
 - Fixed t-test, which also provides Cohen's d as a standardized effect size through the `effectsize` package (#135)
 - Fixed jitter plot box plots to avoid covering labels (#147)
-- Fixed model fitting (#240)
+- Fixed model fitting (#240, #304)
+- Fixed plotting in PyCharm (#304)
 
 #### Code base and docs
 

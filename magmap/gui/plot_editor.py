@@ -1013,17 +1013,21 @@ class PlotEditor:
                 _logger.debug("Found label: %s", name)
             
                 # minimize chance of text overflowing out of axes by
-                # word-wrapping and switching sides at midlines; shift in axes
-                # coords for consistent distance across zooming
+                # word-wrapping and switching sides at plot midlines; shift in
+                # axes coords for consistent distance across zooming
                 name = "\n".join(textwrap.wrap(name, 30))
                 ax_coords = self.axes.transLimits.transform((x, y))
-                if x > self.img3d_labels.shape[2] / 2:
+                
+                # shift horizontally
+                if ax_coords[0] > 0.5:
                     alignment_x = "right"
                     ax_coords[0] -= self._region_label_offset
                 else:
                     alignment_x = "left"
                     ax_coords[0] += self._region_label_offset
-                if y > self.img3d_labels.shape[1] / 2:
+                
+                # shift vertically
+                if ax_coords[1] > 0.5:
                     alignment_y = "top"
                     ax_coords[1] -= self._region_label_offset
                 else:

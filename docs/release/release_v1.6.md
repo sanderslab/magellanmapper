@@ -65,6 +65,7 @@
 - Image registration now supports multiple labels images given as `--reg_suffixes annotation=<suffix1>,<suffix2>,...`, which will apply the same transformation to each of these images (#147)
 - Landmark distance measurements save the raw distances and no longer require spacing (#147)
 - Masks with angle planes can be constructed (#252)
+- Fixed changes to large label IDs during registration (#303)
 
 #### Cell detection
 

@@ -258,10 +258,13 @@ class ImageSyncMixin:
             btn.hovercolor = str(float(btn.hovercolor) + shift)
             if text: btn.label.set_text(text[0])
 
-    def on_close(self):
+    def on_close(self, *args):
         """Figure close handler.
         
         Disconnects all Plot Editors and listeners.
+        
+        Args:
+            args: Additional arguments, currently ignored.
 
         """
         for plot_ed in self.plot_eds.values():

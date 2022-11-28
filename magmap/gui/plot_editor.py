@@ -433,6 +433,12 @@ class PlotEditor:
         self.hline = None
         self.vline = None
         
+        if self.blitter:
+            # remove existing artists in this editor from blitter
+            artists = self.blitter.artists
+            if self.region_label in artists:
+                artists.remove(self.region_label)
+        
         # prep 2D image from main image, assumed to be an intensity image,
         # with settings for each channel within this main image
         imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
@@ -581,9 +587,12 @@ class PlotEditor:
         if not self.connected:
             # connect once get AxesImage
             self.connect()
+        
         # text label with color for visibility on axes plus fig background
         self.region_label = self.axes.text(
             0, 0, "", color="k", bbox=dict(facecolor="xkcd:silver", alpha=0.5))
+        if self.blitter:
+            self.blitter.add_artist(self.region_label)
         self.circle = None
         
         if self.overlayer.labels_annots:

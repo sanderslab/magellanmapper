@@ -17,7 +17,8 @@ class Blitter:
     Improves interactive graphics performance by reducing repetitive drawing.
     
     """
-    def __init__(self, fig, artists):
+    def __init__(self, fig, artists=None):
+        """Initialized the blit controller."""
         #: Matplotlib figure.
         self.fig: "figure.Figure" = fig
         #: Internal representation of tracked artists.
@@ -41,8 +42,8 @@ class Blitter:
         """Set tracked artists.
         
         Args:
-            vals: Artists to add. Only artists in :attr:`fig` will be added.
-                Can be None, which will reset artists to an empty list.
+            vals: Artists to add. Can be None, which will reset artists to an
+                empty list.
 
         """
         if vals is None:
@@ -51,16 +52,28 @@ class Blitter:
             return
         
         for val in vals:
-            if val.figure != self.fig:
-                # skip artists in other figs
-                _logger.warn(
-                    f"Artist from different figure added for blitting: {val}")
-                continue
-            
-            # flag as animated for update, which appears to prevent updating
-            # non-animated artists as well
-            val.set_animated(True)
-            self._artists.append(val)
+            # add artist
+            self.add_artist(val)
+    
+    def add_artist(self, arist: "artist.Artist"):
+        """Add tracked artist.
+        
+        Args:
+            arist: Artist to track. Only artists in :attr:`fig` will be added.
+
+        Returns:
+
+        """
+        if arist.figure != self.fig:
+            # skip artists in other figs
+            _logger.warn(
+                f"Artist from different figure added for blitting: {arist}")
+            return
+        
+        # flag as animated for update, which appears to prevent updating
+        # non-animated artists as well
+        arist.set_animated(True)
+        self._artists.append(arist)
     
     def on_draw(self, evt: Optional["backend_bases.DrawEvent"]):
         """Recapture backgrouna and draw the figure canvas."""

@@ -24,7 +24,7 @@ from matplotlib import pyplot as plt
 from matplotlib.collections import PatchCollection
 
 from magmap.cv import detector
-from magmap.gui import pixel_display, plot_editor
+from magmap.gui import image_viewer, pixel_display, plot_editor
 from magmap.io import importer, libmag, naming
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
@@ -363,6 +363,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         self._blobs_coloc_text = None
         self._z_overview = None
         self._channel = None  # list of channel lists
+        #: Image blitter.
+        self._blitter: Optional["image_viewer.Blitter"] = None
         
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
@@ -465,6 +467,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         plot_ed.scale_bar = True
         plot_ed.enable_painting = False
         plot_ed.max_intens_proj = self._max_intens_proj
+        plot_ed.blitter = self._blitter
         update_coords((self._z_overview, *self.offset[1::-1]), self.plane)
         plot_ed.show_roi(self.offset[1::-1], self.roi_size[1::-1])
         if offsets and sizes:
@@ -595,6 +598,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             fig = figure.Figure()
         fig.clear()
         self.fig = fig
+        self._blitter = image_viewer.Blitter(fig)
 
         # black text with transluscent background the color of the figure
         # background in case the title is a 2D plot

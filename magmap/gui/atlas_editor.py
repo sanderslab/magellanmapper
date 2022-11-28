@@ -13,7 +13,7 @@ from matplotlib import gridspec
 from matplotlib.widgets import Slider, Button, TextBox
 
 from magmap.cv import cv_nd
-from magmap.gui import plot_editor
+from magmap.gui import image_viewer, plot_editor
 from magmap.io import libmag, naming, sitk_io
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
@@ -106,6 +106,7 @@ class AtlasEditor(plot_support.ImageSyncMixin):
             left=0.06, right=0.94, bottom=0.02, top=0.98)
         gs_viewers = gridspec.GridSpecFromSubplotSpec(
             2, 2, subplot_spec=gs[0, 0])
+        blitter = image_viewer.Blitter(fig)
         
         # lay out plot editors based on number shown
         planes = [p for p in self.planes if p]
@@ -198,11 +199,12 @@ class AtlasEditor(plot_support.ImageSyncMixin):
                 overlayer, img3d_tr, labels_img_tr, config.cmap_labels,
                 plane, self.update_coords, self.refresh_images,
                 scaling, plane_slider, img3d_borders=borders_img_tr,
-                cmap_borders=cmap_borders, 
+                cmap_borders=cmap_borders,
                 fn_show_label_3d=self.fn_show_label_3d,
                 interp_planes=self.interp_planes,
                 fn_update_intensity=self.update_color_picker,
                 max_size=max_size, fn_status_bar=self.fn_status_bar)
+            plot_ed.blitter = blitter
             return plot_ed
         
         # set up plot editors for the given orthogonal planes

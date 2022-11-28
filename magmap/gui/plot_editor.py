@@ -13,7 +13,7 @@ from matplotlib import patches
 import numpy as np
 from skimage import draw
 
-from magmap.gui import pixel_display
+from magmap.gui import image_viewer, pixel_display
 from magmap.io import libmag
 from magmap.settings import config
 from magmap.atlas import ontology
@@ -188,6 +188,8 @@ class PlotEditor:
         self.enable_painting = True
         #: Ontology level at which to show region names.
         self.labels_level: Optional[int] = None
+        #: Blit manager.
+        self.blitter: Optional["image_viewer.Blitter"] = None
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -1167,8 +1169,12 @@ class PlotEditor:
                         config.labels_ref.ref_lookup):
                     self._update_region_label(x, y, coord)
 
-            # need explicit draw call for figs embedded in TraitsUI
-            self.axes.figure.canvas.draw_idle()
+            if self.blitter:
+                # blit updates if available for more efficient rendering
+                self.blitter.update()
+            else:
+                # need explicit draw call for figs embedded in TraitsUI
+                self.axes.figure.canvas.draw_idle()
 
         if self.fn_status_bar:
             self.fn_status_bar(self.axes.format_coord.get_msg(event))

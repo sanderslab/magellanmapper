@@ -34,6 +34,16 @@ _EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
 # optional dependencies for classification
 _EXTRAS_CLASSIFER = ["tensorflow"]
 
+# optional dependencies for full GUI; note that this group is not necessary
+# for the Matplotlib-based viewers (eg ROI Editor, Atlas Editor)
+_EXTRAS_GUI = [
+    "PyQt5",
+    "vtk",
+    "mayavi",
+    "pyface",
+    "traitsui",
+]
+
 # installation configuration
 config = {
     "name": "magellanmapper",
@@ -56,12 +66,7 @@ config = {
         "scikit-image",
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
-        "vtk",
-        "mayavi",
         "pandas",
-        "PyQt5",
-        "pyface",
-        "traitsui",
         "simpleitk==2.0.2rc2.dev785+g8ac4f",  # pre-built SimpleElastix
         "PyYAML",
         "appdirs",
@@ -83,11 +88,13 @@ config = {
         "docs": _EXTRAS_DOCS,
         "jupyter": _EXTRAS_JUPYTER,
         "classifier": _EXTRAS_CLASSIFER,
+        "gui": _EXTRAS_GUI,
         
         # dependencies for most common tasks
         "most": [
             "matplotlib_scalebar",
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
+            *_EXTRAS_GUI,
             *_EXTRAS_IMPORT,
         ],
         
@@ -97,6 +104,7 @@ config = {
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             "seaborn",  # for Seaborn-based plots
             "scikit-learn",
+            *_EXTRAS_GUI,
             *_EXTRAS_PANDAS,
             *_EXTRAS_IMPORT,
             *_EXTRAS_AWS,

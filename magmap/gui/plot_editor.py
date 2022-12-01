@@ -993,10 +993,17 @@ class PlotEditor:
                     self.fn_show_label_3d(self.img3d_labels[tuple(coord)])
     
     def on_axes_exit(self, event):
+        """Remove any mouse circle and region label."""
         if event.inaxes != self.axes: return
+        
         if self.circle:
+            # remove circle
             self.circle.remove()
             self.circle = None
+        
+        if self.region_label:
+            # make region label empty
+            self.region_label.set_text("")
     
     def _update_region_label(self, x: int, y: int, coord: Sequence[int]):
         """Update region label at the given location.

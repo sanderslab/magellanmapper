@@ -7,6 +7,7 @@ view of orthogonal planes.
 """
 
 import textwrap
+import time
 from typing import Callable, List, Optional, Sequence, TYPE_CHECKING
 
 from matplotlib import patches
@@ -190,6 +191,10 @@ class PlotEditor:
         self.labels_level: Optional[int] = None
         #: Blit manager.
         self.blitter: Optional["image_viewer.Blitter"] = None
+        #: Threshold for triggering motion events. Use 0 (default) to ignore
+        #: no events except those within the same pixel. Higher values
+        #: filter more movements, especially fast and short motions.
+        self.motion_thresh: float = 0.
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -201,6 +206,8 @@ class PlotEditor:
         self._colorbar = None  # colorbar for first main image
         #: Region label text offset in axes units.
         self._region_label_offset: float = 0.05
+        #: Last time of mouse motion. Defaults to initialization time.
+        self._last_time: float = time.perf_counter()
 
         # ROI offset and size in z,y,x
         self._roi_offset = None
@@ -1075,10 +1082,18 @@ class PlotEditor:
         y_fig = int(event.y)
         
         loc = (x_fig, y_fig)
-        if self.last_loc is not None and self.last_loc == loc:
-            return
-        
         loc_data = (x, y)
+        curr_time = time.perf_counter()
+        
+        if self.last_loc is not None:
+            # skip movements that are fast and short; all movements within the
+            # same px will be skipped if threshold is non-neg
+            time_diff = curr_time - self._last_time
+            dist = np.hypot(*np.subtract(self.last_loc, loc))
+            movt = dist * time_diff
+            if movt <= self.motion_thresh:
+                return
+        
         if event.button == 2 or (event.button == 1 and event.key == "shift"):
             # pan by middle-click or shift+left-click during mouseover
             
@@ -1196,6 +1211,7 @@ class PlotEditor:
             self.fn_status_bar(self.axes.format_coord.get_msg(event))
         self.last_loc = loc
         self.last_loc_data = loc_data
+        self._last_time = curr_time
     
     def on_release(self, event):
         """Respond to mouse button release events.

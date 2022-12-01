@@ -257,6 +257,16 @@ class ImageSyncMixin:
             btn.color = str(float(btn.color) + shift)
             btn.hovercolor = str(float(btn.hovercolor) + shift)
             if text: btn.label.set_text(text[0])
+    
+    def axes_exit(self, event: "backend_bases.LocationEvent"):
+        """Trigger axes exit for all plot editors.
+
+        Args:
+            event: Axes exit event.
+        
+        """
+        for key in self.plot_eds:
+            self.plot_eds[key].on_axes_exit(event)
 
     def on_close(self, *args):
         """Figure close handler.

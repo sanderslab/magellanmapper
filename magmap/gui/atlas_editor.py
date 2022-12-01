@@ -368,15 +368,6 @@ class AtlasEditor(plot_support.ImageSyncMixin):
         """
         self.alpha_slider.reset()
     
-    def axes_exit(self, event):
-        """Trigger axes exit for all plot editors.
-        
-        Args:
-            event: Axes exit event.
-        """
-        for key in self.plot_eds:
-            self.plot_eds[key].on_axes_exit(event)
-    
     def interpolate(self, event):
         """Interpolate planes using :attr:`interp_planes`.
         

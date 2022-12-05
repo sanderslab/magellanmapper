@@ -64,5 +64,5 @@ typing_extensions==4.4.0
 urllib3==1.26.13
 vtk==9.2.2
 wslink==1.9.1
-yarl==1.8.1
+yarl==1.8.2
 zipp==3.11.0

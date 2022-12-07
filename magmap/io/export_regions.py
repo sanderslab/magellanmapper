@@ -476,7 +476,8 @@ def make_labels_level_img(
     Args:
         img_path: Path to the base image from which the corresponding
             registered image will be found. Can be None, where the globally
-            set up image stored in ``config`` will be used instead.
+            set up image stored in :attr:`magmap.settings.config` will be used
+            instead. If so, `prefix` must be given to specify the output path.
         level: Ontological level at which to group child labels.
         prefix: Start of path for output image; defaults to None to
             use ``img_path`` instead.
@@ -485,8 +486,13 @@ def make_labels_level_img(
     Returns:
         Dictionary of registered image suffix to SimpleITK image.
     
+    Raises:
+        `ValueError` if `img_path` and `prefix` are both None.
+    
     """
     if img_path is None:
+        if not prefix:
+            raise ValueError("Must set 'prefix' if 'img_path' is None")
         # use the globally set up image stored in config
         labels_sitk = config.labels_img_sitk
         ref = config.labels_ref

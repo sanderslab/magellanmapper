@@ -39,6 +39,7 @@ outlined here. Each type can be coupled with additional arguments in ``cli``.
 """
 
 from collections import OrderedDict
+import dataclasses
 import os
 import shutil
 from time import time
@@ -73,6 +74,30 @@ _SORT_VOL_COLS = [
 ]
 
 _logger = config.logger.getChild(__name__)
+
+
+@dataclasses.dataclass
+class RegImgs:
+    """Data class for tracking registered images."""
+    exp_orig: Optional[Union[np.ndarray, sitk.Image]] = None
+    exp: Optional[Union[np.ndarray, sitk.Image]] = None
+    atlas: Optional[Union[np.ndarray, sitk.Image]] = None
+    labels: Optional[Union[np.ndarray, sitk.Image]] = None
+    labels_markers: Optional[Union[np.ndarray, sitk.Image]] = None
+    borders: Optional[Union[np.ndarray, sitk.Image]] = None
+    
+    @staticmethod
+    def get_order(name: str) -> Optional[int]:
+        """Get interpolation order for the given image type.
+        
+        Args:
+            name: Image field name.
+
+        Returns:
+            0 if the image is a labels-related image, otherwise None.
+
+        """
+        return 0 if name in ("labels", "labels_markers", "borders") else None
 
 
 def _translation_adjust(orig, transformed, translation, flip=False):

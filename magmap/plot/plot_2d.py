@@ -1339,13 +1339,13 @@ def setup_style(style=None, rc_params=None):
         style = config.matplotlib_style
     if rc_params is None:
         rc_params = config.rc_params
-    print("setting up Matplotlib style", style)
+    _logger.debug("Setting up Matplotlib style: %s", style)
     plt.style.use(style)
     for rc in rc_params:
         if rc is config.Themes.DARK:
             # dark theme requires darker widgets for white text
             config.widget_color = 0.6
-        print("applying theme", rc.name)
+        _logger.debug("Applying theme: %s", rc.name)
         pylab.rcParams.update(rc.value)
 
 

@@ -236,8 +236,9 @@ class PlotEditor:
                 if downsample > 1:
                     # only downsample if factor is over 1
                     self._downsample[i] = downsample
-        print("plane {} downsampling factors by image: {}"
-              .format(self.plane, self._downsample))
+        _logger.debug(
+            "plane %s downsampling factors by image: %s", self.plane,
+            self._downsample)
 
     def connect(self):
         """Connect events to functions.

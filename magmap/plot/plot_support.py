@@ -110,19 +110,20 @@ class ImageSyncMixin:
                 alpha_blend)
         return plot_ax_img
     
-    def save_fig(self, path):
+    def save_fig(self, path: str, **kwargs):
         """Save the figure to file, with path based on filename, ROI,
         and overview plane shown.
         
         Args:
-            path (str): Save path.
+            path: Save path.
+            kwargs: Additional arguments passed to :meth:`save_fig`.
         
         """
         if not self.fig:
             print("Figure not yet initialized, skipping save")
             return
         # use module save fig function
-        save_fig(path, fig=self.fig)
+        save_fig(path, fig=self.fig, **kwargs)
     
     def set_show_labels(self, val):
         """Set whether to show labels for all Plot Editors.

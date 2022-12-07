@@ -23,7 +23,7 @@ future==0.18.2
 idna==3.4
 imagecodecs==2022.9.26
 imageio==2.22.4
-importlib-resources==5.10.0
+importlib-resources==5.10.1
 javabridge==1.0.19.post4+gbebed64
 jmespath==1.0.1
 kiwisolver==1.4.4

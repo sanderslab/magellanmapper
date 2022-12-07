@@ -658,12 +658,12 @@ class ClrDB:
             path = config.db_path
         if new_db or not os.path.exists(path):
             conn, cur = _create_db(path)
-            print("Created a new database at {}".format(path))
+            _logger.debug("Created a new database at %s", path)
         else:
             conn = sqlite3.connect(path)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
-            print("Loaded database from {}".format(path))
+            _logger.debug("Loaded database from %s", path)
         # add foreign key constraint support
         conn.execute("PRAGMA foreign_keys=ON")
         upgrade_db(conn, cur)

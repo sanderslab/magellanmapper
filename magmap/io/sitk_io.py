@@ -169,13 +169,14 @@ def read_sitk(path, dryrun=False):
         img_path = path_split[0] + ext
         if os.path.exists(img_path):
             if not dryrun:
-                print("Loading image with SimpleITK:", img_path)
+                _logger.debug("Loading image with SimpleITK: %s", img_path)
                 img_sitk = sitk.ReadImage(img_path)
             path_loaded = img_path
             break
     if not dryrun and img_sitk is None:
-        print("could not find image from {} and extensions {}"
-              .format(path_split[0], exts))
+        _logger.warn(
+            "could not find image from %s and extensions %s", path_split[0],
+            exts)
     return img_sitk, path_loaded
 
 
@@ -303,11 +304,11 @@ def read_sitk_files(
     
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
-        libmag.warn(
+        _logger.warn(
             "MagellanMapper image metadata file not loaded; will fallback to "
-            "{} for metadata".format(loaded_path))
+            "%s for metadata", loaded_path)
         config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
-        print("set resolutions to {}".format(config.resolutions))
+        _logger.debug("set resolutions to %s", config.resolutions)
     
     # add time axis and insert into Image5d with original name
     img5d = np_io.Image5d(

@@ -17,6 +17,8 @@ from magmap.io import libmag
 # Default colormaps.
 CMAPS = {}
 
+_logger = config.logger.getChild(__name__)
+
 
 class DiscreteModes(Enum):
     """Discrete colormap generation modes."""
@@ -545,6 +547,6 @@ def setup_colormaps(num_channels):
         cmaps = discrete_colormap(
             chls_diff, alpha=255, prioritize_default=False, seed=config.seed,
             min_val=150) / 255.0
-        print("generating colormaps from RGBA colors:\n", cmaps)
+        _logger.debug("Generating colormaps from RGBA colors:\n%s", cmaps)
         for cmap in cmaps:
             config.cmaps.append(make_dark_linear_cmap("", cmap))

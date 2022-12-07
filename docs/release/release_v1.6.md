@@ -38,6 +38,8 @@
   - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89)
   - Image adjustment channels are radio buttons for easier selection (#212)
   - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
+- Faster atlas label display when hovering over regions (#317)
+- Atlas labels adapt better in zoomed images to stay within each plot (#317)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
 - Fixed to turn off the minimum intensity slider's auto setting when manually changing the slider (#126) 

@@ -195,7 +195,11 @@ class PlotEditor:
         #: respond to all events except those within the same pixel. Higher
         #: values filter more movements, especially fast and short motions.
         #: Use `np.inf` to ignore motion and respond to left-click instead.
-        self.motion_thresh: float = 0.
+        self.label_motion_thresh: float = 0.
+        #: Threshold for triggering navigation (eg pan/zoom) events. See
+        #: :attr:`label_motion_thresh`, except `np.inf` simply turns off
+        #: navigation.
+        self.nav_motion_thresh: float = 0.
 
         self._plot_ax_imgs = None
         self._ax_img_labels = None  # displayed labels image
@@ -1002,7 +1006,7 @@ class PlotEditor:
                     # trigger provided handler
                     self.fn_update_coords(self.coord, self.plane)
                 
-                elif self.motion_thresh is np.inf:
+                elif self.label_motion_thresh is np.inf:
                     # update region label on click if set to ignore motion
                     self._update_region_label(x, y, coord)
                     self._redraw_animated()
@@ -1113,17 +1117,18 @@ class PlotEditor:
         is_zoom = event.button == 3 or (
                 event.button == 1 and event.key == "control")
         
-        # pan/zoom only filter out movement in same px to remain more responsive
-        motion_thresh = 0 if is_pan or is_zoom else self.motion_thresh
-        
         if self.last_loc is not None:
             # skip movements that are fast and short; all movements within the
             # same px will be skipped if threshold is non-neg
             time_diff = curr_time - self._last_time
             dist = np.hypot(*np.subtract(self.last_loc, loc))
             movt = dist * time_diff
-            if movt <= motion_thresh:
-                return
+            if is_pan or is_zoom:
+                # navigation threshold
+                if movt <= self.nav_motion_thresh: return
+            else:
+                # region label threshold
+                if movt <= self.label_motion_thresh: return
         
         if is_pan:
             # pan by middle-click or shift+left-click during mouseover
@@ -1230,7 +1235,7 @@ class PlotEditor:
                 if (self.img3d_labels is not None and
                         config.labels_ref is not None and
                         config.labels_ref.ref_lookup and
-                        motion_thresh is not np.inf):
+                        self.label_motion_thresh is not np.inf):
                     # update region label unless motion thresh is set to ignore
                     self._update_region_label(x, y, coord)
             

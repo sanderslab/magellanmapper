@@ -1086,16 +1086,25 @@ class PlotEditor:
         loc_data = (x, y)
         curr_time = time.perf_counter()
         
+        # get action type
+        is_pan = event.button == 2 or (
+                event.button == 1 and event.key == "shift")
+        is_zoom = event.button == 3 or (
+                event.button == 1 and event.key == "control")
+        
+        # pan/zoom only filter out movement in same px to remain more responsive
+        motion_thresh = 0 if is_pan or is_zoom else self.motion_thresh
+        
         if self.last_loc is not None:
             # skip movements that are fast and short; all movements within the
             # same px will be skipped if threshold is non-neg
             time_diff = curr_time - self._last_time
             dist = np.hypot(*np.subtract(self.last_loc, loc))
             movt = dist * time_diff
-            if movt <= self.motion_thresh:
+            if movt <= motion_thresh:
                 return
         
-        if event.button == 2 or (event.button == 1 and event.key == "shift"):
+        if is_pan:
             # pan by middle-click or shift+left-click during mouseover
             
             # use data coordinates so same part of image stays under mouse
@@ -1111,8 +1120,7 @@ class PlotEditor:
             # data itself moved, so update location along with movement
             loc_data = (x - dx, y - dy)
             
-        elif event.button == 3 or (
-                event.button == 1 and event.key == "control"):
+        elif is_zoom:
             
             # zooming by right-click or ctrl+click (which coverts button event
             # to 3 on Mac at least) while moving mouse up/down in y

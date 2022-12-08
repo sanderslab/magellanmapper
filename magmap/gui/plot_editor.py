@@ -445,8 +445,9 @@ class PlotEditor:
         if self.blitter:
             # remove existing artists in this editor from blitter
             artists = self.blitter.artists
-            if self.region_label in artists:
-                artists.remove(self.region_label)
+            for artist in (self.region_label, self.circle, self._ax_img_labels):
+                if artist in artists:
+                    artists.remove(artist)
         
         # prep 2D image from main image, assumed to be an intensity image,
         # with settings for each channel within this main image
@@ -558,9 +559,13 @@ class PlotEditor:
         if self.scale_bar:
             plot_support.add_scale_bar(self.axes, self._downsample[0])
 
+        if len(ax_imgs) > 1:
+            # store labels axes image separately for frequent access
+            self._ax_img_labels = ax_imgs[1][0]
+            self.blitter.add_artist(self._ax_img_labels)
+        
         # store displayed images in the PlotAxImg container class and update
         # displayed brightness/contrast
-        if len(ax_imgs) > 1: self._ax_img_labels = ax_imgs[1][0]
         self._plot_ax_imgs = []
         for i, imgs in enumerate(ax_imgs):
             plot_ax_imgs = []
@@ -1182,6 +1187,8 @@ class PlotEditor:
                             (x, y), radius=self.radius, linestyle=":",
                             fill=False, edgecolor="w")
                         self.axes.add_patch(self.circle)
+                        if self.blitter:
+                            self.blitter.add_artist(self.circle)
 
                 # re-translate downsampled coordinates to original space
                 coord = self.translate_coord([self.coord[0], y, x], up=True)

@@ -191,9 +191,10 @@ class PlotEditor:
         self.labels_level: Optional[int] = None
         #: Blit manager.
         self.blitter: Optional["image_viewer.Blitter"] = None
-        #: Threshold for triggering motion events. Use 0 (default) to ignore
-        #: no events except those within the same pixel. Higher values
-        #: filter more movements, especially fast and short motions.
+        #: Threshold for triggering label motion events. Use 0 (default) to
+        #: respond to all events except those within the same pixel. Higher
+        #: values filter more movements, especially fast and short motions.
+        #: Use `np.inf` to ignore motion and respond to left-click instead.
         self.motion_thresh: float = 0.
 
         self._plot_ax_imgs = None
@@ -993,7 +994,13 @@ class PlotEditor:
                 # corresponding planes
                 self.coord = coord
                 if self.fn_update_coords:
+                    # trigger provided handler
                     self.fn_update_coords(self.coord, self.plane)
+                
+                elif self.motion_thresh is np.inf:
+                    # update region label on click if set to ignore motion
+                    self._update_region_label(x, y, coord)
+                    self._redraw_animated()
             
             if event.key == "3" and self.fn_show_label_3d is not None:
                 if self.img3d_labels is not None:
@@ -1012,6 +1019,15 @@ class PlotEditor:
         if self.region_label:
             # make region label empty
             self.region_label.set_text("")
+    
+    def _redraw_animated(self):
+        """Redraw by blitter if available, falling back to full redraw."""
+        if self.blitter:
+            # blit updates if available for more efficient rendering
+            self.blitter.update()
+        else:
+            # need explicit draw call for figs embedded in TraitsUI
+            self.axes.figure.canvas.draw_idle()
     
     def _update_region_label(self, x: int, y: int, coord: Sequence[int]):
         """Update region label at the given location.
@@ -1206,15 +1222,12 @@ class PlotEditor:
                 
                 if (self.img3d_labels is not None and
                         config.labels_ref is not None and
-                        config.labels_ref.ref_lookup):
+                        config.labels_ref.ref_lookup and
+                        motion_thresh is not np.inf):
+                    # update region label unless motion thresh is set to ignore
                     self._update_region_label(x, y, coord)
-
-            if self.blitter:
-                # blit updates if available for more efficient rendering
-                self.blitter.update()
-            else:
-                # need explicit draw call for figs embedded in TraitsUI
-                self.axes.figure.canvas.draw_idle()
+            
+            self._redraw_animated()
 
         if self.fn_status_bar:
             self.fn_status_bar(self.axes.format_coord.get_msg(event))

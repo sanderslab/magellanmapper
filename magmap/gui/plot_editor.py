@@ -449,7 +449,12 @@ class PlotEditor:
         if self.blitter:
             # remove existing artists in this editor from blitter
             artists = self.blitter.artists
-            for artist in (self.region_label, self.circle, self._ax_img_labels):
+            animated = [self.region_label, self.circle]
+            if self._plot_ax_imgs:
+                # flatten ax image data stores and extract axes images
+                plot_axs = sum(self._plot_ax_imgs, [])
+                animated.extend([p.ax_img for p in plot_axs])
+            for artist in animated:
                 if artist in artists:
                     artists.remove(artist)
         
@@ -566,7 +571,6 @@ class PlotEditor:
         if len(ax_imgs) > 1:
             # store labels axes image separately for frequent access
             self._ax_img_labels = ax_imgs[1][0]
-            self.blitter.add_artist(self._ax_img_labels)
         
         # store displayed images in the PlotAxImg container class and update
         # displayed brightness/contrast
@@ -577,6 +581,8 @@ class PlotEditor:
                 # use original 2D labels, without cmap index conversion
                 img_orig = img2d_lbl if i == 1 else None
                 plot_ax_img = PlotAxImg(img, img=img_orig)
+                if self.blitter:
+                    self.blitter.add_artist(img)
                 
                 if i == 0:
                     # specified vmin/vmax, in contrast to the AxesImages's
@@ -1140,7 +1146,7 @@ class PlotEditor:
             self.axes.set_xlim(xlim[0] - dx, xlim[1] - dx)
             ylim = self.axes.get_ylim()
             self.axes.set_ylim(ylim[0] - dy, ylim[1] - dy)
-            self.axes.figure.canvas.draw_idle()
+            self._redraw_animated()
             self.xlim = self.axes.get_xlim()
             self.ylim = self.axes.get_ylim()
             # data itself moved, so update location along with movement
@@ -1171,7 +1177,7 @@ class PlotEditor:
                 
                 self.axes.set_xlim(xlim_update)
                 self.axes.set_ylim(ylim_update)
-                self.axes.figure.canvas.draw_idle()
+                self._redraw_animated()
                 self.xlim = self.axes.get_xlim()
                 self.ylim = self.axes.get_ylim()
             

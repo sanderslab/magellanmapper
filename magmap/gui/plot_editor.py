@@ -21,7 +21,7 @@ from magmap.atlas import ontology
 from magmap.plot import plot_support
 
 if TYPE_CHECKING:
-    from matplotlib import axes, colors, image
+    from matplotlib import axes, colors, backend_bases, image
 
 _logger = config.logger.getChild(__name__)
 
@@ -182,7 +182,8 @@ class PlotEditor:
         self.xlim = None
         self.ylim = None
         self.edited = False  # True if labels image was edited
-        self.edit_mode = False  # True to edit with mouse motion
+        #: Atlas labels edit mode status; defaults to False.
+        self._edit_mode: bool = False
         self.region_label = None
         self.scale_bar = False
         self.max_intens_proj = 0
@@ -244,6 +245,38 @@ class PlotEditor:
         _logger.debug(
             "plane %s downsampling factors by image: %s", self.plane,
             self._downsample)
+    
+    @property
+    def edit_mode(self) -> bool:
+        """Atlas labels edit mode status.
+        
+        Return:
+            True if in edit mode, False otherwise.
+        
+        """
+        return self._edit_mode
+    
+    @edit_mode.setter
+    def edit_mode(self, val: bool):
+        """Set atlas labels edit mode status.
+        
+        Adds the atlas labels axes image to the blitter in edit mode and
+        removes the image when leaving edit mode.
+        
+        Args:
+            val: True to start editing atlas labels.
+
+        """
+        self._edit_mode = val
+        if self.blitter:
+            if val:
+                # add labels axes images to blitter
+                self.blitter.add_artist(self._ax_img_labels)
+            else:
+                # remove from blitter
+                artists = self.blitter.artists
+                if self._ax_img_labels in artists:
+                    artists.remove(self._ax_img_labels)
 
     def connect(self):
         """Connect events to functions.
@@ -439,7 +472,13 @@ class PlotEditor:
             img2d = img[z]
         
         return img2d
-
+    
+    def _get_ax_imgs(self) -> List["image.AxesImage"]:
+        """Flatten ax image data stores and extract axes images."""
+        plot_axs = sum(self._plot_ax_imgs, [])
+        ax_imgs = [p.ax_img for p in plot_axs]
+        return ax_imgs
+    
     def show_overview(self):
         """Show the main 2D plane, taken as a z-plane."""
         self.axes.clear()
@@ -451,9 +490,7 @@ class PlotEditor:
             artists = self.blitter.artists
             animated = [self.region_label, self.circle]
             if self._plot_ax_imgs:
-                # flatten ax image data stores and extract axes images
-                plot_axs = sum(self._plot_ax_imgs, [])
-                animated.extend([p.ax_img for p in plot_axs])
+                animated.extend(self._get_ax_imgs())
             for artist in animated:
                 if artist in artists:
                     artists.remove(artist)
@@ -581,8 +618,6 @@ class PlotEditor:
                 # use original 2D labels, without cmap index conversion
                 img_orig = img2d_lbl if i == 1 else None
                 plot_ax_img = PlotAxImg(img, img=img_orig)
-                if self.blitter:
-                    self.blitter.add_artist(img)
                 
                 if i == 0:
                     # specified vmin/vmax, in contrast to the AxesImages's
@@ -968,6 +1003,18 @@ class PlotEditor:
             self._ax_img_labels.set_alpha(self.alpha)
         #print("set image alpha to {}".format(self.alpha))
     
+    @staticmethod
+    def _is_pan(event: "backend_bases.MouseEvent") -> bool:
+        """Check if a mouse event is for panning navigation."""
+        return event.button == 2 or (
+                event.button == 1 and event.key == "shift")
+
+    @staticmethod
+    def _is_zoom(event: "backend_bases.MouseEvent") -> bool:
+        """Check if a mouse event is for zooming navigation."""
+        return event.button == 3 or (
+                event.button == 1 and event.key == "control")
+
     def on_press(self, event):
         """Respond to mouse press events."""
         if event.inaxes != self.axes: return
@@ -978,6 +1025,14 @@ class PlotEditor:
         self.last_loc = (int(event.x), int(event.y))
         # re-translate downsampled coordinates back up
         coord = self.translate_coord([self.coord[0], y, x], up=True)
+
+        if self._is_pan(event) or self._is_zoom(event) and self.blitter:
+            # add axes images to blitter for navigation
+            for ax_img in self._get_ax_imgs():
+                artists = self.blitter.artists
+                if ax_img in artists:
+                    artists.remove(ax_img)
+                self.blitter.add_artist(ax_img)
         
         if event.button == 1:
             if self.edit_mode and self.img3d_labels is not None:
@@ -1118,10 +1173,8 @@ class PlotEditor:
         curr_time = time.perf_counter()
         
         # get action type
-        is_pan = event.button == 2 or (
-                event.button == 1 and event.key == "shift")
-        is_zoom = event.button == 3 or (
-                event.button == 1 and event.key == "control")
+        pan = self._is_pan(event)
+        zoom = self._is_zoom(event)
         
         if self.last_loc is not None:
             # skip movements that are fast and short; all movements within the
@@ -1129,14 +1182,14 @@ class PlotEditor:
             time_diff = curr_time - self._last_time
             dist = np.hypot(*np.subtract(self.last_loc, loc))
             movt = dist * time_diff
-            if is_pan or is_zoom:
+            if pan or zoom:
                 # navigation threshold
                 if movt <= self.nav_motion_thresh: return
             else:
                 # region label threshold
                 if movt <= self.label_motion_thresh: return
         
-        if is_pan:
+        if pan:
             # pan by middle-click or shift+left-click during mouseover
             
             # use data coordinates so same part of image stays under mouse
@@ -1152,7 +1205,7 @@ class PlotEditor:
             # data itself moved, so update location along with movement
             loc_data = (x - dx, y - dy)
             
-        elif is_zoom:
+        elif zoom:
             
             # zooming by right-click or ctrl+click (which coverts button event
             # to 3 on Mac at least) while moving mouse up/down in y
@@ -1268,6 +1321,17 @@ class PlotEditor:
                     self.plane, self.coord[0], self.intensity)
             self._editing = False
 
+        if self._is_pan(event) or self._is_zoom(event) and self.blitter:
+            # remove axes images except labels image in editing mode
+            for ax_img in self._get_ax_imgs():
+                artists = self.blitter.artists
+                if ax_img in artists and not (
+                        self.edit_mode and ax_img is self._ax_img_labels):
+                    artists.remove(ax_img)
+            
+            # redraw to refresh any last event
+            self.axes.figure.canvas.draw_idle()
+        
         if self.intensity_spec is not None:
             # reset all plot editors' specified intensity to allow updating
             # with clicked intensities

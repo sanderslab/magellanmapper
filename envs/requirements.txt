@@ -9,7 +9,7 @@ bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/maste
 bg-space==0.6.0
 boto3==1.24.93
 botocore==1.27.93
-certifi==2022.9.24
+certifi==2022.12.7
 charset-normalizer==2.1.1
 click==8.1.3
 commonmark==0.9.1

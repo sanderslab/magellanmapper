@@ -10,6 +10,18 @@ from magmap.io import libmag
 
 class TestLibmag(unittest.TestCase):
     
+    def test_flatten(self):
+        self.assertSequenceEqual(
+            list(libmag.flatten(["a", "b"])), ["a", "b"])
+        self.assertSequenceEqual(
+            list(libmag.flatten([["a", "b"]])), ["a", "b"])
+        self.assertSequenceEqual(
+            list(libmag.flatten([["a", "b"], ["c", "d"]])),
+            ["a", "b", "c", "d"])
+        self.assertSequenceEqual(
+            list(libmag.flatten([["a", "b"], ["c", "d"], [["e", 1], "g", 3]])),
+            ["a", "b", "c", "d", "e", 1, "g", 3])
+    
     def test_insert_before_ext(self):
         self.assertEqual(libmag.insert_before_ext(
             "foo/bar/item.py", "totest", "_"), "foo/bar/item_totest.py")

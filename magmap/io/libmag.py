@@ -8,7 +8,7 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Callable, List, Optional, Sequence, Union
+from typing import Any, Callable, Generator, List, Optional, Sequence, Union
 import warnings
 
 if sys.version_info >= (3, 8):
@@ -185,6 +185,23 @@ def combine_arrs(arrs, filter_none=True, fn=None, **kwargs):
     else:
         # combine with given function
         return fn(arrs, **kwargs)
+
+
+def flatten(vals: Sequence[Any]) -> Generator[Any, None, None]:
+    """Flatten an arbitrarily nested sequence.
+    
+    Args:
+        vals: Sequence of values with arbitrary levels of nesting.
+
+    Yields:
+        ``vals`` flattened to a single sequence.
+
+    """
+    for val in vals:
+        if is_seq(val):
+            yield from flatten(val)
+        else:
+            yield val
 
 
 def insert_before_ext(

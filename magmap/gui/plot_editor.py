@@ -475,8 +475,7 @@ class PlotEditor:
     
     def _get_ax_imgs(self) -> List["image.AxesImage"]:
         """Flatten ax image data stores and extract axes images."""
-        plot_axs = sum(self._plot_ax_imgs, [])
-        ax_imgs = [p.ax_img for p in plot_axs]
+        ax_imgs = [p.ax_img for p in libmag.flatten(self._plot_ax_imgs)]
         return ax_imgs
     
     def show_overview(self):

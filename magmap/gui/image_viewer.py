@@ -55,13 +55,13 @@ class Blitter:
             # add artist
             self.add_artist(val)
     
-    def add_artist(self, arist: "artist.Artist"):
+    def add_artist(self, arist: "artist.Artist", i: Optional[int] = None):
         """Add tracked artist.
         
         Args:
             arist: Artist to track. Only artists in :attr:`fig` will be added.
-
-        Returns:
+            i: Index at which to add the artist. Defaults to None, which will
+                append the artist.
 
         """
         if arist.figure != self.fig:
@@ -73,7 +73,13 @@ class Blitter:
         # flag as animated for update, which appears to prevent updating
         # non-animated artists as well
         arist.set_animated(True)
-        self._artists.append(arist)
+        
+        if i is None:
+            # append artist
+            self._artists.append(arist)
+        else:
+            # use lower index to position behind other animated artists
+            self._artists.insert(i, arist)
     
     def on_draw(self, evt: Optional["backend_bases.DrawEvent"]):
         """Recapture backgrouna and draw the figure canvas."""

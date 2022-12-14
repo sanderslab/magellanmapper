@@ -11,6 +11,7 @@
 - Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
 - Images can be viewed as RGB (see "ROI > Channels")
 - [Jupyter Notebook tutorial](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
+- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
 
 ### Changes
 
@@ -38,7 +39,7 @@
   - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89)
   - Image adjustment channels are radio buttons for easier selection (#212)
   - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
-- Faster atlas label display when hovering over regions (#317)
+- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation (#317, #335)
 - Atlas labels adapt better in zoomed images to stay within each plot (#317)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
@@ -56,6 +57,7 @@
 - Any axis can be flipped through `--transform flip=<axis>`, where `axis = 0` for the z-axis, 1 for the y-axis, and 2 for the x-axis (#147)
 - Density/heat maps can be specified through `--reg_suffixes density=<suffix>` (#129)
 - Write point files for corresponding-point-based registration (#195)
+- Quieter console output by default (#335)
 - Fixed to only remove the final extension from image paths, and paths given by the `--prefix <path>` CLI argument do not undergo any stripping (#115)
 
 #### Atlas refinement
@@ -68,6 +70,7 @@
 - Image registration now supports multiple labels images given as `--reg_suffixes annotation=<suffix1>,<suffix2>,...`, which will apply the same transformation to each of these images (#147)
 - Landmark distance measurements save the raw distances and no longer require spacing (#147)
 - Masks with angle planes can be constructed (#252)
+- `register.RegImgs` is a data class to track registered images (#335)
 - Fixed changes to large label IDs during registration (#303)
 
 #### Cell detection

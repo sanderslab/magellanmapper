@@ -1025,7 +1025,7 @@ class PlotEditor:
         # re-translate downsampled coordinates back up
         coord = self.translate_coord([self.coord[0], y, x], up=True)
 
-        if self._is_pan(event) or self._is_zoom(event) and self.blitter:
+        if (self._is_pan(event) or self._is_zoom(event)) and self.blitter:
             # add axes images to blitter for navigation
             for ax_img in self._get_ax_imgs():
                 artists = self.blitter.artists
@@ -1320,7 +1320,7 @@ class PlotEditor:
                     self.plane, self.coord[0], self.intensity)
             self._editing = False
 
-        if self._is_pan(event) or self._is_zoom(event) and self.blitter:
+        if (self._is_pan(event) or self._is_zoom(event)) and self.blitter:
             # remove axes images except labels image in editing mode
             for ax_img in self._get_ax_imgs():
                 artists = self.blitter.artists

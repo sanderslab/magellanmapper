@@ -8,7 +8,7 @@ view of orthogonal planes.
 
 import textwrap
 import time
-from typing import Callable, List, Optional, Sequence, TYPE_CHECKING
+from typing import Callable, List, Optional, Sequence, TYPE_CHECKING, Union
 
 from matplotlib import patches
 import numpy as np
@@ -328,7 +328,8 @@ class PlotEditor:
 
     def translate_coord(
             self, coord: Sequence[int], up: bool = False,
-            coord_slice: Optional[Sequence[slice]] = None) -> Sequence[int]:
+            coord_slice: Optional[Union[slice, Sequence[slice]]] = None
+    ) -> Sequence[int]:
         """Translate coordinate based on downsampling factor of the main image.
 
         Coordinates sent to and received from the Atlas Editor are assumed to
@@ -337,7 +338,7 @@ class PlotEditor:
 
         Args:
             coord: Coordinates in z,y,x.
-            up: True to upsample; defaults to False to adjust
+            up: True to upsample; defaults to False, which adjusts
                 coordinates for downsampled images.
             coord_slice: Slice of each set of coordinates to
                 transpose. Defaults to None, which gives a slice starting
@@ -1156,9 +1157,8 @@ class PlotEditor:
         self.region_label.set_text(name)
 
     def on_motion(self, event):
-        """Move the editing pen's circle and draw with the chosen intensity
-        value if set.
-        """
+        """Handle motion events, including navigation and label editing."""
+        
         if event.inaxes != self.axes: return
         
         # get mouse position and return if no change from last pixel coord
@@ -1167,6 +1167,7 @@ class PlotEditor:
         x_fig = int(event.x)
         y_fig = int(event.y)
         
+        # current state
         loc = (x_fig, y_fig)
         loc_data = (x, y)
         curr_time = time.perf_counter()
@@ -1175,11 +1176,16 @@ class PlotEditor:
         pan = self._is_pan(event)
         zoom = self._is_zoom(event)
         
-        if self.last_loc is not None:
+        # copy last state since it may change from other threads
+        last_loc = self.last_loc
+        last_loc_data = self.last_loc_data
+        last_time = self._last_time
+        
+        if last_loc is not None:
             # skip movements that are fast and short; all movements within the
             # same px will be skipped if threshold is non-neg
-            time_diff = curr_time - self._last_time
-            dist = np.hypot(*np.subtract(self.last_loc, loc))
+            time_diff = curr_time - last_time
+            dist = np.hypot(*np.subtract(last_loc, loc))
             movt = dist * time_diff
             if pan or zoom:
                 # navigation threshold
@@ -1187,13 +1193,26 @@ class PlotEditor:
             else:
                 # region label threshold
                 if movt <= self.label_motion_thresh: return
+
+        # update instance state
+        self.last_loc = loc
+        self.last_loc_data = loc_data
+        self._last_time = curr_time
         
         if pan:
             # pan by middle-click or shift+left-click during mouseover
             
             # use data coordinates so same part of image stays under mouse
-            dx = x - self.last_loc_data[0]
-            dy = y - self.last_loc_data[1]
+            if last_loc_data is None:
+                last_loc_data = loc_data
+            dx = x - last_loc_data[0]
+            dy = y - last_loc_data[1]
+            
+            # data itself moved, so update saved location for this movement
+            loc_data = (x - dx, y - dy)
+            self.last_loc_data = loc_data
+            
+            # update axes view for the movement
             xlim = self.axes.get_xlim()
             self.axes.set_xlim(xlim[0] - dx, xlim[1] - dx)
             ylim = self.axes.get_ylim()
@@ -1201,8 +1220,6 @@ class PlotEditor:
             self._redraw_animated()
             self.xlim = self.axes.get_xlim()
             self.ylim = self.axes.get_ylim()
-            # data itself moved, so update location along with movement
-            loc_data = (x - dx, y - dy)
             
         elif zoom:
             
@@ -1210,7 +1227,9 @@ class PlotEditor:
             # to 3 on Mac at least) while moving mouse up/down in y
             
             # use figure coordinates since data pixels will scale during zoom
-            zoom_speed = (y_fig - self.last_loc[1]) * 0.01
+            zoom_speed = (y_fig - last_loc[1]) * 0.01
+
+            # update axes view for the zoom
             xlim = self.axes.get_xlim()
             xlim_update = (
                 xlim[0] + (self.press_loc_data[0] - xlim[0]) * zoom_speed,
@@ -1275,8 +1294,9 @@ class PlotEditor:
                                 shape=self.img3d_labels[self.coord[0]].shape)
                             self.img3d_labels[
                                 self.coord[0], rr, cc] = self.intensity
-                            print("changed intensity at x,y,z = {},{},{} to {}"
-                                  .format(*coord[::-1], self.intensity))
+                            _logger.debug(
+                                "Changed intensity at x,y,z = %s to %s",
+                                coord[::-1], self.intensity)
                             if self.fn_refresh_images is None:
                                 self.refresh_img3d_labels()
                             else:
@@ -1301,9 +1321,6 @@ class PlotEditor:
 
         if self.fn_status_bar:
             self.fn_status_bar(self.axes.format_coord.get_msg(event))
-        self.last_loc = loc
-        self.last_loc_data = loc_data
-        self._last_time = curr_time
     
     def on_release(self, event):
         """Respond to mouse button release events.

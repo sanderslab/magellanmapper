@@ -1080,8 +1080,8 @@ class PlotEditor:
         """Remove any mouse circle and region label."""
         if event.inaxes != self.axes: return
         
-        if self.circle:
-            # remove circle
+        if self.circle and not self.blitter:
+            # remove circle unless managed by blitter
             self.circle.remove()
             self.circle = None
         

@@ -1067,7 +1067,7 @@ class PlotEditor:
                     # trigger provided handler
                     self.fn_update_coords(self.coord, self.plane)
                 
-                elif self.label_motion_thresh is np.inf:
+                if self.label_motion_thresh is np.inf:
                     # update region label on click if set to ignore motion
                     self._update_region_label(x, y, coord)
                     self._redraw_animated()

@@ -170,7 +170,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     '''
     labels_reg = labels_reg.astype(np.float)
     lib_clrbrain.normalize(labels_reg, 1, 100, background=15000)
-    labels_reg = labels_reg.astype(np.int)
+    labels_reg = labels_reg.astype(int)
     print(labels_reg[290:300, 20, 190:200])
     '''
     

@@ -673,7 +673,7 @@ class SubSegmenter(object):
         labels_seg = None
         slices = None
         if label_size > 0:
-            props = measure.regionprops(label_mask.astype(np.int))
+            props = measure.regionprops(label_mask.astype(int))
             _, slices = cv_nd.get_bbox_region(props[0].bbox)
             
             # work on a view of the region for efficiency

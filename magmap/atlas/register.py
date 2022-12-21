@@ -1349,8 +1349,8 @@ def get_scaled_regionprops(img_region, scaling):
         bbox_scaled[:3] = bbox_scaled[:3] * scaling_inv
         bbox_scaled[3:] = bbox_scaled[3:] * scaling_inv
         centroid_scaled = np.array(props[0].centroid) * scaling_inv
-        bbox_scaled = np.around(bbox_scaled).astype(np.int)
-        centroid_scaled = np.around(centroid_scaled).astype(np.int)
+        bbox_scaled = np.around(bbox_scaled).astype(int)
+        centroid_scaled = np.around(centroid_scaled).astype(int)
         print(props[0].bbox, props[0].centroid)
         print(bbox_scaled, centroid_scaled)
         return props, bbox_scaled, centroid_scaled

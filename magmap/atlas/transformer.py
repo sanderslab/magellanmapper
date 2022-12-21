@@ -235,9 +235,9 @@ def transpose_img(
             shape = rescaled.shape[:3]
             num_chunks = np.ceil(np.divide(shape, max_pixels))
             max_pixels = np.ceil(
-                np.divide(shape, num_chunks)).astype(np.int)
+                np.divide(shape, num_chunks)).astype(int)
             sub_roi_size = np.floor(
-                np.divide(target_size, num_chunks)).astype(np.int)
+                np.divide(target_size, num_chunks)).astype(int)
             print("Resizing image of shape {} to target_size: {}, using "
                   "num_chunks: {}, max_pixels: {}, sub_roi_size: {}"
                   .format(rescaled.shape, target_size, num_chunks, max_pixels,

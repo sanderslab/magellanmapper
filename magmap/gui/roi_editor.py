@@ -181,7 +181,7 @@ class DraggableCircle:
         print("segment moving from {}...".format(self.segment))
         seg_old = np.copy(self.segment)
         self.segment[1:3] += np.subtract(
-            self.circle.center, self._press[0:2]).astype(np.int)[::-1]
+            self.circle.center, self._press[0:2]).astype(int)[::-1]
         rad_sign = -1 if self.segment[3] < config.POS_THRESH else 1
         self.segment[3] = rad_sign * self.circle.radius
         print("...to {}".format(self.segment))
@@ -445,8 +445,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
                     # zoom images based on scaling to main image
                     scale = np.divide(
                         img.shape[1:3], arrs_3d[0].shape[1:3])[::-1]
-                    origin_scaled = np.multiply(ori, scale).astype(np.int)
-                    end_scaled = np.multiply(end, scale).astype(np.int)
+                    origin_scaled = np.multiply(ori, scale).astype(int)
+                    end_scaled = np.multiply(end, scale).astype(int)
                     offsets.append(origin_scaled[::-1])
                     sizes.append(np.subtract(end_scaled, origin_scaled)[::-1])
 
@@ -490,7 +490,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if config.zoom and config.magnification:
             # calculate total mag from objective zoom and mag
             zoom_components = np.array(
-                [config.zoom, config.magnification, zoom]).astype(np.float)
+                [config.zoom, config.magnification, zoom]).astype(float)
             # use abs since the default mag and zoom were previously -1.0
             tot_zoom = "{}x".format(
                 libmag.compact_float(abs(np.prod(zoom_components)), 1))

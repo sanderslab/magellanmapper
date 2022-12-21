@@ -527,7 +527,7 @@ class Blobs:
             
             if to_int:
                 # convert shifted values to ints
-                sub = sub.astype(np.int)
+                sub = sub.astype(int)
             
             # replace values
             if is_1d:

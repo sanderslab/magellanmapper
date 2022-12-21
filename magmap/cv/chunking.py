@@ -182,7 +182,7 @@ def _num_units(
     """
     num = np.floor_divide(size, max_pixels)
     num[np.remainder(size, max_pixels) > 0] += 1
-    return num.astype(np.int)
+    return num.astype(int)
 
 
 def _bounds_side(
@@ -275,8 +275,8 @@ def merge_split_stack(
     """
     size = sub_rois.shape
     merged = None
-    if overlap.dtype != np.int:
-        overlap = overlap.astype(np.int)
+    if overlap.dtype != int:
+        overlap = overlap.astype(int)
     for z in range(size[0]):
         merged_y = None
         for y in range(size[1]):
@@ -332,8 +332,8 @@ def get_split_stack_total_shape(sub_rois, overlap=None):
     """
     size = sub_rois.shape
     shape_sub_roi = sub_rois[0, 0, 0].shape # for number of dimensions
-    merged_shape = np.zeros(len(shape_sub_roi)).astype(np.int)
-    final_shape = np.zeros(len(shape_sub_roi)).astype(np.int)
+    merged_shape = np.zeros(len(shape_sub_roi)).astype(int)
+    final_shape = np.zeros(len(shape_sub_roi)).astype(int)
     edges = None
     for z in range(size[0]):
         for y in range(size[1]):
@@ -377,7 +377,7 @@ def merge_split_stack2(sub_rois, overlap, offset, output):
         The merged stack.
     """
     size = sub_rois.shape
-    merged_coord = np.zeros(3, dtype=np.int)
+    merged_coord = np.zeros(3, dtype=int)
     sub_roi_shape = sub_rois[0, 0, 0].shape
     if offset > 0:
         # axis offset, such as skipping the time axis

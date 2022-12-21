@@ -33,7 +33,7 @@ mayavi==4.8.1
 meshio==5.3.4
 multidict==6.0.3
 networkx==2.8.8
-numpy==1.23.5
+numpy==1.24.0
 packaging==22.0
 pandas==1.5.2
 Pillow==9.3.0

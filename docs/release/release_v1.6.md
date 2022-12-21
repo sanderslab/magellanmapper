@@ -39,7 +39,7 @@
   - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89)
   - Image adjustment channels are radio buttons for easier selection (#212)
   - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
-- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation (#317, #335)
+- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation (#317, #335, #359)
 - Atlas labels adapt better in zoomed images to stay within each plot (#317)
 - Fixed to reset the ROI selector when redrawing (#115)
 - Fixed to reorient the camera after clearing the 3D space (#121)
@@ -49,6 +49,7 @@
 - Fixed browsing for files or directories in some environments (#201)
 - Fixed clearing the import path (#201)
 - Fixed saving additional, old figures when using the save shortcut (#256)
+- Fixed lag in zoom direction change (#359)
 
 #### CLI
 

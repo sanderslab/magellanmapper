@@ -387,7 +387,7 @@ class Vis3D:
         if segments.shape[0] <= 0:
             return 0, 0
         if roi_offset is None:
-            roi_offset = np.zeros(3, dtype=np.int)
+            roi_offset = np.zeros(3, dtype=int)
         if self.blobs3d:
             for blob in self.blobs3d:
                 # remove existing blob glyphs from the pipeline
@@ -521,7 +521,7 @@ class Vis3D:
                 if self.fn_update_coords:
                     # callback to update coordinates using blob's orig coords
                     self.fn_update_coords(np.add(
-                        segs_in[blobi, 4:7], roi_offset).astype(np.int))
+                        segs_in[blobi, 4:7], roi_offset).astype(int))
         
         # show ROI outline and make blobs pickable, falling back to closest
         # blobs within 20% of the longest ROI edge to be picked if present
@@ -577,7 +577,7 @@ class Vis3D:
             roi = roi[:, :, :, 0]
         isotropic = plot_3d.get_isotropic_vis(config.roi_profile)
         shape = roi.shape
-        shape_iso = np.multiply(roi.shape, isotropic).astype(np.int)
+        shape_iso = np.multiply(roi.shape, isotropic).astype(int)
         shape_iso_mid = shape_iso // 2
         
         # TODO: shift z by +10?
@@ -585,7 +585,7 @@ class Vis3D:
         # xy-plane, positioned just below the 3D ROI
         img2d = roi[shape[0] // 2, :, :]
         img2d = transform.resize(
-            img2d, np.multiply(img2d.shape, isotropic[1:]).astype(np.int),
+            img2d, np.multiply(img2d.shape, isotropic[1:]).astype(int),
             preserve_range=True)
         img2d_mlab = self._shadow_img2d(img2d, shape_iso, 0)
         # Mayavi positions are in x,y,z
@@ -595,7 +595,7 @@ class Vis3D:
         # xz-plane
         img2d = roi[:, shape[1] // 2, :]
         img2d = transform.resize(
-            img2d, np.multiply(img2d.shape, isotropic[[0, 2]]).astype(np.int),
+            img2d, np.multiply(img2d.shape, isotropic[[0, 2]]).astype(int),
             preserve_range=True)
         img2d_mlab = self._shadow_img2d(img2d, shape_iso, 2)
         img2d_mlab.actor.position = [
@@ -605,7 +605,7 @@ class Vis3D:
         # yz-plane
         img2d = roi[:, :, shape[2] // 2]
         img2d = transform.resize(
-            img2d, np.multiply(img2d.shape, isotropic[:2]).astype(np.int),
+            img2d, np.multiply(img2d.shape, isotropic[:2]).astype(int),
             preserve_range=True)
         img2d_mlab = self._shadow_img2d(img2d, shape_iso, 1)
         img2d_mlab.actor.position = [

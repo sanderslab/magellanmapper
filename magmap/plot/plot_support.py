@@ -595,7 +595,7 @@ class ImageOverlayer:
                 shape[:2] = imgs2d[0].shape[:2]
                 img = transform.resize(
                     img, shape, order=0, anti_aliasing=False,
-                    preserve_range=True, mode="reflect").astype(np.int)
+                    preserve_range=True, mode="reflect").astype(int)
             
             if check_single and discrete and len(np.unique(img)) < 2:
                 # WORKAROUND: increment the last val of single unique val images

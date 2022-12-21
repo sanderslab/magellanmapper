@@ -693,12 +693,12 @@ def scale_coords(
         # round when extra precision is necessary, such as during reverse 
         # scaling, which requires clipping so coordinates don't exceed labels 
         # image shape
-        coords_only = np.around(coords_only).astype(np.int)
+        coords_only = np.around(coords_only).astype(int)
         coords_only = np.clip(
             coords_only, None, np.subtract(clip_shape, 1))
     else:
         # typically don't round to stay within bounds
-        coords_only = coords_only.astype(np.int)
+        coords_only = coords_only.astype(int)
     if coord_scaled.shape[-1] <= 3:
         # assume coords are spatial dimensions
         coord_scaled = coords_only
@@ -901,7 +901,7 @@ def get_region_middle(
         # print("coord_labels (unscaled): {}".format(coord))
         # print("ID at middle coord: {} (in region? {})"
         #       .format(labels_img[coord], img_region[coord]))
-        coord = tuple(np.around(np.divide(coord, scaling)).astype(np.int))
+        coord = tuple(np.around(np.divide(coord, scaling)).astype(int))
     # print("coord at middle: {}".format(coord))
     return coord, img_region, region_ids
 

@@ -707,7 +707,7 @@ class StackPruner(object):
                 for j in range(num_sections):
                     # build overlapping region dimensions based on size of 
                     # sub-region in the given axis
-                    coord = np.zeros(3, dtype=np.int)
+                    coord = np.zeros(3, dtype=int)
                     coord[axis] = j
                     print("** setting up blob pruning in axis {}, section {} "
                           "of {}".format(axis, j, num_sections - 1))

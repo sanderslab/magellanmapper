@@ -358,7 +358,7 @@ class PlotEditor:
         else:
             coord_tr[coord_slice] = np.divide(
                 coord_tr[coord_slice], self._downsample[0])
-        coord_tr = list(coord_tr.astype(np.int))
+        coord_tr = list(coord_tr.astype(int))
         # print("translated from {} to {}".format(coord, coord_tr))
         return coord_tr
 

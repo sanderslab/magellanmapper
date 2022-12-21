@@ -65,7 +65,7 @@ def truncate_labels(img_np, x_frac=None, y_frac=None, z_frac=None):
         if bound is not None:
             # convert boundary fractions to absolute coordinates for the 
             # given axis, filling the other axes with full slices
-            bound_abs = np.multiply(bound, shape[axis]).astype(np.int)
+            bound_abs = np.multiply(bound, shape[axis]).astype(int)
             slices = [slice(None)] * bounds_len
             slices[axis] = slice(0, bound_abs[0])
             img_np[tuple(slices)] = 0
@@ -971,7 +971,7 @@ def label_smoothing_metric(orig_img_np, smoothed_img_np, filter_size=None,
         # smoothed image to improve efficiency over filtering whole image
         label_mask = np.logical_or(
             orig_img_np == label_id, smoothed_img_np == label_id)
-        props = measure.regionprops(label_mask.astype(np.int))
+        props = measure.regionprops(label_mask.astype(int))
         if len(props) < 1 or props[0].bbox is None: continue
         _, slices = cv_nd.get_bbox_region(
             props[0].bbox, 2, orig_img_np.shape)

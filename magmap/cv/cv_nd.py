@@ -631,7 +631,7 @@ def get_label_props(labels_img_np, label_id):
     else:
         # single ID
         label_mask = labels_img_np == label_id
-    props = measure.regionprops(label_mask.astype(np.int))
+    props = measure.regionprops(label_mask.astype(int))
     return props
 
 
@@ -694,7 +694,7 @@ def meas_region(mask, res):
         of ``mask`` as given by :meth:`measure.regionprops`.
 
     """
-    props = measure.regionprops(mask.astype(np.int))
+    props = measure.regionprops(mask.astype(int))
     shape = get_bbox_region(props[0].bbox)[0]
     meas = np.multiply(shape, res)
     vol = np.prod(res) * np.sum(mask)
@@ -762,7 +762,7 @@ def crop_to_labels(img_labels, img_ref, mask=None, dil_size=2, padding=5):
     if mask is None:
         # default to get bounding box of all labels, assuming 0 is background
         mask = img_labels != 0
-    props = measure.regionprops(mask.astype(np.int))
+    props = measure.regionprops(mask.astype(int))
     if not props or len(props) < 1: return
     shape, slices = get_bbox_region(
         props[0].bbox, padding=padding, img_shape=img_labels.shape)
@@ -1088,7 +1088,7 @@ def make_isotropic(
     """
     resize_factor = calc_isotropic_factor(scale, res)
     isotropic_shape = np.array(roi.shape)
-    isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(np.int)
+    isotropic_shape[:3] = (isotropic_shape[:3] * resize_factor).astype(int)
     libmag.printv("original ROI shape: {}, isotropic: {}"
                   .format(roi.shape, isotropic_shape))
     

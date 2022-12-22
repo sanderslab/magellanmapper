@@ -172,6 +172,7 @@
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - Python 3.6 and 3.7 have separate pinned dependencies (`envs/requirements_py3<n>`) (#232)
+- Fixed error on deprecated NumPy data type aliases (#364)
 
 #### R Dependency Changes
 

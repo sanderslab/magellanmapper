@@ -1006,14 +1006,14 @@ class PlotEditor:
     @staticmethod
     def _is_pan(event: "backend_bases.MouseEvent") -> bool:
         """Check if a mouse event is for panning navigation."""
-        return event.button == 2 or (
-                event.button == 1 and event.key == "shift")
+        return not event.dblclick and (event.button == 2 or (
+                event.button == 1 and event.key == "shift"))
 
     @staticmethod
     def _is_zoom(event: "backend_bases.MouseEvent") -> bool:
         """Check if a mouse event is for zooming navigation."""
-        return event.button == 3 or (
-                event.button == 1 and event.key == "control")
+        return not event.dblclick and (event.button == 3 or (
+                event.button == 1 and event.key == "control"))
 
     def on_press(self, event):
         """Respond to mouse press events."""

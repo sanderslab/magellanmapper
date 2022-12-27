@@ -19,8 +19,8 @@ Arguments:
     To set while retaining defauls, pass as ' '.
   -p [ver1:ver2[:...]]: Python versions delimted by \":\", for which binaries
     will be built. Defaults to 3.6-3.9.
-  -s [opt1:arg1[:...]]: Arguments to \"build_se.sh\" for SimpleElastix,
-    build delimted by \":\". SimpleElastix will only be built if this option
+  -s [opt1:arg1[:...]]: Arguments to \"build_se.sh\" for SimpleTTK with Elastix,
+    build delimted by \":\". SimpleITK will only be built if this option
     is set. To set while retaining defauls, pass as ' '.
 "
 
@@ -53,7 +53,7 @@ while getopts hd:e:j:p:s: opt; do
       ;;
     s)
       IFS=':' read -r -a se_args <<< "$OPTARG"
-      echo "Set SimpleElastix arguments to: ${se_args[*]}"
+      echo "Set SimpleITK arguments to: ${se_args[*]}"
       ;;
     :)
       echo "Option -$OPTARG requires an argument"
@@ -95,11 +95,11 @@ activate_venv() {
   return 0
 }
 
-# Build SimpleElastix in the given Python version environment.
+# Build SimpleITK in the given Python version environment.
 # Args:
 #   1: Python version, used to activate the corresponding Venv environment.
 build_se_ver() {
-  # build SimpleElastix
+  # build SimpleITK
   local ver="$1"
   local output="${output_dir}/build_se_py${ver}"
   bin/build_se.sh -d "$output" "${se_args[@]}"
@@ -131,7 +131,7 @@ for py_ver in "${py_vers[@]}"; do
   # activate Venv environment for the given Python version
   if activate_venv "$py_ver"; then
     if [[ ${#se_args} -gt 0 ]]; then
-      # build SimpleElastix
+      # build SimpleITK
       build_se_ver "$py_ver"
     fi
     

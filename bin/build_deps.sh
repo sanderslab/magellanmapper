@@ -18,7 +18,7 @@ Arguments:
     delimted by \":\". Javabridge will only be built if this option is set.
     To set while retaining defauls, pass as ' '.
   -p [ver1:ver2[:...]]: Python versions delimted by \":\", for which binaries
-    will be built. Defaults to 3.6-3.9.
+    will be built. Defaults to 3.8-3.11.
   -s [opt1:arg1[:...]]: Arguments to \"build_se.sh\" for SimpleTTK with Elastix,
     build delimted by \":\". SimpleITK will only be built if this option
     is set. To set while retaining defauls, pass as ' '.
@@ -26,7 +26,7 @@ Arguments:
 
 se_args=()
 jb_args=()
-py_vers=(3.6 3.7 3.8 3.9)
+py_vers=(3.8 3.9 3.10 3.11)
 
 OPTIND=1
 while getopts hd:e:j:p:s: opt; do

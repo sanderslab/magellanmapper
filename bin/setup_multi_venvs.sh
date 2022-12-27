@@ -81,7 +81,7 @@ build_venv() {
 }
 
 # set up a Venv for each given Python version
-py_vers=(3.6 3.7 3.8 3.9)
+py_vers=(3.8 3.9 3.10 3.11)
 for py_ver in "${py_vers[@]}"; do
   build_venv "$py_ver"
 done

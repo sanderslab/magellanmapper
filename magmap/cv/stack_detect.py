@@ -110,7 +110,7 @@ class StackDetector(object):
             cli.process_cli_args()
             _, orig_info = importer.make_filenames(img_path)
             importer.load_metadata(orig_info)
-        _logger.info(
+        _logger.debug(
             "Detecting blobs in sub-ROI at %s of %s", coord, last_coord)
         
         if denoise_max_shape is not None:
@@ -153,9 +153,9 @@ class StackDetector(object):
             segments = np.hstack((segments, colocs))
         #print("segs before (offset: {}):\n{}".format(offset, segments))
         if segments is not None:
-            # shift both coordinate sets (at beginning and end of array) to 
-            # absolute positioning, using the latter set to store shifted 
-            # coordinates based on duplicates and the former for initial 
+            # shift both coordinate sets (at beginning and end of array) to
+            # absolute positioning, using the latter set to store shifted
+            # coordinates based on duplicates and the former for initial
             # positions to check for multiple duplicates
             detector.Blobs.shift_blob_rel_coords(segments, offset)
             detector.Blobs.shift_blob_abs_coords(segments, offset)
@@ -174,7 +174,7 @@ class StackDetector(object):
                 chunked sub-ROIs within a stack.
             sub_rois_offsets (:obj:`np.ndarray`): Numpy object array of the same
                 shape as ``sub_rois`` with offsets in z,y,x corresponding to
-                each sub-ROI. Offets are used to transpose blobs into 
+                each sub-ROI. Offets are used to transpose blobs into
                 absolute coordinates.
             denoise_max_shape (Tuple[int]): Maximum shape of each unit within
                 each sub-ROI for denoising.
@@ -192,7 +192,7 @@ class StackDetector(object):
             elements as given in :meth:``StackDetect.detect_sub_roi``.
         
         """
-        # detect nuclei in each sub-ROI, passing an index to access each 
+        # detect nuclei in each sub-ROI, passing an index to access each
         # sub-ROI to minimize pickling
         is_fork = chunking.is_fork()
         last_coord = np.subtract(sub_roi_slices.shape, 1)
@@ -206,6 +206,8 @@ class StackDetector(object):
             cls.coloc = coloc
             cls.channel = channel
         
+        _logger.info("Starting blob detections for channel(s) %s with "
+                     "co-localizations set to %s", channel, coloc)
         pool = chunking.get_mp_pool()
         pool_results = []
         for z in range(sub_roi_slices.shape[0]):
@@ -233,8 +235,9 @@ class StackDetector(object):
         for result in pool_results:
             coord, segments = result.get()
             num_blobs = 0 if segments is None else len(segments)
-            print("adding {} blobs from sub_roi at {} of {}"
-                  .format(num_blobs, coord, np.add(sub_roi_slices.shape, -1)))
+            _logger.info(
+                "Adding %s blobs from sub_roi at %s of %s",
+                num_blobs, coord, np.add(sub_roi_slices.shape, -1))
             seg_rois[coord] = segments
     
         pool.close()
@@ -383,7 +386,7 @@ def detect_blobs_blocks(
     print("Profile for block settings:", settings[settings.NAME_KEY])
     blocks = setup_blocks(settings, roi.shape)
     
-    # TODO: option to distribute groups of sub-ROIs to different servers 
+    # TODO: option to distribute groups of sub-ROIs to different servers
     # for blob detection
     seg_rois = StackDetector.detect_blobs_sub_rois(
         roi, blocks.sub_roi_slices, blocks.sub_rois_offsets,

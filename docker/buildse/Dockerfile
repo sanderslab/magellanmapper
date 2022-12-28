@@ -2,18 +2,25 @@
 # Provides binary compatibility for older Linux kernels and Glibc
 # Author: David Young, 2020
 
-FROM ubuntu:16.04
+FROM ubuntu:18.04
 
 ENV BASE_DIR /app
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# install gnugpg to set up additional PPAs
+RUN apt-get update \
+    && apt-get install -y \
+        gnupg
 
 # install build tools
 # - multiple Python version from deadsnakes PPA
 # - build tools including specific CMake version required for SimpleElastix
 # - OpenJDK 8 to build Python-Javabridge
 # - vim to allow editing
-RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main" \
+RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
         >> /etc/apt/sources.list \
-    && echo "deb-src http://ppa.launchpad.net/deadsnakes/ppa/ubuntu xenial main" \
+    && echo "deb-src http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
         >> /etc/apt/sources.list \
     && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys \
         F23C5A6CF475977595C89F51BA6932366A755776 \

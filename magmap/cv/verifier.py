@@ -137,40 +137,48 @@ def setup_match_blobs_roi(
     return thresh, scaling, inner_padding, resize, blobs
 
 
-def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
-                    inner_padding, resize=None):
-    """Match blobs from two sets of blobs in an ROI, prioritizing the inner
-    portion of ROIs to avoid missing detections because of edge effects
-    while also adding matches between a blob in the inner ROI and another
-    blob in the remaining portion of the ROI.
+def match_blobs_roi(
+        blobs: np.ndarray, blobs_base: np.ndarray, offset: Sequence[int],
+        size: Sequence[int], thresh: float, scaling: Sequence[float],
+        inner_padding: Sequence[float], resize: Optional[Sequence[float]] = None
+) -> Tuple[np.ndarray, np.ndarray, Sequence[int], Sequence[int],
+           "colocalizer.BlobMatch"]:
+    """Match blobs from two sets of blobs in an ROI.
+    
+    Prioritizes the inner portion of ROIs to avoid missing detections because
+    of edge effects while also adding matches between a blob in the inner ROI
+    and another blob in the remaining portion of the ROI.
     
     Args:
-        blobs (:obj:`np.ndarray`): The blobs to be matched against
-            ``blobs_base``, given as 2D array of
-            ``[[z, row, column, radius, ...], ...]``.
-        blobs_base (:obj:`np.ndarray`): The blobs to which ``blobs`` will
-            be matched, in the same format as ``blobs``.
-        offset (List[int]): ROI offset from which to select blobs in x,y,z.
-        size (List[int]): ROI size in x,y,z.
-        thresh (float): Distance map threshold
-        scaling (List[float]): Scaling normalized by ``tol``.
-        inner_padding (List[float]): ROI padding shape.
-        resize (List[float]): Resize sequence retrieved from ROI profile;
-            defaults to None.
+        blobs: The blobs to be matched against ``blobs_base``, given as 2D
+            array of ``[[z, row, column, radius, ...], ...]``.
+        blobs_base: The blobs to which ``blobs`` will be matched, in the same
+            format as ``blobs``.
+        offset: ROI offset from which to select blobs in x,y,z.
+        size: ROI size in x,y,z.
+        thresh: Distance map threshold
+        scaling: Scaling normalized by ``tol``.
+        inner_padding: ROI padding shape.
+        resize: Resize sequence retrieved from ROI profile; defaults to None.
     
     Returns:
-        :class:`numpy.ndarray`, :class:`numpy.ndarray`, list[int], list[int],
-        list[list[:class:`numpy.ndarray`, :class:`numpy.ndarray`, float]]:
-        Array of blobs from ``blobs``; corresponding array from ``blobs_base``
-        matching blobs in ``blobs``; offset of the inner portion of the ROI
-        in absolute coordinates of x,y,z; shape of this inner portion of the
-        ROI; and list of blob matches, each given as a list of
-        ``blob_master, blob, distance``.
+        Tuple of:
+        - ``blobs_inner_plus``: array of blobs from ``blobs``
+        - ``blobs_truth_inner_plus``: corresponding array from ``blobs_base``
+          matching blobs in ``blobs``
+        - ``offset_inner``: offset of the inner portion of the ROI in absolute
+          coordinates of x,y,z
+        - ``size_inner``: shape of this inner portion of the ROI
+        - ``matches``: Blob matches
     
     """
-    # get all blobs in inner and total ROI
-    offset_inner = np.add(offset, inner_padding)
+    # set up inner ROI with symmetrical padding dimensions < size or 0
+    inner_padding_max = np.clip(np.ceil(np.divide(size, 2) - 1), 0, None)
+    inner_padding = np.clip(inner_padding, 0, inner_padding_max)
     size_inner = np.subtract(size, inner_padding * 2)
+    offset_inner = np.add(offset, inner_padding)
+    
+    # get blobs in total ROI
     blobs_roi, _ = detector.get_blobs_in_roi(blobs, offset, size)
     if resize is not None:
         # TODO: doesn't align with exported ROIs
@@ -180,6 +188,8 @@ def match_blobs_roi(blobs, blobs_base, offset, size, thresh, scaling,
         blobs_roi = detector.Blobs.shift_blob_rel_coords(blobs_roi, offset)
         if padding:
             blobs_roi = detector.Blobs.shift_blob_rel_coords(blobs_roi, padding)
+    
+    # get blobs in inner ROI
     blobs_inner, blobs_inner_mask = detector.get_blobs_in_roi(
         blobs_roi, offset_inner, size_inner)
     blobs_base_roi, _ = detector.get_blobs_in_roi(blobs_base, offset, size)

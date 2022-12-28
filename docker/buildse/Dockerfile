@@ -49,9 +49,9 @@ RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && apt-get autoclean \
-    && wget https://cmake.org/files/v3.10/cmake-3.10.3-Linux-x86_64.tar.gz -P /opt \
-    && tar xzvf /opt/cmake-3.10.3-Linux-x86_64.tar.gz -C /opt \
-    && rm /opt/cmake-3.10.3-Linux-x86_64.tar.gz
+    && wget https://cmake.org/files/v3.16/cmake-3.16.9-Linux-x86_64.tar.gz -P /opt \
+    && tar xzvf /opt/cmake-3.16.9-Linux-x86_64.tar.gz -C /opt \
+    && rm /opt/cmake-3.16.9-Linux-x86_64.tar.gz
 
 # set up non-root user with sudo access
 ARG username=magellan
@@ -77,7 +77,7 @@ COPY --chown=$username:$username bin/libmag.sh bin/setup_multi_venvs.sh \
 # the SimpleElastix (otherwise it will be cloned there):
 # `bin/build_deps.sh -d <out>/builds_se -e venvs -s <out>/SimpleElastix`
 RUN echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> ~/.bashrc \
-    && echo 'export PATH=/opt/cmake-3.10.3-Linux-x86_64/bin:$JAVA_HOME/bin:$PATH' \
+    && echo 'export PATH=/opt/cmake-3.16.9-Linux-x86_64/bin:$JAVA_HOME/bin:$PATH' \
         >> ~/.bashrc \
     && . ~/.bashrc \
     && bin/setup_multi_venvs.sh -d venvs

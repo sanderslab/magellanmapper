@@ -33,18 +33,18 @@ RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
         make \
         g++ \
         vim \
-        python3.6 \
-        python3.6-venv \
-        python3.6-dev \
-        python3.7 \
-        python3.7-venv \
-        python3.7-dev \
         python3.8 \
         python3.8-venv \
         python3.8-dev \
         python3.9 \
         python3.9-venv \
         python3.9-dev \
+        python3.10 \
+        python3.10-venv \
+        python3.10-dev \
+        python3.11 \
+        python3.11-venv \
+        python3.11-dev \
         default-jdk \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \

@@ -1081,27 +1081,31 @@ def remove_close_blobs_within_sorted_array(blobs, tol):
     return blobs_all
 
 
-def get_blobs_in_roi(blobs, offset, size, margin=(0, 0, 0), reverse=True):
+def get_blobs_in_roi(
+        blobs: np.ndarray, offset: Sequence[int], size: Sequence[int],
+        margin: Sequence[int] = (0, 0, 0), reverse: bool = True
+) -> Tuple[np.ndarray, np.ndarray]:
     """Get blobs within an ROI based on offset and size.
     
-    Note that dimensions are in x,y,z for natural ordering but may 
-    change for consistency with z,y,x ordering used throughout MagellanMapper.
+    Note that dimensions are in x,y,z for natural ordering but may change for
+    consistency with z,y,x ordering used throughout MagellanMapper.
     
     Args:
-        blobs (:obj:`np.ndarray`): The blobs to retrieve, given as 2D array of
+        blobs: The blobs to retrieve, given as 2D array of
             ``[n, [z, row, column, radius, ...]]``.
-        offset (List[int]): Offset coordinates in .
-        size (List[int]): Size of ROI in x,y,z.
-        margin (List[int]): Additional space outside the ROI to include
-            in x,y,z.
-        reverse (bool): True to reverse the order of ``offset`` and ``size``,
-            assuming that they are in x,y,z rather than z,y,x order.
+        offset: Offset coordinates in ``x,y,z``.
+        size: Size of ROI in ``x,y,z``.
+        margin: Additional space outside the ROI to include in ``x,y,z``.
+        reverse: True to reverse the order of ``offset`` and ``size``,
+            assuming that they are in ``x,y,z`` rather than ``z,y,x`` order.
             Defaults to True for backward compatibility with the ROI
             convention used here.
     
     Returns:
-        :obj:`np.ndarray`, :obj:`np.ndarray`: Blobs within the ROI and the
-        mask used to retrieve these blobs.
+        Tuple of:
+        - ``segs_all`: Blobs within the ROI
+        - ``mask``: the mask used to retrieve these blobs
+    
     """
     if reverse:
         offset = offset[::-1]

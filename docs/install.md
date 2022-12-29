@@ -196,11 +196,16 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 
 | Dependency | Custom Package | Precompiled Run Req | Build Req | Purpose |
 |-----|-----|-----|-----|-----|
-| Python-Javabridge | Precompiled, later release | Python 3.6-3.9[^\*], Java 8+ | JDK, C compiler| For Python-Bioformats |
+| Python-Javabridge | Precompiled with later updates than current release | Python 3.6-3.11, Java 8+ | JDK, C compiler| For Python-Bioformats |
 | Python-Bioformats | Extended support for older NumPy releases | Python 3.6+ | JDK, C compiler | Import proprietary image formats |
-| SimpleElastix | Yes, via custom package | Python 3.6-3.9 | C, C++ compilers | Load medical 3D formats, image regsitration |
+| SimpleITK with Elastix | Yes, via custom package | Python 3.6-3.11 | C, C++ compilers | Load medical 3D formats, image regsitration |
 
-[^\*]: MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies. MagellanMapper 1.6 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions.
+Python version support:
+
+- MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies
+- MagellanMapper 1.6a1 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions
+- MagellanMapper 1.6a2 added support to Python 3.10-3.11 and deprecated support for Python 3.6-3.7
+- The `bin/setup_multi_venvs.sh`, `bin/build_deps.sh`, and their `.bat` counterparts are provided to build these dependencies for multiple Python versions
 
 C compilers by platform:
 
@@ -208,7 +213,7 @@ C compilers by platform:
 - Windows: Microsoft Visual Studio (tested on 2017, 2019, Community edition) along with these additional components
   - MSVC C++ x64/x86 build tools
   - Windows 10 SDK
-  - See [below](#simpleelastix-dependency) for additional requirements when building SimpleElastix
+  - See [below](#simpleitk-with-elastix-dependency) for additional requirements when building SimpleElastix
 
 Java versions:
 
@@ -222,13 +227,13 @@ Java versions:
 - Zstd (fallback to Zip) for compression on servers
 - MeshLab for 3D surface clean-up
 
-### SimpleElastix dependency
+### SimpleITK with Elastix dependency
 
-SimpleElastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library is not currently available in the standard [PyPi](https://pypi.org/). As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/). The [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) is required to run this package.
+SimpleITK with Elastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library in the standard [PyPi](https://pypi.org/) is not currently built with Elastix support. As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/). On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022) is required to run this package.
 
-If you would prefer to build SimpleElastix yourself, we have provided a couple build scripts to ease the build process for the SimpleElastix Python wrapper:
+If you would prefer to build SimpleITK with Elastix yourself, we have provided a couple build scripts to ease the build process for the SimpleElastix Python wrapper:
 
-- Mac or Linux: Run the environment setup with `bin/setup_conda.sh -s` to build and install SimpleElastix during setup using the `bin/build_se.sh` script. SimpleElastix can also be built after envrionment setup by running this script within the environment. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
+- Mac or Linux: Run `bin/build_se.sh` within a Python environment. Building SimpleElastix requires `cmake`, `gcc`, `g++`, and related compiler packages.
 - Windows: Run `bin\build_se.bat` within your environment. See the [build_se.bat](https://github.com/sanderslab/magellanmapper/blob/master/bin/build_se.bat) script for required build components. 
 
 As an alternative, the SimpleITK package can provide much of the same functionality except for our image registration pipeline.

@@ -11,7 +11,8 @@ ENV DEBIAN_FRONTEND noninteractive
 # install gnugpg to set up additional PPAs
 RUN apt-get update \
     && apt-get install -y \
-        gnupg
+        gnupg \
+        wget
 
 # install build tools
 # - multiple Python version from deadsnakes PPA
@@ -24,8 +25,12 @@ RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
         >> /etc/apt/sources.list \
     && apt-key adv --keyserver keyserver.ubuntu.com --recv-keys \
         F23C5A6CF475977595C89F51BA6932366A755776 \
+    && apt-key adv \
+        --keyserver hkp://keyserver.ubuntu.com:80 \
+        --recv-keys 0xB1998361219BD9C9 \
+    && wget https://cdn.azul.com/zulu/bin/zulu-repo_1.0.0-3_all.deb \
+    && apt install ./zulu-repo_1.0.0-3_all.deb \
     && apt-get update && apt-get install -y \
-        wget \
         git \
         gcc \
         gawk \
@@ -33,6 +38,7 @@ RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
         make \
         g++ \
         vim \
+        sudo \
         python3.8 \
         python3.8-venv \
         python3.8-dev \
@@ -45,7 +51,7 @@ RUN echo "deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu bionic main" \
         python3.11 \
         python3.11-venv \
         python3.11-dev \
-        default-jdk \
+        zulu8-jdk \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean \
     && apt-get autoclean \
@@ -76,7 +82,7 @@ COPY --chown=$username:$username bin/libmag.sh bin/setup_multi_venvs.sh \
 # assuming the output parent directory `<out>` has been mounted and contains
 # the SimpleElastix (otherwise it will be cloned there):
 # `bin/build_deps.sh -d <out>/builds_se -e venvs -s <out>/SimpleElastix`
-RUN echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> ~/.bashrc \
+RUN echo 'export JAVA_HOME=/usr/lib/jvm/zulu8' >> ~/.bashrc \
     && echo 'export PATH=/opt/cmake-3.16.9-Linux-x86_64/bin:$JAVA_HOME/bin:$PATH' \
         >> ~/.bashrc \
     && . ~/.bashrc \

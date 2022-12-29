@@ -16,12 +16,12 @@ Arguments:
     Defaults to \"$venv_dir\".
   -j [opt1:arg1[:...]]: Arguments to \"build_jb.sh\" for Javabridge build,
     delimted by \":\". Javabridge will only be built if this option is set.
-    To set while retaining defauls, pass as ' '.
+    To set while retaining defaults, pass as ' '.
   -p [ver1:ver2[:...]]: Python versions delimted by \":\", for which binaries
     will be built. Defaults to 3.8-3.11.
   -s [opt1:arg1[:...]]: Arguments to \"build_se.sh\" for SimpleTTK with Elastix,
     build delimted by \":\". SimpleITK will only be built if this option
-    is set. To set while retaining defauls, pass as ' '.
+    is set. To set while retaining defaults, pass as ' '.
 "
 
 se_args=()
@@ -113,7 +113,8 @@ build_se_ver() {
 # Also installs Cython and Numpy.
 build_jb_ver() {
   pip install cython
-  pip install 'numpy~=1.19' # v1.19 is last ver supporting Python 3.6
+  # v1.19 is last ver supporting Python 3.6; installs latest version otherwise
+  pip install 'numpy~=1.19'
   local java_args=()
   if command -v "/usr/libexec/java_home" &> /dev/null; then
     java_args+=(-j "$(/usr/libexec/java_home -v 1.8)")

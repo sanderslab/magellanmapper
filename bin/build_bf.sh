@@ -16,7 +16,7 @@ Arguments:
 "
 
 bf_dir=""
-out_dir=""
+out_dir="../build_deps"
 
 OPTIND=1
 while getopts hd:j:o: opt; do

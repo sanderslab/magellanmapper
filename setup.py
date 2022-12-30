@@ -67,7 +67,11 @@ config = {
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
         "pandas",
-        "simpleitk==2.0.2rc2.dev785+g8ac4f",  # pre-built SimpleElastix
+        
+        # pre-built SimpleITK with Elastix
+        "simpleitk==2.0.2rc2.dev785+g8ac4f ; python_version < '3.8'",
+        "simpleitk==2.3.0.dev117+g0640d ; python_version >= '3.8'",
+        
         "PyYAML",
         "appdirs",
         # part of stdlib in Python >= 3.8

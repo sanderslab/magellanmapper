@@ -6,9 +6,12 @@ import setuptools
 # optional dependencies to import files via BioFormats, which req Java 8+
 _EXTRAS_IMPORT = [
     # Javabridge pre-built on Java 8
-    "javabridge==1.0.19.post4+gbebed64",
+    "javabridge==1.0.19.post4+gbebed64 ; python_version < '3.8'",
+    "javabridge==1.0.19.post9+gc8c12b4 ; python_version >= '3.8'",
+    
     # Python-Bioformats built to depend on the vanilla (non-forked) Javabridge
-    "python-bioformats==4.0.5.post2+g51eb88a",
+    "python-bioformats==4.0.5.post2+g51eb88a ; python_version < '3.8'",
+    "python-bioformats==4.0.7.post5+g52309d1 ; python_version >= '3.8'",
 ]
 
 # optional dependencies for Pandas

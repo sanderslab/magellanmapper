@@ -35,13 +35,13 @@ The `mm` entry points was added in v1.6.0 to facilitate launching from installed
 
 ### Install using Pip
 
-Install using Pip with Python >= 3.6 (virtual environment [recommended](https://realpython.com/python-virtual-environments-a-primer/)):
+Install using Pip with Python >= 3.6 (see [Python versions](#python-version-support); [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
 
 ```shell
 pip install magellanmapper[most] --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-`most` installs additional pacakges to import more file formats. The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
+The `most` group installs the GUI and file import tools. The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
 
 Java will need to be installed to support more image formats (eg from [here](https://www.azul.com/downloads/?package=jdk)).
 
@@ -131,13 +131,11 @@ See [above](#install-using-conda) for running MagellanMapper from a terminal, wh
 
 #### Venv+Pip installer script
 
-Venv is a virtual environment manager included with Python. We have provided a convenient script to set up a new environment and install all dependencies using Pip. This option assumes that you have already installed Python 3.6-3.9 and Java 8+.
+Venv is a virtual environment manager included with Python. We have provided a convenient script to set up a new environment and install all dependencies using Pip.
 
 ```shell
 bin/setup_venv.sh [-n name]
 ```
-
-**UPDATE**: Python 3.6-3.7 support is deprecated in MagellanMapper 1.6.
 
 This setup script will check and install the following dependencies:
 
@@ -179,9 +177,20 @@ The main required and optional dependencies in MagellanMapper are:
 - [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork of SimpleITK with Elastix integrated (see below)
 - Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler)
 
-### Optional Dependency Build and Runtime Requirements
+### Python version support
 
-#### Pinned packages
+| MagellanMapper Version | Python Versions Supported | Deprecations |
+|-----|-----|-----|
+| < 1.4 | 3.6 | None |
+| 1.4-1.5 | 3.6-3.9 (no GUI support in 3.9) | None |
+| 1.6a1-a2 | 3.6-3.9 (GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI) | 3.6-3.7 to be removed in MM 1.7 |
+| 1.6b1 | 3.6-3.11 (no GUI support in 3.10-3.11 as of 2022-12-30) | Same |
+
+The `bin/setup_multi_venvs.sh`, `bin/build_deps.sh`, and their `.bat` counterparts are provided to build these dependencies for multiple Python versions.
+
+As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
+
+### Pinned packages
 
 We've provided a few sets of pinned dependency versions:
 - Python >= 3.8: `envs/requirements.txt`
@@ -189,6 +198,8 @@ We've provided a few sets of pinned dependency versions:
 - Python 3.6: `envs/requirements_py36`
 
 These package versions are used for automated testing (continuous integration).
+
+### Optional Dependency Build and Runtime Requirements
 
 #### Custom packages
 
@@ -199,13 +210,6 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 | Python-Javabridge | Precompiled with later updates than current release | Python 3.6-3.11, Java 8+ | JDK, C compiler| For Python-Bioformats |
 | Python-Bioformats | Extended support for older NumPy releases | Python 3.6+ | JDK, C compiler | Import proprietary image formats |
 | SimpleITK with Elastix | Yes, via custom package | Python 3.6-3.11 | C, C++ compilers | Load medical 3D formats, image regsitration |
-
-Python version support:
-
-- MagellanMapper 1.4 extended support to Python 3.6-3.8 with custom wheels for these dependencies
-- MagellanMapper 1.6a1 added support to Python 3.9 after the release of mutually compatible Mayavi and VTK versions
-- MagellanMapper 1.6a2 added support to Python 3.10-3.11 and deprecated support for Python 3.6-3.7
-- The `bin/setup_multi_venvs.sh`, `bin/build_deps.sh`, and their `.bat` counterparts are provided to build these dependencies for multiple Python versions
 
 C compilers by platform:
 

@@ -21,7 +21,8 @@
 - Available as binary wheel to install without requiring the source code (#166)
 - Entry point added to launch the app by: `mm` (#166)
 - Conda install simplified to use Pip primarily, which reduces disk space usage (#166)
-- Removed Conda `environment_light.yml` and OS-specific specs (#187)
+- Removed Conda `environment_light.yml` (no GUI) and OS-specific specs (#187)
+- No-GUI (headless) install is now by default, with a new `gui` install group to include the GUI (#317)
 
 #### GUI
 
@@ -170,10 +171,12 @@
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
 - Scikit-learn is an optional rather than a required dependency (#150)
-- The AWS-related dependencies (`boto3`, `awscli`) are also no longer installed in Conda environments (#150)
+- The AWS-related dependencies (`boto3`, `awscli`) are now optional (#150, #379)
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
-- Python 3.6 and 3.7 have separate pinned dependencies (`envs/requirements_py3<n>`) (#232)
+- Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
+- The SimpleElastix custom binaries have been switched to SimpleITK with Elastix (#379)
+- Custom dependency binaries are now built for Python 3.8-3.11 (#379)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by installing PyQt <= 5.15.7 (#431)
 

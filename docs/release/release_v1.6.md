@@ -115,6 +115,7 @@
 - Better 2D image support
   - Extended zero-crossing detection to 2D cases (#142)
   - Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
+  - Fixed ROI padding during blob verification and match-based colocalization for 2D images (#380)
 - Multiple multiplane image files can be selected directly instead of relying on file auto-detection (#201)
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)

@@ -651,7 +651,7 @@ def read_tif(
         # apply 90 deg rotations; appears to need flipping; both return views
         # TODO: check scenarios requiring flipping
         tif_memmap = cv_nd.rotate90(tif_memmap, nrot, (2, 3), ndim >= 5)
-        tif_memmap = np.fliplr(tif_memmap)
+        tif_memmap = tif_memmap[:, :, :, ::-1]
     
     if config.verbose:
         _logger.debug("Parsed TIF metadata:\n%s", pprint.pformat(md))

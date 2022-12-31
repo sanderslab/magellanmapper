@@ -1,26 +1,28 @@
-:: Build SimpleElastix with MSVC
-:: Author: David Young, 2019, 2020
+:: Build SimpleITK with Elastix support using MSVC
+:: Author: David Young, 2019, 2022
 
-:: Build SimpleElastix for Windows using MSVC build tools. Compiled files
-:: will be found in ../../build_se relative to this script.
+:: Build SimpleITK with Elastix for Windows using MSVC build tools.
+::
+:: Compiled files will be found in ../../build_se relative to this script.
 ::
 :: Usage:
-::   build_se.bat [build-dir] [path-to-SimpleElastix]
+::   build_se.bat [build-dir] [path-to-SimpleITK]
 ::
 :: Args:
 ::   build-dir: Path to output build directory; defaults to "..\build_se".
-::   path-to-SimpleElastix: Path to existing SimpleElastix directory or
-::     where it will be stored; defaults to "..\SimpleElastix".
+::   path-to-SimpleITK: Path to existing SimpleITK directory or
+::     where it will be stored; defaults to "..\SimpleITK".
 ::
 :: Build requirements:
-:: - MSVC C++ x64/x86 build tools (eg MSVC v142 VS 2019 C++)
+:: - MSVC C++ x64/x86 build tools (eg MSVC v142 VS 2019 C++; 2022 also works)
+:: - Windows SDK (tested on 10.0.19041.0)
 :: - Git (eg "Git for Windows" in VS2019)
-:: - CMake from https://cmake.org (tested with CMake 3.15, 3.20; has *not*
-::   worked with MSVS CMake 3.14 on our testing
-:: - Run this script in an "x64 Native Tools Command Prompt to VS 2019"
+:: - CMake >= 3.16.3 (official release or via MSVC now working)
+:: - Run this script in a native tools prompt (eg "x64 Native Tools Command
+::   Prompt to VS 2019")
 ::
 :: Assumes:
-:: - The SimpleElastix git repo has been cloned to the parent
+:: - The SimpleITK git repo has been cloned to the parent
 ::   folder of this script's folder
 :: - The Python path from an activated Conda environment will be used through
 ::   the CONDA_PREFIX environment variable
@@ -36,18 +38,18 @@ call :get_abs_path "%build_dir%"
 SET "build_dir=%abs_path%"
 ECHO Setting the build directory path to %build_dir%
 
-:: parse arg for SimpleElastix, converting to an absolute path
-SET "se_dir=..\SimpleElastix"
+:: parse arg for SimpleITK, converting to an absolute path
+SET "se_dir=..\SimpleITK"
 IF NOT "%~2" == "" (
   SET "se_dir=%~2"
 )
 call :get_abs_path "%se_dir%"
 SET "se_dir=%abs_path%"
-ECHO Setting the SimpleElastix path to %se_dir%
+ECHO Setting the SimpleITK path to %se_dir%
 
 :: set up Cmake
 SET "cmake=cmake.exe"
-SET "generator=Visual Studio 16 2019"
+SET "generator=Visual Studio 17 2022"
 SET "arch=x64"
 SET "python_exe="
 
@@ -84,11 +86,12 @@ cd "%build_dir%"
  -DWRAP_LUA:BOOL=OFF -DWRAP_R:BOOL=OFF -DWRAP_RUBY:BOOL=OFF^
  -DWRAP_TCL:BOOL=OFF -DWRAP_CSHARP:BOOL=OFF -DBUILD_EXAMPLES:BOOL=OFF^
  -DBUILD_TESTING:BOOL=OFF -DSimpleITK_PYTHON_USE_VIRTUALENV:BOOL=OFF^
+ -DSimpleITK_USE_ELASTIX=ON^
  "%se_dir%\SuperBuild"
 "%cmake%" -G "%generator%" -A "%arch%" -T host="%arch%"^
  "%se_dir%\SuperBuild"
 
-:: build SimpleElastix
+:: build SimpleITK
 msbuild ALL_BUILD.vcxproj /p:Configuration=Release
 
 :: build Python source and wheel packages for distribution

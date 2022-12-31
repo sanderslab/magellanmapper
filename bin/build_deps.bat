@@ -2,10 +2,10 @@
 rem Build custom binaries for MagellanMapper dependencies on Windows platforms
 
 rem Usage:
-rem   setup_venv.sh [envs-dir] [output-dir]
+rem   build_deps.bat [envs-dir] [output-dir]
 
 rem Args:
-rem   [env-dir]: Path to environment directory; defaults to `..\venvs\vmag`.
+rem   [env-dir]: Path to environment directory; defaults to `..\venvs`.
 rem   [output-dir]: Path to output directory; defaults to `..\build_deps`.
 
 
@@ -27,7 +27,7 @@ pushd "%~dp0"
 cd ..
 
 rem build binaries within each Python version Venv environment
-for %%v in (3.6.8 3.7.7 3.8.7 3.9.1) do (
+for %%v in (3.8.10 3.9.13 3.10.9 3.11.1) do (
   echo Activating Venv for py%%v
   call "%venvs_dir%\py%%v\Scripts\Activate.bat"
   call pip install wheel

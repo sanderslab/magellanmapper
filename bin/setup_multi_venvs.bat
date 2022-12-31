@@ -2,10 +2,10 @@
 rem Set up Venv environments for multiple Python versions on Windows platforms
 
 rem Usage:
-rem   setup_venv.sh [env-dir]
+rem   setup_multi_venvs.sh [env-dir]
 
 rem Args:
-rem   [env-dir]: Path to environment directory; defaults to "..\venvs\vmag".
+rem   [env-dir]: Path to environment directory; defaults to "..\venvs".
 
 
 rem parse user env directory path
@@ -19,13 +19,13 @@ pushd "%~dp0"
 cd ..
 
 rem specify full Python versions
-for %%v in (3.6.8 3.7.7 3.8.7 3.9.1) do (
+for %%v in (3.8.10 3.9.13 3.10.9 3.11.1) do (
   echo Creating Venv for Python %%v
   call pyenv local "%%v"
   if exist "%venvs_dir%\py%%v"\ (
     echo Directory already exists, skipping
   ) else (
-    call python -m venv "%venvs_dir%\py%%v""
+    call python -m venv "%venvs_dir%\py%%v"
   )
 )
 

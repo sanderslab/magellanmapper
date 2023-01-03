@@ -65,13 +65,16 @@ def reg_out_path(file_path, reg_name, match_ext=False):
 
 
 def replace_sitk_with_numpy(
-        img_sitk: sitk.Image, img_np: np.ndarray) -> sitk.Image:
+        img_sitk: sitk.Image, img_np: np.ndarray, multichannel: bool = None
+) -> sitk.Image:
     """Generate a :class:``sitk.Image`` object based on another Image object,
     but replace its array with a new Numpy array.
     
     Args:
         img_sitk: Image object to use as template.
         img_np: Numpy array to swap in.
+        multichannel: True for multichannel images. Defaults to None, where
+            the multichannel setting from ``img_sitk`` will be used.
     
     Returns:
         New :class:``sitk.Image`` object with same spacing, origin, and 
@@ -84,8 +87,10 @@ def replace_sitk_with_numpy(
     direction = img_sitk.GetDirection()
     
     # treat as vector (multichannel) image if source is multichannel
-    img_sitk_back = sitk.GetImageFromArray(
-        img_np, True if img_sitk.GetNumberOfComponentsPerPixel() > 1 else None)
+    if multichannel is None:
+        multichannel = (
+            True if img_sitk.GetNumberOfComponentsPerPixel() > 1 else None)
+    img_sitk_back = sitk.GetImageFromArray(img_np, multichannel)
     
     # transfer original settings to new sitk Image
     img_sitk_back.SetSpacing(spacing)

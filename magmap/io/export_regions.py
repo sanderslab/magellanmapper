@@ -312,7 +312,7 @@ def make_density_image(
     # annotate blobs based on position
     heat_map = make_heat_map()
     if is_2d:
-        # convert back to 3D
+        # convert back to 2D
         heat_map = heat_map[0]
     imgs_write = {
         config.RegNames.IMG_HEAT_MAP.value:
@@ -356,9 +356,11 @@ def make_density_image(
     if heat_colocs is not None:
         # combine heat maps into single image
         heat_colocs = np.stack(heat_colocs, axis=3)
+        if is_2d:
+            # convert back to 2D
+            heat_colocs = heat_colocs[0]
         imgs_write[config.RegNames.IMG_HEAT_COLOC.value] = \
-            sitk_io.replace_sitk_with_numpy(
-                labels_img_sitk, heat_colocs)
+            sitk_io.replace_sitk_with_numpy(labels_img_sitk, heat_colocs, True)
     
     # write images to file
     sitk_io.write_reg_images(imgs_write, mod_path)

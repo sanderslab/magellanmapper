@@ -4,14 +4,15 @@
 
 ### Highlights
 
+- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
 - Available as binary wheel to install without requiring the source code
 - Simpler entry point to launch MagellanMapper: `mm`
 - Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
 - Atlas regions can be searched (see "Atlases > Region")
+- Atlas Editor planes can be reordered or turned off
 - Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
 - Images can be viewed as RGB (see "ROI > Channels")
 - [Jupyter Notebook tutorial](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
-- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
 
 ### Changes
 
@@ -34,7 +35,7 @@
 - Registered image and region names are truncated in the middle to prevent expanding the sidebar for long names (#147)
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
 - Atlas Editor planes can be reordered or turned off (#180)
-- New viewer that displays each blob separately to verify blob classifications (#193)
+- EXPERIMENTAL: New viewer that displays each blob separately to verify blob classifications (#193)
 - Image adjustment
   - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89)
   - Image adjustment channels are radio buttons for easier selection (#212)

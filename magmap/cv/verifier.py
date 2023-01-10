@@ -44,26 +44,32 @@ def _match_blobs(blobs, blobs_master, close, close_master, dists):
     return matches
 
 
-def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
-    """Find the closest blobs within a given tolerance using the 
+def find_closest_blobs_cdist(
+        blobs: np.ndarray, blobs_master: np.ndarray,
+        thresh: Optional[float] = None, scaling:
+        Optional[Sequence[float]] = None
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Find the closest blobs within a given tolerance using the
     Hungarian algorithm to find blob matches.
     
     Args:
-        blobs: Blobs as a 2D array of [n, [z, row, column, ...]].
+        blobs: Blobs as a 2D array of ``[n, [z, row, column, ...]]``.
         blobs_master: Array in same format as ``blobs``.
-        thresh: Threshold distance beyond which blob pairings are excluded; 
+        thresh: Threshold distance beyond which blob pairings are excluded;
             defaults to None to include all matches.
-        scaling: Sequence of scaling factors by which to multiply the 
-            blob coordinates before computing distances, used to 
-            scale coordinates from an anisotropic to isotropic 
-            ROI before computing distances, which assumes isotropy. 
+        scaling: Sequence of scaling factors by which to multiply the
+            blob coordinates before computing distances, used to
+            scale coordinates from an anisotropic to isotropic
+            ROI before computing distances, which assumes isotropy.
             Defaults to None.
     
     Returns:
-        Tuple of ``rowis`` and ``colis``, arrays of row and corresponding 
-        column indices of the closest matches; and ``dists_closest``, an 
-        array of corresponding distances for these matches. Only matches 
-        within the given tolerance will be included.
+        Tuple of:
+        - ``rowis`` and ``colis``, arrays of row and corresponding
+          column indices of the closest matches
+        - ``dists_closest``, an array of corresponding distances for these
+          matches. Only matches within the given tolerance will be included.
+    
     """
     blobs_scaled = blobs
     blobs_master_scaled = blobs_master
@@ -73,7 +79,7 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
         blobs_scaled = np.multiply(blobs[:, :len_scaling], scaling)
         blobs_master_scaled = np.multiply(blobs_master[:, :len_scaling], scaling)
     
-    # find Euclidean distances between each pair of points and determine 
+    # find Euclidean distances between each pair of points and determine
     # the optimal assignments using the Hungarian algorithm
     dists = distance.cdist(blobs_scaled, blobs_master_scaled)
     rowis, colis = optimize.linear_sum_assignment(dists)
@@ -82,14 +88,28 @@ def find_closest_blobs_cdist(blobs, blobs_master, thresh=None, scaling=None):
     if thresh is not None:
         # filter out matches beyond the given threshold distance
         dists_in = dists_closest < thresh
+        
         if config.verbose:
-            for blob, blob_sc, blob_base, blob_base_sc, dist, dist_in in zip(
-                    blobs[rowis], blobs_scaled[rowis], blobs_master[colis],
-                    blobs_master_scaled[colis], dists_closest,
-                    dists_in):
-                print("blob: {} (scaled {}), base: {} ({}), dist: {}, in? {}"
-                      .format(blob[:3], blob_sc[:3], blob_base[:3],
-                              blob_base_sc[:3], dist, dist_in))
+            # show matches using original blob coordinates
+            for i, (blob, blob_base, dist_in) in enumerate(zip(
+                    blobs[rowis], blobs_master[colis], dists_in)):
+                _logger.debug(
+                    "%s: Detected blob: %s, truth blob: %s, in? %s",
+                    i, blob[:3], blob_base[:3], dist_in)
+            _logger.debug("")
+            
+            # show corresponding scaled coordinates and distances
+            for i, (blob_sc, blob_base_sc, dist, dist_in) in enumerate(zip(
+                    blobs_scaled[rowis], blobs_master_scaled[colis],
+                    dists_closest, dists_in)):
+                _logger.debug(
+                    "%s: Scaled dist: %s", i, dist)
+                _logger.debug(
+                    "  %s (detected)", blob_sc[:3])
+                _logger.debug(
+                    "  %s (truth)", blob_base_sc[:3])
+            _logger.debug("")
+        
         rowis = rowis[dists_in]
         colis = colis[dists_in]
         dists_closest = dists_closest[dists_in]

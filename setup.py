@@ -37,7 +37,8 @@ _EXTRAS_CLASSIFER = ["tensorflow"]
 # optional dependencies for full GUI; note that this group is not necessary
 # for the Matplotlib-based viewers (eg ROI Editor, Atlas Editor)
 _EXTRAS_GUI = [
-    "PyQt5",
+    # backend error with 5.15.8
+    "PyQt5 <= 5.15.7",
     "vtk",
     "mayavi",
     "pyface",

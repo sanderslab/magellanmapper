@@ -531,6 +531,7 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
     collage = num_paths > 1
     figs = {}
     
+    path_base = paths[0]
     for i in range(nrows):
         for j in range(ncols):
             n = i * ncols + j
@@ -542,6 +543,10 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
             # TODO: test directory of images
             # TODO: consider not reloading first image
             np_io.setup_images(path_sub, series, subimg_offset, subimg_size)
+            if config.img5d.img_io is config.LoadIO.TIFFFILE:
+                # remove extension from TIF files, which needed ext to load
+                path_base = libmag.get_filename_without_ext(path_base)
+            
             stacker = setup_stack(
                 config.image5d, path_sub, offset=roi_offset,
                 roi_size=roi_size, slice_vals=config.slice_vals, 
@@ -590,7 +595,6 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                 for fig_dict, img in zip(figs.values(), plotted_imgs):
                     fig_dict["imgs"].append(img)
     
-    path_base = paths[0]
     for planei, fig_dict in figs.items():
         if animated:
             # generate animated image (eg animated GIF or movie file)

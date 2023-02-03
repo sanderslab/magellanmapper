@@ -175,6 +175,7 @@
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - Python 3.6 and 3.7 have separate pinned dependencies (`envs/requirements_py3<n>`) (#232)
 - Fixed error on deprecated NumPy data type aliases (#364)
+- Fixed `qt4 backend` error by installing PyQt <= 5.15.7 (#431)
 
 #### R Dependency Changes
 

@@ -109,7 +109,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
         return i, img
     
     @classmethod
-    def process_plane(cls, i, target_size, rotate=None):
+    def process_plane(cls, i, target_size, multichannel, rotate=None):
         """Process corresponding planes from related images.
         
         Assumes that :attr:``imgs`` is a list of nested 2D image lists, 
@@ -120,6 +120,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
         Args:
             i: Index within nested lists of :attr:``imgs`` to plot.
             target_size: Resize to this shape.
+            multichannel: True for multichannel images.
             rotate: Degrees by which to rotate; defaults to None.
         
         Returns:
@@ -131,17 +132,9 @@ class StackPlaneIO(chunking.SharedArrsContainer):
         cls.convert_imgs()
         imgs_proc = []
         for j, img_stack in enumerate(cls.imgs):
-            if j == 0:
-                # atlas image
-                img = transform.resize(
-                    img_stack[i], target_size, mode="reflect",
-                    preserve_range=True, anti_aliasing=True,
-                    order=cls.interp_order)
-            else:
-                # labels-based image, using nearest-neighbor interpolation
-                img = transform.resize(
-                    img_stack[i], target_size, mode="reflect",
-                    preserve_range=True, anti_aliasing=False, order=0)
+            order = cls.interp_order if j == 0 else 0
+            img = cv_nd.rescale_resize(
+                img_stack[i], target_size, multichannel, True, order=order)
             imgs_proc.append(img)
         if rotate:
             # TODO: consider removing since not saved; should instead rotate
@@ -182,12 +175,12 @@ class StackPlaneIO(chunking.SharedArrsContainer):
                 ax = axs[imgi]
             plot_support.hide_axes(ax)
     
-            # multiple artists can be shown at each frame by collecting 
-            # each group of artists in a list; overlay_images returns 
-            # a nested list containing a list for each image, which in turn 
+            # multiple artists can be shown at each frame by collecting
+            # each group of artists in a list; overlay_images returns
+            # a nested list containing a list for each image, which in turn
             # contains a list of artists for each channel
             overlaid = plot_support.ImageOverlayer(
-                ax, self.aspect, self.origin, ignore_invis=True)
+                ax, self.aspect, self.origin, ignore_invis=True, rgb=config.rgb)
             ax_imgs = overlaid.overlay_images(
                 imgs, None, cmaps_all, check_single=True)
             if (colorbar is not None and len(ax_imgs) > 0
@@ -248,7 +241,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
 
         for i in range(num_images):
             # add rotation argument if necessary
-            args = (i, target_size)
+            args = (i, target_size, multichannel)
             if pool is None:
                 # extract and handle without multiprocessing
                 imgi, imgs = self.fn_process(*args)

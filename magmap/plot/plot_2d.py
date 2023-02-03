@@ -1007,7 +1007,9 @@ def plot_swarm(
         x_unit: Optional[str] = None, y_unit: Optional[str] = None,
         legend_names: Optional[Sequence[str]] = None,
         col_vspan: Optional[str] = None, vspan_fmt: Optional[str] = None,
-        size=None, ax=None, **kwargs) -> "axes.Axes":
+        size: Optional[Sequence[float]] = None,
+        ax: Optional["axes.Axes"] = None, rotation: Optional[float] = None,
+        **kwargs) -> "axes.Axes":
     """Generate a swarm/jitter plot in Seaborn.
     
     Supports x-axis scaling and vertical spans.
@@ -1032,6 +1034,8 @@ def plot_swarm(
         vspan_fmt: Vertical span label string format; defaulst to None.
         size: Figure size in ``width, height`` as inches; defaults to None.
         ax: Matplotlib axes; defaults to None.
+        rotation: x-axis ttext angle rotation in degrees. Defaults to None,
+            which will rotate by 45 degrees.
         **kwargs: Additional arguments, passed to :meth:`decorate_plot`.
 
     Returns:
@@ -1071,7 +1075,9 @@ def plot_swarm(
         order=x_order, data=df, ax=ax)
     
     # scale x-axis ticks and rotate labels
-    plot_support.scale_xticks(ax, 45)
+    if rotation is None:
+        rotation = 45
+    plot_support.scale_xticks(ax, rotation)
     
     legend = ax.get_legend()
     if legend:
@@ -1417,6 +1423,7 @@ def main(
     hline = config.plot_labels[config.PlotLabels.HLINE]
     col_vspan = config.plot_labels[config.PlotLabels.VSPAN_COL]
     vspan_fmt = config.plot_labels[config.PlotLabels.VSPAN_FORMAT]
+    rotation = config.plot_labels[config.PlotLabels.ROTATION]
     
     # base output path for tasks that defer saving to post_plot
     base_out_path = None
@@ -1433,7 +1440,8 @@ def main(
             size=size, show=False, groups=config.groups,
             col_vspan=col_vspan, vspan_fmt=vspan_fmt,
             prefix=config.prefix, save=False,
-            col_wt=col_wt, x_tick_labels=x_tick_lbls, rotation=45,
+            col_wt=col_wt, x_tick_labels=x_tick_lbls,
+            rotation=45 if rotation is None else rotation,
             err_cols_abs=err_col_abs)
     
     elif plot_2d_type is config.Plot2DTypes.BAR_PLOT_VOLS_STATS_EFFECTS:
@@ -1519,7 +1527,7 @@ def main(
         ax = plot_swarm(
             pd.read_csv(config.filename), x_cols, data_cols, config.groups,
             group_col, x_lbl, y_lbl, x_unit, y_unit, legend_names, col_vspan,
-            vspan_fmt, size, title=title)
+            vspan_fmt, size, title=title, rotation=rotation)
         base_out_path = "swarm"
     
     elif plot_2d_type is config.Plot2DTypes.CAT_PLOT:

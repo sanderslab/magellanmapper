@@ -369,6 +369,8 @@ class PlotLabels(Enum):
     VSPAN_FORMAT = auto()
     #: Background color as a Matplotlib or RGBA string.
     BACKGROUND = auto()
+    #: Rotation angle in degrees.
+    ROTATION = auto()
 
 
 #: dict[Any]: Plot labels set from command-line.

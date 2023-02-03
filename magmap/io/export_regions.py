@@ -96,8 +96,12 @@ def export_region_ids(labels_ref_lookup, path, level=None,
     if rgbs is not None:
         df = df.style.apply(color_cells, subset="RGB")
     path_xlsx = "{}.xlsx".format(os.path.splitext(path)[0])
-    df.to_excel(path_xlsx)
-    print("exported regions to styled spreadsheet: \"{}\"".format(path_xlsx))
+    try:
+        df.to_excel(path_xlsx)
+        _logger.info("Exported regions to styled spreadsheet: %s", path_xlsx)
+    except ModuleNotFoundError:
+        raise ModuleNotFoundError(
+            config.format_import_err("openpyxl", task="formatting Excel files"))
     return df
 
 

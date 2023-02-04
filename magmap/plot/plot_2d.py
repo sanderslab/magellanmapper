@@ -1047,7 +1047,8 @@ def plot_swarm(
     """
     
     if sns is None:
-        raise ImportError(config.format_import_err("seaborn", task="swarm plots"))
+        raise ImportError(
+            config.format_import_err("seaborn", task="swarm plots"))
     
     df_vspan = df
     if x_order is not None:
@@ -1143,7 +1144,8 @@ def plot_catplot(
     """
     
     if sns is None:
-        raise ImportError("Seaborn is required for swarm plots, please install")
+        raise ImportError(
+            config.format_import_err("seaborn", task="category plots"))
 
     if kwargs_plot is None:
         kwargs_plot = {}

@@ -24,7 +24,7 @@ matplotlib-scalebar==0.8.1
 mayavi==4.8.1
 meshio==5.3.4
 networkx==2.8.8
-numpy==1.24.1
+numpy==1.24.2
 packaging==22.0
 pandas==1.5.2
 Pillow==9.4.0

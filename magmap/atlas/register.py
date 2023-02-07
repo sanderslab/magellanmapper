@@ -989,8 +989,10 @@ def _crop_image(img_np, labels_img, axis, eraser=None):
     return img_crop, i
 
 
-def register_group(img_files, rotate=None, show_imgs=True,
-                   write_imgs=True, name_prefix=None, scale=None):
+def register_group(
+        img_files: Sequence[str], rotate: Optional[Sequence[int]] = None,
+        show_imgs: bool = True, write_imgs: bool = True,
+        name_prefix: Optional[str] = None, scale: Optional[float] = None):
     """Group registers several images to one another.
     
     Uses the first channel in :attr:`config.channel` or the first channel
@@ -1002,17 +1004,18 @@ def register_group(img_files, rotate=None, show_imgs=True,
     Args:
         img_files: Paths to image files to register. A minimum of 4 images
             is required for groupwise registration.
-        rotate (List[int]): List of number of 90 degree rotations for images
+        rotate: List of number of 90 degree rotations for images
             corresponding to ``img_files``; defaults to None, in which
             case the `config.transform` rotate attribute will be used.
-        show_imgs: True if the output images should be displayed; defaults to 
+        show_imgs: True if the output images should be displayed; defaults to
             True.
-        write_imgs: True if the images should be written to file; defaults to 
+        write_imgs: True if the images should be written to file; defaults to
             True.
-        name_prefix: Path with base name where registered files will be output; 
+        name_prefix: Path with base name where registered files will be output;
             defaults to None, in which case the fixed_file path will be used.
-        scale: Rescaling factor as a scalar value, used to find the rescaled, 
+        scale: Rescaling factor as a scalar value, used to find the rescaled,
             smaller images corresponding to ``img_files``. Defaults to None.
+    
     """
     start_time = time()
     if name_prefix is None:
@@ -1022,7 +1025,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
     target_size = config.atlas_profile["target_size"]
     
     '''
-    # TESTING: assuming first file is a raw groupwise registered image, 
+    # TESTING: assuming first file is a raw groupwise registered image,
     # import it for post-processing
     img = sitk.ReadImage(img_files[0])
     img_np = sitk.GetArrayFromImage(img)
@@ -1030,7 +1033,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
     carve_threshold = config.register_settings["carve_threshold"]
     holes_area = config.register_settings["holes_area"]
     img_np, img_np_unfilled = plot_3d.carve(
-        img_np, thresh=carve_threshold, holes_area=holes_area, 
+        img_np, thresh=carve_threshold, holes_area=holes_area,
         return_unfilled=True)
     sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_np_unfilled))
     sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_np))
@@ -1076,10 +1079,10 @@ def register_group(img_files, rotate=None, show_imgs=True,
         img_np = np.rot90(rotated, 2, (1, 2))
         '''
         
-        # force all images into same size and origin as first image 
+        # force all images into same size and origin as first image
         # to avoid groupwise registration error on physical space mismatch
         if size_cropped is not None:
-            # use default interpolation, but should change to nearest neighbor 
+            # use default interpolation, but should change to nearest neighbor
             # if using for labels
             img_np = transform.resize(
                 img_np, size_cropped[::-1], anti_aliasing=True, mode="reflect")
@@ -1093,9 +1096,9 @@ def register_group(img_files, rotate=None, show_imgs=True,
             start_y = y_cropped
             print("size_cropped: ", size_cropped, ", size_orig", size_orig)
         else:
-            # force images into space of first image; may not be exactly 
-            # correct but should be close since resized to match first image, 
-            # and spacing of resized images and atlases largely ignored in 
+            # force images into space of first image; may not be exactly
+            # correct but should be close since resized to match first image,
+            # and spacing of resized images and atlases largely ignored in
             # favor of comparing shapes of large original and registered images
             img.SetOrigin(origin)
             img.SetSpacing(spacing)
@@ -1134,10 +1137,10 @@ def register_group(img_files, rotate=None, show_imgs=True,
     imgs = []
     num_images = len(img_files)
     for i in range(num_images):
-        extract_filter.SetIndex([0, 0, 0, i]) # x, y, z, t
+        extract_filter.SetIndex([0, 0, 0, i])  # x, y, z, t
         img = extract_filter.Execute(transformed_img)
         img_np = sitk.GetArrayFromImage(img)
-        # resize to original shape of first image, all aligned to position 
+        # resize to original shape of first image, all aligned to position
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
         img_large_np[:, start_y:start_y+img_np.shape[1]] = img_np
@@ -1150,7 +1153,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
     extend_borders = settings["extend_borders"]
     carve_threshold = settings["carve_threshold"]
     if extend_borders and carve_threshold:
-        # merge in specified border region from first image for pixels below 
+        # merge in specified border region from first image for pixels below
         # carving threshold to prioritize groupwise image
         slices = []
         for border in extend_borders[::-1]:
@@ -1168,7 +1171,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
     holes_area = settings["holes_area"]
     if carve_threshold and holes_area:
         img_mean, _, img_mean_unfilled = cv_nd.carve(
-            img_mean, thresh=carve_threshold, holes_area=holes_area, 
+            img_mean, thresh=carve_threshold, holes_area=holes_area,
             return_unfilled=True)
         img_unfilled = sitk_io.replace_sitk_with_numpy(
             transformed_img, img_mean_unfilled)
@@ -1183,7 +1186,7 @@ def register_group(img_files, rotate=None, show_imgs=True,
     
     #transformed_img = img_raw
     if write_imgs:
-        # write both the .mhd and Numpy array files to a separate folder to 
+        # write both the .mhd and Numpy array files to a separate folder to
         # mimic the atlas folder format
         out_path = os.path.join(name_prefix, config.RegNames.IMG_GROUPED.value)
         if not os.path.exists(name_prefix):

@@ -996,6 +996,9 @@ def register_group(img_files, rotate=None, show_imgs=True,
     Uses the first channel in :attr:`config.channel` or the first channel
     in each image.
     
+    Registration parameters are assumed to be in a "b-spline"
+    :class:`magmap.settings.atlas_prof.RegParamMap`.
+    
     Args:
         img_files: Paths to image files to register.
         rotate (List[int]): List of number of 90 degree rotations for images
@@ -1098,19 +1101,21 @@ def register_group(img_files, rotate=None, show_imgs=True,
     #sitk.ProcessObject.SetGlobalDefaultCoordinateTolerance(100)
     img_combined = sitk.JoinSeries(img_vector)
     
+    # add b-spline registration parameter map
     settings = config.atlas_profile
+    reg = settings["reg_bspline"]
     elastix_img_filter = sitk.ElastixImageFilter()
     elastix_img_filter.SetFixedImage(img_combined)
     elastix_img_filter.SetMovingImage(img_combined)
     param_map = sitk.GetDefaultParameterMap("groupwise")
     param_map["FinalGridSpacingInVoxels"] = [
-        settings["bspline_grid_space_voxels"]]
-    del param_map["FinalGridSpacingInPhysicalUnits"] # avoid conflict with vox
-    param_map["MaximumNumberOfIterations"] = [settings["groupwise_iter_max"]]
+        reg["grid_space_voxels"]]
+    del param_map["FinalGridSpacingInPhysicalUnits"]  # avoid conflict with vox
+    param_map["MaximumNumberOfIterations"] = [reg["max_iter"]]
     # TESTING:
     #param_map["MaximumNumberOfIterations"] = ["0"]
     _config_reg_resolutions(
-        settings["grid_spacing_schedule"], param_map, img_np_template.ndim)
+        reg["grid_spacing_schedule"], param_map, img_np_template.ndim)
     elastix_img_filter.SetParameterMap(param_map)
     elastix_img_filter.PrintParameterMap()
     transform_filter = elastix_img_filter.Execute()

@@ -1000,7 +1000,8 @@ def register_group(img_files, rotate=None, show_imgs=True,
     :class:`magmap.settings.atlas_prof.RegParamMap`.
     
     Args:
-        img_files: Paths to image files to register.
+        img_files: Paths to image files to register. A minimum of 4 images
+            is required for groupwise registration.
         rotate (List[int]): List of number of 90 degree rotations for images
             corresponding to ``img_files``; defaults to None, in which
             case the `config.transform` rotate attribute will be used.
@@ -1056,14 +1057,18 @@ def register_group(img_files, rotate=None, show_imgs=True,
         img_np = sitk.GetArrayFromImage(img)
         if img_np_template is None:
             img_np_template = np.copy(img_np)
-        
-        # crop y-axis based on registered labels to ensure that sample images 
-        # have the same structures since variable amount of tissue posteriorly; 
-        # cropping appears to work better than erasing for groupwise reg, 
-        # preventing some images from being stretched into the erased space
-        labels_img = sitk_io.load_registered_img(
-            img_files[i], config.RegNames.IMG_LABELS_TRUNC.value)
-        img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
+
+        y_cropped = 0
+        try:
+            # crop y-axis based on registered labels so that sample images,
+            # which appears to work better than erasing for groupwise reg by
+            # preventing some images from being stretched into the erased space
+            labels_img = sitk_io.load_registered_img(
+                img_files[i], config.RegNames.IMG_LABELS_TRUNC.value)
+            _logger.info("Cropping image based on labels trunction image")
+            img_np, y_cropped = _crop_image(img_np, labels_img, 1)#, eraser=0)
+        except FileNotFoundError:
+            pass
         '''
         # crop anterior region
         rotated = np.rot90(img_np, 2, (1, 2))

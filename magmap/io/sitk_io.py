@@ -95,7 +95,17 @@ def replace_sitk_with_numpy(
     # transfer original settings to new sitk Image
     img_sitk_back.SetSpacing(spacing)
     img_sitk_back.SetOrigin(origin)
-    img_sitk_back.SetDirection(direction)
+    
+    try:
+        img_sitk_back.SetDirection(direction)
+    except RuntimeError:
+        # direction format and length may not be directly transferable, such
+        # as direction from groupwise reg image
+        _logger.warn(
+            "Could not replace image direction with: %s\n"
+            "Leaving default direction: %s",
+            direction, img_sitk_back.GetDirection())
+    
     return img_sitk_back
 
 

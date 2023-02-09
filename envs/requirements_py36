@@ -6,7 +6,7 @@ apptools==5.1.0
 async-timeout==4.0.2
 asynctest==0.13.0
 attrs==21.4.0
-bg-atlasapi @ git+https://github.com/brainglobe/bg-atlasapi.git@cc980143c88e71202d09cbbd0f1bcfa491ea759d
+bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/dbecd16b2f63a8e167543f3358452a756bad0e64.tar.gz
 bg-space==0.6.0
 boto3==1.23.10
 botocore==1.26.10

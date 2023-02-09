@@ -1,7 +1,7 @@
 --extra-index-url https://pypi.fury.io/dd8/
 appdirs==1.4.4
 apptools==5.2.0
-bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/refs/heads/master.zip
+bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/dbecd16b2f63a8e167543f3358452a756bad0e64.tar.gz
 bg-space==0.6.0
 certifi==2022.12.7
 charset-normalizer==2.1.1

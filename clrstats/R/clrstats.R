@@ -663,10 +663,6 @@ filterStats <- function(stats, corr=NULL) {
   stats.filt <- stats[non.na, ]
   if (length(stats.filt$Stats) < 1) return(NULL)
   
-  filtered <- NULL
-  interactions <- NULL
-  offset <- 0 # number of columns ahead of coefficients
-  
   # get names and mean and CI columns
   cols.names <- names(stats.filt)
   cols.means.cis <- c(
@@ -676,21 +672,26 @@ filterStats <- function(stats, corr=NULL) {
     cols.names[grepl(".sd", cols.names)], 
     cols.names[grepl(".ci", cols.names)])
   
-  # build data frame for pertinent coefficients from each type of main 
-  # effect or interaction
+  # set up common columns
+  cols <- list("Region", "Volume", "Nuclei")
+  cols.orig <- cols
+  offset <- length(cols) # number of columns ahead of coefficients
+  
+  # get stats coefficients and main effects or interactions
   stats.coef <- stats.filt$Stats[1][[1]]
   interactions <- gsub(":", ".", rownames(stats.coef))
-  cols <- list("Region", "Volume", "Nuclei")
-  cols.orig <- cols # points to original vector if it is mutated
-  offset <- length(cols)
-  cols.suffixes <- c(
-    ".n", ".effect", ".ci.low", ".ci.hi", ".effect.raw", ".ci.low.raw",
-    ".ci.hi.raw", ".p", ".pcorr", ".logp")
+  
+  # make a set of stat coefficient columns for each main effect/interaction
+  cols.suffixes <- paste0(".", tolower(colnames(stats.coef)))
+  cols.suffixes <- gsub("value", "effect", cols.suffixes)
+  cols.suffixes <- c(cols.suffixes, ".pcorr", ".logp")
   for (interact in interactions) {
     for (suf in cols.suffixes) {
       cols <- append(cols, paste0(interact, suf))
     }
   }
+  
+  # build output data frame
   filtered <- data.frame(matrix(nrow=nrow(stats.filt), ncol=length(cols)))
   names(filtered) <- cols
   for (col in cols.orig) {
@@ -699,7 +700,7 @@ filterStats <- function(stats, corr=NULL) {
   }
   num.stat.cols <- length(names(stats.coef))
   
-  for (i in 1:nrow(stats.filt)) {
+  for (i in seq_len(nrow(stats.filt))) {
     if (is.na(stats.filt$Stats[i])) next
     # get coefficients, stored in one-element list
     stats.coef <- stats.filt$Stats[i][[1]]

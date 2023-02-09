@@ -129,12 +129,18 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       lm.formula <- as.formula(form)
       fit <- lm(lm.formula)
       result.summary <- summary.lm(fit)
-      result <- result.summary$coefficients
+      result <- as.data.frame(result.summary$coefficients)
+      result$r.squared <- result.summary$r.squared
       
+      # store intercept coefficient
+      intercept.coef <- 0
       if (intercept) {
-        # remove first ("non-intercept") row
+        # extract intercept coefficient and remove its row so result only
+        # has main effect and interactions
+        intercept.coef <- fit$coefficients[1]
         result <- result[-(1:1), ]
       }
+      result$intercept <- intercept.coef
       
     } else if (model == kModel[3]) {
       # generalized estimating equations
@@ -209,6 +215,15 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
   }
   coef.tab$P <- result[rows, 4]
   coef.tab$N <- length(vals)
+  
+  # transfer any additional stats to output table
+  extra.cols <- c("intercept", "r.squared")
+  for (col in extra.cols) {
+    if (col %in% colnames(result)) {
+      coef.tab[[col]] <- result[rows, col]
+    }
+  }
+  
   print(coef.tab)
   return(coef.tab)
 }

@@ -112,18 +112,29 @@ fitModel <- function(model, vals, genos, sides, ids=NULL) {
       # linear regression
       # TODO: see whether need to factorize genos
       if (length(unique(genos)) < 2) {
-        lm.formula <- as.formula(vals ~ sides)
+        form <- "vals ~ sides"
       } else if (length(unique(sides)) < 2) {
-        lm.formula <- as.formula(vals ~ genos)
+        form <- "vals ~ genos"
       } else {
-        lm.formula <- as.formula(vals ~ genos * sides)
+        form <- "vals ~ genos * sides"
       }
+      
+      intercept <- config.env$Intercept
+      if (!intercept) {
+        # remove the implied intercept term
+        form <- paste0(form, " + 0")
+      }
+      
+      # perform linear regression
+      lm.formula <- as.formula(form)
       fit <- lm(lm.formula)
       result.summary <- summary.lm(fit)
       result <- result.summary$coefficients
       
-      # remove first ("non-intercept") row
-      result <- result[-(1:1), ]
+      if (intercept) {
+        # remove first ("non-intercept") row
+        result <- result[-(1:1), ]
+      }
       
     } else if (model == kModel[3]) {
       # generalized estimating equations
@@ -891,6 +902,8 @@ setupConfig <- function(name=NULL) {
     # region-ID map from MagellanMapper, which should contain all regions
     # including hierarchical/ontological ones
     config.env$Labels.Path <- "../region_ids.csv"
+    # include linear regression intercept term
+    config.env$Intercept <- TRUE
 
   } else if (endsWith(name, ".R")) {
     # load a profile file

@@ -1009,7 +1009,8 @@ def plot_swarm(
         col_vspan: Optional[str] = None, vspan_fmt: Optional[str] = None,
         size: Optional[Sequence[float]] = None,
         ax: Optional["axes.Axes"] = None, rotation: Optional[float] = None,
-        **kwargs) -> "axes.Axes":
+        legend_title: Optional[str] = None,
+        kwargs_plot: Optional[Dict[str, Any]] = None, **kwargs) -> "axes.Axes":
     """Generate a swarm/jitter plot in Seaborn.
     
     Supports x-axis scaling and vertical spans.
@@ -1036,6 +1037,9 @@ def plot_swarm(
         ax: Matplotlib axes; defaults to None.
         rotation: x-axis ttext angle rotation in degrees. Defaults to None,
             which will rotate by 45 degrees.
+        legend_title: Legened title; defaults to None.
+        kwargs_plot: Dictionary of arguments to :meth:`sns.swarmplot`; defaults
+            to None.
         **kwargs: Additional arguments, passed to :meth:`decorate_plot`.
 
     Returns:
@@ -1049,6 +1053,9 @@ def plot_swarm(
     if sns is None:
         raise ImportError(
             config.format_import_err("seaborn", task="swarm plots"))
+    
+    if kwargs_plot is None:
+        kwargs_plot = {}
     
     df_vspan = df
     if x_order is not None:
@@ -1073,7 +1080,7 @@ def plot_swarm(
     # plot in seaborn
     ax = sns.swarmplot(
         x=x_cols, y=y_cols, hue=group_col, hue_order=legend_names,
-        order=x_order, data=df, ax=ax)
+        order=x_order, data=df, ax=ax, **kwargs_plot)
     
     # scale x-axis ticks and rotate labels
     if rotation is None:
@@ -1085,7 +1092,7 @@ def plot_swarm(
         # make legend translucent in case it overlaps points and remove
         # legend title
         legend.get_frame().set(alpha=0.5)
-        legend.set_title(None)
+        legend.set_title(legend_title if legend_title else None)
 
     if col_vspan is not None:
         # add vertical spans
@@ -1526,10 +1533,12 @@ def main(
 
     elif plot_2d_type is config.Plot2DTypes.SWARM_PLOT:
         # swarm/jitter plot
+        df_plot = pd.read_csv(config.filename) if df is None else df
         ax = plot_swarm(
-            pd.read_csv(config.filename), x_cols, data_cols, config.groups,
+            df_plot, x_cols, data_cols, config.groups,
             group_col, x_lbl, y_lbl, x_unit, y_unit, legend_names, col_vspan,
-            vspan_fmt, size, title=title, rotation=rotation)
+            vspan_fmt, size, ax=ax, title=title, rotation=rotation,
+            kwargs_plot=kwargs_plot, **kwargs)
         base_out_path = "swarm"
     
     elif plot_2d_type is config.Plot2DTypes.CAT_PLOT:

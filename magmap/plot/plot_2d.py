@@ -1394,7 +1394,8 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
 
 def main(
         ax: Optional["axes.Axes"] = None, df: Optional[pd.DataFrame] = None,
-        kwargs_plot: Optional[Dict[str, Any]] = None, **kwargs):
+        kwargs_plot: Optional[Dict[str, Any]] = None, save: bool = True,
+        **kwargs):
     """Perform 2D plot tasks.
     
     Args:
@@ -1402,6 +1403,7 @@ def main(
         df: Data frame; defaults to None.
         kwargs_plot: Dictionary of args to the underlying plot function;
             defaults to None.
+        save: True (default) to save plot.
         kwargs: Additional args to :meth:`decorate_plot`.
     
     Returns:
@@ -1553,9 +1555,8 @@ def main(
     if ax is not None:
         # perform plot post-processing tasks, including file save unless
         # savefig is None
-        post_plot(
-            ax, libmag.make_out_path(base_out_path), config.savefig,
-            config.show)
+        out_path = libmag.make_out_path(base_out_path) if save else None
+        post_plot(ax, out_path, config.savefig, config.show)
     
     return ax
 

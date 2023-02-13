@@ -67,6 +67,7 @@
 
 - The atlas transformer (`atlas_refiner.transpose_img`) provides a more comprehensive set of typical transformations before atlas refinement or registration, such as rotation to any angle, flipping along any axis, and resizing (#195, #214)
 - Edge/perimeter thickness can be customized (#307)
+- Fixed groupwise registration for current atlas profiles, turned off default cropping (#444)
 
 #### Atlas registration
 

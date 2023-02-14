@@ -26,7 +26,7 @@ meshio==5.3.4
 networkx==2.8.8
 numpy==1.24.2
 packaging==22.0
-pandas==1.5.2
+pandas==1.5.3
 Pillow==9.4.0
 pyamg==4.2.3
 pyface==7.4.4

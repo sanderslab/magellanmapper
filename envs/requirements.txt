@@ -48,7 +48,7 @@ SimpleITK==2.3.0.dev117+g0640d
 six==1.16.0
 tifffile==2022.10.10
 traits==6.4.1
-traitsui==7.4.2
+traitsui==7.4.3
 treelib==1.6.1
 typing_extensions==4.4.0
 urllib3==1.26.13

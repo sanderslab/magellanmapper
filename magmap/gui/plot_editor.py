@@ -501,6 +501,7 @@ class PlotEditor:
         self._channels = [config.channel]
         cmaps = [config.cmaps]
         alphas = [config.alphas[0]]
+        alpha_is_default = True
         alpha_blends = [None]
         shapes = [self._img3d_shapes[0][1:3]]
         vmaxs = [None]
@@ -517,6 +518,7 @@ class PlotEditor:
             
             # use opacity, brightness, anc contrast from prior images
             alphas[0] = [p.alpha for p in self._plot_ax_imgs[0]]
+            alpha_is_default = False
             alpha_blends[0] = [p.alpha_blend for p in self._plot_ax_imgs[0]]
             brightnesses[0] = [p.brightness for p in self._plot_ax_imgs[0]]
             contrasts[0] = [p.contrast for p in self._plot_ax_imgs[0]]
@@ -630,8 +632,13 @@ class PlotEditor:
                         plot_ax_img, libmag.get_if_within(brightnesses[i], j),
                         libmag.get_if_within(contrasts[i], j))
                 
+                # get alpha from image if default since image overlayer scales
+                # the default alpha for each channel
+                plot_ax_img.alpha = (
+                    plot_ax_img.ax_img.get_alpha() if alpha_is_default
+                    else libmag.get_if_within(alphas[i], j))
+                
                 # store rest of settings
-                plot_ax_img.alpha = libmag.get_if_within(alphas[i], j)
                 plot_ax_img.alpha_blend = libmag.get_if_within(
                     alpha_blends[i], j)
                 plot_ax_img.rgb = self.overlayer.rgb

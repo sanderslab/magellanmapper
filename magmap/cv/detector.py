@@ -215,6 +215,10 @@ class Blobs:
         """
         if to_add is None:
             # save current attributes
+            
+            # filter out column indices that are None
+            col_inds = {k: v for k, v in self.col_inds.items() if v is not None}
+            
             blobs_arc = {
                 Blobs.Keys.VER.value: self.ver,
                 Blobs.Keys.BLOBS.value: self.blobs,
@@ -227,7 +231,7 @@ class Blobs:
                 # save columns ordered by the col indices
                 Blobs.Keys.COLS.value: [
                     k.value for k, v in sorted(
-                        self.col_inds.items(), key=lambda e: e[1])],
+                        col_inds.items(), key=lambda e: e[1])],
             }
         else:
             blobs_arc = to_add

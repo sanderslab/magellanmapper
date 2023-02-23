@@ -110,8 +110,8 @@
 
 #### I/O
 
-- Images can be viewed as RGB(A) using the `RGB` button or the `--rgb` CLI argument (#142)
-- EXPERIMENTAL: Some TIF files can be loaded directly, without importing the file first (#90, #213, #242)
+- Images can be viewed and exported as RGB(A) using the `RGB` button or the `--rgb` CLI argument (#142, #445)
+- EXPERIMENTAL: Some TIF files can be loaded directly, without importing the file first (#90, #213, #242, #445)
 - The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
 - Better 2D image support
@@ -119,6 +119,7 @@
   - Unit factor conversions adapts to image dimensions (eg 2D vs 3D) (#132)
   - Fixed ROI padding during blob verification and match-based colocalization for 2D images (#380)
 - Multiple multiplane image files can be selected directly instead of relying on file auto-detection (#201)
+- `openpyxl` package is now optional during region export (#445)
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 
@@ -132,7 +133,9 @@
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
   - `--plot_labels vspan_col=<col> vspan_format=<str>`: column denoting vertical span groups and string format for them, respectively (#135, 137)
+  - `--plot_labels rotation=<deg>`: change rotation in degrees (#445)
 - The figure save wrapper (`plot_support.save_fig`) is more flexible (#215)
+- 2D plots can be set not to save (#445)
 - Discrete colormaps can use [Matplotlib named colors](https://matplotlib.org/stable/gallery/color/named_colors.html) and use them for symmetric colors (#226)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
@@ -148,6 +151,7 @@
 - The labels reference path has been moved to an environment variable, which can be configured through `--labels <path>` (#147)
 - The Shapiro-Wilks test has been implemented in `meansModel` for consistent table output (#164)
 - A basic `NAMESPACE` file is provided to fix installation and exporting functions (#303)
+- Linear regression intercept term can be toggled using the `Intercept` environment field, and r<sup>2</sup> and intercept are exported (#445)
 - Fixed t-test, which also provides Cohen's d as a standardized effect size through the `effectsize` package (#135)
 - Fixed jitter plot box plots to avoid covering labels (#147)
 - Fixed model fitting (#240, #304)

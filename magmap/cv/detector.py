@@ -117,8 +117,23 @@ class Blobs:
         self.scaling: np.ndarray = np.ones(3)
         
         #: Blob columns loaded from metadata. Defaults to the first 6 columns
-        #: in :class:`Cols`.
+        #: in :class:`Cols`, which has generally been the minimum columns
+        #: saved in blobs v1.
         self.cols: Sequence[str] = [c.value for c in self.Cols][:6]
+        self.set_col_inds()
+
+    def set_col_inds(self):
+        """Set column indices from stored column strings in :attr:`cols`."""
+        # default indices to None to indicate column does not exist
+        Blobs.col_inds = {c: None for c in self.Cols}
+        
+        for i, col in enumerate(self.cols):
+            try:
+                # set index based on position
+                Blobs.col_inds[self.Cols(col)] = i
+            except ValueError:
+                _logger.warn(
+                    "%s is not a valid Blobs column, skipping", col)
 
     def load_blobs(self, path: str = None) -> "Blobs":
         """Load blobs from an archive.
@@ -154,13 +169,7 @@ class Blobs:
                 # TODO: convert to instance attribute after moving all blob
                 # functions into this class
                 self.cols = info[self.Keys.COLS.value]
-                Blobs.col_inds = {c: None for c in self.Cols}
-                for i, col in enumerate(self.cols):
-                    try:
-                        Blobs.col_inds[self.Cols(col)] = i
-                    except ValueError:
-                        _logger.warn(
-                            "%s is not a valid Blobs column, skipping", col)
+                self.set_col_inds()
                 _logger.debug(
                     "Loaded column indices:\n%s",
                     pprint.pformat(Blobs.col_inds))

@@ -2505,10 +2505,14 @@ class Visualization(HasTraits):
         self.blobs.blob_matches = blob_matches
         cli.update_profiles()
         
-        # get selected channels for blob detection; must have at least 1
+        # get selected channels for blob detection
         chls = sorted([int(n) for n in self._segs_chls])
         if len(chls) == 0:
-            self.segs_feedback = "Please select a channel for blob detection"
+            # provide feedback if no channels are selected and return
+            self.segs_feedback = "Please select channels for blob detection"
+            msg = "Please select channels in the Detect tab to show blobs"
+            self.update_status_bar_msg(msg)
+            self._update_roi_feedback(msg)
             return
         
         # process ROI in prep for showing filtered 2D view and segmenting

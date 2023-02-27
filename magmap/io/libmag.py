@@ -1,5 +1,5 @@
 # Library functions shared within MagellanMapper
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2023
 """Shared functions with the MagellanMapper package.
 """
 
@@ -8,7 +8,8 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Any, Callable, Generator, List, Optional, Sequence, Union
+from typing import Any, Callable, Generator, List, Optional, Sequence, Tuple, \
+    Union
 import warnings
 
 if sys.version_info >= (3, 8):
@@ -27,14 +28,14 @@ _logger = config.logger.getChild(__name__)
 
 # file types that are associated with other types
 _FILE_TYPE_GROUPS = {
-    "obj": "mtl", 
-    "mhd": "raw", 
+    "obj": "mtl",
+    "mhd": "raw",
 }
 
 # Numpy numerical dtypes with various ranges
 _DTYPES = {
-    "uint": [np.uint8, np.uint16, np.uint32, np.uint64], 
-    "int": [np.int8, np.int16, np.int32, np.int64], 
+    "uint": [np.uint8, np.uint16, np.uint32, np.uint64],
+    "int": [np.int8, np.int16, np.int32, np.int64],
     "float": [np.float16, np.float32, np.float64]
 }
 
@@ -406,19 +407,24 @@ def remove_file(path):
     return False
 
 
-def normalize(array, minimum, maximum, in_range="image"):
+def normalize(
+        array: Sequence[Union[int, float]], minimum: Union[int, float],
+        maximum: Union[int, float],
+        in_range: Union[str, Tuple[
+            Union[int, float], Union[int, float]]] = "image"
+) -> Union[Sequence[Union[int, float]], np.ndarray]:
     """Normalizes an array to fall within the given min and max.
     
     Args:
-        array (:class:`numpy.ndarray`): Array to normalize.
-        minimum (Union[int, float]): Minimum value for the array.
-        maximum (Union[int, float]): Maximum value for the array. Assumed to
-            be greater than ``min``.
-        in_range(str, List[int, float]): Range within ``array`` to rescale; 
-            defaults to "image" to use the range from ``array`` itself.
+        array: Array to normalize.
+        minimum: Minimum value for the array.
+        maximum: Maximum value for the array. Assumed to be greater than
+            ``min``.
+        in_range: Range within ``array`` to rescale. Defaults to "image",
+            which uses the range from ``array`` itself.
     
     Returns:
-        :class:`numpy.ndarray`: The normalized array.
+        The normalized array.
     
     """
     if len(array) <= 0:
@@ -427,11 +433,13 @@ def normalize(array, minimum, maximum, in_range="image"):
     if not isinstance(array, np.ndarray):
         # rescale_intensity requires Numpy arrays
         array = np.array(array)
+    
     if isinstance(array.flat[0], (int, np.integer)) and (
             isinstance(minimum, float) or isinstance(maximum, float)):
         # convert to float if min/max are float but array is not
         array = 1.0 * array
     
+    # rescale the array intensity range
     array = exposure.rescale_intensity(
         array, out_range=(minimum, maximum), in_range=in_range)
     

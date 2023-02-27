@@ -118,14 +118,14 @@ def find_closest_blobs_cdist(
 
 
 def setup_match_blobs_roi(
-        tol: Sequence[float], blobs: Optional[np.ndarray] = None
+        tol: Sequence[float], blobs: Optional["detector.Blobs"] = None
 ) -> Tuple[float, Sequence[float], np.ndarray, Sequence[float],
            np.ndarray]:
     """Set up tolerances for matching blobs in an ROI.
     
     Args:
         tol: Sequence of tolerances.
-        blobs: Sequence of blobs to resize if the first ROI profile
+        blobs: Blobs to resize if the first ROI profile
             (:attr:`magmap.config.roi_profiles`) ``resize_blobs``
             value is given.
 
@@ -144,17 +144,19 @@ def setup_match_blobs_roi(
     # casting to int causes improper offset import into db
     inner_padding = np.floor(tol[::-1])
     libmag.log_once(
-        _logger.debug, 
+        _logger.debug,
         f"verifying blobs with tol {tol} leading to thresh {thresh}, "
         f"scaling {scaling}, inner_padding {inner_padding}")
     
     # resize blobs based only on first profile
     resize = config.get_roi_profile(0)["resize_blobs"]
-    if resize and blobs is not None:
-        blobs = detector.Blobs.multiply_blob_rel_coords(blobs, resize)
-        libmag.log_once(_logger.debug, f"resized blobs by {resize}:\n{blobs}")
+    blobs_roi = None if blobs is None else blobs.blobs
+    if resize and blobs_roi is not None:
+        blobs_roi = blobs.multiply_blob_rel_coords(blobs_roi, resize)
+        libmag.log_once(
+            _logger.debug, f"resized blobs by {resize}:\n{blobs_roi}")
     
-    return thresh, scaling, inner_padding, resize, blobs
+    return thresh, scaling, inner_padding, resize, blobs_roi
 
 
 def match_blobs_roi(
@@ -285,8 +287,9 @@ def match_blobs_roi(
         matches
 
 
-def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
-                channel):
+def verify_rois(
+        rois, blobs: "detector.Blobs", blobs_truth, tol, output_db, exp_id,
+        exp_name, channel):
     """Verify blobs in ROIs by comparing detected blobs with truth sets
     of blobs stored in a database.
     
@@ -294,14 +297,13 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
     format as saved processed files but with "_verified.db" at the end.
     Prints basic statistics on the verification.
     
-    Note that blobs are found from ROI parameters rather than loading from 
-    database, so blobs recorded within these ROI bounds but from different 
+    Note that blobs are found from ROI parameters rather than loading from
+    database, so blobs recorded within these ROI bounds but from different
     ROIs will be included in the verification.
     
     Args:
         rois: Rows of ROIs from sqlite database.
-        blobs (:obj:`np.ndarray`): The blobs to be checked for accuracy,
-            given as 2D array of ``[[z, row, column, radius, ...], ...]``.
+        blobs: The blobs to be checked for accuracy.
         blobs_truth (:obj:`np.ndarray`): The list by which to check for
             accuracy, in the same format as blobs.
         tol: Tolerance as z,y,x of floats specifying padding for the inner
@@ -325,7 +327,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
     blobs_truth_rois = None
     blobs_rois = None
     rois_falsehood = []
-    thresh, scaling, inner_padding, resize, blobs = setup_match_blobs_roi(
+    thresh, scaling, inner_padding, resize, blobs_roi = setup_match_blobs_roi(
         tol, blobs)
     
     # set up metrics dict for accuracy metrics of each ROI
@@ -350,7 +352,7 @@ def verify_rois(rois, blobs, blobs_truth, tol, output_db, exp_id, exp_name,
         # find matches between truth and detected blobs
         blobs_inner_plus, blobs_truth_inner_plus, offset_inner, size_inner, \
             matches = match_blobs_roi(
-                blobs, blobs_truth, offset, size, thresh, scaling,
+                blobs_roi, blobs_truth, offset, size, thresh, scaling,
                 inner_padding, resize)
         
         # store blobs in separate verified DB
@@ -444,8 +446,9 @@ def verify_stack(filename_base, subimg_path_base, settings, segments_all,
             exp_name, None)
         verify_tol = np.multiply(
             overlap_base, settings["verify_tol_factor"])
+        blobs_all = detector.Blobs(segments_all)
         stats_detection, fdbk, df_verify = verify_rois(
-            rois, segments_all, config.truth_db.blobs_truth,
+            rois, blobs_all, config.truth_db.blobs_truth,
             verify_tol, config.verified_db, exp_id, exp_name,
             channels)
         df_io.data_frames_to_csv(df_verify, libmag.make_out_path(

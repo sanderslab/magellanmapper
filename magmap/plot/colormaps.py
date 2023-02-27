@@ -46,6 +46,14 @@ def setup_cmaps():
         config.Cmaps.CMAP_GRBK_NAME.value, "green")
     CMAPS[config.Cmaps.CMAP_RDBK_NAME] = make_dark_linear_cmap(
         config.Cmaps.CMAP_RDBK_NAME.value, "red")
+    CMAPS[config.Cmaps.CMAP_BUBK_NAME] = make_dark_linear_cmap(
+        config.Cmaps.CMAP_BUBK_NAME.value, "blue")
+    CMAPS[config.Cmaps.CMAP_CYBK_NAME] = make_dark_linear_cmap(
+        config.Cmaps.CMAP_CYBK_NAME.value, "cyan")
+    CMAPS[config.Cmaps.CMAP_MGBK_NAME] = make_dark_linear_cmap(
+        config.Cmaps.CMAP_MGBK_NAME.value, "magenta")
+    CMAPS[config.Cmaps.CMAP_YLBK_NAME] = make_dark_linear_cmap(
+        config.Cmaps.CMAP_YLBK_NAME.value, "yellow")
 
 
 class DiscreteColormap(colors.ListedColormap):

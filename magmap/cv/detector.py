@@ -116,11 +116,8 @@ class Blobs:
         self.basename: Optional[str] = None
         self.scaling: np.ndarray = np.ones(3)
         
-        #: Blob columns loaded from metadata. Defaults to the first 6 columns
-        #: in :class:`Cols`, which has generally been the minimum columns
-        #: saved in blobs v1.
-        self.cols: Sequence[str] = [c.value for c in self.Cols][:6]
-        self.set_col_inds()
+        #: Blob columns loaded from metadata.
+        self.cols: Sequence[str] = [c.value for c in self.Cols]
 
     def set_col_inds(self):
         """Set column indices from stored column strings in :attr:`cols`."""
@@ -164,22 +161,25 @@ class Blobs:
                 # load archive version number
                 self.basename = info[self.Keys.VER.value]
             
-            if self.Keys.COLS.value in info:
-                # load column indices into class attribute
-                # TODO: convert to instance attribute after moving all blob
-                # functions into this class
-                self.cols = info[self.Keys.COLS.value]
-                self.set_col_inds()
-                _logger.debug(
-                    "Loaded column indices:\n%s",
-                    pprint.pformat(Blobs.col_inds))
-
             if self.Keys.BLOBS.value in info:
                 # load blobs as a Numpy array
                 self.blobs = info[self.Keys.BLOBS.value]
-                _logger.info("Loaded %s blobs", len(self.blobs))
-                if config.verbose:
-                    self.show_blobs_per_channel(self.blobs)
+            
+            # set column indices
+            if self.Keys.COLS.value in info:
+                # load column indices from archive
+                # TODO: convert to instance attribute after moving all blob
+                #   functions into this class
+                self.cols = info[self.Keys.COLS.value]
+            else:
+                # default to assume existing blob cols are ordered as in Cols;
+                # if no blobs, simpy use the first 6 cols, generally the min
+                # cols saved in blobs v1
+                ncols = 6 if self.blobs is None else self.blobs.shape[1]
+                self.cols = self.cols[:ncols]
+            self.set_col_inds()
+            _logger.debug(
+                "Set column indices:\n%s", pprint.pformat(Blobs.col_inds))
             
             if self.Keys.COLOCS.value in info:
                 # load intensity-based colocalizations
@@ -204,6 +204,11 @@ class Blobs:
             if self.Keys.ROI_SIZE.value in info:
                 # load size of ROI from which blobs were detected
                 self.roi_size = info[self.Keys.ROI_SIZE.value]
+            
+            if self.blobs is not None:
+                _logger.info("Loaded %s blobs", len(self.blobs))
+                if config.verbose:
+                    self.show_blobs_per_channel(self.blobs)
             
         return self
 

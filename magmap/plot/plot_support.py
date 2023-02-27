@@ -308,7 +308,8 @@ class ImageOverlayer:
         ylims: Optional[Tuple[int, int]] = None
     
     def __init__(
-            self, ax, aspect, origin=None, ignore_invis=False, rgb=False):
+            self, ax, aspect, origin=None, ignore_invis=False, rgb=False,
+            additive_blend=False):
         #: Plot axes.
         self.ax: "axes.Axes" = ax
         #: Aspect ratio.
@@ -322,6 +323,9 @@ class ImageOverlayer:
         #: True to show images as RGB(A); defaults to False.
         self.rgb: bool = rgb
         
+        #: Display images with additive blending; defaults to False.
+        self.additive_blend: bool = additive_blend
+
         #: Dictionary of label IDs to annotation text artists; defaults to an
         #: empty dictionary.
         self.labels_annots: Dict[int, "axes.Axes.Text"] = {}
@@ -421,9 +425,9 @@ class ImageOverlayer:
                 will be shown.
             cmaps: List of colormaps corresponding to each channel. Colormaps
                 can be the names of specific maps in :mod:``config``.
-            alpha: Transparency level for all channels or
-                sequence of levels for each channel. If any value is 0, the
-                corresponding image will not be output. Defaults to None to use 1.
+            alpha: Transparency level for all channels or sequence of levels
+                for each channel. If any value is 0, the corresponding image
+                will not be output. Defaults to None to use 1.
             vmin: Scalar or sequence of vmin levels for
                 all channels; defaults to None.
             vmax: Scalar or sequence of vmax levels for
@@ -472,24 +476,45 @@ class ImageOverlayer:
             norm = None if norms is None else norms[chl]
             cmap = colormaps.get_cmap(cmap)
             if cmap is not None and nan_color:
-                # given color for masked values such as NaNs to distinguish from 0
+                # set color for masked values such as NaNs to distinguish from 0
                 cmap.set_bad(color=nan_color)
+            
             # get setting corresponding to the channel index, or use the value
             # directly if it is a scalar
             vmin_plane = libmag.get_if_within(vmin, chl)
             vmax_plane = libmag.get_if_within(vmax, chl)
             alpha_plane = libmag.get_if_within(alpha, chl)
+            
             img_chl = None
             if not self.ignore_invis or alpha_plane > 0:
                 # skip display if alpha is 0 to avoid outputting a hidden image
                 # that may show up in other renderers (eg PDF viewers)
-                img_chl = self.ax.imshow(
-                    img2d_show, cmap=cmap, norm=norm, aspect=self.aspect, 
-                    alpha=alpha_plane, vmin=vmin_plane, vmax=vmax_plane, 
-                    origin=self.origin, interpolation=interpolation)
+                
+                if self.additive_blend:
+                    # colorize channel before merging; normalize to fit in
+                    # expected colormap range
+                    in_range = (
+                        "image" if vmin_plane is None or vmax_plane is None
+                        else (vmin_plane, vmax_plane))
+                    img2d_norm = libmag.normalize(img2d_show, 0, 1, in_range)
+                    img_chl = cmap(img2d_norm)
+                
+                else:
+                    # display the channel
+                    img_chl = self.ax.imshow(
+                        img2d_show, cmap=cmap, norm=norm, aspect=self.aspect,
+                        alpha=alpha_plane, vmin=vmin_plane, vmax=vmax_plane,
+                        origin=self.origin, interpolation=interpolation)
+            
             img.append(img_chl)
         
-        # apply transformation such as rotation to main axes components
+        if self.additive_blend:
+            # merge colorized channels, set to full opacity, and set reference
+            # to image in each output channel
+            img_blended = np.max(np.stack(img, axis=2), axis=2)
+            img_chl = self.ax.imshow(img_blended, alpha=1)
+            img = [img_chl] * num_chls
+        
         if self._transform is None:
             # set up transformation such as rotation
             self.setup_transform(img2d)

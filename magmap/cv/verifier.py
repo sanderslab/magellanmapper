@@ -91,14 +91,16 @@ def find_closest_blobs_cdist(
         
         if config.verbose:
             # show matches using original blob coordinates
+            i = -1
             for i, (blob, blob_base, dist_in) in enumerate(zip(
                     blobs[rowis], blobs_master[colis], dists_in)):
                 _logger.debug(
                     "%s: Detected blob: %s, truth blob: %s, in? %s",
                     i, blob[:3], blob_base[:3], dist_in)
-            _logger.debug("")
+            if i >= 0: _logger.debug("")
             
             # show corresponding scaled coordinates and distances
+            i = -1
             for i, (blob_sc, blob_base_sc, dist, dist_in) in enumerate(zip(
                     blobs_scaled[rowis], blobs_master_scaled[colis],
                     dists_closest, dists_in)):
@@ -108,7 +110,7 @@ def find_closest_blobs_cdist(
                     "  %s (detected)", blob_sc[:3])
                 _logger.debug(
                     "  %s (truth)", blob_base_sc[:3])
-            _logger.debug("")
+            if i >= 0: _logger.debug("")
         
         rowis = rowis[dists_in]
         colis = colis[dists_in]

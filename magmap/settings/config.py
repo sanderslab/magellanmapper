@@ -303,10 +303,14 @@ proc_type: Dict[ProcessTypes, Any] = dict.fromkeys(ProcessTypes, None)
 # 2D PLOTTING
 
 
-# custom colormaps in plot_2d
 class Cmaps(Enum):
+    """Custom colormap names."""
     CMAP_GRBK_NAME = "Green_black"
     CMAP_RDBK_NAME = "Red_black"
+    CMAP_BUBK_NAME = "Blue_black"
+    CMAP_CYBK_NAME = "Cyan_black"
+    CMAP_MGBK_NAME = "Magenta_black"
+    CMAP_YLBK_NAME = "Yellow_black"
 
 
 class Plot2DTypes(Enum):

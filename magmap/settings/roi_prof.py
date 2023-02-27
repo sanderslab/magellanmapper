@@ -56,7 +56,13 @@ class ROIProfile(profiles.SettingsDict):
         self["vis_3d"] = "points"  # "points" or "surface" 3D visualization
         self["points_3d_thresh"] = 0.85  # frac of thresh (changed in v.0.6.6)
         self["channel_colors"] = (
-            config.Cmaps.CMAP_GRBK_NAME, config.Cmaps.CMAP_RDBK_NAME)
+            config.Cmaps.CMAP_GRBK_NAME,
+            config.Cmaps.CMAP_RDBK_NAME,
+            config.Cmaps.CMAP_BUBK_NAME,
+            config.Cmaps.CMAP_YLBK_NAME,
+            config.Cmaps.CMAP_MGBK_NAME,
+            config.Cmaps.CMAP_CYBK_NAME,
+        )
         self["scale_bar_color"] = "w"
         #: Colorbar args passed to :meth:`matplotlib.figure.Figure.colorbar`.
         self["colorbar"] = None

@@ -435,6 +435,9 @@ class Visualization(HasTraits):
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float
+    _imgadj_merge_chls = Bool(
+        tooltip="Merge channels using additive blending"
+    )
     _imgadj_alpha_blend = Float(0.5)
     _imgadj_alpha_blend_check = Bool(
         tooltip="Blend the overlapping parts of imags to shown alignment.\n"
@@ -871,6 +874,9 @@ class Visualization(HasTraits):
         HGroup(
             Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g")),
+        ),
+        HGroup(
+            Item("_imgadj_merge_chls", label="Merge channels"),
         ),
         
         HGroup(
@@ -2992,6 +2998,7 @@ class Visualization(HasTraits):
         roi_ed.fn_update_coords = self.set_offset
         roi_ed.fn_redraw = self.redraw_selected_viewer
         roi_ed.blobs = self.blobs
+        roi_ed.additive_blend = self._imgadj_merge_chls
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
@@ -3069,6 +3076,7 @@ class Visualization(HasTraits):
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
             self.update_status_bar_msg)
+        atlas_ed.additive_blend = self._imgadj_merge_chls
         self.atlas_eds.append(atlas_ed)
         
         if self._DEFAULTS_2D[4] in self._check_list_2d:
@@ -3251,6 +3259,7 @@ class Visualization(HasTraits):
             config.img5d, self.blobs, "Verifier", self._roi_ed_fig,
             # necessary for immediate table refresh rather than after scroll
             self.update_segment)
+        verifier_ed.additive_blend = self._imgadj_merge_chls
         verifier_ed.show_fig()
         self.verifier_ed = verifier_ed
     

@@ -457,7 +457,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if img3d_extras is not None:
             img3d_extras = [np.array(img) for img in img3d_extras]
         overlayer = plot_support.ImageOverlayer(
-            ax_ov, aspect, origin, rgb=self.img5d.rgb)
+            ax_ov, aspect, origin, rgb=self.img5d.rgb,
+            additive_blend=self.additive_blend)
         plot_ed = plot_editor.PlotEditor(
             overlayer, arrs_3d[0], labels_img, cmap_labels,
             self.plane, update_coords,
@@ -1235,7 +1236,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
 
             # show the ROI, which is now a 2D zoomed image
             overlaid = plot_support.ImageOverlayer(
-                ax, aspect, rgb=self.img5d.rgb)
+                ax, aspect, rgb=self.img5d.rgb,
+                additive_blend=self.additive_blend)
             ax_imgs = [overlaid.imshow_multichannel(
                 roi, channel, config.cmaps, alpha, rgb=self.img5d.rgb)]
             #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))

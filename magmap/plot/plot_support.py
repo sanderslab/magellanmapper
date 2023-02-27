@@ -56,6 +56,9 @@ class ImageSyncMixin:
         self.plot_eds: Dict[Any, "plot_editor.PlotEditor"] = OrderedDict()
         #: Edited flag.
         self.edited: bool = False
+        
+        #: Display images with additive blending; default to False.
+        self.additive_blend: bool = False
 
         #: Plane(s) for max intensity projections.
         self._max_intens_proj: Optional[Union[int, Sequence[int]]] = None

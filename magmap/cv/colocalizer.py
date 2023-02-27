@@ -171,12 +171,15 @@ class StackColocalizer(object):
     """
     blobs: Optional["detector.Blobs"] = None
     match_tol: Optional[Sequence[float]] = None
+    #: Channels to match; defaults to None.
+    channels: Optional[Sequence[int]] = None
     
     @classmethod
     def colocalize_block(
             cls, coord: Sequence[int], offset: Sequence[int],
             shape: Sequence[int], blobs: Optional["detector.Blobs"] = None,
-            tol: Optional[Sequence[float]] = None, setup_cli: bool = False
+            tol: Optional[Sequence[float]] = None, setup_cli: bool = False,
+            channels: Optional[Sequence[int]] = None
     ) -> Tuple[Sequence[int], Dict[Tuple[int, int], "BlobMatch"]]:
         """Colocalize blobs from different channels within a block.
 
@@ -189,6 +192,8 @@ class StackColocalizer(object):
                 to None to use :attr:`match_tol`.
             setup_cli: True to set up CLI arguments, typically for
                 a spawned (rather than forked) environment; defaults to False.
+            channels: Channels to match; defaults to None, where
+                :attr:`channels` will be used.
 
         Returns:
             Tuple of:
@@ -200,33 +205,39 @@ class StackColocalizer(object):
             blobs = cls.blobs
         if tol is None:
             tol = cls.match_tol
+        if channels is None:
+            channels = cls.channels
         if setup_cli:
             # reload command-line parameters
             cli.process_cli_args()
         _logger.debug(
             "Match-based colocalizing blobs in ROI at offset %s, size %s",
             offset, shape)
-        matches = colocalize_blobs_match(blobs, offset[::-1], shape[::-1], tol)
+        matches = colocalize_blobs_match(
+            blobs, offset[::-1], shape[::-1], tol, channels=channels)
         return coord, matches
     
     @classmethod
     def colocalize_stack(
-            cls, shape: Sequence[int], blobs: "detector.Blobs"
+            cls, shape: Sequence[int], blobs: "detector.Blobs",
+            channels: Optional[Sequence[int]] = None
     ) -> Dict[Tuple[int, int], "BlobMatch"]:
         """Entry point to colocalizing blobs within a stack.
 
         Args:
             shape: Image shape in z,y,x.
             blobs: Blobs.
+            channels: Channels to match; defaults to None.
 
         Returns:
             Dictionary of matches, where keys are tuples of the channel pairs,
             and values are blob match objects.
 
         """
+        chls = ("each pair of channels" if channels is None
+                else f"channels: {channels}")
         _logger.info(
-            "Colocalizing blobs based on matching blobs in each pair of "
-            "channels")
+            "Colocalizing blobs based on matching blobs in %s", chls)
         # scale match tolerance based on block processing ROI size
         blocks = stack_detect.setup_blocks(config.roi_profile, shape)
         match_tol = np.multiply(
@@ -265,7 +276,7 @@ class StackColocalizer(object):
                         pool_results.append(pool.apply_async(
                             StackColocalizer.colocalize_block,
                             args=(coord, offset, shape, blobs_roi, match_tol,
-                                  True)))
+                                  True, channels)))
         
         # dict of channel combos to blob matches data frame
         matches_all = {}
@@ -427,7 +438,8 @@ def colocalize_blobs(roi, blobs, thresh=None):
 
 def colocalize_blobs_match(
         blobs: "detector.Blobs", offset: Sequence[int], size: Sequence[int],
-        tol: Sequence[float], inner_padding: Optional[Sequence[int]] = None
+        tol: Sequence[float], inner_padding: Optional[Sequence[int]] = None,
+        channels: Optional[Sequence[int]] = None
 ) -> Optional[Dict[Tuple[int, int], "BlobMatch"]]:
     """Co-localize blobs in separate channels but the same ROI by finding
     optimal blob matches.
@@ -452,11 +464,13 @@ def colocalize_blobs_match(
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}
-    channels = np.unique(blobs.get_blobs_channel(blobs_roi)).astype(int)
-    for chl in channels:
+    blob_chls = np.unique(blobs.get_blobs_channel(blobs_roi)).astype(int)
+    if channels is not None:
+        blob_chls = [c for c in blob_chls if c in channels]
+    for chl in blob_chls:
         # pair channels
         blobs_chl = blobs.blobs_in_channel(blobs_roi, chl)
-        for chl_other in channels:
+        for chl_other in blob_chls:
             # prevent duplicates by skipping other channels below given channel
             if chl >= chl_other: continue
             # find colocalizations between blobs from one channel to blobs

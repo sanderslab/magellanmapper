@@ -2542,8 +2542,8 @@ class Visualization(HasTraits):
                     detector.calc_overlap(),
                     config.roi_profile["verify_tol_factor"])
                 matches = colocalizer.colocalize_blobs_match(
-                    segs_all, np.zeros(3, dtype=int), roi_size, verify_tol,
-                    np.zeros(3, dtype=int))
+                    detector.Blobs(segs_all), np.zeros(3, dtype=int), roi_size,
+                    verify_tol, np.zeros(3, dtype=int))
                 if matches and len(matches) > 0:
                     # TODO: include all channel combos
                     self.blobs.blob_matches = matches[tuple(matches.keys())[0]]

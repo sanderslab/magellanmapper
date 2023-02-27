@@ -1256,7 +1256,7 @@ def process_file(
                 else:
                     shape = config.img5d.meta[config.MetaKeys.SHAPE][1:]
             matches = colocalizer.StackColocalizer.colocalize_stack(
-                shape, config.blobs.blobs)
+                shape, config.blobs)
             # insert matches into database
             colocalizer.insert_matches(config.db, matches)
         else:

@@ -169,28 +169,31 @@ class StackColocalizer(object):
     pickling in forked multiprocessing.
 
     """
-    blobs = None
-    match_tol = None
+    blobs: Optional["detector.Blobs"] = None
+    match_tol: Optional[Sequence[float]] = None
     
     @classmethod
-    def colocalize_block(cls, coord, offset, shape, blobs=None,
-                         tol=None, setup_cli=False):
+    def colocalize_block(
+            cls, coord: Sequence[int], offset: Sequence[int],
+            shape: Sequence[int], blobs: Optional["detector.Blobs"] = None,
+            tol: Optional[Sequence[float]] = None, setup_cli: bool = False
+    ) -> Tuple[Sequence[int], Dict[Tuple[int, int], "BlobMatch"]]:
         """Colocalize blobs from different channels within a block.
 
         Args:
-            coord (Tuple[int]): Block coordinate.
-            offset (List[int]): Block offset within the full image in z,y,x.
-            shape (List[int]): Block shape in z,y,x.
-            blobs (:obj:`np.ndarray`): 2D blobs array; defaults to None to
-                use :attr:`blobs`.
-            tol (List[float]): Tolerance for colocalizing blobs; defaults
+            coord: Block coordinate.
+            offset: Block offset within the full image in z,y,x.
+            shape: Block shape in z,y,x.
+            blobs: Blobs; defaults to None, which will use :attr:`blobs`.
+            tol: Tolerance for colocalizing blobs; defaults
                 to None to use :attr:`match_tol`.
-            setup_cli (bool): True to set up CLI arguments, typically for
+            setup_cli: True to set up CLI arguments, typically for
                 a spawned (rather than forked) environment; defaults to False.
 
         Returns:
-            Tuple[int], dict[Tuple[int], Tuple]: ``coord`` for tracking
-            multiprocessing and the dictionary of matches.
+            Tuple of:
+            - ``coord``: ``coord``, for tracking multiprocessing
+            - ``matches``: dictionary of matches
 
         """
         if blobs is None:
@@ -207,17 +210,18 @@ class StackColocalizer(object):
         return coord, matches
     
     @classmethod
-    def colocalize_stack(cls, shape, blobs):
+    def colocalize_stack(
+            cls, shape: Sequence[int], blobs: "detector.Blobs"
+    ) -> Dict[Tuple[int, int], "BlobMatch"]:
         """Entry point to colocalizing blobs within a stack.
 
         Args:
-            shape (List[int]): Image shape in z,y,x.
-            blobs (:obj:`np.ndarray`): 2D Numpy array of blobs.
+            shape: Image shape in z,y,x.
+            blobs: Blobs.
 
         Returns:
-            dict[tuple[int, int], :class:`BlobMatch`]: The
-            dictionary of matches, where keys are tuples of the channel pairs,
-            and values are blob match objects. 
+            Dictionary of matches, where keys are tuples of the channel pairs,
+            and values are blob match objects.
 
         """
         _logger.info(
@@ -256,11 +260,11 @@ class StackColocalizer(object):
                             args=(coord, offset, shape)))
                     else:
                         # pickle full set of variables
+                        blobs_roi = detector.Blobs(detector.get_blobs_in_roi(
+                            blobs.blobs, offset, shape)[0])
                         pool_results.append(pool.apply_async(
                             StackColocalizer.colocalize_block,
-                            args=(coord, offset, shape,
-                                  detector.get_blobs_in_roi(
-                                      blobs, offset, shape)[0], match_tol,
+                            args=(coord, offset, shape, blobs_roi, match_tol,
                                   True)))
         
         # dict of channel combos to blob matches data frame
@@ -422,14 +426,14 @@ def colocalize_blobs(roi, blobs, thresh=None):
 
 
 def colocalize_blobs_match(
-        blobs: np.ndarray, offset: Sequence[int], size: Sequence[int],
+        blobs: "detector.Blobs", offset: Sequence[int], size: Sequence[int],
         tol: Sequence[float], inner_padding: Optional[Sequence[int]] = None
 ) -> Optional[Dict[Tuple[int, int], "BlobMatch"]]:
     """Co-localize blobs in separate channels but the same ROI by finding
     optimal blob matches.
 
     Args:
-        blobs: Blobs from separate channels.
+        blobs: Blobs.
         offset: ROI offset given as x,y,z.
         size: ROI shape given as x,y,z.
         tol: Tolerances for matching given as x,y,z
@@ -443,21 +447,21 @@ def colocalize_blobs_match(
     """
     if blobs is None:
         return None
-    thresh, scaling, inner_pad, resize, blobs = verifier.setup_match_blobs_roi(
-        tol, blobs)
+    thresh, scaling, inner_pad, resize, blobs_roi = \
+        verifier.setup_match_blobs_roi(tol, blobs)
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}
-    channels = np.unique(detector.Blobs.get_blobs_channel(blobs)).astype(int)
+    channels = np.unique(blobs.get_blobs_channel(blobs_roi)).astype(int)
     for chl in channels:
         # pair channels
-        blobs_chl = detector.Blobs.blobs_in_channel(blobs, chl)
+        blobs_chl = blobs.blobs_in_channel(blobs_roi, chl)
         for chl_other in channels:
             # prevent duplicates by skipping other channels below given channel
             if chl >= chl_other: continue
             # find colocalizations between blobs from one channel to blobs
             # in another channel
-            blobs_chl_other = detector.Blobs.blobs_in_channel(blobs, chl_other)
+            blobs_chl_other = blobs.blobs_in_channel(blobs_roi, chl_other)
             blobs_inner_plus, blobs_truth_inner_plus, offset_inner, \
                 size_inner, matches = verifier.match_blobs_roi(
                     blobs_chl_other, blobs_chl, offset, size, thresh, scaling,
@@ -465,8 +469,8 @@ def colocalize_blobs_match(
             
             # reset truth and confirmation blob flags in matches
             chl_combo = (chl, chl_other)
-            matches.update_blobs(detector.Blobs.set_blob_truth, -1)
-            matches.update_blobs(detector.Blobs.set_blob_confirmed, -1)
+            matches.update_blobs(blobs.set_blob_truth, -1)
+            matches.update_blobs(blobs.set_blob_confirmed, -1)
             matches_chls[chl_combo] = matches
     return matches_chls
 

@@ -155,7 +155,8 @@ class VerifierEditor(plot_support.ImageSyncMixin):
 
                 # display plot editor centered on blob
                 overlayer = plot_support.ImageOverlayer(
-                    ax, aspect, origin, rgb=config.rgb)
+                    ax, aspect, origin, rgb=config.rgb,
+                    additive_blend=self.additive_blend)
                 plot_ed = plot_editor.PlotEditor(
                     overlayer, self.img5d.img[0], None, None)
                 

@@ -451,6 +451,8 @@ def colocalize_blobs_match(
         tol: Tolerances for matching given as x,y,z
         inner_padding: ROI padding given as x,y,z; defaults
             to None to use the padding based on ``tol``.
+        channels: Indices of channels to colocalize. Defaults to None, which
+            will use all channels in ``blobs``.
 
     Returns:
         Dictionary where keys are tuples of the two channels compared and
@@ -464,9 +466,13 @@ def colocalize_blobs_match(
     if inner_padding is None:
         inner_padding = inner_pad
     matches_chls = {}
+    
+    # get channels in blobs
     blob_chls = np.unique(blobs.get_blobs_channel(blobs_roi)).astype(int)
     if channels is not None:
+        # filter blob channels to only include specified channels
         blob_chls = [c for c in blob_chls if c in channels]
+    
     for chl in blob_chls:
         # pair channels
         blobs_chl = blobs.blobs_in_channel(blobs_roi, chl)
@@ -486,6 +492,7 @@ def colocalize_blobs_match(
             matches.update_blobs(blobs.set_blob_truth, -1)
             matches.update_blobs(blobs.set_blob_confirmed, -1)
             matches_chls[chl_combo] = matches
+    
     return matches_chls
 
 

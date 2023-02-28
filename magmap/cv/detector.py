@@ -41,8 +41,6 @@ class Blobs:
     """Blob storage class.
     
     Attributes:
-        blobs: 2D Numpy array of blobs in the format
-            ``[[z, y, x, radius, ...], ...]``; defaults to None.
         blob_matches: Sequence of blob matches; defaults to None.
         colocalizations: 2D Numpy array of same length
             as ``blobs`` with a column for each channel, where 0 = no
@@ -94,19 +92,18 @@ class Blobs:
         ABS_X = "abs_x"
     
     #: Dictionary of column types to column indices in :attr:`blobs`.
-    col_inds: Dict["Cols", int] = {c: i for i, c in enumerate(Cols)}
+    _col_inds: Dict["Cols", int] = {c: i for i, c in enumerate(Cols)}
     
     def __init__(
-            self,
-            blobs: Optional[np.ndarray] = None,
-            blob_matches: Optional["colocalizer.BlobMatch"] = None,
-            colocalizations: Optional[np.ndarray] = None,
-            path: str = None):
+            self, blobs=None, blob_matches=None, colocalizations=None,
+            path=None, cols=None):
         """Initialize blobs storage object."""
-        self.blobs = blobs
-        self.blob_matches = blob_matches
-        self.colocalizations = colocalizations
-        self.path = path
+        # set attributes from args
+        self._cols: Optional[Sequence[str]] = cols
+        self.blobs: Optional[np.ndarray] = blobs
+        self.blob_matches: Optional["colocalizer.BlobMatch"] = blob_matches
+        self.colocalizations: Optional[np.ndarray] = colocalizations
+        self.path: str = path
         
         # additional attributes
         self.ver: int = self.BLOBS_NP_VER
@@ -115,22 +112,53 @@ class Blobs:
         self.resolutions: Optional[Sequence[float]] = None
         self.basename: Optional[str] = None
         self.scaling: np.ndarray = np.ones(3)
-        
-        #: Blob columns loaded from metadata.
-        self.cols: Sequence[str] = [c.value for c in self.Cols]
+    
+    @property
+    def cols(self) -> Optional[Sequence[str]]:
+        """Blob column names."""
+        return self._cols
 
-    def set_col_inds(self):
-        """Set column indices from stored column strings in :attr:`cols`."""
+    @cols.setter
+    def cols(self, cols: Optional[Sequence[str]]):
+        """Set blob column names.
+        
+        Args:
+            cols: Sequence of names, which should be values of :class:`Cols`.
+
+        """
+        self._cols = cols
+        
         # default indices to None to indicate column does not exist
-        Blobs.col_inds = {c: None for c in self.Cols}
+        Blobs._col_inds = {c: None for c in self.Cols}
         
         for i, col in enumerate(self.cols):
             try:
                 # set index based on position
-                Blobs.col_inds[self.Cols(col)] = i
+                Blobs._col_inds[self.Cols(col)] = i
             except ValueError:
                 _logger.warn(
                     "%s is not a valid Blobs column, skipping", col)
+
+    @property
+    def blobs(self) -> Optional[np.ndarray]:
+        """Array of blobs."""
+        return self._blobs
+    
+    @blobs.setter
+    def blobs(self, blobs):
+        """Set the array of blobs.
+        
+        Args:
+            blobs: 2D NumPy arrray of blobs in the format:
+                ``[[z, y, x, radius, ...], ...]``. Can be None.
+        
+        """
+        self._blobs = blobs
+        
+        if blobs is not None and self.cols is None:
+            # default to column names based on number of blob columns
+            self.cols: Sequence[str] = [
+                c.value for c in self.Cols][:blobs.shape[1]]
 
     def load_blobs(self, path: str = None) -> "Blobs":
         """Load blobs from an archive.
@@ -161,25 +189,19 @@ class Blobs:
                 # load archive version number
                 self.basename = info[self.Keys.VER.value]
             
+            # set column indices
+            if self.Keys.COLS.value in info:
+                # load columns from archive
+                # TODO: convert column indices to instance attribute after
+                #   moving all blob functions into this class
+                self.cols = info[self.Keys.COLS.value]
+            
             if self.Keys.BLOBS.value in info:
                 # load blobs as a Numpy array
                 self.blobs = info[self.Keys.BLOBS.value]
             
-            # set column indices
-            if self.Keys.COLS.value in info:
-                # load column indices from archive
-                # TODO: convert to instance attribute after moving all blob
-                #   functions into this class
-                self.cols = info[self.Keys.COLS.value]
-            else:
-                # default to assume existing blob cols are ordered as in Cols;
-                # if no blobs, simpy use the first 6 cols, generally the min
-                # cols saved in blobs v1
-                ncols = 6 if self.blobs is None else self.blobs.shape[1]
-                self.cols = self.cols[:ncols]
-            self.set_col_inds()
             _logger.debug(
-                "Set column indices:\n%s", pprint.pformat(Blobs.col_inds))
+                "Set column indices:\n%s", pprint.pformat(Blobs._col_inds))
             
             if self.Keys.COLOCS.value in info:
                 # load intensity-based colocalizations
@@ -231,7 +253,7 @@ class Blobs:
             # save current attributes
             
             # filter out column indices that are None
-            col_inds = {k: v for k, v in self.col_inds.items() if v is not None}
+            col_inds = {k: v for k, v in self._col_inds.items() if v is not None}
             
             blobs_arc = {
                 Blobs.Keys.VER.value: self.ver,
@@ -306,7 +328,7 @@ class Blobs:
         # map added col names to indices, assumed to be ordered as in Cols
         for i, col in enumerate(cls.Cols):
             if i < shape[1]: continue
-            Blobs.col_inds[cls.Cols(col)] = i
+            Blobs._col_inds[cls.Cols(col)] = i
         
         # copy relative to absolute coords
         blobs[:, cls._get_abs_inds()] = blobs[:, cls._get_rel_inds()]
@@ -355,7 +377,7 @@ class Blobs:
             it is an array of blobs.
 
         """
-        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CONFIRMED])
+        return cls.get_blob_col(blob, cls._col_inds[cls.Cols.CONFIRMED])
     
     @classmethod
     def get_blob_truth(cls, blob: np.ndarray) -> Union[int, float, np.ndarray]:
@@ -369,7 +391,7 @@ class Blobs:
             it is an array of blobs.
 
         """
-        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.TRUTH])
+        return cls.get_blob_col(blob, cls._col_inds[cls.Cols.TRUTH])
 
     @classmethod
     def get_blobs_channel(cls, blob: np.ndarray) -> np.ndarray:
@@ -384,24 +406,24 @@ class Blobs:
 
         """
         # get the channel index from the class attribute of indices
-        return cls.get_blob_col(blob, cls.col_inds[cls.Cols.CHANNEL])
+        return cls.get_blob_col(blob, cls._col_inds[cls.Cols.CHANNEL])
     
     @classmethod
     def _get_rel_inds(cls) -> List[int]:
         """Get relative coordinate indices."""
         return [
-            cls.col_inds[cls.Cols.Z],
-            cls.col_inds[cls.Cols.Y],
-            cls.col_inds[cls.Cols.X]
+            cls._col_inds[cls.Cols.Z],
+            cls._col_inds[cls.Cols.Y],
+            cls._col_inds[cls.Cols.X]
         ]
 
     @classmethod
     def _get_abs_inds(cls) -> List[int]:
         """Get absolute coordinate indices."""
         return [
-            cls.col_inds[cls.Cols.ABS_Z],
-            cls.col_inds[cls.Cols.ABS_Y],
-            cls.col_inds[cls.Cols.ABS_X]
+            cls._col_inds[cls.Cols.ABS_Z],
+            cls._col_inds[cls.Cols.ABS_Y],
+            cls._col_inds[cls.Cols.ABS_X]
         ]
     
     @classmethod
@@ -461,7 +483,7 @@ class Blobs:
 
         """
         return cls.set_blob_col(
-            blob, cls.col_inds[cls.Cols.CONFIRMED], *args, **kwargs)
+            blob, cls._col_inds[cls.Cols.CONFIRMED], *args, **kwargs)
     
     @classmethod
     def set_blob_truth(
@@ -478,7 +500,7 @@ class Blobs:
 
         """
         return cls.set_blob_col(
-            blob, cls.col_inds[cls.Cols.TRUTH], *args, **kwargs)
+            blob, cls._col_inds[cls.Cols.TRUTH], *args, **kwargs)
     
     @classmethod
     def set_blob_channel(
@@ -495,7 +517,7 @@ class Blobs:
 
         """
         return cls.set_blob_col(
-            blob, cls.col_inds[cls.Cols.CHANNEL], *args, **kwargs)
+            blob, cls._col_inds[cls.Cols.CHANNEL], *args, **kwargs)
     
     @classmethod
     def set_blob_abs_coords(
@@ -637,7 +659,7 @@ class Blobs:
             ``blob`` modified in-place.
 
         """
-        inds = cls.col_inds.values() if remove_extra else slice(blobs.shape[1])
+        inds = cls._col_inds.values() if remove_extra else slice(blobs.shape[1])
         return blobs[:, [i for i in inds if i not in cls._get_abs_inds()]]
     
     @classmethod
@@ -709,10 +731,10 @@ class Blobs:
             format.
         """
         inds = [
-            cls.col_inds[cls.Cols.RADIUS],
-            cls.col_inds[cls.Cols.CONFIRMED],
-            cls.col_inds[cls.Cols.TRUTH],
-            cls.col_inds[cls.Cols.CHANNEL],
+            cls._col_inds[cls.Cols.RADIUS],
+            cls._col_inds[cls.Cols.CONFIRMED],
+            cls._col_inds[cls.Cols.TRUTH],
+            cls._col_inds[cls.Cols.CHANNEL],
         ]
         return np.array([*blob[cls._get_abs_inds()], *blob[inds]])
 

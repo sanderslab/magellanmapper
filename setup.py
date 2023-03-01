@@ -1,5 +1,5 @@
 # MagellanMapper setup script
-# Author: David Young, 2017, 2020
+# Author: David Young, 2017, 2023
 
 import setuptools
 
@@ -37,16 +37,17 @@ _EXTRAS_JUPYTER = ["jupyterlab", "bash_kernel"]
 # optional dependencies for classification
 _EXTRAS_CLASSIFER = ["tensorflow"]
 
-# optional dependencies for full GUI; note that this group is not necessary
+# optional dependencies for main GUI; note that this group is not necessary
 # for the Matplotlib-based viewers (eg ROI Editor, Atlas Editor)
 _EXTRAS_GUI = [
     # backend error with 5.15.8
     "PyQt5 <= 5.15.7",
-    "vtk",
-    "mayavi",
     "pyface",
     "traitsui",
 ]
+
+#: Optional dependencies for the 3D viewer.
+_EXTRAS_3D = ["mayavi"]
 
 # installation configuration
 config = {
@@ -98,6 +99,7 @@ config = {
         "jupyter": _EXTRAS_JUPYTER,
         "classifier": _EXTRAS_CLASSIFER,
         "gui": _EXTRAS_GUI,
+        "3d": _EXTRAS_3D,
         
         # dependencies for most common tasks
         "most": [
@@ -118,6 +120,7 @@ config = {
             *_EXTRAS_IMPORT,
             *_EXTRAS_AWS,
             *_EXTRAS_JUPYTER,
+            *_EXTRAS_3D,
         ]
     },
 }

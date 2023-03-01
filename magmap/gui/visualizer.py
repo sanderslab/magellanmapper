@@ -47,16 +47,24 @@ from traits.api import Any, Array, Bool, Button, Event, Float, Instance, \
     Int, List, observe, on_trait_change, Property, push_exception_handler, \
     Str, HasTraits
 from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
-    EnumEditor, HGroup, HSplit, Item, ProgressEditor, RangeEditor, \
+    EnumEditor, HGroup, HSplit, Item, NullEditor, ProgressEditor, RangeEditor, \
     StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
 from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
-from tvtk.pyface.scene_editor import SceneEditor
-from tvtk.pyface.scene_model import SceneModelError
-from mayavi.tools.mlab_scene_model import MlabSceneModel
-from mayavi.core.ui.mayavi_scene import MayaviScene
-import vtk
+
+try:
+    from tvtk.pyface.scene_editor import SceneEditor
+    from tvtk.pyface.scene_model import SceneModelError
+    from mayavi.tools.mlab_scene_model import MlabSceneModel
+    from mayavi.core.ui.mayavi_scene import MayaviScene
+    import vtk
+except ImportError:
+    SceneEditor = None
+    SceneModelError = None
+    MlabSceneModel = None
+    MayaviScene = None
+    vtk = None
 
 from magmap.atlas import ontology
 from magmap.brain_globe import bg_controller
@@ -85,9 +93,10 @@ def main():
     # show complete stacktraces for debugging
     push_exception_handler(reraise_exceptions=True)
 
-    # suppress output window on Windows but print errors to console
-    vtk_out = vtk.vtkOutputWindow()
-    vtk_out.SetInstance(vtk_out)
+    if vtk is not None:
+        # suppress output window on Windows but print errors to console
+        vtk_out = vtk.vtkOutputWindow()
+        vtk_out.SetInstance(vtk_out)
 
     # create Trait-enabled GUI
     visualization = Visualization()
@@ -496,7 +505,7 @@ class Visualization(HasTraits):
     flipz = True  # True to invert 3D vis along z-axis
     controls_created = Bool(False)
     mpl_fig_active = Any
-    scene = Instance(MlabSceneModel, ())
+    scene = None if MlabSceneModel is None else Instance(MlabSceneModel, ())
     scene_3d_shown = False  # 3D Mayavi display shown
     selected_viewer_tab = vis_handler.ViewerTabs.ROI_ED
     select_controls_tab = Int(-1)
@@ -965,6 +974,9 @@ class Visualization(HasTraits):
     )
 
     # tabbed panel with ROI Editor, Atlas Editor, and Mayavi scene
+    # (if installed)
+    mayavi_ed = NullEditor if SceneEditor is None else SceneEditor(
+        scene_class=MayaviScene)
     panel_figs = Tabbed(
         # set a small width to allow window to be resized down to this size
         Item("_roi_ed_fig", label="ROI Editor", show_label=False,
@@ -972,14 +984,14 @@ class Visualization(HasTraits):
         Item("_atlas_ed_fig", label="Atlas Editor", show_label=False,
              editor=MPLFigureEditor()),
         Item("scene", label="3D Viewer", show_label=False,
-             editor=SceneEditor(scene_class=MayaviScene)),
+             editor=mayavi_ed),
     )
 
     # icon as a Pyface resource if image file exists
     icon_img = (ImageResource(str(config.ICON_PATH))
                 if config.ICON_PATH.exists() else None)
     
-    # set up the GUI layout; 
+    # set up the GUI layout
     view = View(
         # control the HSplit width ratio by setting min widths for an item in
         # each Tabbed view and initial window total width; panel_figs expands
@@ -1698,25 +1710,28 @@ class Visualization(HasTraits):
             
             if self._atlas_label is not None and self.scene_3d_shown:
                 title = ontology.get_label_name(self._atlas_label)
-                if title is not None:
+                if title is not None and self.scene is not None:
                     # update title in 3D viewer
                     self._mlab_title = self.scene.mlab.title(title)
     
-    def _post_3d_display(self, title="clrbrain3d", show_orientation=True):
+    def _post_3d_display(
+            self, title: str = "magmap3d", show_orientation: bool = True):
         """Show axes and saved ROI parameters after 3D display.
         
         Args:
-            title: Path without extension to save file if 
-                :attr:``config.savefig`` is set to an extension. Defaults to 
-                "clrbrain3d".
+            title: Path without extension to save file if
+                :attr:``config.savefig`` is set to an extension. Defaults to
+                "magmap3d".
             show_orientation: True to show orientation axes; defaults to True.
         """
+        if self.scene is None: return
+        
         if self.scene_3d_shown:
             if config.savefig in config.FORMATS_3D:
                 path = "{}.{}".format(title, config.savefig)
                 libmag.backup_file(path)
                 try:
-                    # save before setting any other objects to avoid VTK 
+                    # save before setting any other objects to avoid VTK
                     # render error
                     print("saving 3D scene to {}".format(path))
                     self.scene.mlab.savefig(path)
@@ -1724,10 +1739,10 @@ class Visualization(HasTraits):
                     # the scene may not have been activated yet
                     print("unable to save 3D surface")
             if show_orientation:
-                # TODO: cannot save file manually once orientation axes are on 
-                # and have not found a way to turn them off easily, so 
-                # consider turning them off by default and deferring to the 
-                # GUI to turn them back on
+                # TODO: cannot save file manually once orientation axes are on
+                #   and have not found a way to turn them off easily, so
+                #   consider turning them off by default and deferring to the
+                #   GUI to turn them back on
                 self.show_orientation_axes(self.flipz)
         # updates the GUI here even though it doesn't elsewhere for some reason
         if self._rois_selections.selections:
@@ -1793,6 +1808,11 @@ class Visualization(HasTraits):
             print("Main image has not been loaded, cannot show 3D Viewer")
             return
         
+        if self.scene is None:
+            self.update_status_bar_msg(
+                config.format_import_err("mayavi", task="3D viewing"))
+            return
+        
         # show raw 3D image unless selected not to
         curr_offset, curr_roi_size, feedback = self._check_roi_position()
         if Vis3dOptions.CLEAR.value in self._check_list_3d:
@@ -1836,6 +1856,8 @@ class Visualization(HasTraits):
         Args:
             label_id: ID of label to display.
         """
+        if self.scene is None: return
+        
         # get bounding box for label region
         bbox = cv_nd.get_label_bbox(config.labels_img, label_id)
         if bbox is None: return
@@ -2450,6 +2472,8 @@ class Visualization(HasTraits):
         """Provide a default camera orientation with orientation axes.
 
         """
+        if self.scene is None: return
+        
         view = self.scene.mlab.view(*self.scene.mlab.view()[:3], "auto")
         roll = self.scene.mlab.roll(-175)
         if self.scene_3d_shown:
@@ -2458,14 +2482,19 @@ class Visualization(HasTraits):
         #self.scene.mlab.axes() # need to adjust units to microns
         print("Scene activated with view:", view, "roll:", roll)
     
-    def show_orientation_axes(self, flipud=False):
-        """Show orientation axes with option to flip z-axis to match 
-        handedness in Matplotlib images with z increasing upward.
+    def show_orientation_axes(self, flipud: bool = False):
+        """Show orientation axes with option to flip z-axis.
+        
+        Allows adjusting z-axis to match handedness in Matplotlib images with
+        z increasing upward.
         
         Args:
-            flipud: True to invert z-axis, which also turns off arrowheads; 
+            flipud: True to invert z-axis, which also turns off arrowheads;
                 defaults to True.
+        
         """
+        if self.scene is None: return
+        
         orient = self.scene.mlab.orientation_axes()
         if flipud:
             # flip z-axis and turn off now upside-down arrowheads
@@ -2474,7 +2503,9 @@ class Visualization(HasTraits):
     
     @on_trait_change("scene.busy")
     def _scene_changed(self):
-        # show camera position after roll changes; only use roll for 
+        if self.scene is None: return
+        
+        # show camera position after roll changes; only use roll for
         # simplification since almost any movement involves a roll change
         roll = self.scene.mlab.roll()
         if self._camera_pos is None or self._camera_pos["roll"] != roll:
@@ -2724,7 +2755,8 @@ class Visualization(HasTraits):
     
     def show_3d_blobs(self):
         """Show blobs as spheres in 3D viewer."""
-        if self.segments is None or len(self.segments) < 1:
+        if self.scene is None or self.segments is None or len(
+                self.segments) < 1:
             return
         
         # get blobs in ROI and display as spheres in Mayavi viewer
@@ -2920,8 +2952,10 @@ class Visualization(HasTraits):
         }
         if self._styles_2d[0] == Styles2D.SQUARE_3D.value:
             # layout for square ROIs with 3D screenshot for square-ish fig
-            screenshot = self.scene.mlab.screenshot(
-                mode="rgba", antialiased=True) if self.scene_3d_shown else None
+            screenshot = None
+            if self.scene_3d_shown and self.screen:
+                screenshot = self.scene.mlab.screenshot(
+                    mode="rgba", antialiased=True)
             roi_ed.plot_2d_stack(
                 *stack_args, **stack_args_named, mlab_screenshot=screenshot)
         elif self._styles_2d[0] == Styles2D.SINGLE_ROW.value:
@@ -3218,7 +3252,7 @@ class Visualization(HasTraits):
                     self.atlas_eds[0].save_fig(path)
             
             elif self.selected_viewer_tab is vis_handler.ViewerTabs.MAYAVI:
-                if config.filename:
+                if self.scene is not None and config.filename:
                     # save 3D image with extension in config
                     screenshot = self.scene.mlab.screenshot(
                         mode="rgba", antialiased=True)

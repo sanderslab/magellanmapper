@@ -290,54 +290,52 @@ class Blobs:
             pprint.pprint(blobs_arc)
         return blobs_arc
     
-    @classmethod
     def format_blobs(
-            cls, blobs: np.ndarray,
-            channel: Optional[Union[int, Sequence[int]]] = None) -> np.ndarray:
+            self, channel: Optional[Union[int, Sequence[int]]] = None
+    ) -> np.ndarray:
         """Format blobs with the full set of fields.
          
-
         Blobs in MagellanMapper can be assumed to start with ``z, y, x, radius``
-        but should use this class's functions to manipulate other fields to 
+        but should use this class's functions to manipulate other fields to
         ensure that the correct columns are accessed. This function adds
         these fields: ``confirmation, truth, channel, abs z, abs y, abs x``.
 
         "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
 
-        "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where 
-        a "matched" truth blob is one that has a detected blob within a given 
+        "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where
+        a "matched" truth blob is one that has a detected blob within a given
         tolerance.
 
         Args:
-            blobs: Numpy 2D array in ``[[z, y, x, radius, ...], ...]`` format.
-            channel: Channel to set. Defaults to None, in which case the channel 
+            channel: Channel to set. Defaults to None, in which case the channel
                 will not be updated.
 
         Returns:
-            Blobs array formatted as 
-            ``[[z, y, x, radius, confirmation, truth, channel, 
+            Blobs array formatted as
+            ``[[z, y, x, radius, confirmation, truth, channel,
               abs_z, abs_y, abs_x], ...]``.
         
         """
         # target num of cols minus current cols
-        shape = blobs.shape
-        extra_cols = len(cls.Cols) - shape[1]
+        shape = self.blobs.shape
+        extra_cols = len(self.Cols) - shape[1]
         extras = np.ones((shape[0], extra_cols)) * -1
-        blobs = np.concatenate((blobs, extras), axis=1)
+        self.blobs = np.concatenate((self.blobs, extras), axis=1)
         
         # map added col names to indices, assumed to be ordered as in Cols
-        for i, col in enumerate(cls.Cols):
+        for i, col in enumerate(self.Cols):
             if i < shape[1]: continue
-            Blobs._col_inds[cls.Cols(col)] = i
+            self._col_inds[self.Cols(col)] = i
         
         # copy relative to absolute coords
-        blobs[:, cls._get_abs_inds()] = blobs[:, cls._get_rel_inds()]
+        self.blobs[:, self._get_abs_inds()] = self.blobs[
+            :, self._get_rel_inds()]
         
         if channel is not None:
             # update channel
-            cls.set_blob_channel(blobs, channel)
+            self.set_blob_channel(self.blobs, channel)
         
-        return blobs
+        return self.blobs
 
     @classmethod
     def get_blob_col(
@@ -867,7 +865,7 @@ def detect_blobs(
             _logger.debug("No blobs detected for channel %s", chl)
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
-        blobs = Blobs.format_blobs(blobs_log, chl)
+        blobs = Blobs(blobs_log).format_blobs(chl)
         #print(blobs)
         blobs_all.append(blobs)
     if not blobs_all:

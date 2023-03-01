@@ -22,7 +22,7 @@ class TestDetector(unittest.TestCase):
         blobs[:, :3] = np.multiply(blobs[:, :3], 100).astype(int)
         blobs[:, 3] = blobs[:, 3] * 10
         bl = detector.Blobs(blobs)
-        bl.blobs = bl.format_blobs(bl.blobs)
+        bl.format_blobs()
         print(f"Blobs:\n{bl.blobs}")
         return bl
     

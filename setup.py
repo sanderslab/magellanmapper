@@ -41,7 +41,7 @@ _EXTRAS_CLASSIFER = ["tensorflow"]
 # for the Matplotlib-based viewers (eg ROI Editor, Atlas Editor)
 _EXTRAS_GUI = [
     # backend error with 5.15.8
-    "PyQt5 <= 5.15.7",
+    "PyQt5 != 5.15.8",
     "pyface",
     "traitsui",
 ]

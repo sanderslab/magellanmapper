@@ -937,7 +937,7 @@ def format_import_err(
     
     if name is None:
         name = dist_name.capitalize()
-    task = "" if task is None else f"for {task}"
-    msg = f"{name} is required {task} but not installed. Please install, " \
+    task = "" if task is None else f"for {task} "
+    msg = f"{name} is required {task}but not installed. Please install, " \
           f"eg with 'pip install {dist_name}'."
     return msg

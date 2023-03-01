@@ -46,7 +46,7 @@ scikit-image==0.19.3
 scipy==1.10.0
 SimpleITK==2.3.0.dev117+g0640d
 six==1.16.0
-tifffile==2022.10.10
+tifffile==2023.2.28
 traits==6.4.1
 traitsui==7.4.2
 treelib==1.6.1

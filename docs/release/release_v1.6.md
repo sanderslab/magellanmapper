@@ -98,6 +98,7 @@
 
 - Match-based colocalization can run without the main image, using just its metadata instead (#117)
 - These colocalizations are now displayed in the 3D viewer (#121)
+- Specific match-based colocalizations channels can be set, eg `--channels 0 2` (#451)
 - Fixed match-based colocalizations when no matches are found (#117, #120)
 - Fixed slow loading of match-based colocalizations (#119, #123)
 

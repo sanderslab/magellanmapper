@@ -2541,6 +2541,7 @@ class Visualization(HasTraits):
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
             segs_all = detector.detect_blobs(roi, chls)
+            self.blobs.blobs = segs_all
             
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # match blobs between two channels
@@ -2548,7 +2549,7 @@ class Visualization(HasTraits):
                     detector.calc_overlap(),
                     config.roi_profile["verify_tol_factor"])
                 matches = colocalizer.colocalize_blobs_match(
-                    detector.Blobs(segs_all), np.zeros(3, dtype=int), roi_size,
+                    self.blobs, np.zeros(3, dtype=int), roi_size,
                     verify_tol, np.zeros(3, dtype=int))
                 if matches and len(matches) > 0:
                     # TODO: include all channel combos
@@ -2560,12 +2561,14 @@ class Visualization(HasTraits):
             print("Selecting blobs in ROI from loaded blobs")
             segs_all, mask = detector.get_blobs_in_roi(
                 config.blobs.blobs, offset, roi_size, self._margin)
+            self.blobs.blobs = segs_all
             
             # shift coordinates to be relative to offset
             segs_all[:, :3] = np.subtract(segs_all[:, :3], offset[::-1])
-            segs_all = detector.Blobs(segs_all).format_blobs()
-            segs_all, mask_chl = detector.Blobs.blobs_in_channel(
+            segs_all = self.blobs.format_blobs()
+            segs_all, mask_chl = self.blobs.blobs_in_channel(
                 segs_all, chls, return_mask=True)
+            self.blobs.blobs = segs_all
             
             if ColocalizeOptions.MATCHES.value in self._colocalize:
                 # get blob matches from whole-image match colocalization,
@@ -2581,9 +2584,9 @@ class Visualization(HasTraits):
                     matches = matches[tuple(matches.keys())[0]]
                     shift = [n * -1 for n in roi[0]]
                     matches.update_blobs(
-                        detector.Blobs.shift_blob_rel_coords, shift)
+                        self.blobs.shift_blob_rel_coords, shift)
                     matches.update_blobs(
-                        detector.Blobs.multiply_blob_rel_coords,
+                        self.blobs.multiply_blob_rel_coords,
                         config.blobs.scaling[:3])
                     matches.get_mean_coords()
                     self.blobs.blob_matches = matches
@@ -2605,24 +2608,26 @@ class Visualization(HasTraits):
             # current ROI, so fill in the padding area from segs_all
             # TODO: remove since blobs from different sources may be confusing?
             _, segs_in_mask = detector.get_blobs_in_roi(
-                segs_all, np.zeros(3), 
+                segs_all, np.zeros(3),
                 roi_size, np.multiply(self.border, -1))
             segs_outside = segs_all[np.logical_not(segs_in_mask)]
             print("segs_outside:\n{}".format(segs_outside))
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
-            segs = detector.Blobs(segs).format_blobs()
-            segs = detector.Blobs.blobs_in_channel(segs, chls)
+            blobs_segs = detector.Blobs(segs)
+            blobs_segs.format_blobs()
+            segs = blobs_segs.blobs_in_channel(blobs_segs.blobs, chls)
             segs_all = np.concatenate((segs, segs_outside), axis=0)
+            self.blobs.blobs = segs_all
             
         if segs_all is not None and len(segs_all) > 0:
             # set confirmation flag to user-selected label for any
             # un-annotated blob
-            confirmed = detector.Blobs.get_blob_confirmed(segs_all)
+            confirmed = self.blobs.get_blob_confirmed(segs_all)
             confirmed[confirmed == -1] = self._segs_labels[0]
-            detector.Blobs.set_blob_confirmed(segs_all, confirmed)
+            self.blobs.set_blob_confirmed(segs_all, confirmed)
             
             # convert segments to visualizer table format and plot
-            self.segments = detector.Blobs.shift_blob_abs_coords(
+            self.segments = self.blobs.shift_blob_abs_coords(
                 segs_all, offset[::-1])
             self.blobs.blobs = self.segments
             if colocs is not None:
@@ -2656,7 +2661,7 @@ class Visualization(HasTraits):
                 
                 # set up colormaps for blobs and blob matches
                 self.segs_cmap = get_atlas_cmap(
-                    detector.Blobs.get_blob_abs_coords(
+                    self.blobs.get_blob_abs_coords(
                         segs_all[self.segs_in_mask]))
                 if (self.blobs.blob_matches is not None and
                         self.blobs.blob_matches.coords is not None):
@@ -2665,7 +2670,7 @@ class Visualization(HasTraits):
             
             else:
                 # default to color by channel
-                blob_chls = detector.Blobs.get_blobs_channel(
+                blob_chls = self.blobs.get_blobs_channel(
                     segs_all[self.segs_in_mask]).astype(int)
                 cmap = colormaps.discrete_colormap(
                     max(blob_chls) + 1, alpha, True, config.seed)
@@ -2682,16 +2687,16 @@ class Visualization(HasTraits):
             self.labels = segmenter.segment_ws(
                 self.roi, chls, None, blobs)
             '''
-            # 3D-seeded random-walker with high beta to limit walking 
-            # into background, also removing objects smaller than the 
-            # smallest blob, roughly normalized for anisotropy and 
+            # 3D-seeded random-walker with high beta to limit walking
+            # into background, also removing objects smaller than the
+            # smallest blob, roughly normalized for anisotropy and
             # reduced by not including the 4/3 factor
             min_size = int(
-                np.pi * np.power(np.amin(np.abs(blobs[:, 3])), 3) 
+                np.pi * np.power(np.amin(np.abs(blobs[:, 3])), 3)
                 / np.mean(plot_3d.calc_isotropic_factor(1)))
             print("min size threshold for r-w: {}".format(min_size))
             self.labels = segmenter.segment_rw(
-                self.roi, chls, beta=100000, 
+                self.roi, chls, beta=100000,
                 blobs=blobs, remove_small=min_size)
             '''
         #detector.show_blob_surroundings(self.segments, self.roi)

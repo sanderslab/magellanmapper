@@ -4,6 +4,8 @@
 
 These setting typically involve high-resolution such as microscopy images.
 """
+from typing import Dict, Optional, Tuple
+
 from magmap.settings import config
 from magmap.settings import profiles
 
@@ -128,6 +130,11 @@ class ROIProfile(profiles.SettingsDict):
         
         self["isotropic_vis"] = (1, 1, 1)  # only for visualization
         self["resize_blobs"] = None  # z,y,x coord scaling before verification
+        
+        #: Spectral unmixing for channel subtraction.
+        #: Provide as: ``{channel: [channel_to_subtract, factor], ...}``.
+        #: Eg, to subtract 90% of channel 1 from 3: ``{3: [1, 0.9]}``.
+        self.spectral_unmixing: Optional[Dict[int, Tuple[int, float]]] = None
         
         # update with args
         self.update(*args, **kwargs)

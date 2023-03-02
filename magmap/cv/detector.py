@@ -839,6 +839,26 @@ def detect_blobs(
         scale = calc_scaling_factor()
         scaling_factor = scale[2]
         
+        # perform spectral unmixing
+        spectral_unmixing = settings.spectral_unmixing
+        if spectral_unmixing is not None:
+            for spec_chl, spec_subtr in spectral_unmixing.items():
+                if spec_chl != chl: continue
+    
+                # subtract fraction of channel from the current channel
+                subt_chl = spec_subtr[0]
+                roi_spec = roi[..., subt_chl]
+                roi_detect = np.subtract(roi_detect, spec_subtr[1] * roi_spec)
+                roi_detect[roi_detect < 0] = 0
+                
+                if np.all(np.isclose(roi_spec, 0)):
+                    # during preprocessing, excluded channels are set to 0 and
+                    # thus cannot subtract as intended
+                    _logger.warn(
+                        "Spectral unmixing set to subtract channel %s from %s, "
+                        "but channel %s may not be set",
+                        subt_chl, spec_chl, subt_chl)
+        
         # find blobs; sigma factors can be sequences by axes for anisotropic
         # detection in skimage >= 0.15, or images can be interpolated to
         # isotropy using the "isotropic" MagellanMapper setting
@@ -851,7 +871,7 @@ def detect_blobs(
             roi_detect, min_sigma=min_sigma, max_sigma=max_sigma,
             num_sigma=num_sigma, threshold=threshold, overlap=overlap)
         if blobs_log.size < 1:
-            _logger.debug("No blobs detected")
+            _logger.debug("No blobs detected for channel %s", chl)
             continue
         blobs_log[:, 3] = blobs_log[:, 3] * math.sqrt(3)
         blobs = Blobs.format_blobs(blobs_log, chl)

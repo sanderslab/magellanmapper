@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from magmap.atlas import labels_meta, ontology
     from magmap.cv import detector
     from magmap.io import np_io
-    from magmap.settings import prefs_prof
+    from magmap.settings import prefs_prof, roi_prof
 
 #: str: Application name.
 APP_NAME = "MagellanMapper"
@@ -885,15 +885,16 @@ roi_profiles = []
 atlas_profile = None
 
 
-def get_roi_profile(i):
-    """Get the microscope profile for the given channel.
+def get_roi_profile(i: int) -> "roi_prof":
+    """Get the region of interest profile for the given channel.
     
     Args:
         i: Index, typically a channel number.
     
     Returns:
-        The profile settings for corresponding to the given channel number, 
+        The profile settings for corresponding to the given channel number,
         or the default profile if only one is available.
+    
     """
     settings = roi_profile
     if len(roi_profiles) > i:

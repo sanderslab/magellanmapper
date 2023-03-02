@@ -1,5 +1,5 @@
 # Plot Support for MagellanMapper
-# Author: David Young, 2018, 2020
+# Author: David Young, 2018, 2023
 """Shared plotting functions with the MagellanMapper package.
 """
 import pathlib
@@ -7,8 +7,8 @@ from collections import OrderedDict
 import math
 import os
 import warnings
-from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING, Tuple, \
-    Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, \
+    TYPE_CHECKING, Tuple, Union
 
 import numpy as np
 from matplotlib import backend_bases, gridspec, pyplot as plt
@@ -29,7 +29,7 @@ except ImportError as e:
     warnings.warn(config.WARN_IMPORT_SCALEBAR, ImportWarning)
 
 if TYPE_CHECKING:
-    from matplotlib import axes, backend_bases, colors, figure, image
+    from matplotlib import axes, colors, figure, image
     from magmap.gui import plot_editor
     from magmap.io import np_io
     import pandas as pd
@@ -949,26 +949,31 @@ def get_aspect_ratio(plane):
     return aspect, origin
 
 
-def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
+def scroll_plane(
+        event: backend_bases.MouseEvent, z_overview: int, max_size: int,
+        jump: Optional[Callable[[backend_bases.MouseEvent], Any]] = None,
+        max_scroll: Optional[int] = None
+) -> int:
     """Scroll through overview images along their orthogonal axis.
     
     Args:
-        event: Mouse or key event. For mouse events, scroll step sizes 
+        event: Mouse or key event. For mouse events, scroll step sizes
             will be used for movements. For key events, arrows will be used.
         z_overview: Index of plane to show.
         max_size: Maximum number of planes.
         jump: Function to jump to a given plane; defaults to None.
-            Activated if present and the right arrow button is pressed.
-        max_scroll: Max number of planes to scroll by mouse. Ignored during 
+            Activated if present and "j"+click is pressed.
+        max_scroll: Max number of planes to scroll by mouse. Ignored during
             jumps.
 
     Returns:
         int: Index of plane after scrolling.
+    
     """
     step = 0
     if isinstance(event, backend_bases.MouseEvent):
-        if jump is not None and event.button == 3:
-            # jump to the given plane for right-button mouse press; using a
+        if jump is not None and event.button == 1 and event.key == "j":
+            # jump to the given plane for "j"+left-click press; using a
             # mouse event also serves as workaround to get axes as they are
             # absent from key event if fig lost focus as happens sporadically
             z = jump(event)
@@ -981,7 +986,7 @@ def scroll_plane(event, z_overview, max_size, jump=None, max_scroll=None):
                 steps *= max_scroll / abs(steps)
             step += int(steps)  # decimal point num on some platforms
     elif isinstance(event, backend_bases.KeyEvent):
-        # finer-grained movements through keyboard controls since the 
+        # finer-grained movements through keyboard controls since the
         # finest scroll movements may be > 1
         if event.key in ("up", "right"):
             step += 1

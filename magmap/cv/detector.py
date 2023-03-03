@@ -851,7 +851,7 @@ def detect_blobs(
                 roi_detect = np.subtract(roi_detect, spec_subtr[1] * roi_spec)
                 roi_detect[roi_detect < 0] = 0
                 
-                if np.all(np.isclose(roi_spec, 0)):
+                if subt_chl not in channels:
                     # during preprocessing, excluded channels are set to 0 and
                     # thus cannot subtract as intended
                     _logger.warn(

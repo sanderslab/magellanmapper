@@ -17,7 +17,7 @@ javabridge==1.0.19.post9+gc8c12b4
 kiwisolver==1.4.4
 lazy_loader==0.1
 markdown-it-py==2.2.0
-matplotlib==3.7.0
+matplotlib==3.7.1
 matplotlib-scalebar==0.8.1
 mdurl==0.1.2
 meshio==5.3.4

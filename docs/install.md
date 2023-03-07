@@ -12,7 +12,7 @@
 
 ## Installation Options
 
-MagellanMapper can be installed depending on one's Python preferences.
+MagellanMapper supports several Python setups.
 
 ### Install using Conda
 
@@ -41,27 +41,28 @@ Install using Pip with Python >= 3.6 (see [Python versions](#python-version-supp
 pip install magellanmapper[most] --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-The `most` group installs the GUI and file import tools. The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
+The `most` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
 
 Java will need to be installed to support more image formats (eg from [here](https://www.azul.com/downloads/?package=jdk)).
 
 ### Developer installs
 
-If you download the source code, you can install in developer mode for the latest updates and any changes you make.
+You can install directly from the source code for the latest updates.
 
-Download the repo:
+First, download the repo:
 
 ```shell
 git clone https://github.com/sanderslab/magellanmapper.git
 ```
 
-For Conda:
+Next, install it:
+- For Conda:
 
 ```shell
 conda env create -n mag -f environment.yml
 ```
 
-Or Pip:
+- Or Pip:
 
 ```shell
 pip install -e .[most] --extra-index-url https://pypi.fury.io/dd8/
@@ -152,7 +153,7 @@ On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 20
 If installed from a Python package, enter your virtual environment and run:
 
 ```shell
-pip install -U magellanmapper  --extra-index-url https://pypi.fury.io/dd8/
+pip install -U magellanmapper --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 If installed from source:
@@ -167,26 +168,14 @@ Sometimes a virtual environment update is required for new depdendencies.
 
 ## Dependencies
 
-The main required and optional dependencies in MagellanMapper are:
-
-- Scipy, Numpy, Matplotlib stack
-- Mayavi/TraitsUI/Qt stack for GUI and 3D visualization
-- Scikit-image for image processing
-- Scikit-learn for machine learning based stats
-- Pandas for stats
-- [SimpleElastix](https://github.com/SuperElastix/SimpleElastix), a fork of SimpleITK with Elastix integrated (see below)
-- Python-Bioformats/Javabridge for importing images from propriety formast such as `.czi` (optional, requires Java SDK and C compiler)
-
 ### Python version support
 
 | MagellanMapper Version | Python Versions Supported | Deprecations |
 |-----|-----|-----|
 | < 1.4 | 3.6 | None |
 | 1.4-1.5 | 3.6-3.9 (no GUI support in 3.9) | None |
-| 1.6a1-a2 | 3.6-3.9 (GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI) | 3.6-3.7 to be removed in MM 1.7 |
+| 1.6a1-a3 | 3.6-3.9 (GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI) | 3.6-3.7 to be removed in MM 1.7 |
 | 1.6b1 | 3.6-3.11 (no GUI support in 3.10-3.11 as of 2022-12-30) | Same |
-
-The `bin/setup_multi_venvs.sh`, `bin/build_deps.sh`, and their `.bat` counterparts are provided to build these dependencies for multiple Python versions.
 
 As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
 
@@ -198,6 +187,21 @@ We've provided a few sets of pinned dependency versions:
 - Python 3.6: `envs/requirements_py36`
 
 These package versions are used for automated testing (continuous integration).
+
+### Optional installation groups
+
+| Group | Packages | Collection |
+|-----|-----|-----|
+| `most` | Import and GUI tools | Has `import`, `gui` |
+| `all` | All groups plus `seaborn`, `scikit-learn` | Has all below |
+| `import` | Imports proprietary image formats | |
+| `gui` | Main graphical interface | |
+| `pandas_plus` | Exports styled and Excel formats | |
+| `aws` | Tools for accessing AWS | |
+| `docs` | Tools for building docs | |
+| `jupyter` | Running Notebooks | |
+| `classifer` | Tensorflow | |
+| `3D` | 3D rendering | |
 
 ### Optional Dependency Build and Runtime Requirements
 
@@ -417,6 +421,12 @@ This error may occur in WSL even with an X11 server open. Workarounds include:
 Additional errors:
 
 - An error with VTK has prevented display of 3D images at least as of VTK 8.1.2 on RHEL 7.5, though the same VTK version works on Ubuntu 18.04
+
+```Building TVTK classes... Windows fatal exception: code 0xc0000374``` or ```Building TVTK classes... Fatal Python error: Segmentation fault```
+
+* Appears to be a sporadic installation issue (see [issue](https://github.com/sanderslab/magellanmapper/issues/401))
+* Workaround: reinstall Mayavi: `pip install mayavi`
+* Starting with MM v1.6a4, Mayavi will no longer be installed by defaul
 
 ### Display issues
 

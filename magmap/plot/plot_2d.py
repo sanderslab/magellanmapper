@@ -1395,6 +1395,7 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
 def main(
         ax: Optional["axes.Axes"] = None, df: Optional[pd.DataFrame] = None,
         kwargs_plot: Optional[Dict[str, Any]] = None, save: bool = True,
+        plot_2d_type: Optional["config.Plot2DTypes"] = None,
         **kwargs):
     """Perform 2D plot tasks.
     
@@ -1404,16 +1405,21 @@ def main(
         kwargs_plot: Dictionary of args to the underlying plot function;
             defaults to None.
         save: True (default) to save plot.
+        plot_2d_type: Enum of plot type. If None (default),
+            :attr:`config.plot_2d_type` will be used.
         kwargs: Additional args to :meth:`decorate_plot`.
     
     Returns:
         The generated axes, or ``ax`` if given.
     
     """
+    if plot_2d_type is None:
+        # default to set task from config
+        plot_2d_type = libmag.get_enum(
+            config.plot_2d_type, config.Plot2DTypes)
+
     # collect config settings
     size = config.plot_labels[config.PlotLabels.SIZE]
-    plot_2d_type = libmag.get_enum(
-        config.plot_2d_type, config.Plot2DTypes)
     x_cols = config.plot_labels[config.PlotLabels.X_COL]
     data_cols = config.plot_labels[config.PlotLabels.Y_COL]
     annot_col = config.plot_labels[config.PlotLabels.ANNOT_COL]

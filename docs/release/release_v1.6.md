@@ -6,6 +6,7 @@
 
 - Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
 - Available as binary wheel to install without requiring the source code
+- Faster, lighter installation with fewer required dependency packages
 - Simpler entry point to launch MagellanMapper: `mm`
 - Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
 - Atlas regions can be searched (see "Atlases > Region")
@@ -177,7 +178,8 @@
 - Updated to use the `axis_channel` parameter in Scikit-image's `transform.rescale` function (#115)
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
 - Scikit-learn is an optional rather than a required dependency (#150)
-- The AWS-related dependencies (`boto3`, `awscli`) are now optional (#150, #379)
+- The AWS-related dependencies (`boto3`, `awscli`) are now optional, installed in the `aws` group (#150, #379)
+- Mayavi/VTK are now optional, installed in the `3d` group (#455)
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)

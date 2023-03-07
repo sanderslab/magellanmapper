@@ -1551,6 +1551,10 @@ def main(
             y_unit, legend_names, size, title, kwargs_plot=kwargs_plot,
             **kwargs)
         base_out_path = "catplot"
+        
+    elif plot_2d_type is config.Plot2DTypes.DECORATE_PLOT:
+        # decorate plot labels
+        ax = decorate_plot(ax, title, x_lbl, y_lbl, x_unit, y_unit, **kwargs)
 
     if ax is not None:
         # perform plot post-processing tasks, including file save unless

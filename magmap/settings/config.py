@@ -320,6 +320,8 @@ class Plot2DTypes(Enum):
     SWARM_PLOT = auto()
     #: Generate a category plot through Seaborn.
     CAT_PLOT = auto()
+    #: Decorate plot labels.
+    DECORATE_PLOT = auto()
     
 
 plot_2d_type = None

@@ -181,22 +181,27 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     return param_map, translation
 
 
-def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True, 
-                thresh=None, holes_area=None):
-    """Curate images by in-painting where corresponding pixels are present in 
-    fixed image but not labels or other images and removing pixels 
+def curate_img(
+        fixed_img: sitk.Image, labels_img: sitk.Image,
+        imgs: Optional[List[sitk.Image]] = None, inpaint: bool = True,
+        carve: bool = True, thresh: Optional[float] = None,
+        holes_area: Optional[int] = None) -> List[sitk.Image]:
+    """Curate an image by the foreground of another.
+    
+    In-painting where corresponding pixels are present in fixed image but
+    not labels or other images and removing pixels
     present in those images but not the fixed image.
     
     Args:
         fixed_img: Image in SimpleITK format by which to curate other images.
-        labels_img: Labels image in SimpleITK format, used to determine 
+        labels_img: Labels image in SimpleITK format, used to determine
             missing pixels and measure overlap.
-        imgs: Array of additional images to curate corresponding pixels 
+        imgs: Array of additional images to curate corresponding pixels
             as those curated in ``labels_img``. Defaults to None.
         inpaint: True to in-paint; defaults to True.
-        carve: True to carve based on ``fixed_img``; defaults to True. If 
+        carve: True to carve based on ``fixed_img``; defaults to True. If
             ``inpaint`` is True, ``carve`` should typically be True as well.
-        thresh (float): Threshold to use for carving; defaults to None to
+        thresh: Threshold to use for carving; defaults to None to
             determine by taking the mean threshold of ``fixed_img``.
         holes_area: Maximum area of holes to fill when carving.
     
@@ -207,25 +212,26 @@ def _curate_img(fixed_img, labels_img, imgs=None, inpaint=True, carve=True,
     """
     fixed_img_np = sitk.GetArrayFromImage(fixed_img)
     labels_img_np = sitk.GetArrayFromImage(labels_img)
+    
     # ensure that labels image is first
     if imgs:
         imgs.insert(0, labels_img)
     else:
         imgs = [labels_img]
     
-    # mask image showing where result is 0 but fixed image is above thresh 
+    # mask image showing where result is 0 but fixed image is above thresh
     # to fill in with nearest neighbors
     if thresh is None:
         thresh = filters.threshold_mean(fixed_img_np)
     print("Carving thresh for curation: {}".format(thresh))
-    # fill only empty regions corresponding to filled pixels, but fills 
+    # fill only empty regions corresponding to filled pixels, but fills
     # some with 0 from dist transform pointing to appropriately empty pixels
     #to_fill = np.logical_and(labels_img_np == 0, fixed_img_np > thresh)
     to_fill = labels_img_np == 0
     
     result_imgs = []
     for i in range(len(imgs)):
-        # in-paint and remove pixels from result image where fixed image is 
+        # in-paint and remove pixels from result image where fixed image is
         # below threshold
         img = imgs[i]
         result_img_np = sitk.GetArrayFromImage(img)
@@ -720,7 +726,7 @@ def register(
             if isinstance(thresh_carve, str):
                 # get threshold from another setting, eg atlas_threshold_all
                 thresh_carve = settings[thresh_carve]
-            labels_trans_cur, transformed_img_cur = _curate_img(
+            labels_trans_cur, transformed_img_cur = curate_img(
                 fixed_img_orig, labels_trans, [img_moved], inpaint=new_atlas,
                 thresh=thresh_carve, holes_area=settings["holes_area"])
             _logger.info(
@@ -1958,7 +1964,7 @@ def _test_curate_img(path, prefix):
         prefix, config.RegNames.IMG_ATLAS.value, get_sitk=True)
     labels_img.SetSpacing(fixed_img.GetSpacing())
     holes_area = config.atlas_profile["holes_area"]
-    result_imgs = _curate_img(
+    result_imgs = curate_img(
         fixed_img, labels_img, [atlas_img], inpaint=False, 
         holes_area=holes_area)
     sitk.Show(fixed_img)

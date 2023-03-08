@@ -2546,15 +2546,17 @@ class Visualization(HasTraits):
             self._update_roi_feedback(msg)
             return
         
-        # process ROI in prep for showing filtered 2D view and segmenting
+        # extract ROI
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
         self.roi = plot_3d.prepare_roi(config.image5d, offset, roi_size)
+        
         if not libmag.is_binary(self.roi):
-            self.roi = plot_3d.saturate_roi(
-                self.roi, channel=chls)
-            self.roi = plot_3d.denoise_roi(self.roi, chls)
+            # preprocess ROI in prep for showing filtered 2D view and blob
+            # detectionsn; include all channels in case of spectral unmixing
+            self.roi = plot_3d.saturate_roi(self.roi)
+            self.roi = plot_3d.denoise_roi(self.roi)
         else:
             libmag.printv(
                 "binary image detected, will not preprocess")

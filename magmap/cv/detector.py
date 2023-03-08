@@ -851,13 +851,6 @@ def detect_blobs(
                 roi_detect = np.subtract(roi_detect, spec_subtr[1] * roi_spec)
                 roi_detect[roi_detect < 0] = 0
                 
-                if subt_chl not in channels:
-                    # during preprocessing, excluded channels are set to 0 and
-                    # thus cannot subtract as intended
-                    _logger.warn(
-                        "Spectral unmixing set to subtract channel %s from %s, "
-                        "but channel %s may not be set",
-                        subt_chl, spec_chl, subt_chl)
         
         # find blobs; sigma factors can be sequences by axes for anisotropic
         # detection in skimage >= 0.15, or images can be interpolated to

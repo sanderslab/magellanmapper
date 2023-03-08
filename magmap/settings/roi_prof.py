@@ -132,7 +132,7 @@ class ROIProfile(profiles.SettingsDict):
         self["resize_blobs"] = None  # z,y,x coord scaling before verification
         
         #: Spectral unmixing for channel subtraction.
-        #: Provide as: ``{channel: [channel_to_subtract, factor], ...}``.
+        #: Provide as: ``{channel: {channel_to_subtract: factor, ...}, ...}``.
         #: Eg, to subtract 90% of channel 1 from 3: ``{3: [1, 0.9]}``.
         self.spectral_unmixing: Optional[Dict[int, Tuple[int, float]]] = None
         

@@ -843,14 +843,14 @@ def detect_blobs(
         spectral_unmixing = settings.spectral_unmixing
         if spectral_unmixing is not None:
             for spec_chl, spec_subtr in spectral_unmixing.items():
+                # get target channel to unmix
                 if spec_chl != chl: continue
-    
-                # subtract fraction of channel from the current channel
-                subt_chl = spec_subtr[0]
-                roi_spec = roi[..., subt_chl]
-                roi_detect = np.subtract(roi_detect, spec_subtr[1] * roi_spec)
-                roi_detect[roi_detect < 0] = 0
                 
+                for subt_chl, subt_fac in spec_subtr.items():
+                    # subtract fraction of channel from the current channel
+                    roi_subt = roi[..., subt_chl]
+                    roi_detect = np.subtract(roi_detect, subt_fac * roi_subt)
+                    roi_detect[roi_detect < 0] = 0
         
         # find blobs; sigma factors can be sequences by axes for anisotropic
         # detection in skimage >= 0.15, or images can be interpolated to

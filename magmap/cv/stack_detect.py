@@ -77,31 +77,33 @@ class StackDetector(object):
             cls.channel, coloc=cls.coloc)
 
     @classmethod
-    def detect_sub_roi(cls, coord, offset, last_coord, denoise_max_shape,
-                       exclude_border, sub_roi, channel, img_path=None,
-                       coloc=False):
+    def detect_sub_roi(
+            cls, coord: Sequence[int], offset: Sequence[int],
+            last_coord: Sequence[int], denoise_max_shape: Sequence[int],
+            exclude_border: bool, sub_roi: np.ndarray, channel: Sequence[int],
+            img_path: Optional[str] = None, coloc: bool = False
+    ) -> Tuple[Sequence[int], np.ndarray]:
         """Perform 3D blob detection within a sub-ROI without accessing
         class attributes, such as for spawned multiprocessing.
         
         Args:
-            coord (Tuple[int]): Coordinate of the sub-ROI in the order z,y,x.
-            offset (Tuple[int]): Offset of the sub-ROI within the full ROI,
-                in z,y,x.
-            last_coord (:obj:`np.ndarray`): See attributes.
-            denoise_max_shape (Tuple[int]): See attributes.
-            exclude_border (bool): See attributes.
-            sub_roi (:obj:`np.ndarray`): Array in which to perform detections.
-            img_path (str): Path from which to load metadatat; defaults to None.
+            coord: Coordinate of the sub-ROI in the order z,y,x.
+            offset: Offset of the sub-ROI within the full ROI, in z,y,x.
+            last_coord: See attributes.
+            denoise_max_shape: See attributes.
+            exclude_border: See attributes.
+            sub_roi: Array in which to perform detections.
+            img_path: Path from which to load metadatat; defaults to None.
                 If given, the command line arguments will be reloaded to
                 set up the image and processing parameters.
-            coloc (bool): True to perform blob co-localizations; defaults
-                to False.
-            channel (Sequence[int]): Sequence of channels, where None detects
-                in all channels.
+            coloc: True to perform blob co-localizations; defaults to False.
+            channel: Sequence of channels, where None detects in all channels.
         
         Returns:
-            Tuple[int], :obj:`np.ndarray`: The coordinate given back again to
-            identify the sub-ROI position and an array of detected blobs.
+            Tuple of:
+            - ``coord``: the coordinate given back again to identify the
+              sub-ROI position
+            - ``blobs``: array of detected blobs
 
         """
         if img_path:
@@ -120,15 +122,18 @@ class StackDetector(object):
             for z in range(denoise_roi_slices.shape[0]):
                 for y in range(denoise_roi_slices.shape[1]):
                     for x in range(denoise_roi_slices.shape[2]):
+                        # extract sub-sub-ROI
                         denoise_coord = (z, y, x)
                         denoise_roi = sub_roi[denoise_roi_slices[denoise_coord]]
                         _logger.debug(
                             f"Preprocessing sub-sub-ROI {denoise_coord} of "
                             f"{np.subtract(denoise_roi_slices.shape, 1)}")
-                        denoise_roi = plot_3d.saturate_roi(
-                            denoise_roi, channel=channel)
-                        denoise_roi = plot_3d.denoise_roi(
-                            denoise_roi, channel=channel)
+                        
+                        # preprocess all channels, even those not detected in
+                        # case they are used for spectral unmixing
+                        denoise_roi = plot_3d.saturate_roi(denoise_roi)
+                        denoise_roi = plot_3d.denoise_roi(denoise_roi)
+                        
                         # replace slices with denoised ROI
                         denoise_roi_slices[denoise_coord] = denoise_roi
             

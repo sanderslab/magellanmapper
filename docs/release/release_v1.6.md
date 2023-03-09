@@ -136,6 +136,9 @@
   - `--plot_labels background=<color>`: change plot background color with a Matplotlib color string
   - `--plot_labels vspan_col=<col> vspan_format=<str>`: column denoting vertical span groups and string format for them, respectively (#135, 137)
   - `--plot_labels rotation=<deg>`: change rotation in degrees (#445)
+- 2D plot tasks
+  - `--plot_2d decorate_plot` to add plot decorations such as title and axis labels (#457)
+  - Tasks can be run programmatically as: `plot_2d.main(plot_2d_type=<config.Plot2DTypes>)` (#457)
 - The figure save wrapper (`plot_support.save_fig`) is more flexible (#215)
 - 2D plots can be set not to save (#445)
 - Discrete colormaps can use [Matplotlib named colors](https://matplotlib.org/stable/gallery/color/named_colors.html) and use them for symmetric colors (#226)

@@ -53,6 +53,7 @@
 - Fixed clearing the import path (#201)
 - Fixed saving additional, old figures when using the save shortcut (#256)
 - Fixed lag in zoom direction change (#359)
+- Fixed conflict between shortcut to add blob and jumping to ROI plane (`ctrl+click`) by changing the jump shortcut to `j+click` (#456)
 
 #### CLI
 

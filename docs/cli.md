@@ -23,7 +23,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--proc` | `<task1>=[sub-task1,...] <task2>` | Image processing tasks; see `config.ProcessTypes` | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--register` | `<task>` | Registration and other atlas-related tasks; see `config.RegisterTypes` | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 `--df` | `<task>` | Pandas data frame tasks; see `config.DFTasks` | v1.0.0 | [v1.3.0](#changes-in-magellanmapper-v13)
-`--plot_2d` | `<task>` | 2D plot tasks; see `config.Plot2DTypes` | v1.0.0 | v1.0.0
+`--plot_2d` | `<task>` | 2D plot tasks; see `config.Plot2DTypes` | v1.0.0 | [v1.6.0](#changes-in-magellanmapper-v16)
 `--ec2_start` | `<tag_name> <ami_id> <instance_type> <subnet_id> <sec_group> <key_name> <ebs> <max_count> <snapshot_ids>` | Start an EC2 instance. | v1.0.0 | v1.0.0
 `--ec2_list` | `<state> <image_id>` | List EC2 instances. | v1.0.0 | v1.0.0
 `--ec2_terminate` | `<instance1> [instance2] ...` | Terminate EC2 instances by instance ID. | v1.0.0 | v1.0.0
@@ -54,6 +54,7 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 Old | New | Version | Purpose of Change |
 --- | --- | --- | ---
 None | `--rgb` | v1.6a1 | Open images in RGB(a) mode.
+`--plot_2d ...` | `--plot_2d decorate_plot ...` | v1.6b1 | Task to add plot decorations such as title and axis labels.
 `--plot_labels ...` | `--plot_labels err_col_abs=<col> ...` | v1.6a1 | Plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes.
 ` ` |  `--plot_labels background=<color>` | v1.6a1 | Change plot background color with a Matplotlib color string.
 ` ` |  `--plot_labels vspan_col=<col> vspan_format=<str>` | v1.6a1 | Column denoting vertical span groups and string format for them, respectively.

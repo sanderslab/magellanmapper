@@ -512,12 +512,12 @@ def detect_blobs_stack(
     different block sizes.
     
     Args:
-        filename_base (str): Base image filename, for saving files.
-        subimg_offset (Sequence[int]): Sub-image offset as ``z,y,x`` to load
+        filename_base: Base image filename, for saving files.
+        subimg_offset: Sub-image offset as ``z,y,x`` to load
             from :attr:`config.image5d`; defaults to None.
-        subimg_size (Sequence[int]): Sub-image size as ``z,y,x`` to load
+        subimg_size: Sub-image size as ``z,y,x`` to load
             from :attr:`config.image5d`; defaults to None.
-        coloc (bool): True to also detect blob-colocalizations based on image
+        coloc: True to also detect blob-colocalizations based on image
             intensity; defaults to False. For match-based colocalizations,
             use the ``coloc_match`` task
             (:meth:`magmap.colocalizer.StackColocalizer.colocalize_stack`)
@@ -552,11 +552,11 @@ def detect_blobs_stack(
             chl = [chl]
         blobs_out = detect_blobs_blocks(
             filename_base, config.image5d, subimg_offset, subimg_size,
-            chl, config.truth_db_mode is config.TruthDBModes.VERIFY, 
+            chl, config.truth_db_mode is config.TruthDBModes.VERIFY,
             not config.grid_search_profile, config.image5d_is_roi, coloc)
         for col, val in zip(cols, blobs_out):
             detection_out.setdefault(col, []).append(val)
-        print("{}\n".format("-" * 80))
+        _logger.info(f"\n{'-' * 80}")
     
     stats = None
     fdbk = None
@@ -568,9 +568,10 @@ def detect_blobs_stack(
             [b.blobs for b in detection_out["blobs"]
              if b.blobs is not None])
         if blobs_all.blobs is None:
-            print("\nNo blobs found across channels")
+            _logger.info("No blobs found across channels")
         else:
-            print("\nTotal blobs found across channels:", len(blobs_all.blobs))
+            _logger.info("Total blobs found across channels: %s",
+                         len(blobs_all.blobs))
             detector.Blobs.show_blobs_per_channel(blobs_all.blobs)
         blobs_all.colocalizations = libmag.combine_arrs(
             [b.colocalizations for b in detection_out["blobs"]
@@ -585,11 +586,11 @@ def detect_blobs_stack(
                 _logger.debug(e)
         
         blobs_all.save_archive()
-        print()
+        _logger.info("\n")
         
         # combine verification stats and feedback messages
         stats = libmag.combine_arrs(
-            detection_out["stats"], fn=np.sum)
+            detection_out["stats"], fn=np.sum, axis=0)
         fdbk = "\n".join(
             [f for f in detection_out["fdbk"] if f is not None])
     return stats, fdbk, blobs_all

@@ -344,9 +344,8 @@ def detect_blobs_blocks(
         image5d: Large image to process as a Numpy array of t,z,y,x,[c]
         offset: Sub-image offset given as coordinates in z,y,x.
         size: Sub-image shape given in z,y,x.
-        channels: Sequence of channels, where None detects
-            in all channels.
-        verify: True to verify detections against truth database; defaults 
+        channels: Sequence of channels, where None detects in all channels.
+        verify: True to verify detections against truth database; defaults
             to False.
         save_dfs: True to save data frames to file; defaults to True.
         full_roi: True to treat ``image5d`` as the full ROI; defaults to False.
@@ -381,14 +380,14 @@ def detect_blobs_blocks(
     num_chls_roi = 1 if len(roi.shape) < 4 else roi.shape[3]
     if num_chls_roi < 2:
         coloc = False
-        print("Unable to co-localize as image has only 1 channel")
+        _logger.info("Unable to co-localize as image has only 1 channel")
     
     # prep chunking ROI into sub-ROIs with size based on segment_size, scaling
     # by physical units to make more independent of resolution; use profile
     # from first channel to be processed for block settings
     time_detection_start = time()
     settings = config.get_roi_profile(channels[0])
-    print("Profile for block settings:", settings[settings.NAME_KEY])
+    _logger.info("Profile for block settings: %s", settings[settings.NAME_KEY])
     blocks = setup_blocks(settings, roi.shape)
     
     # TODO: option to distribute groups of sub-ROIs to different servers
@@ -397,7 +396,7 @@ def detect_blobs_blocks(
         roi, blocks.sub_roi_slices, blocks.sub_rois_offsets,
         blocks.denoise_max_shape, blocks.exclude_border, coloc, channels)
     detection_time = time() - time_detection_start
-    print("blob detection time (s):", detection_time)
+    _logger.info("Blob detection time (s): %s", detection_time)
     
     # prune blobs in overlapping portions of sub-ROIs
     time_pruning_start = time()
@@ -405,12 +404,12 @@ def detect_blobs_blocks(
         roi, seg_rois, blocks.overlap, blocks.tol, blocks.sub_roi_slices,
         blocks.sub_rois_offsets, channels, blocks.overlap_padding)
     pruning_time = time() - time_pruning_start
-    print("blob pruning time (s):", pruning_time)
+    _logger.info("Blob pruning time (s): %s", pruning_time)
     #print("maxes:", np.amax(segments_all, axis=0))
     
     # get weighted mean of ratios
     if df_pruning is not None:
-        print("\nBlob pruning ratios:")
+        _logger.info("\nBlob pruning ratios:")
         path_pruning = "blob_ratios.csv" if save_dfs else None
         df_pruning_all = df_io.data_frames_to_csv(
             df_pruning, path_pruning, show=" ")
@@ -421,13 +420,13 @@ def detect_blobs_blocks(
             num_blobs_unpruned = np.sum(blobs_unpruned)
             for col in cols[1:]:
                 blob_pruning_means["mean_{}".format(col)] = [
-                    np.sum(np.multiply(df_pruning_all[col], blobs_unpruned)) 
+                    np.sum(np.multiply(df_pruning_all[col], blobs_unpruned))
                     / num_blobs_unpruned]
             path_pruning_means = "blob_ratios_means.csv" if save_dfs else None
             df_pruning_means = df_io.dict_to_data_frame(
                 blob_pruning_means, path_pruning_means, show=" ")
         else:
-            print("no blob ratios found")
+            _logger.info("No blob ratios found")
     
     '''# report any remaining duplicates
     np.set_printoptions(linewidth=500, threshold=10000000)
@@ -443,17 +442,18 @@ def detect_blobs_blocks(
     stats_detection = None
     fdbk = None
     colocs = None
+    blobs = detector.Blobs(segments_all, path=filename_blobs)
     if segments_all is not None:
         # remove the duplicated elements that were used for pruning
-        detector.Blobs.replace_rel_with_abs_blob_coords(segments_all)
+        blobs.replace_rel_with_abs_blob_coords(segments_all)
         if coloc:
             colocs = segments_all[:, 10:10+num_chls_roi].astype(np.uint8)
         # remove absolute coordinate and any co-localization columns
-        segments_all = detector.Blobs.remove_abs_blob_coords(segments_all, True)
+        segments_all = blobs.remove_abs_blob_coords(segments_all, True)
         
         # compare detected blobs with truth blobs
         # TODO: assumes ground truth is relative to any ROI offset,
-        # but should make customizable
+        #   but should make customizable
         if verify:
             stats_detection, fdbk = verifier.verify_stack(
                 filename_base, subimg_path_base, settings, segments_all,
@@ -462,7 +462,7 @@ def detect_blobs_blocks(
     if config.save_subimg:
         subimg_base_path = libmag.combine_paths(
             subimg_path_base, config.SUFFIX_SUBIMG)
-        if (isinstance(config.image5d, np.memmap) and 
+        if (isinstance(config.image5d, np.memmap) and
                 config.image5d.filename == os.path.abspath(subimg_base_path)):
             # file at sub-image save path may have been opened as a memmap
             # file, in which case saving would fail
@@ -473,10 +473,10 @@ def detect_blobs_blocks(
             with open(subimg_base_path, "wb") as f:
                 np.save(f, roi)
 
-    # store blobs in Blobs instance
+    # update blobs array and add metadata
     # TODO: consider separating into blobs and blobs metadata archives
-    blobs = detector.Blobs(
-        segments_all, colocalizations=colocs, path=filename_blobs)
+    blobs.blobs = segments_all
+    blobs.colocalizations = colocs
     blobs.resolutions = config.resolutions
     blobs.basename = os.path.basename(config.filename)
     blobs.roi_offset = offset
@@ -484,18 +484,18 @@ def detect_blobs_blocks(
     
     # whole image benchmarking time
     times = (
-        [detection_time], 
-        [pruning_time], 
+        [detection_time],
+        [pruning_time],
         time() - time_start)
     times_dict = {}
     for key, val in zip(StackTimes, times):
         times_dict[key] = val
     if segments_all is None:
-        print("\nNo blobs detected")
+        _logger.info("\nNo blobs detected")
     else:
-        print("\nTotal blobs found:", len(segments_all))
-        detector.Blobs.show_blobs_per_channel(segments_all)
-    print("\nTotal detection processing times (s):")
+        _logger.info("\nTotal blobs found: %s", len(segments_all))
+        blobs.show_blobs_per_channel(segments_all)
+    _logger.info("\nTotal detection processing times (s):")
     path_times = "stack_detection_times.csv" if save_dfs else None
     df_io.dict_to_data_frame(times_dict, path_times, show=" ")
     

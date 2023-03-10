@@ -325,6 +325,7 @@ class Blobs:
         # map added col names to indices, assumed to be ordered as in Cols
         for i, col in enumerate(self.Cols):
             if i < shape[1]: continue
+            # mutate underlying class attribute, which doesn't become inst attr
             self._col_inds[self.Cols(col)] = i
         
         # copy relative to absolute coords
@@ -936,25 +937,29 @@ def _find_close_blobs(blobs, blobs_master, tol):
     return close_master, close
 
 
-def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
+def remove_close_blobs(
+        blobs: np.ndarray, blobs_master: np.ndarray, tol: float,
+        chunk_size: int = 1000) -> Tuple[np.ndarray, np.ndarray]:
     """Removes blobs that are close to one another.
     
     Args:
-        blobs: The blobs to be checked for closeness and pruning, given as 2D 
+        blobs: The blobs to be checked for closeness and pruning, given as 2D
             array of [n, [z, row, column, ...]].
         blobs_master: The list by which to check for close blobs, in the same
             format as blobs.
         tol: Tolerance to check for closeness, given in the same format
-            as region. Blobs that are equal to or less than the the absolute
+            as region. Blobs that are equal to or less than the absolute
             difference for all corresponding parameters will be pruned in
             the returned array.
-        chunk_size: Max size along first dimension for each blob array 
+        chunk_size: Max size along first dimension for each blob array
             to minimize memory consumption; defaults to 1000.
     
     Return:
-        Tuple of the blobs array after pruning and ``blobs_master`` with 
-        absolute coordinates updated with the average of any 
-        corresponding duplicates.
+        Tuple of:
+        - ``pruned``: blobs array after pruning
+        - `blobs_master``: blobs with absolute coordinates updated with the
+          average of any corresponding duplicates
+    
     """
     num_blobs_check = len(blobs)
     num_blobs_master = len(blobs_master)
@@ -964,13 +969,13 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     
     # smallest type to hold blob coordinates, signed to use for diffs
     dtype = libmag.dtype_within_range(
-        0, np.amax((np.amax(blobs[:, :3]), np.amax(blobs_master[:, :3]))), 
+        0, np.amax((np.amax(blobs[:, :3]), np.amax(blobs_master[:, :3]))),
         True, True)
     match_check = None
     match_master = None
     
-    # chunk both master and check array for consistent max array size; 
-    # compare each master chunk to each check chunk and save matches 
+    # chunk both master and check array for consistent max array size;
+    # compare each master chunk to each check chunk and save matches
     # to prune at end
     i = 0
     while i * chunk_size < num_blobs_master:
@@ -997,14 +1002,15 @@ def remove_close_blobs(blobs, blobs_master, tol, chunk_size=1000):
     
     # shift close blobs to their mean values, storing values in the duplicated
     # coordinates and radius of the blob array after the confirmation value;
-    # use the duplicated coordinates to work from any prior shifting; 
+    # use the duplicated coordinates to work from any prior shifting;
     # further duplicate testing will still be based on initial position to
     # allow detection of duplicates that occur in multiple ROI pairs
+    bbs = Blobs(blobs)
     abs_between = np.around(
         np.divide(
-            np.add(Blobs.get_blob_abs_coords(blobs_master[match_master]), 
-                   Blobs.get_blob_abs_coords(blobs[match_check])), 2))
-    blobs_master[match_master] = Blobs.set_blob_abs_coords(
+            np.add(bbs.get_blob_abs_coords(blobs_master[match_master]),
+                   bbs.get_blob_abs_coords(blobs[match_check])), 2))
+    blobs_master[match_master] = bbs.set_blob_abs_coords(
         blobs_master[match_master], abs_between)
     #print("blobs_master after shifting:\n{}".format(blobs_master[:, 5:9]))
     return pruned, blobs_master

@@ -1,17 +1,19 @@
 #!/bin/bash
 # Prepare a server the MagellanMapper pipeline
-# Author: David Young 2018, 2019
+# Author: David Young 2018, 2023
 
 HELP="
-Sets up a server for processing files in the MagellanMapper pipeline. 
+Sets up a server for processing files in the MagellanMapper pipeline.
+
 Both initial setup and re-setup of existing servers is supported.
 
 Arguments:
-   -d [/dev/name]: Set data device path to mount \"/data\". If an empty 
-     string, data mount will not be set up. Can be a name (eg \"sdf\") to 
-     map to an NVMe name if the NVMe flag is given.
+   -d [/dev/name]: Set path of data device. If an empty  string, data mount
+     will not be set up. Can be a name (eg \"sdf\") to map to an NVMe name if
+     the NVMe flag is given.
    -f [GB]: Size of swap file in GB.
    -h: Show help and exit.
+   -m [/mount/path]: Set data mount path. Defaults to \"/data\".
    -n: Map device names to NVMe names. Assumes that NVMe device names 
      are in the format \"/dev/nvme[n]n1\", where n is from 0-5.
    -s: Set up a fresh server, including drive initiation.
@@ -22,7 +24,8 @@ Arguments:
 
 "
 
-DIR_DATA="/data"
+# mount path
+dir_data="/data"
 
 setup=0
 swap=""
@@ -32,7 +35,7 @@ swapfile_size=""
 nvme=0
 
 OPTIND=1
-while getopts hslw:d:u:f:n opt; do
+while getopts hslw:d:u:f:nm: opt; do
   case $opt in
     h)
       echo "$HELP"
@@ -57,6 +60,10 @@ while getopts hslw:d:u:f:n opt; do
     f)
       swapfile_size="$OPTARG"
       echo "Generate a swapfile with size of ${swapfile_size}GB"
+      ;;
+    m)
+      dir_data="$OPTARG"
+      echo "Changing mount directory to $dir_data"
       ;;
     u)
       username="$OPTARG"
@@ -107,7 +114,7 @@ is_formatted() {
 ############################################
 # Mount device.
 # Globals:
-#   DIR_DATA: Data mount point.
+#   dir_data: Data mount point.
 # Arguments:
 #   1: Device path.
 #   2: Mount path.
@@ -115,7 +122,7 @@ is_formatted() {
 #   NONE
 ############################################
 mount_dev() {
-  if ! mountpoint -q "$DIR_DATA"; then
+  if ! mountpoint -q "$dir_data"; then
     if [[ ! -d "$2" ]]; then
       sudo mkdir "$2"
     fi
@@ -172,8 +179,8 @@ if [[ "$nvme" -eq 1 ]]; then
       exit 1
     fi
   fi
-  if [[ "$swap" = "$DIR_DATA"* ]]; then
-    echo "Treating $swap as a swap file in $DIR_DATA"
+  if [[ "$swap" = "$dir_data"* ]]; then
+    echo "Treating $swap as a swap file in $dir_data"
   elif [[ -n "$swap" && -z "$swapfile_size" ]]; then
     if map_nvme_name "$swap"; then
       swap="$dev"
@@ -194,10 +201,10 @@ if [[ $setup -eq 1 ]]; then
     if [[ $already_formatted -ne 0 ]]; then
       sudo mkfs -t ext4 "$data"
     fi
-    mount_dev "$data" "$DIR_DATA"
+    mount_dev "$data" "$dir_data"
     if [[ $already_formatted -ne 0 ]]; then
       # need to change ownership if new drive attached
-      sudo chown -R "${username}.${username}" "$DIR_DATA"
+      sudo chown -R "${username}.${username}" "$dir_data"
     fi
   fi
   if [[ -n "$swap" ]]; then
@@ -228,7 +235,7 @@ fi
 # drives were not initialized or attached
 if [[ -n "$data" ]]; then
   # mount if not previously mounted
-  mount_dev "$data" "$DIR_DATA"
+  mount_dev "$data" "$dir_data"
 fi
 if [[ -n "$swap" ]]; then
   sudo swapon "$swap"

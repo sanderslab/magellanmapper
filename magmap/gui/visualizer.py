@@ -71,7 +71,7 @@ from magmap.brain_globe import bg_controller
 from magmap.cv import classifier, colocalizer, cv_nd, detector, segmenter, \
     verifier
 from magmap.gui import atlas_editor, atlas_threads, import_threads, \
-    roi_editor, verifier_editor, vis_3d, vis_handler
+    plot_editor, roi_editor, verifier_editor, vis_3d, vis_handler
 from magmap.io import cli, importer, libmag, load_env, naming, np_io, sitk_io, \
     sqlite
 from magmap.plot import colormaps, plot_2d, plot_3d
@@ -1134,8 +1134,9 @@ class Visualization(HasTraits):
         # set up rest of image adjustment during image setup
         self.stale_viewers = self.reset_stale_viewers()
         self._img3ds = None
-        self._imgadj_min_ignore_update = False
-        self._imgadj_max_ignore_update = False
+        self._imgadj_min_ignore_update: bool = False
+        self._imgadj_max_ignore_update: bool = False
+        self._imgadj_ignore_update: bool = False
         
         # set up rest of registered images during image setup
         
@@ -1298,6 +1299,29 @@ class Visualization(HasTraits):
         
         # update control values
         self.update_imgadj_for_img()
+
+    def _get_selected_viewers(self) -> List:
+        """Get selected viewers."""
+        viewers = []
+        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
+            if self.roi_ed:
+                viewers.append(self.roi_ed)
+        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
+            if self.atlas_eds:
+                # support multiple Atlas Editors (currently only have one)
+                viewers.extend(self.atlas_eds)
+        return viewers
+    
+    def _get_curr_plot_ax_img(self) -> Optional["plot_editor.PlotAxImg"]:
+        """Get the first displayed image in the current viewer."""
+        viewers = self._get_selected_viewers()
+        plot_ax_img = None
+        if viewers:
+            # get the first displayed image from the viewer
+            plot_ax_img = viewers[0].get_img_display_settings(
+                self._imgadj_names.selections.index(self._imgadj_name),
+                chl=int(self.imgadj_chls))
+        return plot_ax_img
     
     @on_trait_change("_imgadj_chls")
     def update_imgadj_for_img(self):
@@ -1309,21 +1333,13 @@ class Visualization(HasTraits):
             # resetting image adjustment channel names triggers update as
             # empty array
             return
-        
-        # get the currently selected viewer
-        ed = None
-        if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
-            ed = self.roi_ed
-        elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
-            if self.atlas_eds:
-                ed = self.atlas_eds[0]
-        if ed is None: return
 
-        # get the first displayed image from the viewer
-        imgi = self._imgadj_names.selections.index(self._imgadj_name)
-        plot_ax_img = ed.get_img_display_settings(
-            imgi, chl=int(self.imgadj_chls))
+        # get currently dispalyed image
+        plot_ax_img = self._get_curr_plot_ax_img()
         if plot_ax_img is None: return
+        
+        # ignore triggers
+        self._imgadj_ignore_update = True
         
         # populate controls with intensity settings
         self._imgadj_brightness = plot_ax_img.brightness
@@ -1342,6 +1358,9 @@ class Visualization(HasTraits):
         else:
             self._imgadj_max = plot_ax_img.ax_img.norm.vmax
             self._imgadj_max_auto = False
+
+        # respond to triggers
+        self._imgadj_ignore_update = False
     
     def _adapt_imgadj_limits(self, plot_ax_img):
         """Adapt image adjustment slider limits based on values in the
@@ -1403,7 +1422,7 @@ class Visualization(HasTraits):
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):
-        if self._imgadj_min_ignore_update:
+        if self._imgadj_min_ignore_update or self._imgadj_ignore_update:
             self._imgadj_min_ignore_update = False
             return
         self._imgadj_min_auto = False
@@ -1411,16 +1430,42 @@ class Visualization(HasTraits):
         # intensity max may have been adjusted to remain >= min
         self._set_inten_max_to_curr(plot_ax_img)
     
+    def _adjust_img_auto(self, mode: str = "min"):
+        """Handle changes to the image range auto control.
+        
+        Args:
+            mode: "min" for minimum and "max" for maximum auto modes.
+
+        """
+        if self._imgadj_ignore_update:
+            # get a currently displayed image
+            plot_ax_img = self._get_curr_plot_ax_img()
+        else:
+            # adjust the image's min or max auto setting
+            if mode == "min":
+                min_inten = None if self._imgadj_min_auto else self._imgadj_min
+                args = dict(minimum=min_inten)
+            else:
+                max_inten = None if self._imgadj_max_auto else self._imgadj_max
+                args = dict(maximum=max_inten)
+            plot_ax_img = self._adjust_displayed_imgs(**args)
+        
+        if plot_ax_img:
+            # synchronize intensity controls with the displayed image
+            self._set_inten_min_to_curr(plot_ax_img)
+            self._set_inten_max_to_curr(plot_ax_img)
+
     @on_trait_change("_imgadj_min_auto")
     def _adjust_img_min_auto(self):
-        min_inten = None if self._imgadj_min_auto else self._imgadj_min
-        plot_ax_img = self._adjust_displayed_imgs(minimum=min_inten)
-        self._set_inten_min_to_curr(plot_ax_img)
-        self._set_inten_max_to_curr(plot_ax_img)
+        self._adjust_img_auto("min")
+
+    @on_trait_change("_imgadj_max_auto")
+    def _adjust_img_max_auto(self):
+        self._adjust_img_auto("max")
 
     @on_trait_change("_imgadj_max")
     def _adjust_img_max(self):
-        if self._imgadj_max_ignore_update:
+        if self._imgadj_max_ignore_update or self._imgadj_ignore_update:
             self._imgadj_max_ignore_update = False
             return
         self._imgadj_max_auto = False
@@ -1428,27 +1473,23 @@ class Visualization(HasTraits):
         # intensity min may have been adjusted to remain <= max
         self._set_inten_min_to_curr(plot_ax_img)
 
-    @on_trait_change("_imgadj_max_auto")
-    def _adjust_img_max_auto(self):
-        max_inten = None if self._imgadj_max_auto else self._imgadj_max
-        plot_ax_img = self._adjust_displayed_imgs(maximum=max_inten)
-        self._set_inten_min_to_curr(plot_ax_img)
-        self._set_inten_max_to_curr(plot_ax_img)
-
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):
+        if self._imgadj_ignore_update: return
         # include contrast to restore its value while adjusting the original img
         self._adjust_displayed_imgs(
             brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_contrast")
     def _adjust_img_contrast(self):
+        if self._imgadj_ignore_update: return
         # include brightness to restore its value while adjusting the orig img
         self._adjust_displayed_imgs(
             brightness=self._imgadj_brightness, contrast=self._imgadj_contrast)
 
     @on_trait_change("_imgadj_alpha")
     def _adjust_img_alpha(self):
+        if self._imgadj_ignore_update: return
         self._adjust_displayed_imgs(alpha=self._imgadj_alpha)
 
     @on_trait_change("_imgadj_alpha_blend")
@@ -1485,17 +1526,13 @@ class Visualization(HasTraits):
             self._vis3d.update_img_display(**kwargs)
         else:
             # update any selected Matplotlib-based viewer settings
-            eds = []
-            if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
-                eds.append(self.roi_ed)
-            elif self.selected_viewer_tab is vis_handler.ViewerTabs.ATLAS_ED:
-                # support multiple Atlas Editors (currently only have one)
-                eds.extend(self.atlas_eds)
+            viewers = self._get_selected_viewers()
             plot_ax_img = None
-            for ed in eds:
-                if not ed: continue
+            for viewer in viewers:
+                if not viewer: continue
                 # update settings for the viewer
-                plot_ax_img = ed.update_imgs_display(
+                print("adjusting channel", int(self.imgadj_chls), kwargs)
+                plot_ax_img = viewer.update_imgs_display(
                     self._imgadj_names.selections.index(self._imgadj_name),
                     chl=int(self.imgadj_chls), **kwargs)
         return plot_ax_img

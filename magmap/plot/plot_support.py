@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, \
     TYPE_CHECKING, Tuple, Union
 
 import numpy as np
-from matplotlib import backend_bases, gridspec, pyplot as plt
+from matplotlib import backend_bases, gridspec, layout_engine, pyplot as plt
 import matplotlib.transforms as transforms
 from skimage import filters, img_as_float32, transform
 
@@ -1034,36 +1034,42 @@ def scale_axes(ax, scale_x=None, scale_y=None):
         ax.set_yscale(scale_y)
 
 
-def fit_frame_to_image(fig, shape, aspect):
+def fit_frame_to_image(
+        fig: "figure.Figure", shape: Sequence[int], aspect: float):
     """Compress figure to fit image only.
 
     Use :attr:`config.plot_labels[config.PlotLabels.PADDING]` to configure
-    figure padding, which will turn off the constrained layout.
+    figure padding. Negative padding may be required to remove a thin left
+    border that sometimes appears.
     
     Args:
         fig: Figure to compress.
         shape: Shape of image to which the figure will be fit.
         aspect: Aspect ratio of image.
+    
     """
     pad = config.plot_labels[config.PlotLabels.PADDING]
     if aspect is None:
         aspect = 1
     img_size_inches = np.divide(shape, fig.dpi)  # convert to inches
-    print("image shape: {}, img_size_inches: {}, aspect: {}"
-          .format(shape, img_size_inches, aspect))
+    
     if aspect > 1:
         fig.set_size_inches(img_size_inches[1], img_size_inches[0] * aspect)
     else:
         # multiply both sides by 1 / aspect => number > 1 to enlarge
         fig.set_size_inches(img_size_inches[1] / aspect, img_size_inches[0])
+    
     if pad:
-        # use neg padding to remove thin left border that sometimes appears;
-        # NOTE: this setting will turn off constrained layout
-        fig.tight_layout(pad=libmag.get_if_within(pad, 0, 0))
-    print("fig size: {}".format(fig.get_size_inches()))
+        # set padding in layout engine
+        engine = fig.get_layout_engine()
+        padding = libmag.get_if_within(pad, 0, 0)
+        if isinstance(engine, layout_engine.ConstrainedLayoutEngine):
+            engine.set(h_pad=padding, w_pad=padding)
+        else:
+            fig.tight_layout(pad=padding)
 
 
-def set_overview_title(ax, plane, z_overview, zoom="", level=0, 
+def set_overview_title(ax, plane, z_overview, zoom="", level=0,
                        max_intens_proj=False):
     """Set the overview image title.
     
@@ -1441,7 +1447,7 @@ def setup_fig(
         The figure and grid spec used for its layout.
 
     """
-    fig = plt.figure(frameon=False, constrained_layout=True, figsize=size)
+    fig = plt.figure(frameon=False, layout="constrained", figsize=size)
     fig.set_constrained_layout_pads(w_pad=0, h_pad=0)
     gs = gridspec.GridSpec(nrows, ncols, figure=fig)
     return fig, gs

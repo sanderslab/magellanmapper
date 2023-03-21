@@ -1252,7 +1252,7 @@ def plot_image(img, path=None, show=False):
     # plot figure without frame, axes, or border space
     fig, gs = plot_support.setup_fig(1, 1)
     ax = fig.add_subplot(gs[0, 0])
-    plot_support.hide_axes(ax)
+    plot_support.hide_axes(ax, True)
     ax.imshow(img)
     plot_support.fit_frame_to_image(fig, img.shape, None)
     

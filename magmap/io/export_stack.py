@@ -267,6 +267,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
                 if libmag.is_seq(ax_img):
                     ax_img = ax_img[0]
                 if isinstance(ax_img, AxesImage):
+                    ax_img.axes.set_frame_on(False)
                     plot_support.fit_frame_to_image(
                         ax_img.figure, ax_img.get_array().shape, self.aspect)
         
@@ -650,6 +651,7 @@ def reg_planes_to_img(imgs, path=None, ax=None):
     plotted_imgs = stacker.build_stack(ax, scale_bar=False)
     ax_img = plotted_imgs[0][0]
     aspect, origin = plot_support.get_aspect_ratio(config.plane)
+    ax_img.axes.set_frame_on(False)
     plot_support.fit_frame_to_image(
         ax_img.figure, ax_img.get_array().shape, aspect)
     if path:

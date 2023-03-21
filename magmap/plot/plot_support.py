@@ -1035,12 +1035,11 @@ def scale_axes(ax, scale_x=None, scale_y=None):
 
 
 def fit_frame_to_image(
-        fig: "figure.Figure", shape: Sequence[int], aspect: float):
+        fig: "figure.Figure", shape: Sequence[int], aspect: Optional[float]):
     """Compress figure to fit image only.
 
     Use :attr:`config.plot_labels[config.PlotLabels.PADDING]` to configure
-    figure padding. Negative padding may be required to remove a thin left
-    border that sometimes appears.
+    figure padding.
     
     Args:
         fig: Figure to compress.

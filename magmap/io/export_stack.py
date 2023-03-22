@@ -269,7 +269,7 @@ class StackPlaneIO(chunking.SharedArrsContainer):
                 if isinstance(ax_img, AxesImage):
                     ax_img.axes.set_frame_on(False)
                     plot_support.fit_frame_to_image(
-                        ax_img.figure, ax_img.get_array().shape, self.aspect)
+                        ax_img.figure, None, self.aspect)
         
         return plotted_imgs
 

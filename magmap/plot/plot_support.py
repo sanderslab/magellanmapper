@@ -1035,7 +1035,8 @@ def scale_axes(ax, scale_x=None, scale_y=None):
 
 
 def fit_frame_to_image(
-        fig: "figure.Figure", shape: Sequence[int], aspect: Optional[float]):
+        fig: "figure.Figure", shape: Optional[Sequence[int]] = None,
+        aspect: Optional[float] = None):
     """Compress figure to fit image only.
 
     Use :attr:`config.plot_labels[config.PlotLabels.PADDING]` to configure
@@ -1043,10 +1044,18 @@ def fit_frame_to_image(
     
     Args:
         fig: Figure to compress.
-        shape: Shape of image to which the figure will be fit.
-        aspect: Aspect ratio of image.
+        shape: Shape of image to which the figure will be fit. Default of None
+            uses the first axes bounding box.
+        aspect: Aspect ratio of image. Default of None gives 1.
     
     """
+    axs = fig.axes
+    if shape is None and axs:
+        # default shape is bounding box of axes
+        shape = np.abs([
+            np.diff(axs[0].get_ylim())[0],
+            np.diff(axs[0].get_xlim())[0]])
+    
     pad = config.plot_labels[config.PlotLabels.PADDING]
     if aspect is None:
         aspect = 1

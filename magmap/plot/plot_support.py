@@ -296,11 +296,11 @@ class ImageOverlayer:
     class RotTransform:
         """Rotation transformation settings."""
         #: Matplotlib transformation.
-        transform: transforms.Transform
+        transform: Optional[transforms.Transform] = None
         #: x-axis limits.
-        xlims: Tuple[int, int]
+        xlims: Optional[Tuple[int, int]] = None
         #: y-axis limits
-        ylims: Tuple[int, int]
+        ylims: Optional[Tuple[int, int]] = None
     
     def __init__(
             self, ax, aspect, origin=None, ignore_invis=False, rgb=False):
@@ -348,6 +348,11 @@ class ImageOverlayer:
             rotate_deg = config.transform[config.Transforms.ROTATE_DEG]
             if rotate_deg:
                 rotate += rotate_deg
+        
+        if not rotate:
+            # no rotation set
+            self._transform = self.RotTransform()
+            return self._transform
         
         if center is None:
             # default rotation center to origin
@@ -481,11 +486,18 @@ class ImageOverlayer:
         
         # apply transformation such as rotation to main axes components
         if self._transform is None:
+            # set up transformation such as rotation
             self.setup_transform(img2d)
-        for n in self.ax.images + self.ax.lines + self.ax.collections:
-            n.set_transform(self._transform.transform)
-        self.ax.set_xlim(*self._transform.xlims)
-        self.ax.set_ylim(*self._transform.ylims)
+
+        # apply transformation to main axes components and axes limits
+        transf = self._transform
+        if transf.transform:
+            for n in self.ax.images + self.ax.lines + self.ax.collections:
+                n.set_transform(transf.transform)
+        if transf.xlims is not None:
+            self.ax.set_xlim(*transf.xlims)
+        if transf.ylims is not None:
+            self.ax.set_ylim(*transf.ylims)
         
         # flip horizontally or vertically by inverting axes
         if config.transform[config.Transforms.FLIP_HORIZ]:

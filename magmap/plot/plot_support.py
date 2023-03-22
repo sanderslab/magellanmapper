@@ -1251,11 +1251,12 @@ def add_vspans(
     """
     # set up span x-val indices
     num_groups = len(ax.get_xticklabels())
-    xs = vspans - padding / 2
+    x_offset = padding / 2
+    xs = vspans - x_offset
     num_xs = len(xs)
     
     if vspans is not None:
-        # show vertical spans alternating in white and black; assume 
+        # show vertical spans alternating in white and black; assume
         # background is already white, so simply skip white shading
         for i, x in enumerate(xs):
             if i % 2 == 0: continue
@@ -1264,20 +1265,23 @@ def add_vspans(
 
     if vspan_lbls is not None:
         # show labels for vertical spans
-        ylims = ax.get_ylim()
-        y_span = abs(ylims[1] - ylims[0])
-        y_top = max(ylims)
+        x_max = num_groups
         for i, x in enumerate(xs):
+            # set x to middle of span
             end = xs[i + 1] if i < num_xs - 1 else num_groups
-            x = (x + end) / 2
+            x = (x + end + x_offset) / 2 / x_max
+            
             # position 4% down from top in data coordinates
             y_frac = 0.04
             if vspan_alt_y and i % 2 != 0:
                 # shift alternating labels further down to avoid overlap
                 y_frac += 0.03
-            y = y_top - y_span * y_frac
+            y = 1 - y_frac
+            
+            # add text
             ax.text(
-                x, y, vspan_lbls[i], color="k", horizontalalignment="center")
+                x, y, vspan_lbls[i], color="k", horizontalalignment="center",
+                transform=ax.transAxes)
     
     legend = ax.get_legend()
     if legend:

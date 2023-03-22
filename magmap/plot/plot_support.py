@@ -2,6 +2,7 @@
 # Author: David Young, 2018, 2023
 """Shared plotting functions with the MagellanMapper package.
 """
+import dataclasses
 import pathlib
 from collections import OrderedDict
 import math
@@ -291,6 +292,16 @@ class ImageSyncMixin:
 class ImageOverlayer:
     """Manager for overlaying multiple images on top of one another."""
     
+    @dataclasses.dataclass
+    class RotTransform:
+        """Rotation transformation settings."""
+        #: Matplotlib transformation.
+        transform: transforms.Transform
+        #: x-axis limits.
+        xlims: Tuple[int, int]
+        #: y-axis limits
+        ylims: Tuple[int, int]
+    
     def __init__(
             self, ax, aspect, origin=None, ignore_invis=False, rgb=False):
         #: Plot axes.
@@ -311,16 +322,18 @@ class ImageOverlayer:
         self.labels_annots: Dict[int, "axes.Axes.Text"] = {}
         
         #: Matplotlib transform object.
-        self._transform: Optional[transforms.Transform] = None
+        self._transform: Optional["ImageOverlayer.RotTransform"] = None
     
     def setup_transform(
-            self, img2d: np.ndarray, rotate: Optional[int] = None
-    ) -> transforms.Transform:
+            self, img2d: np.ndarray, rotate: Optional[int] = None,
+            center: Optional[Tuple[int, int]] = None
+    ) -> Optional["ImageOverlayer.RotTransform"]:
         """Set up transformation from config settings.
         
         Args:
             img2d: 2D+/-channel array.
             rotate: Clockwise rotation in degrees.
+            center: Rotation center in `x, y`. Default of None gives `0, 0`.
 
         Returns:
             :attr:`self._transform` for chained calls.
@@ -336,14 +349,39 @@ class ImageOverlayer:
             if rotate_deg:
                 rotate += rotate_deg
         
-        # rotate around the center of the image in data coords
-        shape = np.divide(img2d.shape[:2], 2)
-        self._transform = transforms.Affine2D().rotate_deg_around(
-            *shape[::-1], rotate)
+        if center is None:
+            # default rotation center to origin
+            center = (0, 0)
+        ctr_x, ctr_y = center
+        
+        # rotate around given center in data coords
+        transf = transforms.Affine2D().rotate_deg_around(
+            ctr_x, ctr_y, rotate)
         
         # convert to display coordinates
-        self._transform += self.ax.transData
+        transf += self.ax.transData
         
+        # measure rotation corner points for the rotation angle in radians
+        rad = np.radians(rotate)
+        ht, wd = img2d.shape[:2]
+        
+        x2 = ctr_x + wd * np.cos(rad)
+        y2 = ctr_y + wd * np.sin(rad)
+
+        x4 = ctr_x - ht * np.sin(rad)
+        y4 = ctr_y + ht * np.cos(rad)
+
+        x3 = x4 + wd * np.cos(rad)
+        y3 = y4 + wd * np.sin(rad)
+        
+        # set axes limits to fit the rotated image
+        xlims = (ctr_x, x2, x3, x4)
+        xlims = min(xlims), max(xlims)
+        ylims = (ctr_y, y2, y3, y4)
+        ylims = max(ylims), min(ylims)
+        
+        self._transform = self.RotTransform(transf, xlims, ylims)
+
         return self._transform
     
     def imshow_multichannel(
@@ -445,7 +483,9 @@ class ImageOverlayer:
         if self._transform is None:
             self.setup_transform(img2d)
         for n in self.ax.images + self.ax.lines + self.ax.collections:
-            n.set_transform(self._transform)
+            n.set_transform(self._transform.transform)
+        self.ax.set_xlim(*self._transform.xlims)
+        self.ax.set_ylim(*self._transform.ylims)
         
         # flip horizontally or vertically by inverting axes
         if config.transform[config.Transforms.FLIP_HORIZ]:

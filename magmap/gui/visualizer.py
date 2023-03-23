@@ -1405,7 +1405,7 @@ class Visualization(HasTraits):
             self._imgadj_brightness_high = high
     
     def _set_inten_min_to_curr(self, plot_ax_img):
-        # set min intensity to current image value
+        """Set min intensity to current image value."""
         if plot_ax_img is not None:
             vmin = plot_ax_img.ax_img.norm.vmin
             self._adapt_imgadj_limits(plot_ax_img)
@@ -1414,7 +1414,7 @@ class Visualization(HasTraits):
                 self._imgadj_min = vmin
 
     def _set_inten_max_to_curr(self, plot_ax_img):
-        # set max intensity to current image value
+        """Set max intensity to current image value."""
         if plot_ax_img is not None:
             vmax = plot_ax_img.ax_img.norm.vmax
             self._adapt_imgadj_limits(plot_ax_img)
@@ -1431,8 +1431,9 @@ class Visualization(HasTraits):
         self._imgadj_min_auto = False
         self._imgadj_ignore_update = False
         plot_ax_img = self._adjust_displayed_imgs(minimum=self._imgadj_min)
-        # intensity max may have been adjusted to remain >= min
-        self._set_inten_max_to_curr(plot_ax_img)
+        
+        # # intensity max may have been adjusted to remain >= min
+        # self._set_inten_max_to_curr(plot_ax_img)
     
     def _adjust_img_auto(self, mode: str = "min"):
         """Handle changes to the image range auto control.
@@ -1476,8 +1477,9 @@ class Visualization(HasTraits):
         self._imgadj_max_auto = False
         self._imgadj_ignore_update = False
         plot_ax_img = self._adjust_displayed_imgs(maximum=self._imgadj_max)
-        # intensity min may have been adjusted to remain <= max
-        self._set_inten_min_to_curr(plot_ax_img)
+        
+        # # intensity min may have been adjusted to remain <= max
+        # self._set_inten_min_to_curr(plot_ax_img)
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):

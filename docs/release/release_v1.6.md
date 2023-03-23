@@ -89,7 +89,7 @@
 - `ctrl+[n]+click` to add a channel now sets the channel directly to `n` rather than to the `n`th seleted channel (#109)
 - Added a slider to choose the fraction of 3D blobs to display (#121)
 - Improved blob size slider range and readability (#121)
-- Blob columns can be customized, including excluding or reordering columns (#133, #216, #449)
+- Blob columns can be customized, including excluding or reordering columns (#133, #216, #449, #475)
 - Existing blob archives are backed up before saving (#216)
 - Basic spectral unmixing through channel subtraction (#458)
 - Fixed to scale blobs' radii when viewing blobs detections on a downsampled image (#121)

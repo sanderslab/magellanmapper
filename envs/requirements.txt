@@ -15,7 +15,7 @@ imageio==2.26.0
 importlib-resources==5.12.0
 javabridge==1.0.19.post9+gc8c12b4
 kiwisolver==1.4.4
-lazy_loader==0.1
+lazy_loader==0.2
 markdown-it-py==2.2.0
 matplotlib==3.7.1
 matplotlib-scalebar==0.8.1

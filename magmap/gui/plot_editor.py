@@ -63,11 +63,14 @@ class PlotAxImg:
         #: True if the image is displayed as RGB(A); defaults to False.
         self.rgb: bool = False
         
-        #: Original underlying image data, copied to allow adjusting the array
-        #: in ``ax_img`` while retaining the original data unless given by
-        #: directly by ``img``.
+        #: Original array of the displayed Matplotlib image. If None (default),
+        #: the displayed image's array will be copied to allow adjusting the
+        #: array in ``ax_img`` while retaining the original data.
         self.img: np.ndarray = np.copy(
             self.ax_img.get_array()) if img is None else img
+        
+        #: Original input image data; defaults to None.
+        self.input_img: Optional[np.ndarray] = None
 
 
 class PlotEditor:
@@ -615,9 +618,16 @@ class PlotEditor:
         for i, imgs in enumerate(ax_imgs):
             plot_ax_imgs = []
             for j, img in enumerate(imgs):
-                # use original 2D labels, without cmap index conversion
+                # for 2D label images, use the original 2D labels, without
+                # cmap index conversion
                 img_orig = img2d_lbl if i == 1 else None
+                
+                # initialized the plotted image storage instance
                 plot_ax_img = PlotAxImg(img, img=img_orig)
+                if i == 0 and imgs2d:
+                    # store the original intensity image plane, which may
+                    # differ from the displayed axes image array
+                    plot_ax_img.input_img = libmag.get_if_within(imgs2d[0], j)
                 
                 if i == 0:
                     # specified vmin/vmax, in contrast to the AxesImages's

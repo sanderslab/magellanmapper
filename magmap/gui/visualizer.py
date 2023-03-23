@@ -1544,11 +1544,17 @@ class Visualization(HasTraits):
             plot_ax_img = None
             for viewer in viewers:
                 if not viewer: continue
+                
                 # update settings for the viewer
-                print("adjusting channel", int(self.imgadj_chls), kwargs)
                 plot_ax_img = viewer.update_imgs_display(
                     self._imgadj_names.selections.index(self._imgadj_name),
                     chl=int(self.imgadj_chls), **kwargs)
+                
+                if self._imgadj_merge_chls:
+                    # fully re-blend the image using the updated settings
+                    for plot_ed in viewer.plot_eds.values():
+                        plot_ed.show_overview()
+        
         return plot_ax_img
 
     @staticmethod

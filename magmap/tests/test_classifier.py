@@ -14,7 +14,7 @@ class TestClassifier(unittest.TestCase):
     def test_setup_classification_roi(self):
         
         # set up blobs
-        blobs = test_detector.TestDetector.make_random_blobs()
+        blobs = test_detector.TestDetector().make_random_blobs()
         
         # set up image
         image5d = np.zeros((1, 10, 15, 20, 2))

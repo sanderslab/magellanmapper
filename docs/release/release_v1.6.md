@@ -156,7 +156,7 @@
 - The `revpairedstats` profile is now `revconds` since it applies to reversing conditions in general, not just for paired stats (#132)
 - Stats errors are caught rather than stopping the pipeline (#132)
 - The labels reference path has been moved to an environment variable, which can be configured through `--labels <path>` (#147)
-- The Shapiro-Wilks test has been implemented in `meansModel` for consistent table output (#164)
+- One-sample t-tests and Wilxocon tests and the Shapiro-Wilks test have been implemented in `meansModel` (#164, #470)
 - A basic `NAMESPACE` file is provided to fix installation and exporting functions (#303)
 - Linear regression intercept term can be toggled using the `Intercept` environment field, and r<sup>2</sup> and intercept are exported (#445)
 - Fixed t-test, which also provides Cohen's d as a standardized effect size through the `effectsize` package (#135)

@@ -1370,21 +1370,21 @@ class Visualization(HasTraits):
         # respond to triggers
         self._imgadj_ignore_update = False
     
-    def _adapt_imgadj_limits(self, plot_ax_img):
+    def _adapt_imgadj_limits(self, plot_ax_img: "plot_editor.PlotAxImg"):
         """Adapt image adjustment slider limits based on values in the
         given plotted image.
         
         Args:
-            plot_ax_img (:obj:`magmap.gui.plot_editor.PlotAxImg`): Plotted
-                image.
+            plot_ax_img: Plotted image.
 
         """
         if plot_ax_img is None: return
         norm = plot_ax_img.ax_img.norm
-        inten_lim = (np.amin(plot_ax_img.img), np.amax(plot_ax_img.img))
+        input_img = plot_ax_img.input_img
+        inten_lim = (np.amin(input_img), np.amax(input_img))
 
         if inten_lim[0] < self._imgadj_max_low:
-            # ensure that lower limit is beyond current plane's limits;
+            # ensure that lower limit is beyond current plane's lower limit;
             # bottom out at 0 unless current low is < 0
             low_thresh = inten_lim[0] if norm.vmin is None else min(
                 inten_lim[0], norm.vmin)

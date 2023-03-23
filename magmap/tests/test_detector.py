@@ -10,19 +10,30 @@ from magmap.cv import detector
 
 class TestDetector(unittest.TestCase):
     
-    @staticmethod
-    def make_random_blobs() -> "detector.Blobs":
+    def make_random_blobs(self) -> "detector.Blobs":
         """Make blobs with random coordinates.
         
         Returns:
             Blobs instance.
 
         """
+        # set up basic blobs with random coordinates and radii
         blobs = np.random.rand(20).reshape((5, 4))
         blobs[:, :3] = np.multiply(blobs[:, :3], 100).astype(int)
         blobs[:, 3] = blobs[:, 3] * 10
+        
+        # test constructing blobs with default columns
         bl = detector.Blobs(blobs)
+        self.assertTrue(bl.cols == [c.value for c in bl.Cols][:4])
+        self.assertTrue(bl._col_inds[bl.Cols.RADIUS] == 3)
+        self.assertTrue(bl._col_inds[bl.Cols.ABS_X] is None)
+        
+        # test formatting blobs for full set of columns
         bl.format_blobs()
+        self.assertTrue(bl.cols == [c.value for c in bl.Cols])
+        self.assertTrue(bl._col_inds[bl.Cols.RADIUS] == 3)
+        self.assertTrue(bl._col_inds[bl.Cols.ABS_X] == 9)
+        
         print(f"Blobs:\n{bl.blobs}")
         return bl
     

@@ -99,7 +99,7 @@ class Blobs:
             path=None, cols=None):
         """Initialize blobs storage object."""
         # set attributes from args
-        self._cols: Optional[Sequence[str]] = cols
+        self.cols: Optional[Sequence[str]] = cols
         self.blobs: Optional[np.ndarray] = blobs
         self.blob_matches: Optional["colocalizer.BlobMatch"] = blob_matches
         self.colocalizations: Optional[np.ndarray] = colocalizations
@@ -127,6 +127,7 @@ class Blobs:
 
         """
         self._cols = cols
+        if cols is None: return
         
         # default indices to None to indicate column does not exist
         Blobs._col_inds = {c: None for c in self.Cols}
@@ -321,12 +322,13 @@ class Blobs:
         extra_cols = len(self.Cols) - shape[1]
         extras = np.ones((shape[0], extra_cols)) * -1
         self.blobs = np.concatenate((self.blobs, extras), axis=1)
+        self.cols = [c.value for c in self.Cols]
         
         # map added col names to indices, assumed to be ordered as in Cols
         for i, col in enumerate(self.Cols):
             if i < shape[1]: continue
             # mutate underlying class attribute, which doesn't become inst attr
-            self._col_inds[self.Cols(col)] = i
+            self._col_inds[col] = i
         
         # copy relative to absolute coords
         self.blobs[:, self._get_abs_inds()] = self.blobs[

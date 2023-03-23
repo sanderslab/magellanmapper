@@ -12,7 +12,12 @@ from typing import Any, Callable, Dict, List, Optional, Sequence, \
     TYPE_CHECKING, Tuple, Union
 
 import numpy as np
-from matplotlib import backend_bases, gridspec, layout_engine, pyplot as plt
+from matplotlib import backend_bases, gridspec, pyplot as plt
+try:
+    from matplotlib import layout_engine
+except ImportError as e:
+    # not available in Matplotlib on Python 3.6
+    layout_engine = None
 import matplotlib.transforms as transforms
 from skimage import filters, img_as_float32, transform
 
@@ -1123,7 +1128,8 @@ def fit_frame_to_image(
         # set padding in layout engine
         engine = fig.get_layout_engine()
         padding = libmag.get_if_within(pad, 0, 0)
-        if isinstance(engine, layout_engine.ConstrainedLayoutEngine):
+        if layout_engine is not None and isinstance(
+                engine, layout_engine.ConstrainedLayoutEngine):
             engine.set(h_pad=padding, w_pad=padding)
         else:
             fig.tight_layout(pad=padding)

@@ -511,10 +511,8 @@ class PlotEditor:
         if self._plot_ax_imgs:
             # use vmin/vmax from norm values in previously displayed images
             # if available; None specifies auto-scaling
-            vmaxs[0] = [p.vmax if p.vmax is None else p.ax_img.norm.vmax
-                        for p in self._plot_ax_imgs[0]]
-            vmins[0] = [p.vmin if p.vmin is None else p.ax_img.norm.vmin
-                        for p in self._plot_ax_imgs[0]]
+            vmaxs[0] = [p.vmax for p in self._plot_ax_imgs[0]]
+            vmins[0] = [p.vmin for p in self._plot_ax_imgs[0]]
             
             # use opacity, brightness, anc contrast from prior images
             alphas[0] = [p.alpha for p in self._plot_ax_imgs[0]]

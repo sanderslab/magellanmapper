@@ -11,7 +11,7 @@ fonttools==4.39.2
 future==0.18.3
 idna==3.4
 imagecodecs==2023.3.16
-imageio==2.26.0
+imageio==2.26.1
 importlib-resources==5.12.0
 javabridge==1.0.19.post9+gc8c12b4
 kiwisolver==1.4.4

@@ -1334,7 +1334,7 @@ class Visualization(HasTraits):
             # empty array
             return
 
-        # get currently dispalyed image
+        # get currently displayed image
         plot_ax_img = self._get_curr_plot_ax_img()
         if plot_ax_img is None: return
         
@@ -1348,11 +1348,13 @@ class Visualization(HasTraits):
 
         # populate intensity limits, auto-scaling, and current val (if not auto)
         self._adapt_imgadj_limits(plot_ax_img)
+        
         if plot_ax_img.vmin is None:
             self._imgadj_min_auto = True
         else:
             self._imgadj_min = plot_ax_img.ax_img.norm.vmin
             self._imgadj_min_auto = False
+        
         if plot_ax_img.vmax is None:
             self._imgadj_max_auto = True
         else:
@@ -1425,7 +1427,9 @@ class Visualization(HasTraits):
         if self._imgadj_min_ignore_update or self._imgadj_ignore_update:
             self._imgadj_min_ignore_update = False
             return
+        self._imgadj_ignore_update = True
         self._imgadj_min_auto = False
+        self._imgadj_ignore_update = False
         plot_ax_img = self._adjust_displayed_imgs(minimum=self._imgadj_min)
         # intensity max may have been adjusted to remain >= min
         self._set_inten_max_to_curr(plot_ax_img)
@@ -1468,7 +1472,9 @@ class Visualization(HasTraits):
         if self._imgadj_max_ignore_update or self._imgadj_ignore_update:
             self._imgadj_max_ignore_update = False
             return
+        self._imgadj_ignore_update = True
         self._imgadj_max_auto = False
+        self._imgadj_ignore_update = False
         plot_ax_img = self._adjust_displayed_imgs(maximum=self._imgadj_max)
         # intensity min may have been adjusted to remain <= max
         self._set_inten_min_to_curr(plot_ax_img)

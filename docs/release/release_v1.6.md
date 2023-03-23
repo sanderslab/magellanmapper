@@ -164,6 +164,10 @@
 - Fixed model fitting (#240, #304)
 - Fixed plotting in PyCharm (#304)
 
+#### Server pipelines
+
+- The server setup script now accepts `-m [mount-path]` to set a custom mount path target (#469)
+
 #### Code base and docs
 
 - Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)

@@ -47,7 +47,7 @@ six==1.16.0
 tifffile==2023.3.21
 traits==6.4.1
 traitsui==7.4.3
-treelib==1.6.1
+treelib==1.6.3
 typing_extensions==4.5.0
 urllib3==1.26.15
 zipp==3.15.0

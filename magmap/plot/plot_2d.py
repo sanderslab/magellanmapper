@@ -710,13 +710,14 @@ def plot_scatter(
         alpha: Optional[float] = None, legend_loc: str = "best",
         ax: Optional["axes.Axes"] = None, save: bool = True,
         annot_thresh_fn: Optional[Callable[[int, int], bool]] = None,
-        colors: Optional[Sequence] = None, **kwargs) -> "axes.Axes":
+        colors: Optional[Sequence[str]] = None, jitter: int = 0, **kwargs
+) -> "axes.Axes":
     """Generate a scatter plot from a data frame or CSV file.
     
     Args:
-        path: Path from which to read a saved Pandas data frame and the 
+        path: Path from which to read a saved Pandas data frame and the
             path basis to save the figure if :attr:``config.savefig`` is set.
-        col_x: Name of column to plot as x-values. Can also be a sequence 
+        col_x: Name of column to plot as x-values. Can also be a sequence
             of names to define groups with corresponding `col_y` values.
         col_y: Name of column to plot as corresponding y-values; defaults to
             None. Can also be a sequence corresponding to that of `col_x`.
@@ -730,17 +731,17 @@ def plot_scatter(
             defaults to None, in which case a name based on ``cols_groups``
             will be used instead. Length should equal that of groups based
             on ``cols_group``.
-        fig_size: Sequence of ``width, height`` to size the figure; defaults 
+        fig_size: Sequence of ``width, height`` to size the figure; defaults
             to None.
-        show: True to display the image; otherwise, the figure will only 
-            be saved to file, if :attr:``config.savefig`` is set.  
+        show: True to display the image; otherwise, the figure will only
+            be saved to file, if :attr:``config.savefig`` is set.
             Defaults to True.
-        suffix: String to append to output path before extension; 
+        suffix: String to append to output path before extension;
             defaults to None to ignore.
-        df: Data frame to use; defaults to None. If set, this data frame 
+        df: Data frame to use; defaults to None. If set, this data frame
             will be used instead of loading from ``path``.
         xy_line: Show an xy line; defaults to False.
-        col_size: Name of column from which to scale point sizes, where 
+        col_size: Name of column from which to scale point sizes, where
             the max value in the column is 1; defaults to None.
         size_mult: Point size multiplier; defaults to 5.
         annot_arri: Int as index or slice of indices of annotation value
@@ -755,9 +756,12 @@ def plot_scatter(
         annot_thresh_fn: Function accepting ``x, y`` and returning
             a boolean indicated whether to annotate the given point;
             defaults to False.
-        colors: Color or sequence of colors for each point; defaults to None.
-            If None, distinct colors are auto-generated for each pair of x-y
+        colors: Sequence of colors for each point. If None (default),
+            distinct colors are auto-generated for each pair of x-y
             column or for each group.
+        jitter: Jitter width in x-units; defaults to 0. If given, x-values
+            will randomly "jitter" by this value, centered on the original
+            position.
         kwargs: Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
@@ -777,8 +781,17 @@ def plot_scatter(
         color = colors[i]
         scat_args = {"color" if mat_colors.is_color_like(color) else "c": color}
         
+        xs_jits = xs
+        if jitter:
+            # add jitter with the given width; convert x-vals given as strings
+            # to a range along the vals
+            nxs = len(xs)
+            xs_num = range(nxs) if pd.api.types.is_string_dtype(xs) else xs
+            xs_jits = np.random.sample(nxs) * jitter - jitter / 2.
+            xs_jits = np.add(xs_num, xs_jits)
+        
         ax.scatter(
-            xs, ys, s=sizes_plot, label=label, **scat_args, 
+            xs_jits, ys, s=sizes_plot, label=label, **scat_args,
             marker=markers[i])
         if col_annot:
             # annotate each point with val from annotation col, which can be

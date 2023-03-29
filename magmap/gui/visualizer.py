@@ -1528,6 +1528,7 @@ class Visualization(HasTraits):
 
         Args:
             refresh: True to refresh all Plot Editors; defaults to False.
+                Overridden to True if merge channels is on.
             **kwargs: Arguments to update the currently selected viewer.
         
         Returns:
@@ -1545,18 +1546,17 @@ class Visualization(HasTraits):
             # update all Matplotlib-based viewers
             viewers = self._get_mpl_viewers()
             plot_ax_img = None
+            
+            # always fully refresh when channels are merged
+            refresh = refresh or self._imgadj_merge_chls
+            
             for viewer in viewers:
                 if not viewer: continue
                 
                 # update settings for the viewer
                 plot_ax_img = viewer.update_imgs_display(
                     self._imgadj_names.selections.index(self._imgadj_name),
-                    chl=int(self.imgadj_chls), **kwargs)
-                
-                if self._imgadj_merge_chls or refresh:
-                    # fully refresh the image using the updated settings
-                    for plot_ed in viewer.plot_eds.values():
-                        plot_ed.show_overview()
+                    chl=int(self.imgadj_chls), refresh=refresh, **kwargs)
         
         return plot_ax_img
 

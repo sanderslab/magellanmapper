@@ -15,11 +15,12 @@ Examples:
 import glob
 import pprint
 from collections import OrderedDict
-from enum import auto, Enum 
+from enum import auto, Enum
 import os
 import subprocess
 import sys
-from typing import Dict, Optional, Sequence, TYPE_CHECKING, Tuple, Type, Union
+from typing import Dict, List as TypeList, Optional, Sequence, TYPE_CHECKING, \
+    Tuple, Type, Union
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # explicitly use PyQt5 for custom GUI events
@@ -1306,8 +1307,8 @@ class Visualization(HasTraits):
         # update control values
         self.update_imgadj_for_img()
 
-    def _get_selected_viewers(self) -> List:
-        """Get selected viewers."""
+    def _get_mpl_viewers(self) -> TypeList["plot_support.ImageSyncMixin"]:
+        """Get Matplotlib-based viewers."""
         viewers = []
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
             if self.roi_ed:
@@ -1320,7 +1321,7 @@ class Visualization(HasTraits):
     
     def _get_curr_plot_ax_img(self) -> Optional["plot_editor.PlotAxImg"]:
         """Get the first displayed image in the current viewer."""
-        viewers = self._get_selected_viewers()
+        viewers = self._get_mpl_viewers()
         plot_ax_img = None
         if viewers:
             # get the first displayed image from the viewer
@@ -1539,8 +1540,8 @@ class Visualization(HasTraits):
             # update 3D visualization Mayavi/VTK settings
             self._vis3d.update_img_display(**kwargs)
         else:
-            # update any selected Matplotlib-based viewer settings
-            viewers = self._get_selected_viewers()
+            # update all Matplotlib-based viewers
+            viewers = self._get_mpl_viewers()
             plot_ax_img = None
             for viewer in viewers:
                 if not viewer: continue

@@ -851,6 +851,9 @@ class Visualization(HasTraits):
                      name="object._imgadj_chls_names.selections", cols=8)),
         ),
         HGroup(
+            Item("_imgadj_merge_chls", label="Merge channels"),
+        ),
+        HGroup(
             Item("_imgadj_min", label="Minimum", editor=RangeEditor(
                      low_name="_imgadj_min_low", high_name="_imgadj_min_high",
                      mode="slider", format="%.4g")),
@@ -876,13 +879,11 @@ class Visualization(HasTraits):
             Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g")),
         ),
-        HGroup(
-            Item("_imgadj_merge_chls", label="Merge channels"),
-        ),
         
         HGroup(
             # alpha blending controls
-            Item("_imgadj_alpha_blend_check", label="Blend"),
+            Item("_imgadj_alpha_blend_check", label="Blend",
+                 enabled_when="not _imgadj_merge_chls"),
             Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g"),
                  enabled_when="_imgadj_alpha_blend_check"),
@@ -2384,10 +2385,15 @@ class Visualization(HasTraits):
             evt: Event, ignored.
 
         """
+        if self._imgadj_merge_chls and self._imgadj_alpha_blend_check:
+            # turn off alpha blending when merging channels
+            self._imgadj_alpha_blend_check = False
+        
         viewers = self._get_mpl_viewers()
         for viewer in viewers:
             # update additive blending
             viewer.additive_blend = self._imgadj_merge_chls
+        
         # refresh display images
         self._adjust_displayed_imgs(refresh=True)
 

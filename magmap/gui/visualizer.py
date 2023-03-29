@@ -1522,17 +1522,19 @@ class Visualization(HasTraits):
             # turn off alpha blending and reset alpha values
             self._adjust_displayed_imgs(alpha_blend=False)
 
-    def _adjust_displayed_imgs(self, **kwargs):
+    def _adjust_displayed_imgs(
+            self, refresh: bool = False, **kwargs) -> "plot_editor.PlotAxImg":
         """Adjust image display settings for the currently selected viewer.
 
         Args:
+            refresh: True to refresh all Plot Editors; defaults to False.
             **kwargs: Arguments to update the currently selected viewer.
         
         Returns:
-            :obj:`magmap.plot_editor.PlotAxImg`: The last updated axes image
-            plot, assumed to have the same values as all the other
-            updated plots, or None if the selected tab does not have an
-            axes image, such as an unloaded tab or 3D visualization tab.
+            The last updated axes image plot, assumed to have the same values
+            as all the other updated plots, or None if the selected tab does
+            not have an axes image, such as an unloaded tab or 3D visualization
+            tab.
 
         """
         plot_ax_img = None
@@ -1551,8 +1553,8 @@ class Visualization(HasTraits):
                     self._imgadj_names.selections.index(self._imgadj_name),
                     chl=int(self.imgadj_chls), **kwargs)
                 
-                if self._imgadj_merge_chls:
-                    # fully re-blend the image using the updated settings
+                if self._imgadj_merge_chls or refresh:
+                    # fully refresh the image using the updated settings
                     for plot_ed in viewer.plot_eds.values():
                         plot_ed.show_overview()
         
@@ -2373,6 +2375,21 @@ class Visualization(HasTraits):
             ed.update_max_intens_proj(shape, True)
         if self.roi_ed is not None:
             self.roi_ed.update_max_intens_proj(shape, True)
+
+    @observe("_imgadj_merge_chls")
+    def _update_merge_channels(self, evt):
+        """Handle changes to merge channels control.
+        
+        Args:
+            evt: Event, ignored.
+
+        """
+        viewers = self._get_mpl_viewers()
+        for viewer in viewers:
+            # update additive blending
+            viewer.additive_blend = self._imgadj_merge_chls
+        # refresh display images
+        self._adjust_displayed_imgs(refresh=True)
 
     def update_status_bar_msg(self, msg):
         """Update the message displayed in the status bar.

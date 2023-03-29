@@ -66,6 +66,18 @@ class ImageSyncMixin:
         #: Listeners attached to the editor.
         self._listeners: List["backend_bases.Event"] = []
 
+    @property
+    def additive_blend(self) -> bool:
+        """Get additive blend setting."""
+        return self._additive_blend
+    
+    @additive_blend.setter
+    def additive_blend(self, val: bool):
+        """Set additive blend setting and propagate to Plot Editors."""
+        self._additive_blend = val
+        for ed in self.plot_eds.values():
+            ed.overlayer.additive_blend = val
+
     def get_img_display_settings(self, imgi, chl=None):
         """Get display settings for the given image.
         

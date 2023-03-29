@@ -96,7 +96,7 @@ class PlotEditor:
     _KEY_MODIFIERS = ("shift", "alt", "control")
     
     def __init__(self, overlayer, img3d,
-                 img3d_labels, cmap_labels, plane=None,
+                 img3d_labels=None, cmap_labels=None, plane=None,
                  fn_update_coords=None, fn_refresh_images=None,
                  scaling=None, plane_slider=None, img3d_borders=None,
                  cmap_borders=None, fn_show_label_3d=None, interp_planes=None,
@@ -136,11 +136,11 @@ class PlotEditor:
         self.axes: "axes.Axes" = self.overlayer.ax
         #: Main 3D image.
         self.img3d: np.ndarray = img3d
-        #: Labels 3D image.
-        self.img3d_labels: np.ndarray = img3d_labels
+        #: Labels 3D image; defaults to None.
+        self.img3d_labels: Optional[np.ndarray] = img3d_labels
         #: Labels colormap, generally of
-        #: :class:`magmap.plot.colormaps.DiscreteColormap`.
-        self.cmap_labels: "colors.ListedColormap" = cmap_labels
+        #: :class:`magmap.plot.colormaps.DiscreteColormap`. Defaults to None.
+        self.cmap_labels: Optional["colors.ListedColormap"] = cmap_labels
         #: One of :attr:`magmap.settings.config.PLANE` specifying the
         #: orthogonal plane to view.
         self.plane: str = plane if plane else config.PLANE[0]
@@ -245,9 +245,10 @@ class PlotEditor:
                 if downsample > 1:
                     # only downsample if factor is over 1
                     self._downsample[i] = downsample
-        _logger.debug(
-            "plane %s downsampling factors by image: %s", self.plane,
-            self._downsample)
+        if config.verbose and not np.all(np.array(self._downsample) == 1):
+            _logger.debug(
+                "Plane %s downsampling factors by image: %s", self.plane,
+                self._downsample)
     
     @property
     def edit_mode(self) -> bool:
@@ -280,6 +281,10 @@ class PlotEditor:
                 artists = self.blitter.artists
                 if self._ax_img_labels in artists:
                     artists.remove(self._ax_img_labels)
+
+    @property
+    def plot_ax_imgs(self) -> Optional[List["PlotAxImg"]]:
+        return self._plot_ax_imgs
 
     def connect(self):
         """Connect events to functions.
@@ -779,22 +784,24 @@ class PlotEditor:
                 self.img3d_labels[self.coord[0]]))
     
     @staticmethod
-    def get_plot_ax_img(plot_ax_imgs, imgi, channels=None, chl=None):
+    def get_plot_ax_img(
+            plot_ax_imgs: Sequence[Sequence["PlotAxImg"]], imgi: int,
+            channels: Optional[Sequence[Sequence[int]]] = None, chl:
+            Optional[int] = None) -> Optional["PlotAxImg"]:
         """Get a plotted image based on image group and channel.
 
         Args:
-            plot_ax_imgs (list[list[:class:`PlotAxImg`]]): Plotted image
-                objects, organized as
+            plot_ax_imgs: Plotted image objects, organized as
                 ``[[img0_chl0, img0_chl1, ...], [img1_chl0, ...], ....]``.
-            imgi (int): Index of image group in ``plot_ax_imgs``.
-            channels (list[list[int]]): List of channel lists corresponding
+            imgi: Index of image group in ``plot_ax_imgs``.
+            channels: List of channel lists corresponding
                 to ``plot_ax_imgs``; defalts to None to use ``chl`` directly.
-            chl (int): Index of channel within the selected image group;
+            chl: Index of channel within the selected image group;
                 defaults to None to use the first channel.
 
         Returns:
-            :class:`PlotAxImg`: The selected plotted image, or None if image
-            corresponding to ``imgi`` and ``chl`` is not found.
+            The selected plotted image, or None if image corresponding to
+            ``imgi`` and ``chl`` is not found.
 
         """
         plot_ax_img = None

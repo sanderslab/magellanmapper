@@ -1,5 +1,5 @@
 # ROI Editor with serial 2D viewer and annotator
-# Author: David Young, 2018, 2020
+# Author: David Young, 2018, 2023
 """ROI editing GUI in the MagellanMapper package.
 
 Attributes:
@@ -7,14 +7,14 @@ Attributes:
         simply turns on interior borders as the picker remains on
         by default.
 """
-
 from collections import OrderedDict
 import math
 import os
 from enum import Enum
 import re
 from time import time
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Callable, Dict, List, Optional, Sequence, TYPE_CHECKING, \
+    Tuple
 
 import numpy as np
 from matplotlib import figure
@@ -25,11 +25,12 @@ from matplotlib.collections import PatchCollection
 
 from magmap.cv import detector
 from magmap.gui import image_viewer, pixel_display, plot_editor
-from magmap.io import importer, libmag, naming
+from magmap.io import libmag, naming
 from magmap.plot import colormaps, plot_support
 from magmap.settings import config
 
 if TYPE_CHECKING:
+    from matplotlib import axes
     from magmap.io import np_io
 
 verify = False
@@ -931,7 +932,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                < roi_size[2] - border[2])
 
                 # show the zoomed subplot with scale bar for the current z-plane
-                ax_z, ax_z_imgs = self.show_subplot(
+                ax_z, ax_z_plot_ed = self.show_subplot(
                     fig, gs_zoomed, i, j, channel, roi_size, zoom_offset,
                     fn_update_seg, blobs_in, blobs_out, blobs_cmap, alpha,
                     z_relative, z == self._z_overview,
@@ -942,7 +943,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 if (i == 0 and j == 0
                         and config.plot_labels[config.PlotLabels.SCALE_BAR]):
                     plot_support.add_scale_bar(ax_z, plane=self.plane)
-                self._ax_subplots[ax_z] = ax_z_imgs
+                self._ax_subplots[ax_z] = ax_z_plot_ed
         update_subplot_border()
 
         if not circles == self.CircleStyles.NO_CIRCLES:
@@ -983,27 +984,18 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # update overview images
         plot_ax_img = super().update_imgs_display(imgi, **kwargs)
         
-        if "chl" in kwargs:
-            # use channel when getting plotted image
-            chl = kwargs["chl"]
-            del kwargs["chl"]
-        else:
-            chl = None
         alpha = kwargs["alpha"] if "alpha" in kwargs else None
         num_subplots = len(self._ax_subplots)
-        for i, plot_ax_imgs in enumerate(self._ax_subplots.values()):
-            # get zoomed image; halve alpha for ROI padding planes
-            img = plot_editor.PlotEditor.get_plot_ax_img(
-                plot_ax_imgs, imgi, self._channel, chl)
+        for i, zoomed_plot_ed in enumerate(self._ax_subplots.values()):
+            if zoomed_plot_ed is None: continue
+            
+            # update zoomed image
             alpha_subplot = alpha
             if alpha and (i < self._z_planes_padding
                           or i >= num_subplots - self._z_planes_padding):
                 alpha_subplot /= 2
             kwargs["alpha"] = alpha_subplot
-            
-            # update zoomed image
-            plot_editor.PlotEditor.update_plot_ax_img_display(
-                img, **kwargs)
+            zoomed_plot_ed.update_img_display(imgi, **kwargs)
         return plot_ax_img
 
     def update_max_intens_proj(self, shape, show=False):
@@ -1124,11 +1116,13 @@ class ROIEditor(plot_support.ImageSyncMixin):
             region, name, series, *offset[:3], str(tuple(roi_size)).strip("()"),
             str(tuple(roi_size_um)).strip("()"), u'\u00b5m')
 
-    def show_subplot(self, fig, gs, row, col, channel, roi_size,
-                     offset, fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
-                     z_relative, highlight=False, border=None, plane="xy",
-                     roi=None, labels=None, blobs_truth=None, circles=None,
-                     aspect=None, grid=False, cmap_labels=None):
+    def show_subplot(
+            self, fig, gs, row, col, channel, roi_size,
+            offset, fn_update_seg, segs_in, segs_out, segs_cmap, alpha,
+            z_relative, highlight=False, border=None, plane="xy",
+            roi=None, labels=None, blobs_truth=None, circles=None,
+            aspect=None, grid=False, cmap_labels=None
+    ) -> Tuple["axes.Axes", Optional["plot_editor.PlotEditor"]]:
         """Shows subplots of the region of interest.
 
         Args:
@@ -1139,6 +1133,7 @@ class ROIEditor(plot_support.ImageSyncMixin):
             channel: Channel of the image to display.
             roi_size: List of x,y,z dimensions of the ROI.
             offset: Tuple of x,y,z coordinates of the ROI.
+            fn_update_seg: Function to update blob.
             segs_in: Numpy array of segments within the ROI to display in the
                 subplot, which can be None. Segments are generally given as an
                 ``(n, 4)`` dimension array, where each segment is in
@@ -1190,9 +1185,11 @@ class ROIEditor(plot_support.ImageSyncMixin):
         if border is not None:
             # boundaries of border region, with xy point of corner in first
             # elements and [width, height] in 2nd, allowing flip for yz plane
-            border_bounds = np.array(
-                [border[0:2],
+            border_bounds = np.array([
+                border[0:2],
                 [roi_size[0] - 2 * border[0], roi_size[1] - 2 * border[1]]])
+        
+        plot_ed = None
         if z < 0 or z >= size[image5d_shape_offset]:
             # draw empty, grey subplot out of image planes just for spacing
             ax_imgs = [[ax.imshow(np.zeros(roi_size[0:2]), alpha=0)]]
@@ -1238,8 +1235,10 @@ class ROIEditor(plot_support.ImageSyncMixin):
             overlaid = plot_support.ImageOverlayer(
                 ax, aspect, rgb=self.img5d.rgb,
                 additive_blend=self.additive_blend)
-            ax_imgs = [overlaid.imshow_multichannel(
-                roi, channel, config.cmaps, alpha, rgb=self.img5d.rgb)]
+            plot_ed = plot_editor.PlotEditor(overlaid, roi[None])
+            plot_ed.alpha_img3d = [alpha]
+            plot_ed.coord = (0, 0, 0)
+            plot_ed.show_overview()
             #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
 
             # show labels if provided and within ROI
@@ -1369,19 +1368,18 @@ class ROIEditor(plot_support.ImageSyncMixin):
                                                linestyle="dashed",
                                                linewidth=self._BLOB_LINEWIDTH))
             
-            if self.fn_status_bar:
+            if self.fn_status_bar and plot_ed:
                 # set up status bar pixel display for mouseover
                 imgs2d = [roi if channel is None or len(roi.shape) < 3
                           else roi[..., tuple(channel)]]
+                ax_imgs = [
+                    [p.ax_img for p in ps] for ps in plot_ed.plot_ax_imgs]
                 ax.format_coord = pixel_display.PixelDisplay(
                     imgs2d, ax_imgs, offset=offset[1::-1])
                 self._listeners.append(
                     fig.canvas.mpl_connect("motion_notify_event", on_motion))
-        plot_ax_imgs = None
-        if ax_imgs and ax_imgs[0]:
-            plot_ax_imgs = [[plot_editor.PlotAxImg(img) for img in imgs]
-                            for imgs in ax_imgs]
-        return ax, plot_ax_imgs
+        
+        return ax, plot_ed
 
     def _circle_collection(self, segments, edgecolor, facecolor, linewidth):
         """Draws a patch collection of circles for segments.

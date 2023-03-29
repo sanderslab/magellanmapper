@@ -710,7 +710,8 @@ def plot_scatter(
         alpha: Optional[float] = None, legend_loc: str = "best",
         ax: Optional["axes.Axes"] = None, save: bool = True,
         annot_thresh_fn: Optional[Callable[[int, int], bool]] = None,
-        colors: Optional[Sequence[str]] = None, jitter: int = 0, **kwargs
+        colors: Optional[Sequence[str]] = None, jitter: float = 0,
+        rotation: int = 0, **kwargs
 ) -> "axes.Axes":
     """Generate a scatter plot from a data frame or CSV file.
     
@@ -762,6 +763,7 @@ def plot_scatter(
         jitter: Jitter width in x-units; defaults to 0. If given, x-values
             will randomly "jitter" by this value, centered on the original
             position.
+        rotation: Degrees to rotate x-tick labels; defaults to 0.
         kwargs: Extra arguments to :meth:`plot_support.decorate_plot`.
     
     Returns:
@@ -862,8 +864,7 @@ def plot_scatter(
         if not cols_group:
             groups = [""]  # default to single group of empty string
         else:
-            # treat each unique combination of cols_group values as 
-            # a separate group
+            # treat each unique combo of cols_group values as a separate group
             for col in cols_group:
                 df_col = df[col].astype(str)
                 if df_groups is None:
@@ -912,6 +913,10 @@ def plot_scatter(
         # add xy line
         xy_line = np.linspace(*ax.get_xlim())
         ax.plot(xy_line, xy_line)
+    
+    if rotation:
+        # rotate x-tick labels by given degrees
+        plot_support.scale_xticks(ax, rotation)
     
     # set labels, title, etc
     decorate_plot(ax, **kwargs)

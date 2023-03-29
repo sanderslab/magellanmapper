@@ -162,6 +162,11 @@ class PlotEditor:
         self.fn_status_bar = fn_status_bar
         self.img3d_extras = img3d_extras
         
+        #: Main image opacity as a sequence of values from 0-1 for each
+        #: channel. Defaults to a list of the first element in
+        #: :attr:`config.alphas`.
+        self.alpha_img3d: Sequence[float] = [config.alphas[0]]
+        #: Labels opacity from 0-1; defaults to :const:`ALPHA_DEFAULT`.
         self.alpha: float = self.ALPHA_DEFAULT
         self.intensity = None  # picked intensity of underlying img3d_label
         self.intensity_spec = None  # specified intensity
@@ -508,7 +513,7 @@ class PlotEditor:
         imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
         self._channels = [config.channel]
         cmaps = [config.cmaps]
-        alphas = [config.alphas[0]]
+        alphas = self.alpha_img3d
         alpha_is_default = True
         alpha_blends = [None]
         shapes = [self._img3d_shapes[0][1:3]]

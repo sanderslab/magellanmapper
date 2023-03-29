@@ -210,7 +210,7 @@ class ImageSyncMixin:
     def enable_btn(btn, enable=True, color=None, max_color=0.99):
         """Display a button or other widget as enabled or disabled.
 
-        Note that the button's active state will not change since doing so 
+        Note that the button's active state will not change since doing so
         prevents the coloration from changing.
 
         Args:
@@ -419,9 +419,9 @@ class ImageOverlayer:
             img2d: 2D image either as 2D (y, x) or 3D (y, x, channel) array.
             channel: Sequence of channels to display; if None, all channels
                 will be shown.
-            cmaps: List of colormaps corresponding to each channel. Colormaps 
+            cmaps: List of colormaps corresponding to each channel. Colormaps
                 can be the names of specific maps in :mod:``config``.
-            alpha: Transparency level for all channels or 
+            alpha: Transparency level for all channels or
                 sequence of levels for each channel. If any value is 0, the
                 corresponding image will not be output. Defaults to None to use 1.
             vmin: Scalar or sequence of vmin levels for
@@ -481,7 +481,7 @@ class ImageOverlayer:
             alpha_plane = libmag.get_if_within(alpha, chl)
             img_chl = None
             if not self.ignore_invis or alpha_plane > 0:
-                # skip display if alpha is 0 to avoid outputting a hidden image 
+                # skip display if alpha is 0 to avoid outputting a hidden image
                 # that may show up in other renderers (eg PDF viewers)
                 img_chl = self.ax.imshow(
                     img2d_show, cmap=cmap, norm=norm, aspect=self.aspect, 
@@ -540,9 +540,9 @@ class ImageOverlayer:
     ) -> Optional[List[List["image.AxesImage"]]]:
         """Show multiple, overlaid images.
         
-        Wrapper function calling :meth:`imshow_multichannel` for multiple 
-        images. The first image is treated as a sample image with potential 
-        for multiple channels. Subsequent images are typically label images, 
+        Wrapper function calling :meth:`imshow_multichannel` for multiple
+        images. The first image is treated as a sample image with potential
+        for multiple channels. Subsequent images are typically label images,
         which may or may not have multple channels.
         
         Args:
@@ -551,21 +551,21 @@ class ImageOverlayer:
             channels: A nested list of channels to display for
                 each image, or None to use :attr:``config.channel`` for the
                 first image and 0 for all subsequent images.
-            cmaps: Either a single colormap for all images or a list of 
-                colormaps corresponding to each image. Colormaps of type 
-                :class:`colormaps.DiscreteColormap` will have their 
+            cmaps: Either a single colormap for all images or a list of
+                colormaps corresponding to each image. Colormaps of type
+                :class:`colormaps.DiscreteColormap` will have their
                 normalization object applied as well. If a color is given for
                 :obj:`config.AtlasLabels.BINARY` in :attr:`config.atlas_labels`,
                 images with :class:`colormaps.DiscreteColormap` will be
                 converted to NaN for foreground to use this color.
-            alphas: Either a single alpha for all images or a list of 
+            alphas: Either a single alpha for all images or a list of
                 alphas corresponding to each image. Defaults to None to use
                 :attr:`config.alphas`, filling with 0.9 for any additional
                 values required and :attr:`config.plot_labels` for the first value.
-            vmins: A list of vmins for each image; defaults to None to use 
+            vmins: A list of vmins for each image; defaults to None to use
                 :attr:``config.vmins`` for the first image and None for all others.
-            vmaxs: A list of vmaxs for each image; defaults to None to use 
-                :attr:``config.vmax_overview`` for the first image and None 
+            vmaxs: A list of vmaxs for each image; defaults to None to use
+                :attr:``config.vmax_overview`` for the first image and None
                 for all others.
             check_single: True to check for images with a single unique
                 value displayed with a :class:`colormaps.DiscreteColormap`, which
@@ -641,7 +641,7 @@ class ImageOverlayer:
                 if img_norm_setting:
                     # normalize main intensity image
                     img = libmag.normalize(img, *img_norm_setting)
-                # currently only support RGB in main image 
+                # currently only support RGB in main image
                 rgb = self.rgb
             
             elif not all(np.equal(img.shape[:2], imgs2d[0].shape[:2])):
@@ -804,7 +804,7 @@ def alpha_blend_intersection(
         img1: First image.
         img2: Second image.
         alpha: Alpha level from 0-1 for the first image to use for its
-            intersecting area; the second image will use ``1 - alpha``.            
+            intersecting area; the second image will use ``1 - alpha``.
         mask1: Foreground mask for ``img1``; defaults to None, in which case
             the foreground will be segmented using Otsu's method.
         mask2: Same for ``img2``; defaults to None.
@@ -820,7 +820,7 @@ def alpha_blend_intersection(
         mask2 = img2 > filters.threshold_otsu(img2)
     
     # alpha blend the intersecting area while leaving the non-overlapping
-    # foreground at full opacity and background at full transparency 
+    # foreground at full opacity and background at full transparency
     intersection = np.logical_and(mask1, mask2)
     mask1 = mask1.astype(float)
     mask2 = mask2.astype(float)
@@ -833,22 +833,22 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
     """Extract a 2D plane or stack of planes.
     
     Args:
-        image5d (:obj:`np.ndarray`): The full image stack in either 
-            ``t,z,y,x[,c]`` or ``z,y,x`` formate; if 4 or more dimensions, 
+        image5d (:obj:`np.ndarray`): The full image stack in either
+            ``t,z,y,x[,c]`` or ``z,y,x`` formate; if 4 or more dimensions,
             the first dimension is assumed to be time and ignored.
         plane_n (int, slice): Slice of planes to extract, which can be
             a single index or multiple indices such as would be used for an
             animation.
-        plane (str): Type of plane to extract, which should be one of 
+        plane (str): Type of plane to extract, which should be one of
             :attribute:`config.PLANES`.
-        max_intens_proj (bool): True to show a max intensity projection, which 
-            assumes that plane_n is an array of multiple, typically 
-            contiguous planes along which the max intensity pixel will 
+        max_intens_proj (bool): True to show a max intensity projection, which
+            assumes that plane_n is an array of multiple, typically
+            contiguous planes along which the max intensity pixel will
             be taken. Defaults to False.
     
     Returns:
-        Tuple of an array of the image, which is 2D if ``plane_n`` is a 
-        scalar or ``max_intens_projection`` is True, or 3D otherwise; 
+        Tuple of an array of the image, which is 2D if ``plane_n`` is a
+        scalar or ``max_intens_projection`` is True, or 3D otherwise;
         the aspect ratio; and the origin value.
     """
     if image5d.ndim >= 4:
@@ -870,16 +870,16 @@ def extract_planes(image5d, plane_n, plane=None, max_intens_proj=False):
 def add_scale_bar(ax, downsample=None, plane=None):
     """Adds a scale bar to the plot.
     
-    Uses the x resolution value and assumes that it is in microns per pixel. 
-    The bar's color is taken from the setting in 
+    Uses the x resolution value and assumes that it is in microns per pixel.
+    The bar's color is taken from the setting in
     :attr:``config.process_settings``.
     
     Args:
         ax: The plot that will show the bar.
-        downsample: Downsampling factor by which the resolution will be 
+        downsample: Downsampling factor by which the resolution will be
             multiplied; defaults to None.
-        plane: Plane of the image, used to transpose the resolutions to 
-            find the corresponding x resolution for the given orientation. 
+        plane: Plane of the image, used to transpose the resolutions to
+            find the corresponding x resolution for the given orientation.
             Defaults to None.
     """
     # ensure that ScaleBar package exists
@@ -890,11 +890,11 @@ def add_scale_bar(ax, downsample=None, plane=None):
         # transpose resolutions to the given plane
         _, arrs_1d = transpose_images(plane, arrs_1d=[resolutions])
         resolutions = arrs_1d[0]
-    res = resolutions[2] # assume scale bar is along x-axis
+    res = resolutions[2]  # assume scale bar is along x-axis
     if downsample:
         res *= downsample
     scale_bar = scalebar.ScaleBar(
-        res, u'\u00b5m', scalebar.SI_LENGTH, box_alpha=0, 
+        res, u'\u00b5m', scalebar.SI_LENGTH, box_alpha=0,
         color=config.roi_profile["scale_bar_color"], location=3)
     ax.add_artist(scale_bar)
 
@@ -922,17 +922,17 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
     """Transpose images and associated coorinates to the given plane.
     
     Args:
-        plane: Target plane, which should be one of :const:``config.PLANE``. 
-            If ``rev`` is True, the array will be assumed to have been 
+        plane: Target plane, which should be one of :const:``config.PLANE``.
+            If ``rev`` is True, the array will be assumed to have been
             transposed from ``plane``.
         arrs_3d: Sequence of 3D arrays to transpose; defaults to None.
-        arrs_1d: Sequence of 1D arrays to transpose, typically coordinates 
+        arrs_1d: Sequence of 1D arrays to transpose, typically coordinates
             associated with the 3D arrays; defaults to None.
         rev: True to transpose in reverse, from ``plane`` to "xy".
     
     Returns:
-        Tuple of a list of transposed 3D arrays, or None if no 3D arrays 
-        are given; and a list of transposed 1D arrays, or None if no 1D 
+        Tuple of a list of transposed 3D arrays, or None if no 3D arrays
+        are given; and a list of transposed 1D arrays, or None if no 1D
         arrays are given.
     """
     
@@ -941,12 +941,12 @@ def transpose_images(plane, arrs_3d=None, arrs_1d=None, rev=False):
         arrs_1d_swapped = None
         if arrs_3d is not None:
             arrs_3d_swapped = [
-                None if arr is None else np.swapaxes(arr, *indices) 
+                None if arr is None else np.swapaxes(arr, *indices)
                 for arr in arrs_3d]
         if arrs_1d is not None:
             arrs_1d_swapped = [
-                None if arr is None else 
-                libmag.swap_elements(np.copy(arr), *indices) 
+                None if arr is None else
+                libmag.swap_elements(np.copy(arr), *indices)
                 for arr in arrs_1d]
         return arrs_3d_swapped, arrs_1d_swapped
     
@@ -975,12 +975,12 @@ def get_aspect_ratio(plane):
     is set to rotate the image by an odd number of 90 degree turns.
     
     Args:
-        plane: Planar orientation, which should be one of 
+        plane: Planar orientation, which should be one of
             :const:``config.PLANE``.
     
     Returns:
-        Tuple of the aspect ratio as a float, or None if 
-        :attr:``detector.resolutions`` has not been set; and origin as a 
+        Tuple of the aspect ratio as a float, or None if
+        :attr:``detector.resolutions`` has not been set; and origin as a
         string, or None for default origin.
     """
     origin = None
@@ -1144,9 +1144,9 @@ def set_overview_title(ax, plane, z_overview, zoom="", level=0,
         plane: Plane string.
         z_overview: Value along the axis corresponding to that plane.
         zoom: String showing zoom information; defaults to "".
-        level: Overview view image level, where 0 is unzoomed, 1 is the 
+        level: Overview view image level, where 0 is unzoomed, 1 is the
             next zoom, etc; defaults to 0.
-        max_intens_proj: True to add maximum intensity projection 
+        max_intens_proj: True to add maximum intensity projection
             information to the first overview subplot; defaults to False.
     """
     plane_axis = get_plane_axis(plane)
@@ -1168,10 +1168,10 @@ def set_scinot(
         units: Optional[Sequence[str]] = None):
     """Set axes tick scientific notation and shift exponents to their labels.
     
-    Scientific notation in Matplotlib positions the exponent at the top 
-    of the y-axis and right of the x-axis, which may be missed or overlap 
-    with the title or other labels. This method sets scientific notation 
-    along with axis labels and units and moves any exponent to the 
+    Scientific notation in Matplotlib positions the exponent at the top
+    of the y-axis and right of the x-axis, which may be missed or overlap
+    with the title or other labels. This method sets scientific notation
+    along with axis labels and units and moves any exponent to the
     unit labels. Units will be formatted with math text.
     
     In some cases, scientific notation is incompatible with the axes'
@@ -1257,19 +1257,19 @@ def scale_xticks(
     
     font_size = plt.rcParams["axes.titlesize"]
     if libmag.is_number(font_size):
-        # scale font size of x-axis labels by a sigmoid function to rapidly 
+        # scale font size of x-axis labels by a sigmoid function to rapidly
         # decrease size for larger numbers of labels so they don't overlap
         font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
     font_dict = {"fontsize": font_size}
     
-    # draw x-ticks based on number of bars per group and align to right 
-    # since center shifts the horiz middle of the label to the center; 
+    # draw x-ticks based on number of bars per group and align to right
+    # since center shifts the horiz middle of the label to the center;
     # rotation_mode in dict helps but still slightly off
     ax.set_xticklabels(
-        x_labels, rotation=rotation, horizontalalignment="right", 
+        x_labels, rotation=rotation, horizontalalignment="right",
         fontdict=font_dict)
     
-    # translate to right since "right" alignment shift the right of labels 
+    # translate to right since "right" alignment shift the right of labels
     # too far to the left of tick marks; shift less with more groups
     offset = transforms.ScaledTranslation(
         30 / np.cbrt(len(x_labels)) / ax.figure.dpi, 0,
@@ -1294,13 +1294,13 @@ def setup_vspans(
         sequence of span labels.
 
     """
-    # further group bar groups by vertical spans with location based 
+    # further group bar groups by vertical spans with location based
     # on each change in value in col_vspan
     # TODO: change .values to .to_numpy when Pandas req >= 0.24
     vspan_vals = df[col_vspan].values
     vspans = np.insert(
         np.where(vspan_vals[:-1] != vspan_vals[1:])[0] + 1, 0, 0)
-    vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val) 
+    vspan_lbls = [vspan_fmt.format(val) if vspan_fmt else str(val)
                   for val in vspan_vals[vspans]]
     return vspans, vspan_lbls
 
@@ -1370,7 +1370,7 @@ def get_plane_axis(plane, get_index=False):
         get_index (bool): True to get the axis as an index.
     
     Returns:
-        The axis name orthogonal to :attr:``config.PLANE`` as string, or 
+        The axis name orthogonal to :attr:``config.PLANE`` as string, or
         the axis index in the order ``z,y,x`` if ``get_index`` is True.
     """
     plane_axis = "z"

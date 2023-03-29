@@ -332,7 +332,11 @@ class ROIEditor(plot_support.ImageSyncMixin):
     def __init__(self, img5d, labels_img=None, img_region=None,
                  fn_show_label_3d=None, fn_status_bar=None):
         """Initialize the editor."""
+        #: Dictionary of z-planes to zoomed plots.
+        self._ax_subplots: Dict[
+            "axes.Axes", "plot_editor.PlotEditor"] = OrderedDict()
         super().__init__(img5d)
+        
         print("Initiating ROI Editor")
         #: Image instance to display.
         self.image5d: Optional[
@@ -370,7 +374,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
         # store DraggableCircles objects to prevent premature garbage collection
         self._draggable_circles = []
         self._circle_last_picked = []
-        self._ax_subplots = OrderedDict()  # PlotAxImg for each zoomed plot
 
         # additional z's above/below
         margin = config.plot_labels[config.PlotLabels.MARGIN]
@@ -380,6 +383,17 @@ class ROIEditor(plot_support.ImageSyncMixin):
             # assumes x,y,z order
             self._z_planes_padding = libmag.get_if_within(margin, 2, 3)
         print("margin: {}, savefig: {}".format(margin, config.savefig))
+
+    @plot_support.ImageSyncMixin.additive_blend.setter
+    def additive_blend(self, val: bool):
+        """Set additive blending in overview and zoomed Plot Editors."""
+        # call parent function
+        plot_support.ImageSyncMixin.additive_blend.fset(self, val)
+        
+        for zoomed_plot in self._ax_subplots.values():
+            if zoomed_plot is None or zoomed_plot.overlayer is None: continue
+            # synchronize setting in zoomed editor
+            zoomed_plot.overlayer.additive_blend = val
 
     def _show_overview(self, ax_ov, lev, zoom_levels, arrs_3d, cmap_labels,
                        aspect, origin, scaling, max_size):
@@ -970,19 +984,23 @@ class ROIEditor(plot_support.ImageSyncMixin):
         fig.canvas.draw_idle()
         print("2D plot time: {}".format(time() - time_start))
     
-    def update_imgs_display(self, imgi, **kwargs):
+    def update_imgs_display(
+            self, imgi: int, refresh: bool = False, **kwargs
+    ) -> "plot_editor.PlotAxImg":
         """Update images with the given display settings.
         
         Args:
-            imgi (int): Index of image group.
+            imgi: Index of image group.
+            refresh: True to refresh all zoomed Plot Editors; defaults to False.
             **kwargs: Arguments to pass to the updater.
 
         Returns:
-            :obj:`plot_editor.PlotAxImg`: Updated plotted image.
+            Updated plotted image.
 
         """
         # update overview images
-        plot_ax_img = super().update_imgs_display(imgi, **kwargs)
+        plot_ax_img = super().update_imgs_display(
+            imgi, refresh=refresh, **kwargs)
         
         alpha = kwargs["alpha"] if "alpha" in kwargs else None
         num_subplots = len(self._ax_subplots)
@@ -996,6 +1014,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
                 alpha_subplot /= 2
             kwargs["alpha"] = alpha_subplot
             zoomed_plot_ed.update_img_display(imgi, **kwargs)
+            if refresh:
+                zoomed_plot_ed.show_overview()
+        
         return plot_ax_img
 
     def update_max_intens_proj(self, shape, show=False):

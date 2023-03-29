@@ -98,14 +98,13 @@ class ImageSyncMixin:
         return None
 
     def update_imgs_display(
-            self, imgi: int,
-            chl: Optional[int] = None,
+            self, imgi: int, chl: Optional[int] = None,
             minimum: Optional[float] = np.nan,
             maximum: Optional[float] = np.nan,
             brightness: Optional[float] = None,
-            contrast: Optional[float] = None,
-            alpha: Optional[float] = None,
-            alpha_blend: Optional[float] = None) -> "plot_editor.PlotAxImg":
+            contrast: Optional[float] = None, alpha: Optional[float] = None,
+            alpha_blend: Optional[float] = None, refresh: bool = False, **kwargs
+    ) -> "plot_editor.PlotAxImg":
         """Update dislayed image settings in all Plot Editors.
 
         Args:
@@ -119,6 +118,8 @@ class ImageSyncMixin:
             contrast: Contrast multiplier; defaults to None.
             alpha: Opacity value; defalts to None.
             alpha_blend: Opacity blending value; defaults to None.
+            refresh: True to refresh all zoomed Plot Editors; defaults to False.
+            kwargs: Additional arguments, which are ignored.
         
         Returns:
             The updated axes image plot.
@@ -126,9 +127,15 @@ class ImageSyncMixin:
         """
         plot_ax_img = None
         for ed in self.plot_eds.values():
+            # update the displayed image
             plot_ax_img = ed.update_img_display(
                 imgi, chl, minimum, maximum, brightness, contrast, alpha,
                 alpha_blend)
+            
+            if refresh:
+                # fully refresh editor
+                ed.show_overview()
+        
         return plot_ax_img
     
     def save_fig(self, path: str, **kwargs):

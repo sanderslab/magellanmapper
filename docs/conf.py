@@ -218,6 +218,12 @@ napoleon_use_rtype = True
 myst_heading_anchors = 4
 
 
+# -- Options for Sphinx-autodoc-typehints ---------------------------------
+
+# add default values within type hints parentheses
+typehints_defaults = "comma"
+
+
 # automate building API .rst files, necessary for ReadTheDocs, as inspired by:
 # https://github.com/readthedocs/readthedocs.org/issues/1139#issuecomment-398083449
 def run_apidoc(_):

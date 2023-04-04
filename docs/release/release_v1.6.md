@@ -24,6 +24,7 @@
 - Conda install simplified to use Pip primarily, which reduces disk space usage (#166)
 - Removed Conda `environment_light.yml` (no GUI) and OS-specific specs (#187)
 - No-GUI (headless) install is now by default, with a new `gui` install group to include the GUI (#317)
+- Fixed instructions for installing by Pip in ZSH terminals (#485)
 
 #### GUI
 
@@ -177,6 +178,7 @@
 - Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
 - Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225)
+- Default arguments are documented in API auto-docs (#485)
 
 ### Dependency Updates
 

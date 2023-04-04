@@ -38,7 +38,7 @@ The `mm` entry points was added in v1.6.0 to facilitate launching from installed
 Install using Pip with Python >= 3.6 (see [Python versions](#python-version-support); [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
 
 ```shell
-pip install magellanmapper[most] --extra-index-url https://pypi.fury.io/dd8/
+pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 The `most` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
@@ -65,7 +65,7 @@ conda env create -n mag -f environment.yml
 - Or Pip:
 
 ```shell
-pip install -e .[most] --extra-index-url https://pypi.fury.io/dd8/
+pip install -e ".[most]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 MagellanMapper can be run using `mm` and `mm-cli` as above, or through the run script:

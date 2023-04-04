@@ -38,7 +38,7 @@ mm
 Or install using Pip (virtual environment [recommended](https://realpython.com/python-virtual-environments-a-primer/)):
 
 ```shell
-pip install magellanmapper[most] --extra-index-url https://pypi.fury.io/dd8/
+pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 The extra index accesses a few [customized dependencies](docs/install.md#custom-packages) for MagellanMapper.
@@ -82,4 +82,4 @@ To try out functions with sample images, download any of these files:
 
 Licensed under the open-source [BSD-3 license](LICENSE.txt)
 
-Author: David Young, 2017, 2022, Stephan Sanders Lab
+Author: David Young, 2017, 2023, Stephan Sanders Lab

@@ -168,7 +168,7 @@ def plot_overlays_reg(exp, atlas, atlas_reg, labels_reg, cmap_exp,
     print("vmin: {}, vmax: {}".format(vmin, vmax))
     labels_reg = exposure.rescale_intensity(labels_reg, in_range=(vmin, vmax))
     '''
-    labels_reg = labels_reg.astype(np.float)
+    labels_reg = labels_reg.astype(float)
     lib_clrbrain.normalize(labels_reg, 1, 100, background=15000)
     labels_reg = labels_reg.astype(int)
     print(labels_reg[290:300, 20, 190:200])
@@ -1354,18 +1354,21 @@ def decorate_plot(
     return ax
 
 
-def setup_style(style=None, rc_params=None):
-    """Setup Matplotlib styles and RC parameter themes.
+def setup_style(
+        style: Optional[str] = None,
+        rc_params: Optional[Sequence["config.Themes"]] = None):
+    """Set up Matplotlib styles and RC parameter themes.
     
     Both styles and themes default to those specified in :mod:`config`.
     
     Args:
-        style (str): Name of Matplotlib style to apply. Defaults to None to
+        style: Name of Matplotlib style to apply. Defaults to None to
             use the style specified in :attr:``config.matplotlib_style``.
-        rc_params (List[Enum]): Sequence of :class:`config.Themes` enums
+        rc_params: Sequence of :class:`config.Themes` enums
             specifying custom themes to apply after setting the style.
             Themes will be applied in the order listed. Defaults to None,
             which will use the :attr:`config.rc_params` value.
+    
     """
     #print(plt.style.available)
     if style is None:
@@ -1374,6 +1377,14 @@ def setup_style(style=None, rc_params=None):
         rc_params = config.rc_params
     _logger.debug("Setting up Matplotlib style: %s", style)
     plt.style.use(style)
+    
+    # use core fonts for PDF/PS exports to avoid embedding fonts and ensure
+    # text is editable in some viewers
+    pylab.rcParams.update({
+        "pdf.use14corefonts": True,
+        "ps.useafm": True,
+    })
+    
     for rc in rc_params:
         if rc is config.Themes.DARK:
             # dark theme requires darker widgets for white text

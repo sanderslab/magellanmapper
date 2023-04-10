@@ -1186,39 +1186,39 @@ def measure_labels_overlap(labels_imgs, heat_map=None, spacing=None,
 
 def map_meas_to_labels(
         labels_img: np.ndarray, df: pd.DataFrame, meas: str,
-        fn_avg: Callable[[Sequence], float], skip_nans: bool = False, 
+        fn_avg: Callable[[Sequence], float], skip_nans: bool = False,
         reverse: bool = False, col_wt: Optional[str] = None
 ) -> Optional[np.ndarray]:
     """Generate a map of a given measurement on a labels image.
     
-    The intensity values of labels will be replaced by the given metric 
-    of the chosen measurement, such as the mean of the densities. If 
-    multiple conditions exist, the difference of metrics for the first 
+    The intensity values of labels will be replaced by the given metric
+    of the chosen measurement, such as the mean of the densities. If
+    multiple conditions exist, the difference of metrics for the first
     two conditions will be taken under the assumption that the values for
     each condition are in matching order.
     
     Args:
         labels_img: Labels image as a Numpy array in x,y,z.
-        df: Pandas data frame with measurements by regions corresponding 
+        df: Pandas data frame with measurements by regions corresponding
             to that of ``labels_img``.
         meas: Name of column in ``df`` from which to extract measurements.
-        fn_avg: Function to apply to the column for each region. If None, 
-            ``df`` is assumed to already contain statistics generated from 
+        fn_avg: Function to apply to the column for each region. If None,
+            ``df`` is assumed to already contain statistics generated from
             the ``clrstats`` R package, which will be extracted directly.
-        skip_nans: True to skip any region with NaNs, leaving 0 instead; 
-            defaults to False to allow NaNs in resulting image. Some 
-            applications may not be able to read NaNs, so this parameter 
+        skip_nans: True to skip any region with NaNs, leaving 0 instead;
+            defaults to False to allow NaNs in resulting image. Some
+            applications may not be able to read NaNs, so this parameter
             allows giving a neutral value instead.
-        reverse: Reverse the order of sorted conditions when generating 
+        reverse: Reverse the order of sorted conditions when generating
             stats by ``fn_avg`` to compare conditions; defaults to False.
-        col_wt: Name of column to use for weighting, where the 
-            magnitude of ``meas`` will be adjusted as fractions of the max 
-            value in this weighting column for labels found in ``labels_img``; 
+        col_wt: Name of column to use for weighting, where the
+            magnitude of ``meas`` will be adjusted as fractions of the max
+            value in this weighting column for labels found in ``labels_img``;
             defaults to None.
     
     Retunrs:
-        A map of averages for the given measurement as an image of the 
-        same shape as ``labels_img`` of float data type, or None if no 
+        A map of averages for the given measurement as an image of the
+        same shape as ``labels_img`` of float data type, or None if no
         values for ``meas`` are found.
     
     """
@@ -1228,9 +1228,9 @@ def map_meas_to_labels(
               .format(meas))
         return None
     
-    # make image array to map differences for each label and filter data 
+    # make image array to map differences for each label and filter data
     # frame to get only these regions
-    labels_diff = np.zeros_like(labels_img, dtype=np.float)
+    labels_diff = np.zeros_like(labels_img, dtype=float)
     labels_img_abs = np.abs(labels_img)
     regions = np.unique(labels_img_abs)
     df = df.loc[df["Region"].isin(regions)].copy()
@@ -1258,8 +1258,8 @@ def map_meas_to_labels(
             df.loc[:, meas] *= wts
     
     for region in regions:
-        # get difference for each region, either from a single column 
-        # that already has the difference of effect size of by taking 
+        # get difference for each region, either from a single column
+        # that already has the difference of effect size of by taking
         # the difference from two columns
         df_region = df[df[LabelMetrics.Region.name] == region]
         labels_region = labels_img_abs == region

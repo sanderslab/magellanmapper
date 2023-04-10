@@ -166,8 +166,8 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
         sitk.WriteParameterFile(transform_param_map[0], filename)
         param_map = transform_param_map[0]
     return param_map, None # TODO: not using translation parameters
-    transform = np.array(param_map["TransformParameters"]).astype(np.float)
-    spacing = np.array(param_map["Spacing"]).astype(np.float)
+    transform = np.array(param_map["TransformParameters"]).astype(float)
+    spacing = np.array(param_map["Spacing"]).astype(float)
     len_spacing = len(spacing)
     #spacing = [16, 16, 20]
     translation = None

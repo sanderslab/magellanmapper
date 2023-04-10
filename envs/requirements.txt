@@ -21,7 +21,7 @@ matplotlib==3.7.1
 matplotlib-scalebar==0.8.1
 mdurl==0.1.2
 meshio==5.3.4
-networkx==3.0
+networkx==3.1
 numpy==1.24.2
 packaging==23.0
 pandas==1.5.3

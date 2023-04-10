@@ -32,7 +32,7 @@ Pygments==2.14.0
 pyparsing==3.0.9
 PyQt5==5.15.9
 PyQt5-Qt5==5.15.2
-PyQt5-sip==12.11.1
+PyQt5-sip==12.12.0
 python-bioformats==4.0.7.post5+g52309d1
 python-dateutil==2.8.2
 pytz==2023.3

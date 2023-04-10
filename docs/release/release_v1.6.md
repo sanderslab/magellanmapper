@@ -127,6 +127,7 @@
   - Fixed ROI padding during blob verification and match-based colocalization for 2D images (#380)
 - Multiple multiplane image files can be selected directly instead of relying on file auto-detection (#201)
 - `openpyxl` package is now optional during region export (#445)
+- Use core fonts in PDF/PS file exports to keep vector text (#486)
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 
@@ -148,6 +149,7 @@
 - 2D plots can be set not to save (#445)
 - Discrete colormaps can use [Matplotlib named colors](https://matplotlib.org/stable/gallery/color/named_colors.html) and use them for symmetric colors (#226)
 - Vertical span labels adapt to the axes rather than data limits (#472)
+- Scatter plots support jitter and x-tick rotation (#486)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)
 

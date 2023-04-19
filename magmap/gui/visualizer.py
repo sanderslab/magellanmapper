@@ -298,6 +298,9 @@ class Visualization(HasTraits):
     _channel = List  # selected channels, 0-based
     _rgb = Bool(config.rgb, tooltip="Show image as RGB(A)")
     _rgb_enabled = Bool
+    _merge_chls = Bool(
+        tooltip="Merge channels using additive blending"
+    )
     
     # main registered image available and selected dropdowns
     _main_img_name_avail = Str
@@ -436,9 +439,6 @@ class Visualization(HasTraits):
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float
-    _imgadj_merge_chls = Bool(
-        tooltip="Merge channels using additive blending"
-    )
     _imgadj_alpha_blend = Float(0.5)
     _imgadj_alpha_blend_check = Bool(
         tooltip="Blend the overlapping parts of imags to shown alignment.\n"
@@ -606,7 +606,9 @@ class Visualization(HasTraits):
                      enabled_when="not _rgb",
                      editor=CheckListEditor(
                          name="object._channel_names.selections", cols=8)),
-                Item("_rgb", label="RGB", enabled_when="_rgb_enabled"),
+                Item("_rgb", label="RGB",
+                     enabled_when="_rgb_enabled and not _merge_chls"),
+                Item("_merge_chls", label="Merge", enabled_when="not _rgb"),
             ),
         ),
         VGroup(
@@ -851,9 +853,6 @@ class Visualization(HasTraits):
                      name="object._imgadj_chls_names.selections", cols=8)),
         ),
         HGroup(
-            Item("_imgadj_merge_chls", label="Merge channels"),
-        ),
-        HGroup(
             Item("_imgadj_min", label="Minimum", editor=RangeEditor(
                      low_name="_imgadj_min_low", high_name="_imgadj_min_high",
                      mode="slider", format="%.4g")),
@@ -883,7 +882,7 @@ class Visualization(HasTraits):
         HGroup(
             # alpha blending controls
             Item("_imgadj_alpha_blend_check", label="Blend",
-                 enabled_when="not _imgadj_merge_chls"),
+                 enabled_when="not _merge_chls"),
             Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
                  low=0.0, high=1.0, mode="slider", format="%.3g"),
                  enabled_when="_imgadj_alpha_blend_check"),
@@ -1549,7 +1548,7 @@ class Visualization(HasTraits):
             plot_ax_img = None
             
             # always fully refresh when channels are merged
-            refresh = refresh or self._imgadj_merge_chls
+            refresh = refresh or self._merge_chls
             
             for viewer in viewers:
                 if not viewer: continue
@@ -2377,7 +2376,7 @@ class Visualization(HasTraits):
         if self.roi_ed is not None:
             self.roi_ed.update_max_intens_proj(shape, True)
 
-    @observe("_imgadj_merge_chls")
+    @observe("_merge_chls")
     def _update_merge_channels(self, evt):
         """Handle changes to merge channels control.
         
@@ -2385,14 +2384,14 @@ class Visualization(HasTraits):
             evt: Event, ignored.
 
         """
-        if self._imgadj_merge_chls and self._imgadj_alpha_blend_check:
+        if self._merge_chls and self._imgadj_alpha_blend_check:
             # turn off alpha blending when merging channels
             self._imgadj_alpha_blend_check = False
         
         viewers = self._get_mpl_viewers()
         for viewer in viewers:
             # update additive blending
-            viewer.additive_blend = self._imgadj_merge_chls
+            viewer.additive_blend = self._merge_chls
         
         # refresh display images
         self._adjust_displayed_imgs(refresh=True)
@@ -3028,7 +3027,7 @@ class Visualization(HasTraits):
         roi_ed.fn_update_coords = self.set_offset
         roi_ed.fn_redraw = self.redraw_selected_viewer
         roi_ed.blobs = self.blobs
-        roi_ed.additive_blend = self._imgadj_merge_chls
+        roi_ed.additive_blend = self._merge_chls
         roi_cols = libmag.get_if_within(
             config.plot_labels[config.PlotLabels.LAYOUT], 0)
         stack_args_named = {
@@ -3106,7 +3105,7 @@ class Visualization(HasTraits):
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
             self.update_status_bar_msg)
-        atlas_ed.additive_blend = self._imgadj_merge_chls
+        atlas_ed.additive_blend = self._merge_chls
         self.atlas_eds.append(atlas_ed)
         
         if self._DEFAULTS_2D[4] in self._check_list_2d:
@@ -3289,7 +3288,7 @@ class Visualization(HasTraits):
             config.img5d, self.blobs, "Verifier", self._roi_ed_fig,
             # necessary for immediate table refresh rather than after scroll
             self.update_segment)
-        verifier_ed.additive_blend = self._imgadj_merge_chls
+        verifier_ed.additive_blend = self._merge_chls
         verifier_ed.show_fig()
         self.verifier_ed = verifier_ed
     

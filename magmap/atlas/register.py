@@ -45,9 +45,16 @@ import shutil
 from time import time
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+try:
+    import itk
+except ImportError:
+    itk = None
 import pandas as pd
 import numpy as np
-import SimpleITK as sitk
+try:
+    import SimpleITK as sitk
+except ImportError:
+    sitk = None
 from skimage import filters, measure, morphology, transform
 
 from magmap.atlas import atlas_refiner, edge_seg, labels_meta, ontology, \
@@ -335,9 +342,13 @@ def register_duo(
         path: Optional[str] = None, fixed_mask: Optional[sitk.Image] = None,
         moving_mask: Optional[sitk.Image] = None,
         regs: Optional[Union[
-            Sequence[str], Sequence["atlas_prof.RegParamMap"]]] = None
-) -> Tuple[sitk.Image, "sitk.TransformixImageFilter"]:
-    """Register two images to one another using ``SimpleElastix``.
+            Sequence[str], Sequence["atlas_prof.RegParamMap"]]] = None,
+        is_sitk: bool = False
+) -> Tuple["sitk.Image",
+           Union["sitk.TransformixImageFilter", "itk.TransformixFilter"]]:
+    """Register two images to one another using ``Elastix``.
+    
+    Supports Elastix provided by SimpleITK or ITK.
     
     Args:
         fixed_img: The image to be registered to.
@@ -353,6 +364,8 @@ def register_duo(
         regs: Sequence of atlas profile registration keys or registration
             parameter objects. The default of None gives all three major
             registration types, "reg_translation", "reg_affine", "reg_bspline".
+        is_sitk: True to register using SimpleITK with Elastix. Defaults to
+            False, which will use ITK-Elastix.
     
     Returns:
         Tuple of the registered image and a Transformix filter with the
@@ -363,6 +376,9 @@ def register_duo(
         # default to perform all the major registration types
         regs = ("reg_translation", "reg_affine", "reg_bspline")
     
+    if itk is None and sitk is not None:
+        is_sitk = True
+    
     # basic info from images just prior to SimpleElastix filtering for
     # registration; to view raw images, show these images rather than merely
     # turning all iterations to 0 since simply running through the filter
@@ -372,20 +388,39 @@ def register_duo(
     print("moving image (type {}):\n{}".format(
         moving_img.GetPixelIDTypeAsString(), moving_img))
     
-    # set up SimpleElastix filter
-    elastix_img_filter = sitk.ElastixImageFilter()
-    elastix_img_filter.SetFixedImage(fixed_img)
-    elastix_img_filter.SetMovingImage(moving_img)
-
-    # add any masks
-    if fixed_mask is not None:
-        elastix_img_filter.SetFixedMask(fixed_mask)
-    if moving_mask is not None:
-        elastix_img_filter.SetMovingMask(moving_mask)
+    elastix_img_filter = None
+    param_map_vector = None  # for sitk
+    reg_params = None  # for ITK
+    if is_sitk:
+        # set up SimpleElastix filter
+        elastix_img_filter = sitk.ElastixImageFilter()
+        elastix_img_filter.SetFixedImage(fixed_img)
+        elastix_img_filter.SetMovingImage(moving_img)
+        param_map_vector = sitk.VectorOfParameterMap()
+        
+        # add any masks
+        if fixed_mask is not None:
+            elastix_img_filter.SetFixedMask(fixed_mask)
+        if moving_mask is not None:
+            elastix_img_filter.SetMovingMask(moving_mask)
+        
+    else:
+        # convert sitk to ITK Images
+        fixed_img = sitk_io.sitk_to_itk_img(fixed_img).astype(itk.F)
+        moving_img = sitk_io.sitk_to_itk_img(moving_img).astype(itk.F)
+        
+        # convert any masks
+        if fixed_mask is not None:
+            fixed_mask = sitk_io.sitk_to_itk_img(fixed_mask)
+        if moving_mask is not None:
+            moving_mask = sitk_io.sitk_to_itk_img(moving_mask)
+        
+        # set up object holding reg parameters
+        reg_params = itk.ParameterObject.New()
     
     # set up parameter maps for the included registration types
     settings = config.atlas_profile
-    param_map_vector = sitk.VectorOfParameterMap()
+    elx_kwargs = dict()
     for reg in regs:
         # get registration parameters from profile
         params = reg if isinstance(
@@ -396,7 +431,13 @@ def register_duo(
         # TODO: consider removing since does not skip if "0" and need at least
         # one transformation for reg, even if 0 iterations
         if not max_iter: continue
-        param_map = sitk.GetDefaultParameterMap(params["map_name"])
+        
+        reg_name = params["map_name"]
+        if reg_params:
+            param_map = reg_params.GetDefaultParameterMap(reg_name)
+        else:
+            param_map = sitk.GetDefaultParameterMap(reg_name)
+        
         similarity = params["metric_similarity"]
         if len(param_map["Metric"]) > 1:
             param_map["Metric"] = [similarity, *param_map["Metric"][1:]]
@@ -429,27 +470,56 @@ def register_duo(
             fix_pts_path = os.path.join(os.path.dirname(path), "fix_pts.txt")
             move_pts_path = os.path.join(
                 os.path.dirname(path), "mov_pts.txt")
+            
             if os.path.isfile(fix_pts_path) and os.path.isfile(move_pts_path):
+                # set point files if both exist
                 metric = list(param_map["Metric"])
                 metric.append("CorrespondingPointsEuclideanDistanceMetric")
                 param_map["Metric"] = metric
                 #param_map["Metric2Weight"] = ["0.5"]
-                elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
-                elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
-        param_map_vector.append(param_map)
-
-    elastix_img_filter.SetParameterMap(param_map_vector)
-    elastix_img_filter.PrintParameterMap()
-    elastix_img_filter.Execute()
-    transformed_img = elastix_img_filter.GetResultImage()
+                if elastix_img_filter is not None:
+                    elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
+                    elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
+                elx_kwargs["fixed_point_set_file_name"] = fix_pts_path
+                elx_kwargs["moving_point_set_file_name"] = move_pts_path
+        
+        if param_map_vector is not None:
+            param_map_vector.append(param_map)
+        elif reg_params is not None:
+            reg_params.AddParameterMap(param_map)
     
-    # prep filter to apply transformation to label files; turn off final
-    # bspline interpolation to avoid overshooting the interpolation for the
-    # labels image (see Elastix manual section 4.3)
-    transform_param_map = elastix_img_filter.GetTransformParameterMap()
-    transformix_img_filter = sitk.TransformixImageFilter()
-    transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
-    transformix_img_filter.SetTransformParameterMap(transform_param_map)
+    if elastix_img_filter is not None:
+        # perform registration in sitk
+        elastix_img_filter.SetParameterMap(param_map_vector)
+        elastix_img_filter.PrintParameterMap()
+        elastix_img_filter.Execute()
+        transformed_img = elastix_img_filter.GetResultImage()
+        
+        # prep filter to apply transformation to label files; turn off final
+        # bspline interpolation to avoid overshooting the interpolation for the
+        # labels image (see Elastix manual section 4.3)
+        transform_param_map = elastix_img_filter.GetTransformParameterMap()
+        transformix_img_filter = sitk.TransformixImageFilter()
+        transform_param_map[-1]["FinalBSplineInterpolationOrder"] = ["0"]
+        transformix_img_filter.SetTransformParameterMap(transform_param_map)
+
+    else:
+        # perform registration in ITK-Elastix
+        transformed_img, result_transform_parameters = \
+            itk.elastix_registration_method(
+                fixed_img, moving_img, parameter_object=reg_params,
+                fixed_mask=fixed_mask, moving_mask=moving_mask, **elx_kwargs)
+        
+        # set up transformix
+        result_transform_parameters.SetParameter(
+            result_transform_parameters.GetNumberOfParameterMaps() - 1,
+            "FinalBSplineInterpolationOrder", "0")
+        transformix_img_filter = itk.TransformixFilter.New()
+        transformix_img_filter.SetTransformParameterObject(
+            result_transform_parameters)
+        
+        # convert back to sitk Image
+        transformed_img = sitk_io.itk_to_sitk_img(transformed_img)
     
     return transformed_img, transformix_img_filter
 
@@ -458,9 +528,10 @@ def register(
         fixed_file: str, moving_img_path: str, show_imgs: bool = True,
         write_imgs: bool = True, name_prefix: Optional[str] = None,
         new_atlas: bool = False,
-        transformix: Optional["sitk.TransformixImageFilter"] = None
-) -> "sitk.TransformixImageFilter":
-    """Register an atlas to a sample image using the SimpleElastix library.
+        transformix: Optional[Union[
+            "sitk.TransformixImageFilter", "itk.TransformixFilter"]] = None
+) -> Union["sitk.TransformixImageFilter", "itk.TransformixFilter"]:
+    """Register an atlas to a sample image using the Elastix library.
     
     Loads the images, applies any transformations to the moving image, and
     registers the moving to the sample images. Applies the identical
@@ -481,13 +552,13 @@ def register(
         * If the registration does not complete, the moving image origin and
           direction will be changed to that of the fixed image
         * If no reg, the spacing will also be matched
-        * If still no reg, the atlas will be output as-is 
+        * If still no reg, the atlas will be output as-is
         * If the atlas profile ``fallback`` parameter sets a DSC threshold
           and alternate registration settings, the image will be re-registered
           under these new settings if below the threshold
     
     Args:
-        fixed_file: The image to register, given as a Numpy archive file to 
+        fixed_file: The image to register, given as a Numpy archive file to
             be read by :importer:`read_file`.
         moving_img_path (str): Moving image base path from which an intensity
             and a labels image will be loaded using registered image suffixes.
@@ -495,18 +566,18 @@ def register(
             for the labels image. The intensity image will be used for
             registration. The atlas is currently used as the moving file
             since it is likely to be lower resolution than the Numpy file.
-        show_imgs: True if the output images should be displayed; defaults to 
+        show_imgs: True if the output images should be displayed; defaults to
             True.
-        write_imgs: True if the images should be written to file; defaults to 
+        write_imgs: True if the images should be written to file; defaults to
             False.
-        name_prefix: Path with base name where registered files will be output; 
+        name_prefix: Path with base name where registered files will be output;
             defaults to None, in which case the fixed_file path will be used.
-        new_atlas: True to generate registered images that will serve as a 
+        new_atlas: True to generate registered images that will serve as a
             new atlas; defaults to False.
-        transformix: SimpleElastix transformation filter from prior run;
+        transformix: Elastix transformation filter from prior run;
             defaults to None.
     Returns:
-        The SimpleElastix transformation filter generated by the registration.
+        The Elastix transformation filter generated by the registration.
     
     """
     def get_similarity_metric():

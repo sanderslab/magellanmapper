@@ -8,8 +8,15 @@ import os
 import shutil
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
+try:
+    import itk
+except ImportError:
+    itk = None
 import numpy as np
-import SimpleITK as sitk
+try:
+    import SimpleITK as sitk
+except ImportError:
+    sitk = None
 from skimage import transform
 
 from magmap.settings import config
@@ -696,3 +703,55 @@ def numpy_to_sitk(img: np.ndarray):
         img_sitk = sitk.Image(
             img.shape[::-1], _DTYPES_NP_SITK[np.dtype(img.dtype).name])
     return img_sitk
+
+
+def sitk_to_itk_img(sitk_img: "sitk.Image") -> "itk.Image":
+    """Convert a SimpleITK image to an ITK Image.
+    
+    Args:
+        sitk_img: SimpleITK Image.
+
+    Returns:
+        ITK Image.
+
+    """
+    # construct an ITK Image through the ndarray extracted from the sitk Image
+    itk_img = itk.GetImageFromArray(
+        sitk.GetArrayFromImage(sitk_img),
+        is_vector=sitk_img.GetNumberOfComponentsPerPixel() > 1)
+    
+    # transfer metadata
+    itk_img.SetOrigin(sitk_img.GetOrigin())
+    itk_img.SetSpacing(sitk_img.GetSpacing())
+    
+    # sitk Image directions are flattened arrays, but ITK expects an
+    # (ndim x ndim) matrix
+    itk_img.SetDirection(itk.GetMatrixFromArray(np.reshape(
+        np.array(sitk_img.GetDirection()), [sitk_img.GetDimension()] * 2)))
+    
+    return itk_img
+
+
+def itk_to_sitk_img(itk_img: "itk.Image") -> "sitk.Image":
+    """Convert an ITK image to a SimpleITK Image.
+    
+    Args:
+        itk_img: ITK Image.
+
+    Returns:
+        SimpleITK Image.
+
+    """
+    # construct a sitk Image through the ndarray extracted from the ITK Image
+    sitk_img = sitk.GetImageFromArray(
+        itk.GetArrayFromImage(itk_img),
+        isVector=itk_img.GetNumberOfComponentsPerPixel() > 1)
+    
+    # transfer metadata
+    sitk_img.SetOrigin(tuple(itk_img.GetOrigin()))
+    sitk_img.SetSpacing(tuple(itk_img.GetSpacing()))
+    
+    # ITK Image directions are 2D arrays, but ITK expects a 1D array
+    sitk_img.SetDirection(np.ravel(np.array(itk_img.GetDirection())))
+    
+    return sitk_img

@@ -77,6 +77,8 @@ config = {
         # pre-built SimpleITK with Elastix
         "simpleitk==2.0.2rc2.dev785+g8ac4f ; python_version < '3.8'",
         "simpleitk==2.3.0.dev117+g0640d ; python_version >= '3.8'",
+        "itk",
+        "itk-elastix",
         
         "PyYAML",
         "appdirs",

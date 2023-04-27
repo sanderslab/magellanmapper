@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # Image registration
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2023
 """Register images to one another.
 
 The registration type can be given on the command-line (see :mod:``cli``) as 
@@ -253,7 +253,7 @@ def curate_img(
 
 
 def register_repeat(
-        transformix_img_filter: sitk.TransformixImageFilter,
+        transformix_img_filter: "sitk.TransformixImageFilter",
         img: sitk.Image, preserve_idents: bool = False) -> sitk.Image:
     """Transform labels to match a prior registration.
     
@@ -336,7 +336,7 @@ def register_duo(
         moving_mask: Optional[sitk.Image] = None,
         regs: Optional[Union[
             Sequence[str], Sequence["atlas_prof.RegParamMap"]]] = None
-) -> Tuple[sitk.Image, sitk.TransformixImageFilter]:
+) -> Tuple[sitk.Image, "sitk.TransformixImageFilter"]:
     """Register two images to one another using ``SimpleElastix``.
     
     Args:

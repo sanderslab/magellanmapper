@@ -260,7 +260,8 @@ def curate_img(
 
 
 def register_repeat(
-        transformix_img_filter: "sitk.TransformixImageFilter",
+        transformix_img_filter: Union[
+            "sitk.TransformixImageFilter", "itk.TransformixFilter"],
         img: sitk.Image, preserve_idents: bool = False) -> sitk.Image:
     """Transform labels to match a prior registration.
     
@@ -278,30 +279,50 @@ def register_repeat(
         Transformed image.
 
     """
-    # apply atlas transformation to labels image
-    pixel_id = img.GetPixelID()  # now as signed int
+    # use SimpleITK if it has Elastix and filter is from it
+    is_sitk = sitk and "TransformixImageFilter" in dir(sitk) and isinstance(
+        transformix_img_filter, sitk.TransformixImageFilter)
+    
+    if is_sitk:
+        # store data type
+        pixel_id = img.GetPixelID()
+    else:
+        # convert to ITK Image and cast to required data type
+        img = sitk_io.sitk_to_itk_img(img)
+        pixel_id = type(img)
+        img = img.astype(itk.F)
     
     img_sitk = img
     img_unique = None
     if preserve_idents:
         # map values to indices in their unique array to minimize change of
         # rounding errors for large values
-        img_np = sitk.GetArrayFromImage(img_sitk)
+        img_np = sitk_io.convert_img(img_sitk)
         img_unique, img_inds = np.unique(img_np, return_inverse=True)
         
         # offset by 1 since background will be inserted as 0
         img_inds = img_inds.reshape(img_np.shape) + 1
-        img_sitk = sitk_io.replace_sitk_with_numpy(img, img_inds)
+        img_sitk = sitk_io.replace_sitk_with_numpy(
+            img, img_inds.astype(np.float32))
     
-    # apply transformation
     transformix_img_filter.SetMovingImage(img_sitk)
-    transformix_img_filter.Execute()
-    transf_img = transformix_img_filter.GetResultImage()
-    transf_img = sitk.Cast(transf_img, pixel_id)
-
+    if is_sitk:
+        # reapply transformation using sitk
+        transformix_img_filter.Execute()
+        transf_img = transformix_img_filter.GetResultImage()
+        transf_img = sitk.Cast(transf_img, pixel_id)
+    else:
+        # reapply transformation using ITK
+        transformix_img_filter.UpdateLargestPossibleRegion()
+        transf_img = transformix_img_filter.GetOutput()
+        cast_filter = itk.CastImageFilter[type(transf_img), pixel_id].New()
+        cast_filter.SetInput(transf_img)
+        transf_img = cast_filter.GetOutput()
+    
     if preserve_idents:
         # map indices back to original values
-        transf_inds = sitk.GetArrayFromImage(transf_img)
+        transf_inds = sitk_io.convert_img(transf_img)
+        transf_inds = transf_inds.astype(int)
         bkgdi = np.nonzero(img_unique == 0)
         if len(bkgdi) > 0:
             # convert inserted background (0) to background index
@@ -319,6 +340,9 @@ def register_repeat(
     variance = LabelStatistics.GetVariance(1)
     print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
     '''
+    
+    if not is_sitk:
+        transf_img = sitk_io.itk_to_sitk_img(transf_img)
     return transf_img
 
 

@@ -71,6 +71,42 @@ def reg_out_path(file_path, reg_name, match_ext=False):
         return file_path_base + "_" + reg_name
 
 
+def convert_img(
+        img: Union["sitk.Image", "itk.Image", np.ndarray],
+        multichannel: bool = None, to_sitk: bool = False
+) -> Union["sitk.Image", "itk.Image", np.ndarray]:
+    """Convert SimpleITK, ITK, and NumPy images.
+    
+    Args:
+        img: SimpleITK Image, ITK Image, or NumPy array. Non-NumPy arrays
+            will be converted to a NumPy array.
+        multichannel: True if the resulting SimpleITK or ITK Image should be
+            multichannel. Defaults to None, which will attempt to auto-detect
+            multichannel images. Only used if ``img`` is a NumPy array.
+        to_sitk: True to convert a NumPy ``img`` to a SimpleITK Image. If
+            False (default), an ITK Image is output instead. Ignored if
+            ``img`` is not a NumPy array.
+
+    Returns:
+        The converted image.
+
+    """
+    conv = img
+    if sitk and isinstance(img, sitk.Image):
+        # convert an sitk Image to an np array
+        conv = sitk.GetArrayFromImage(img)
+    elif itk and isinstance(img, itk.Image):
+        # convert an ITK image to an np array
+        conv = itk.GetArrayFromImage(img)
+    elif sitk and to_sitk:
+        # convert an np array to sitk Image
+        conv = sitk.GetImageFromArray(img, multichannel)
+    elif itk:
+        # convert an np array to ITK Image
+        conv = itk.GetImageFromArray(img, multichannel)
+    return conv
+
+
 def replace_sitk_with_numpy(
         img_sitk: sitk.Image, img_np: np.ndarray, multichannel: bool = None
 ) -> sitk.Image:
@@ -97,11 +133,12 @@ def replace_sitk_with_numpy(
     if multichannel is None:
         multichannel = (
             True if img_sitk.GetNumberOfComponentsPerPixel() > 1 else None)
-    img_sitk_back = sitk.GetImageFromArray(img_np, multichannel)
+    img_sitk_back = convert_img(
+        img_np, multichannel, sitk and isinstance(img_sitk, sitk.Image))
     
     # transfer original settings to new sitk Image
-    img_sitk_back.SetSpacing(spacing)
-    img_sitk_back.SetOrigin(origin)
+    img_sitk_back.SetSpacing(tuple(spacing))
+    img_sitk_back.SetOrigin(tuple(origin))
     
     try:
         img_sitk_back.SetDirection(direction)

@@ -74,9 +74,8 @@ config = {
         "matplotlib != 3.3.0, != 3.3.1",
         "pandas",
         
-        # pre-built SimpleITK with Elastix
-        "simpleitk==2.0.2rc2.dev785+g8ac4f ; python_version < '3.8'",
-        "simpleitk==2.3.0.dev117+g0640d ; python_version >= '3.8'",
+        # image registration toolkits
+        "simpleitk",
         "itk",
         "itk-elastix",
         

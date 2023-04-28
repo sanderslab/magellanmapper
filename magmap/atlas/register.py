@@ -362,13 +362,14 @@ def _config_reg_resolutions(grid_spacing_schedule, param_map, ndim):
 
 
 def register_duo(
-        fixed_img: sitk.Image, moving_img: sitk.Image,
-        path: Optional[str] = None, fixed_mask: Optional[sitk.Image] = None,
-        moving_mask: Optional[sitk.Image] = None,
+        fixed_img: Union["sitk.Image", "itk.Image"],
+        moving_img: Union["sitk.Image", "itk.Image"],
+        path: Optional[str] = None,
+        fixed_mask: Optional[Union["sitk.Image", "itk.Image"]] = None,
+        moving_mask: Optional[Union["sitk.Image", "itk.Image"]] = None,
         regs: Optional[Union[
-            Sequence[str], Sequence["atlas_prof.RegParamMap"]]] = None,
-        is_sitk: bool = False
-) -> Tuple["sitk.Image",
+            Sequence[str], Sequence["atlas_prof.RegParamMap"]]] = None
+) -> Tuple[Union["sitk.Image", "itk.Image"],
            Union["sitk.TransformixImageFilter", "itk.TransformixFilter"]]:
     """Register two images to one another using ``Elastix``.
     
@@ -379,17 +380,12 @@ def register_duo(
         moving_img: The image to register to ``fixed_img``.
         path: Path as string from whose parent directory the points-based
             registration files ``fix_pts.txt`` and ``mov_pts.txt`` will
-            be found; defaults to None, in which case points-based
-            reg will be ignored even if set.
-        fixed_mask: Mask for ``fixed_img``, typically a uint8 image.; defaults
-            to None.
-        moving_mask: Mask for ``moving_img``, typically a uint8 image.; defaults
-            to None.
+            be found. If None, points-based reg will be ignored even if set.
+        fixed_mask: Mask for ``fixed_img``, typically a uint8 image.
+        moving_mask: Mask for ``moving_img``, typically a uint8 image.
         regs: Sequence of atlas profile registration keys or registration
             parameter objects. The default of None gives all three major
             registration types, "reg_translation", "reg_affine", "reg_bspline".
-        is_sitk: True to register using SimpleITK with Elastix. Defaults to
-            False, which will use ITK-Elastix.
     
     Returns:
         Tuple of the registered image and a Transformix filter with the
@@ -400,23 +396,51 @@ def register_duo(
         # default to perform all the major registration types
         regs = ("reg_translation", "reg_affine", "reg_bspline")
     
-    if itk is None and sitk is not None:
-        is_sitk = True
+    is_sitk_img = sitk and isinstance(fixed_img, sitk.Image)
+    if itk and isinstance(fixed_img, itk.Image):
+        # use ITK-Elastix if images are of ITK type
+        is_sitk = False
+        
+    elif is_sitk_img:
+        # images are of SimpleITK type
+        if "ElastixImageFilter" in dir(sitk):
+            # use SimpleITK if Elastix is enabled
+            is_sitk = True
+        else:
+            # fall back to ITK-Elastix
+            is_sitk = False
+            _logger.debug(
+                "Converting SimpleITK to ITK images since Elastix was not "
+                "found in the SimpleITK library")
+            
+            # convert sitk to ITK Images
+            fixed_img = sitk_io.sitk_to_itk_img(fixed_img).astype(itk.F)
+            moving_img = sitk_io.sitk_to_itk_img(moving_img).astype(itk.F)
+            
+            # convert any masks
+            if fixed_mask is not None:
+                fixed_mask = sitk_io.sitk_to_itk_img(fixed_mask).astype(itk.F)
+            if moving_mask is not None:
+                moving_mask = sitk_io.sitk_to_itk_img(moving_mask).astype(itk.F)
+        
+    else:
+        if not itk and not sitk:
+            raise ModuleNotFoundError(
+                "ITK-Elastix or SimpleITK with Elastix must be installed for "
+                "image registration")
+        raise TypeError(
+            f"Images must be ITK or SimpleITK Image types, but 'fixed_img' is "
+            f"of type {type(fixed_img)}")
     
-    # basic info from images just prior to SimpleElastix filtering for
-    # registration; to view raw images, show these images rather than merely
-    # turning all iterations to 0 since simply running through the filter
-    # will alter images
-    print("fixed image (type {}):\n{}".format(
-        fixed_img.GetPixelIDTypeAsString(), fixed_img))
-    print("moving image (type {}):\n{}".format(
-        moving_img.GetPixelIDTypeAsString(), moving_img))
+    _logger.info(f"Fixed image:\n{fixed_img}")
+    _logger.info(f"Moving image:\n{moving_img}")
     
     elastix_img_filter = None
     param_map_vector = None  # for sitk
     reg_params = None  # for ITK
     if is_sitk:
         # set up SimpleElastix filter
+        _logger.info("Registering images using SimpleITK with Elastix")
         elastix_img_filter = sitk.ElastixImageFilter()
         elastix_img_filter.SetFixedImage(fixed_img)
         elastix_img_filter.SetMovingImage(moving_img)
@@ -429,17 +453,8 @@ def register_duo(
             elastix_img_filter.SetMovingMask(moving_mask)
         
     else:
-        # convert sitk to ITK Images
-        fixed_img = sitk_io.sitk_to_itk_img(fixed_img).astype(itk.F)
-        moving_img = sitk_io.sitk_to_itk_img(moving_img).astype(itk.F)
-        
-        # convert any masks
-        if fixed_mask is not None:
-            fixed_mask = sitk_io.sitk_to_itk_img(fixed_mask)
-        if moving_mask is not None:
-            moving_mask = sitk_io.sitk_to_itk_img(moving_mask)
-        
         # set up object holding reg parameters
+        _logger.info("Registering images using ITK-Elastix")
         reg_params = itk.ParameterObject.New()
     
     # set up parameter maps for the included registration types
@@ -452,8 +467,10 @@ def register_duo(
         if not params: continue
         
         max_iter = params["max_iter"]
-        # TODO: consider removing since does not skip if "0" and need at least
-        # one transformation for reg, even if 0 iterations
+        # TODO: Consider removing since does not skip if "0" and need at least
+        #   one transformation for reg, even if 0 iterations. Also, note that
+        #   turning all iterations to 0 since simply running through the filter
+        #   will still alter images.
         if not max_iter: continue
         
         reg_name = params["map_name"]
@@ -542,8 +559,9 @@ def register_duo(
         transformix_img_filter.SetTransformParameterObject(
             result_transform_parameters)
         
-        # convert back to sitk Image
-        transformed_img = sitk_io.itk_to_sitk_img(transformed_img)
+        if is_sitk_img:
+            # convert back to sitk Image
+            transformed_img = sitk_io.itk_to_sitk_img(transformed_img)
     
     return transformed_img, transformix_img_filter
 

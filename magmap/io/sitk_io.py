@@ -746,12 +746,14 @@ def sitk_to_itk_img(sitk_img: "sitk.Image") -> "itk.Image":
     """Convert a SimpleITK image to an ITK Image.
     
     Args:
-        sitk_img: SimpleITK Image.
+        sitk_img: SimpleITK Image. If None, will simply be returned.
 
     Returns:
         ITK Image.
 
     """
+    if sitk_img is None: return sitk_img
+    
     # construct an ITK Image through the ndarray extracted from the sitk Image
     itk_img = itk.GetImageFromArray(
         sitk.GetArrayFromImage(sitk_img),
@@ -773,12 +775,14 @@ def itk_to_sitk_img(itk_img: "itk.Image") -> "sitk.Image":
     """Convert an ITK image to a SimpleITK Image.
     
     Args:
-        itk_img: ITK Image.
+        itk_img: ITK Image. If None, will simply be returned.
 
     Returns:
         SimpleITK Image.
 
     """
+    if itk_img is None: return itk_img
+    
     # construct a sitk Image through the ndarray extracted from the ITK Image
     sitk_img = sitk.GetImageFromArray(
         itk.GetArrayFromImage(itk_img),

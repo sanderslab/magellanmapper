@@ -262,16 +262,17 @@ def curate_img(
 def register_repeat(
         transformix_img_filter: Union[
             "sitk.TransformixImageFilter", "itk.TransformixFilter"],
-        img: sitk.Image, preserve_idents: bool = False) -> sitk.Image:
+        img: Union["sitk.Image", "itk.Image"], preserve_idents: bool = False
+) -> Union["sitk.Image", "itk.Image"]:
     """Transform labels to match a prior registration.
     
     Uses an Elastix Transformix filter to reproduce a transformation on
-    a labels image. Ensures that the output pixel type remains the same as
-    the input.
+    a labels image. This filter can be from SimpleITK or ITK. Ensures that
+    the output pixel type remains the same as the input.
     
     Args:
         transformix_img_filter: Filter generated from a prior registration.
-        img: SimpleITK image.
+        img: SimpleITK or ITK image.
         preserve_idents: True to ensure that identities in ``img`` are
             preserved. Typically used for label images. Defaults to False.
 
@@ -283,12 +284,18 @@ def register_repeat(
     is_sitk = sitk and "TransformixImageFilter" in dir(sitk) and isinstance(
         transformix_img_filter, sitk.TransformixImageFilter)
     
+    # check if input image is sitk type
+    is_sitk_img = sitk and isinstance(img, sitk.Image)
+    
     if is_sitk:
         # store data type
         pixel_id = img.GetPixelID()
     else:
-        # convert to ITK Image and cast to required data type
-        img = sitk_io.sitk_to_itk_img(img)
+        if is_sitk_img:
+            # convert to ITK Image
+            img = sitk_io.sitk_to_itk_img(img)
+        
+        # cast to required data type for ITK transformation
         pixel_id = type(img)
         img = img.astype(itk.F)
     
@@ -341,7 +348,7 @@ def register_repeat(
     print("count: {}, mean: {}, variance: {}".format(count, mean, variance))
     '''
     
-    if not is_sitk:
+    if not is_sitk and is_sitk_img:
         transf_img = sitk_io.itk_to_sitk_img(transf_img)
     return transf_img
 

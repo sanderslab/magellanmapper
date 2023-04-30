@@ -86,12 +86,23 @@ _logger = config.logger.getChild(__name__)
 @dataclasses.dataclass
 class RegImgs:
     """Data class for tracking registered images."""
-    exp_orig: Optional[Union[np.ndarray, sitk.Image]] = None
-    exp: Optional[Union[np.ndarray, sitk.Image]] = None
-    atlas: Optional[Union[np.ndarray, sitk.Image]] = None
-    labels: Optional[Union[np.ndarray, sitk.Image]] = None
-    labels_markers: Optional[Union[np.ndarray, sitk.Image]] = None
-    borders: Optional[Union[np.ndarray, sitk.Image]] = None
+    #: Original experimental/fixed image.
+    exp_orig: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Experimental/fixed image.
+    exp: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Atlas/moving image.
+    atlas: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Atlas/moving labels image.
+    labels: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Labels markers image.
+    labels_markers: Optional[Union[
+        np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Borders image.
+    borders: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Experimental/fixed mask image.
+    exp_mask: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
+    #: Atlas/moving mask image.
+    atlas_mask: Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]] = None
     
     @staticmethod
     def get_order(name: str) -> Optional[int]:
@@ -403,8 +414,13 @@ def register_duo(
         # default to perform all the major registration types
         regs = ("reg_translation", "reg_affine", "reg_bspline")
     
-    is_sitk_img = sitk and isinstance(fixed_img, sitk.Image)
-    if itk and isinstance(fixed_img, itk.Image):
+    # collect images
+    reg_imgs = RegImgs(
+        exp=fixed_img, atlas=moving_img, exp_mask=fixed_mask,
+        atlas_mask=moving_mask)
+    
+    is_sitk_img = sitk and isinstance(reg_imgs.exp, sitk.Image)
+    if itk and isinstance(reg_imgs.exp, itk.Image):
         # use ITK-Elastix if images are of ITK type
         is_sitk = False
         
@@ -420,15 +436,12 @@ def register_duo(
                 "Converting SimpleITK to ITK images since Elastix was not "
                 "found in the SimpleITK library")
             
-            # convert sitk to ITK Images
-            fixed_img = sitk_io.sitk_to_itk_img(fixed_img).astype(itk.F)
-            moving_img = sitk_io.sitk_to_itk_img(moving_img).astype(itk.F)
-            
-            # convert any masks
-            if fixed_mask is not None:
-                fixed_mask = sitk_io.sitk_to_itk_img(fixed_mask).astype(itk.F)
-            if moving_mask is not None:
-                moving_mask = sitk_io.sitk_to_itk_img(moving_mask).astype(itk.F)
+            for field in dataclasses.fields(RegImgs):
+                # convert sitk to ITK images
+                reg_img = getattr(reg_imgs, field.name)
+                if reg_img is not None:
+                    reg_img = sitk_io.sitk_to_itk_img(reg_img).astype(itk.F)
+                setattr(reg_imgs, field.name, reg_img)
         
     else:
         if not itk and not sitk:
@@ -437,10 +450,10 @@ def register_duo(
                 "image registration")
         raise TypeError(
             f"Images must be ITK or SimpleITK Image types, but 'fixed_img' is "
-            f"of type {type(fixed_img)}")
+            f"of type {type(reg_imgs.exp)}")
     
-    _logger.info(f"Fixed image:\n{fixed_img}")
-    _logger.info(f"Moving image:\n{moving_img}")
+    _logger.info(f"Fixed image:\n{reg_imgs.exp}")
+    _logger.info(f"Moving image:\n{reg_imgs.atlas}")
     
     elastix_img_filter = None
     param_map_vector = None  # for sitk
@@ -449,15 +462,15 @@ def register_duo(
         # set up SimpleElastix filter
         _logger.info("Registering images using SimpleITK with Elastix")
         elastix_img_filter = sitk.ElastixImageFilter()
-        elastix_img_filter.SetFixedImage(fixed_img)
-        elastix_img_filter.SetMovingImage(moving_img)
+        elastix_img_filter.SetFixedImage(reg_imgs.exp)
+        elastix_img_filter.SetMovingImage(reg_imgs.atlas)
         param_map_vector = sitk.VectorOfParameterMap()
         
         # add any masks
-        if fixed_mask is not None:
-            elastix_img_filter.SetFixedMask(fixed_mask)
-        if moving_mask is not None:
-            elastix_img_filter.SetMovingMask(moving_mask)
+        if reg_imgs.exp_mask is not None:
+            elastix_img_filter.SetFixedMask(reg_imgs.exp_mask)
+        if reg_imgs.atlas_mask is not None:
+            elastix_img_filter.SetMovingMask(reg_imgs.atlas_mask)
         
     else:
         # set up object holding reg parameters
@@ -496,7 +509,7 @@ def register_duo(
         if grid_spacing_sched:
             # fine tune the spacing for multi-resolution registration
             _config_reg_resolutions(
-                grid_spacing_sched, param_map, fixed_img.GetDimension())
+                grid_spacing_sched, param_map, reg_imgs.exp.GetDimension())
         else:
             # num of resolutions is automatically set by spacing sched
             param_map["NumberOfResolutions"] = [params["num_resolutions"]]
@@ -555,8 +568,9 @@ def register_duo(
         # perform registration in ITK-Elastix
         transformed_img, result_transform_parameters = \
             itk.elastix_registration_method(
-                fixed_img, moving_img, parameter_object=reg_params,
-                fixed_mask=fixed_mask, moving_mask=moving_mask, **elx_kwargs)
+                reg_imgs.exp, reg_imgs.atlas, parameter_object=reg_params,
+                fixed_mask=reg_imgs.exp_mask, moving_mask=reg_imgs.atlas_mask,
+                **elx_kwargs)
         
         # set up transformix
         result_transform_parameters.SetParameter(

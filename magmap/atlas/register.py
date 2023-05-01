@@ -43,7 +43,7 @@ import dataclasses
 import os
 import shutil
 from time import time
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 try:
     import itk
@@ -116,6 +116,22 @@ class RegImgs:
 
         """
         return 0 if name in ("labels", "labels_markers", "borders") else None
+    
+    def update_fields(
+            self, fn: Callable[
+                [Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]]],
+                Optional[Union[np.ndarray, "sitk.Image", "itk.Image"]]]):
+        """Update all fields.
+        
+        Args:
+            fn: Function to apply to each field if not None.
+
+        """
+        for field in dataclasses.fields(RegImgs):
+            reg_img = getattr(self, field.name)
+            if reg_img is not None:
+                reg_img = fn(reg_img)
+            setattr(self, field.name, reg_img)
 
 
 def _translation_adjust(orig, transformed, translation, flip=False):
@@ -436,12 +452,9 @@ def register_duo(
                 "Converting SimpleITK to ITK images since Elastix was not "
                 "found in the SimpleITK library")
             
-            for field in dataclasses.fields(RegImgs):
-                # convert sitk to ITK images
-                reg_img = getattr(reg_imgs, field.name)
-                if reg_img is not None:
-                    reg_img = sitk_io.sitk_to_itk_img(reg_img).astype(itk.F)
-                setattr(reg_imgs, field.name, reg_img)
+            # convert sitk to ITK images
+            reg_imgs.update_fields(
+                lambda x: sitk_io.sitk_to_itk_img(x).astype(itk.F))
         
     else:
         if not itk and not sitk:

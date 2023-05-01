@@ -407,7 +407,12 @@ def register_duo(
            Union["sitk.TransformixImageFilter", "itk.TransformixFilter"]]:
     """Register two images to one another using ``Elastix``.
     
-    Supports Elastix provided by SimpleITK or ITK.
+    Supports Elastix provided by SimpleITK or ITK. If SimpleITK images are
+    given with Elastix enabled in SimpleITK, registration will be performed
+    in SimpleITK. If Elastix is not enabled, however, the images will be
+    converted to ITK, and registration will use ITK-Elastix. If ITK images
+    are given, ITK-Elastix is assumed to be present; no conversion will take
+    place to SimpleITK.
     
     Args:
         fixed_img: The image to be registered to.
@@ -435,6 +440,12 @@ def register_duo(
         exp=fixed_img, atlas=moving_img, exp_mask=fixed_mask,
         atlas_mask=moving_mask)
     
+    if not itk and not sitk:
+        raise ImportError(
+            config.format_import_err(
+                "itk-elastix", "ITK-Elastix or SimpleITK with Elastix",
+                "image registration"))
+    
     is_sitk_img = sitk and isinstance(reg_imgs.exp, sitk.Image)
     if itk and isinstance(reg_imgs.exp, itk.Image):
         # use ITK-Elastix if images are of ITK type
@@ -457,10 +468,6 @@ def register_duo(
                 lambda x: sitk_io.sitk_to_itk_img(x).astype(itk.F))
         
     else:
-        if not itk and not sitk:
-            raise ModuleNotFoundError(
-                "ITK-Elastix or SimpleITK with Elastix must be installed for "
-                "image registration")
         raise TypeError(
             f"Images must be ITK or SimpleITK Image types, but 'fixed_img' is "
             f"of type {type(reg_imgs.exp)}")

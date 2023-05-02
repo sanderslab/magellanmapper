@@ -959,13 +959,6 @@ def register(
             lbls_meta.prefix = name_prefix
             lbls_meta.save()
 
-    # save transform parameters and attempt to find the original position 
-    # that corresponds to the final position that will be displayed
-    if transformix_filter is not None:
-        _, translation = _handle_transform_file(
-            name_prefix, transformix_filter.GetTransformParameterMap())
-        _translation_adjust(moving_img, img_moved, translation, flip=True)
-    
     # compare original atlas with registered labels taken as a whole
     dsc_labels = atlas_refiner.measure_overlap_combined_labels(
         fixed_img_orig, labels_moved)
@@ -994,6 +987,13 @@ def register(
     df_io.dict_to_data_frame(metrics, df_path, show="\t")
 
     '''
+    # save transform parameters and attempt to find the original position
+    # that corresponds to the final position that will be displayed
+    if transformix_filter is not None:
+        _, translation = _handle_transform_file(
+            name_prefix, transformix_filter.GetTransformParameterMap())
+        _translation_adjust(moving_img, img_moved, translation, flip=True)
+    
     # show 2D overlays or registered image and atlas last since blocks until 
     # fig is closed
     imgs = [

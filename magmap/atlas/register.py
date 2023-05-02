@@ -339,14 +339,22 @@ def register_repeat(
         img_sitk = sitk_io.replace_sitk_with_numpy(
             img, img_inds.astype(np.float32))
     
-    transformix_img_filter.SetMovingImage(img_sitk)
     if is_sitk:
         # reapply transformation using sitk
+        transformix_img_filter.SetMovingImage(img_sitk)
         transformix_img_filter.Execute()
         transf_img = transformix_img_filter.GetResultImage()
         transf_img = sitk.Cast(transf_img, pixel_id)
     else:
         # reapply transformation using ITK
+        
+        # set up new filter since it needs to be set up with the image
+        # to support 3D images
+        params = transformix_img_filter.GetTransformParameterObject()
+        transformix_img_filter = itk.TransformixFilter.New(img_sitk)
+        transformix_img_filter.SetTransformParameterObject(params)
+        
+        # perform the transformation
         transformix_img_filter.UpdateLargestPossibleRegion()
         transf_img = transformix_img_filter.GetOutput()
         cast_filter = itk.CastImageFilter[type(transf_img), pixel_id].New()

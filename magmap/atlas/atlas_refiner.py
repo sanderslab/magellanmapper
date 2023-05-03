@@ -1,5 +1,5 @@
 # Atlas refinement
-# Author: David Young, 2019
+# Author: David Young, 2019, 2023
 """Refine atlases in 3D.
 """
 from collections import OrderedDict
@@ -1081,14 +1081,14 @@ def aggr_smoothing_metrics(df_pxs):
 
 
 def transpose_img(
-        img_sitk: sitk.Image, plane: Optional[str] = None,
+        img_sitk: "sitk.Image", plane: Optional[str] = None,
         rotate: Optional[int] = None,
         rotate_deg: Optional[Sequence[Dict[str, Any]]] = None,
         target_size: Optional[Union[float, Sequence[int]]] = None,
         target_size_res: Optional[Union[float, Sequence[int]]] = None,
         flip: Optional[Union[int, Sequence[int]]] = None,
         order: Optional[int] = None
-) -> sitk.Image:
+) -> "sitk.Image":
     """Transpose an image to a different plane or rotation.
     
     Supports the `ROTATE` and `FLIP` settings in
@@ -1574,8 +1574,8 @@ def import_atlas(atlas_dir, show=True, prefix=None):
 
 
 def measure_atlas_refinement(
-        metrics: Dict[Enum, List], img_atlas: sitk.Image,
-        img_labels: sitk.Image, atlas_profile: atlas_prof.AtlasProfile,
+        metrics: Dict[Enum, List], img_atlas: "sitk.Image",
+        img_labels: "sitk.Image", atlas_profile: atlas_prof.AtlasProfile,
         path: str = None) -> pd.DataFrame:
     """
     
@@ -1615,13 +1615,15 @@ def measure_atlas_refinement(
 
 
 def measure_overlap(
-        img1: sitk.Image, img2: sitk.Image, thresh_img1: Optional[float] = None,
+        img1: "sitk.Image", img2: "sitk.Image",
+        thresh_img1: Optional[float] = None,
         thresh_img2: Optional[float] = None,
         add_to_img1_mask: Optional[np.ndarray] = None,
         return_masks: bool = False
-) -> Union[float, Tuple[float, sitk.Image, np.ndarray]]:
-    """Measure the Dice Similarity Coefficient (DSC) between two foreground 
-    of two images.
+) -> Union[float, Tuple[float, "sitk.Image", np.ndarray]]:
+    """Measure the Dice Similarity Coefficient (DSC) two images.
+     
+    Calculdate the DSC between the foreground of two images.
     
     Args:
         img1: First image.
@@ -1642,7 +1644,7 @@ def measure_overlap(
         the DSC cannot be computed. If`return_masks`` is True, also returns
         the masked images as NumPy arrays.
     """
-    # upper threshold does not seem be set with max despite docs for 
+    # upper threshold does not seem be set with max despite docs for
     # sitk.BinaryThreshold, so need to set with max explicitly
     img1_np = sitk.GetArrayFromImage(img1)
     thresh_img1_up = float(np.amax(img1_np))

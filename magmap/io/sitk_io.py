@@ -6,7 +6,7 @@ Manage import and export of :class:`simpleitk.Image` objects.
 """
 import os
 import shutil
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 try:
     import itk
@@ -99,8 +99,9 @@ def convert_img(
 
 
 def replace_sitk_with_numpy(
-        img_sitk: sitk.Image, img_np: np.ndarray, multichannel: bool = None
-) -> sitk.Image:
+        img_sitk: Union["sitk.Image", "itk.Image"], img_np: np.ndarray,
+        multichannel: bool = None
+) -> Union["sitk.Image", "itk.Image"]:
     """Generate a :class:``sitk.Image`` object based on another Image object,
     but replace its array with a new Numpy array.
     
@@ -111,8 +112,8 @@ def replace_sitk_with_numpy(
             the multichannel setting from ``img_sitk`` will be used.
     
     Returns:
-        New :class:``sitk.Image`` object with same spacing, origin, and 
-        direction as that of ``img_sitk`` and array replaced with ``img_np``.
+        New SimpleITK or ITK ``sitk.Image`` object with same spacing, origin,
+        and direction as that of ``img_sitk`` and array replaced by ``img_np``.
     
     """
     # get original settings
@@ -145,20 +146,21 @@ def replace_sitk_with_numpy(
 
 
 def match_world_info(
-        source: sitk.Image, target: sitk.Image,
+        source: Union["sitk.Image", "itk.Image"],
+        target: Union["sitk.Image", "itk.Image"],
         spacing: Union[bool, Tuple[int], List[int]] = True,
         origin: Union[bool, Tuple[int], List[int]] = True,
         direction: Union[bool, Tuple[int], List[int]] = True):
-    """Copy world information (eg spacing, origin, direction) from one
-    image object to another.
+    """Transfer world information from one image object to another.
 
-    This matching is sometimes necessary for slight differences in
+    Supported world information is spacing, origin, direction. Matching
+    this information is sometimes necessary for slight differences in
     metadata perhaps from founding that may prevent ITK filters from executing.
 
     Args:
-        source (:obj:`sitk.Image`): Source object whose relevant metadata
+        source: Source object whose relevant metadata
             will be copied into ``target``.
-        target (:obj:`sitk.Image`): Target object whose corresponding
+        target: Target object whose corresponding
             metadata will be overwritten by that of ``source``.
         spacing: True to copy the spacing from ``source`` to ``target``, or
             the spacing to set in ``target``; defaults to True.
@@ -189,21 +191,26 @@ def match_world_info(
         target.SetDirection(direction)
 
 
-def read_sitk(path, dryrun=False):
-    """Read an image file into :class:``sitk.Image`` format, checking for 
-    alternative supported extensions if necessary.
+def read_sitk(
+        path: str, dryrun: bool = False
+) -> Tuple[Optional["sitk.Image"], Optional[str]]:
+    """Read an image file into SimpleITK ``sitk.Image`` format
+    
+    Checks for alternative supported extensions if necessary.
     
     Args:
-        path (str): Path, including prioritized extension to check first.
-        dryrun (bool): True to find an existing path if available, without
+        path: Path, including prioritized extension to check first.
+        dryrun: True to find an existing path if available, without
             loading the image; defaults to False.
     
     Returns:
-        :obj:`sitk.Image`, str: Image object located at ``path`` with
-        the found extension, or None if unable to load; and the loaded path,
-        or None if no matching, existing path is found. If a file at
-        ``path`` cannot be found, its extension is replaced successively
-        with remaining extensions in :const:``EXTS_3D`` until a file is found.
+        Tuple of:
+        - ``img_sitk``: Image object located at ``path`` with the found
+          extension, or None if unable to load
+        - ``path_loaded``: the loaded path, or None if no matching, existing
+          path is found. If a file at ``path`` cannot be found, its extension
+          is replaced successively with remaining extensions in
+          :const:``EXTS_3D`` until a file is found.
     
     """
     # prioritize given extension
@@ -253,7 +260,7 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
     return img_sitk, loaded_path
 
 
-def _make_3d(img_sitk: sitk.Image, spacing_z=1) -> sitk.Image:
+def _make_3d(img_sitk: "sitk.Image", spacing_z=1) -> "sitk.Image":
     """Make a 2D image into a 3D image with a single plane.
     
     Args:
@@ -278,7 +285,7 @@ def read_sitk_files(
         filename_sitk: str,
         reg_names: Optional[Union[str, Sequence[str]]] = None,
         return_sitk: bool = False, make_3d: bool = False
-) -> Union["np_io.Image5d", Tuple["np_io.Image5d", sitk.Image]]:
+) -> Union["np_io.Image5d", Tuple["np_io.Image5d", "sitk.Image"]]:
     """Read image files through SimpleITK.
     
     Supports identifying files based on registered suffixes and combining
@@ -370,8 +377,8 @@ def read_sitk_files(
 
 def load_registered_imgs(
         img_path: str, reg_names: Sequence[str], *args, **kwargs
-) -> Dict[str, Union[Union[np.ndarray, sitk.Image],
-          Tuple[Union[np.ndarray, sitk.Image], str]]]:
+) -> Dict[str, Union[Union[np.ndarray, "sitk.Image"],
+          Tuple[Union[np.ndarray, "sitk.Image"], str]]]:
     """Load atlas-based images registered to another image.
     
     Args:
@@ -399,8 +406,8 @@ def load_registered_imgs(
 def load_registered_img(
         img_path: str, reg_name: str, get_sitk: bool = False,
         return_path: bool = False
-) -> Union[Union[np.ndarray, sitk.Image],
-           Tuple[Union[np.ndarray, sitk.Image], str]]:
+) -> Union[Union[np.ndarray, "sitk.Image"],
+           Tuple[Union[np.ndarray, "sitk.Image"], str]]:
     """Load atlas-based image that has been registered to another image.
     
     Args:
@@ -482,32 +489,35 @@ def find_atlas_labels(
     return list(labels_ref_lookup.keys())
 
 
-def write_registered_image(img_np, img_path, reg_name, img_sitk=None,
-                           load_reg_names=None, overwrite=False):
+def write_registered_image(
+        img_np: np.ndarray, img_path: str, reg_name: str,
+        img_sitk: Optional["sitk.Image"] = None,
+        load_reg_names: Optional[Sequence[str]] = None,
+        overwrite: bool = False) -> "sitk.Image":
     """Write a Numpy array as a registered 3D image file through SimpleITK.
     
     To find metadata for the output image, another SimpleITK image must
     be given or discovered as a registered image.
     
     Args:
-        img_np (:class:`numpy.ndarray`): Image array to write.
-        img_path (str): Base path from which to construct output path.
-        reg_name (str): Registered image suffix, which will also specify the
+        img_np: Image array to write.
+        img_path: Base path from which to construct output path.
+        reg_name: Registered image suffix, which will also specify the
             output file format.
-        img_sitk (:class:`sitk.Image`): SimpleITK Image object to use as
+        img_sitk: SimpleITK Image object to use as
             a template for image metadata; defaults to None, in which case
             a registered image will be loaded through ``load_reg_names``.
-        load_reg_names (List[str]): Sequence of registered image suffixes
+        load_reg_names: Sequence of registered image suffixes
             from which to load a template image for metdata. Names are
             checked until the first image loads successfully. Defaults to
             None to use the atlas volume followed by the experimental image.
             If ``img_sitk`` is None and no registered image can be found,
             writing will be aborted.
-        overwrite (bool): True to overwrite any existing image at the output
+        overwrite: True to overwrite any existing image at the output
             path; defaults to False.
 
     Returns:
-        :class:`sitk.Image`: The saved image as a SimpleITK Image object.'
+        The saved image as a SimpleITK Image object.
     
     Raises:
         FileExistsError: if ``overwrite`` is false and existing file is at
@@ -549,24 +559,27 @@ def write_registered_image(img_np, img_path, reg_name, img_sitk=None,
             f"'{reg_img_path}'")
 
 
-def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None,
-                     prefix_is_dir=False):
+def write_reg_images(
+        imgs_write: Dict[str, "sitk.Image"], prefix: str,
+        copy_to_suffix: bool = False, ext: Optional[str] = None,
+        prefix_is_dir: bool = False):
     """Write registered images to file.
     
     Args:
-        imgs_write: Dictionary of ``{suffix: image}``, where ``suffix`` 
-            is a registered images suffix, such as :const:``IMAGE_LABELS``, 
-            and ``image`` is a SimpleITK image object. If the image does 
+        imgs_write: Dictionary of ``{suffix: image}``, where ``suffix``
+            is a registered images suffix, such as :const:``IMAGE_LABELS``,
+            and ``image`` is a SimpleITK image object. If the image does
             not exist, the file will not be written.
         prefix: Base path from which to construct registered file paths.
             Parent directories will be created if necessary.
-        copy_to_suffix: If True, copy the output path to a file in the 
-            same directory with ``suffix`` as the filename, which may 
-            be useful when setting the registered images as the 
-            main images in the directory. Defaults to False.
+        copy_to_suffix: If True, copy the output path to a file in the
+            same directory with ``suffix`` as the filename, which may
+            be useful when setting the registered images as the
+            main images in the directory.
         ext: Replace extension with this value if given; defaults to None.
-        prefix_is_dir (bool): True to treat ``prefix`` as a directory;
-            defaults to False to get the directory name of ``prefix``.
+        prefix_is_dir: True to treat ``prefix`` as a directory.
+            If False, will use the directory name of ``prefix``.
+    
     """
     # get parent directories and create them if necessary
     target_dir = prefix if prefix_is_dir else os.path.dirname(prefix)
@@ -582,7 +595,7 @@ def write_reg_images(imgs_write, prefix, copy_to_suffix=False, ext=None,
         sitk.WriteImage(img, out_path, False)
         print("wrote registered image to", out_path)
         if copy_to_suffix:
-            # copy metadata file to allow opening images from bare suffix name, 
+            # copy metadata file to allow opening images from bare suffix name,
             # such as when this atlas becomes the new atlas for registration
             out_path_copy = os.path.join(target_dir, suffix)
             shutil.copy(out_path, out_path_copy)
@@ -610,8 +623,11 @@ def write_pts(path: str, pts: Sequence[Sequence[int]], pt_type: str = "index"):
             f.write(f"{' '.join([str(p) for p in pt])}\n")
 
 
-def merge_images(img_paths, reg_name, prefix=None, suffix=None, 
-                 fn_combine=np.sum):
+def merge_images(
+        img_paths: Sequence[str], reg_name: str, prefix: Optional[str] = None,
+        suffix: Optional[str] = None,
+        fn_combine: Callable[[Sequence[np.ndarray]], np.ndarray] = np.sum
+) -> "sitk.Image":
     """Merge images from multiple paths.
     
     Assumes that the images are relatively similar in size, but will resize 
@@ -619,18 +635,18 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
     
     Args:
         img_paths: Paths from which registered paths will be found.
-        reg_name: Registration suffix to load for the given paths 
+        reg_name: Registration suffix to load for the given paths
             in ``img_paths``.
-        prefix: Start of output path; defaults to None to use the first 
-           path in ``img_paths`` instead.
-        suffix: Portion of path to be combined with each path 
-            in ``img_paths`` and output path; defaults to None.
-        fn_combine: Function to apply to combine images with ``axis=0``. 
-            Defaults to :func:``np.sum``. If None, each image will be 
-            inserted as a separate channel.
+        prefix: Start of output path. If None, the first path in ``img_paths``
+            will be used instead.
+        suffix: Portion of path to be combined with each path
+            in ``img_paths`` and output path.
+        fn_combine: Function to apply to combine images with ``axis=0``.
+            If None, each image will be inserted as a separate channel.
     
     Returns:
         The combined image in SimpleITK format.
+    
     """
     if len(img_paths) < 1: return None
     
@@ -666,7 +682,7 @@ def merge_images(img_paths, reg_name, prefix=None, suffix=None,
 
 def load_numpy_to_sitk(
         img5d: Union[str, "np_io.Image5d"], rotate: bool = False,
-        channel: Optional[Union[int, Sequence[int]]] = None) -> sitk.Image:
+        channel: Optional[Union[int, Sequence[int]]] = None) -> "sitk.Image":
     """Load Numpy image array to SimpleITK Image object.
 
     Use ``channel`` to extract a single channel before generating a

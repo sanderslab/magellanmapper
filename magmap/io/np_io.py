@@ -458,7 +458,7 @@ def setup_images(
         if bg_atlas:
             # extract labels image from BrainGlobe atlas
             config.labels_img = bg_atlas.annotation
-            config.labels_img_sitk = sitk_io.numpy_to_sitk(config.labels_img)
+            config.labels_img_sitk = sitk_io.convert_img(config.labels_img)
         else:
             try:
                 # load labels image

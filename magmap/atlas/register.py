@@ -216,10 +216,10 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
 
 
 def curate_img(
-        fixed_img: sitk.Image, labels_img: sitk.Image,
-        imgs: Optional[List[sitk.Image]] = None, inpaint: bool = True,
+        fixed_img: "sitk.Image", labels_img: "sitk.Image",
+        imgs: Optional[List["sitk.Image"]] = None, inpaint: bool = True,
         carve: bool = True, thresh: Optional[float] = None,
-        holes_area: Optional[int] = None) -> List[sitk.Image]:
+        holes_area: Optional[int] = None) -> List["sitk.Image"]:
     """Curate an image by the foreground of another.
     
     In-painting where corresponding pixels are present in fixed image but

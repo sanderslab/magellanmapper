@@ -1,5 +1,5 @@
 # Region labels export to data frames and CSV files
-# Author: David Young, 2019
+# Author: David Young, 2019, 2023
 """Region labels export to data frames and CSV files.
 
 Convert regions from ontology files or atlases to data frames.
@@ -186,7 +186,7 @@ def export_common_labels(img_paths, output_path):
 def make_density_image(
         img_path: str, scale: Optional[float] = None,
         shape: Optional[Sequence[int]] = None, suffix: Optional[str] = None, 
-        labels_img_sitk: Optional[sitk.Image] = None,
+        labels_img_sitk: Optional["sitk.Image"] = None,
         channel: Optional[Sequence[int]] = None,
         matches: Dict[Tuple[int, int], "colocalizer.BlobMatch"] = None,
         atlas_profile: Optional["atlas_prof.AtlasProfile"] = None,
@@ -474,7 +474,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
 def make_labels_level_img(
         img_path: Optional[str], level: int, prefix: Optional[str] = None,
         show: bool = False
-) -> Dict[str, sitk.Image]:
+) -> Dict[str, "sitk.Image"]:
     """Replace labels in an image with their parents at the given level.
     
     Labels that do not fall within a parent at that level will remain in place.

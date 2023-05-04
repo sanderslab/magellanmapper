@@ -483,7 +483,6 @@ def register_duo(
     _logger.info(f"Fixed image:\n{reg_imgs.exp}")
     _logger.info(f"Moving image:\n{reg_imgs.atlas}")
     
-    elastix_img_filter = None
     param_map_vector = None  # for sitk
     reg_params = None  # for ITK
     if is_sitk:
@@ -503,11 +502,14 @@ def register_duo(
     else:
         # set up object holding reg parameters
         _logger.info("Registering images using ITK-Elastix")
+        elastix_img_filter = itk.ElastixRegistrationMethod.New(
+            reg_imgs.exp, reg_imgs.atlas)
+        elastix_img_filter.SetFixedMask(reg_imgs.exp_mask)
+        elastix_img_filter.SetMovingMask(reg_imgs.atlas_mask)
         reg_params = itk.ParameterObject.New()
     
     # set up parameter maps for the included registration types
     settings = config.atlas_profile
-    elx_kwargs = dict()
     for reg in regs:
         # get registration parameters from profile
         params = reg if isinstance(
@@ -566,18 +568,15 @@ def register_duo(
                 metric.append("CorrespondingPointsEuclideanDistanceMetric")
                 param_map["Metric"] = metric
                 #param_map["Metric2Weight"] = ["0.5"]
-                if elastix_img_filter is not None:
-                    elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
-                    elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
-                elx_kwargs["fixed_point_set_file_name"] = fix_pts_path
-                elx_kwargs["moving_point_set_file_name"] = move_pts_path
+                elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
+                elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
         
         if param_map_vector is not None:
             param_map_vector.append(param_map)
         elif reg_params is not None:
             reg_params.AddParameterMap(param_map)
     
-    if elastix_img_filter is not None:
+    if is_sitk:
         # perform registration in sitk
         elastix_img_filter.SetParameterMap(param_map_vector)
         elastix_img_filter.PrintParameterMap()
@@ -594,19 +593,18 @@ def register_duo(
 
     else:
         # perform registration in ITK-Elastix
-        transformed_img, result_transform_parameters = \
-            itk.elastix_registration_method(
-                reg_imgs.exp, reg_imgs.atlas, parameter_object=reg_params,
-                fixed_mask=reg_imgs.exp_mask, moving_mask=reg_imgs.atlas_mask,
-                **elx_kwargs)
+        elastix_img_filter.SetParameterObject(reg_params)
+        elastix_img_filter.SetLogToConsole(config.verbose)
+        elastix_img_filter.UpdateLargestPossibleRegion()
+        transformed_img = elastix_img_filter.GetOutput()
+        transf_params = elastix_img_filter.GetTransformParameterObject()
         
         # set up transformix
-        result_transform_parameters.SetParameter(
-            result_transform_parameters.GetNumberOfParameterMaps() - 1,
+        transf_params.SetParameter(
+            transf_params.GetNumberOfParameterMaps() - 1,
             "FinalBSplineInterpolationOrder", "0")
         transformix_img_filter = itk.TransformixFilter.New()
-        transformix_img_filter.SetTransformParameterObject(
-            result_transform_parameters)
+        transformix_img_filter.SetTransformParameterObject(transf_params)
         
         if is_sitk_img:
             # convert back to sitk Image

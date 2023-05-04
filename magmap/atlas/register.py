@@ -473,7 +473,7 @@ def register_duo(
             
             # convert sitk to ITK images
             reg_imgs.update_fields(
-                lambda x: sitk_io.sitk_to_itk_img(x).astype(itk.F))
+                lambda x: sitk_io.sitk_to_itk_img(x))
         
     else:
         raise TypeError(
@@ -500,13 +500,23 @@ def register_duo(
             elastix_img_filter.SetMovingMask(reg_imgs.atlas_mask)
         
     else:
-        # set up object holding reg parameters
+        # set up ITK-Elastix filter
         _logger.info("Registering images using ITK-Elastix")
+        
+        # main images must be float
+        reg_imgs.exp = reg_imgs.exp.astype(itk.F)
+        reg_imgs.atlas = reg_imgs.atlas.astype(itk.F)
         elastix_img_filter = itk.ElastixRegistrationMethod.New(
             reg_imgs.exp, reg_imgs.atlas)
-        elastix_img_filter.SetFixedMask(reg_imgs.exp_mask)
-        elastix_img_filter.SetMovingMask(reg_imgs.atlas_mask)
         reg_params = itk.ParameterObject.New()
+        
+        # masks must be unsigned char
+        if reg_imgs.exp_mask:
+            reg_imgs.exp_mask = reg_imgs.exp_mask.astype(itk.UC)
+            elastix_img_filter.SetFixedMask(reg_imgs.exp_mask)
+        if reg_imgs.atlas_mask:
+            reg_imgs.atlas_mask = reg_imgs.atlas_mask.astype(itk.UC)
+            elastix_img_filter.SetMovingMask(reg_imgs.atlas_mask)
     
     # set up parameter maps for the included registration types
     settings = config.atlas_profile

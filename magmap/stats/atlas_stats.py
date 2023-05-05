@@ -1,5 +1,5 @@
 # Atlas measurements and statistics
-# Author: David Young, 2019, 2021
+# Author: David Young, 2019, 2023
 """Low-level measurement of atlases and statistics generation.
 
 Typically applied to specific types of atlases and less generalizable
@@ -10,7 +10,6 @@ from typing import Optional, Sequence
 
 import numpy as np
 import pandas as pd
-import SimpleITK as sitk
 
 from magmap.atlas import atlas_refiner, ontology
 from magmap.io import df_io, export_stack, libmag, np_io, sitk_io
@@ -562,7 +561,7 @@ def meas_landmark_dist(
     
     # transpose 2nd image with any config settings
     labels_imgs[1] = atlas_refiner.transpose_img(labels_imgs[1])
-    labels_imgs = [sitk.GetArrayFromImage(m) for m in labels_imgs]
+    labels_imgs = [sitk_io.convert_img(m) for m in labels_imgs]
     
     # set up output path and sample name based on 1st image's path
     out_path = libmag.make_out_path(libmag.combine_paths(

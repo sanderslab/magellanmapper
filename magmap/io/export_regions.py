@@ -257,7 +257,7 @@ def make_density_image(
         scaling = np.divide(shape, blobs.roi_size)
         labels_spacing = np.divide(blobs.resolutions[0], scaling)
         labels_img = np.zeros(shape, dtype=np.uint8)
-        labels_img_sitk = sitk.GetImageFromArray(labels_img)
+        labels_img_sitk = sitk_io.convert_img(labels_img)
         labels_img_sitk.SetSpacing(labels_spacing[::-1])
     
     else:
@@ -265,7 +265,7 @@ def make_density_image(
         if labels_img_sitk is None:
             labels_img_sitk = sitk_io.load_registered_img(
                 mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-        labels_img = sitk.GetArrayFromImage(labels_img_sitk)
+        labels_img = sitk_io.convert_img(labels_img_sitk)
         
         is_2d = labels_img.ndim == 2
         labels_res = list(labels_img_sitk.GetSpacing()[::-1])
@@ -447,7 +447,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     reg_name = (config.RegNames.IMG_LABELS.value if level is None 
                 else config.RegNames.IMG_LABELS_LEVEL.value.format(level))
     labels_sitk = sitk_io.load_registered_img(img_path, reg_name, get_sitk=True)
-    labels_np = sitk.GetArrayFromImage(labels_sitk)
+    labels_np = sitk_io.convert_img(labels_sitk)
     df = pd.read_csv(df_path)
     labels_diff = vols.map_meas_to_labels(
         labels_np, df, meas, fn_avg, col_wt=col_wt)
@@ -507,7 +507,7 @@ def make_labels_level_img(
         labels_sitk = sitk_io.load_registered_img(
             img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
         ref = ontology.LabelsRef(config.load_labels).load()
-    labels_np = sitk.GetArrayFromImage(labels_sitk)
+    labels_np = sitk_io.convert_img(labels_sitk)
     
     # remap labels to given level
     labels_np = ontology.make_labels_level(labels_np, ref, level)

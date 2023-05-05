@@ -209,8 +209,8 @@ def match_world_info(
 
 def read_sitk(
         path: str, dryrun: bool = False
-) -> Tuple[Optional["sitk.Image"], Optional[str]]:
-    """Read an image file into SimpleITK ``sitk.Image`` format
+) -> Tuple[Optional[Union["sitk.Image", "itk.Image"]], Optional[str]]:
+    """Read an image file into SimpleITK or ITK ``Image`` format
     
     Checks for alternative supported extensions if necessary.
     
@@ -262,7 +262,7 @@ def _load_reg_img_to_combine(path, reg_name, img_nps):
         img_np_base = img_nps[0]
     img_sitk, loaded_path = load_registered_img(
         path, reg_name, get_sitk=True, return_path=True)
-    img_np = sitk.GetArrayFromImage(img_sitk)
+    img_np = convert_img(img_sitk)
     if img_np_base is not None:
         if img_np_base.shape != img_np.shape:
             # resize to first image
@@ -290,9 +290,9 @@ def _make_3d(img_sitk: "sitk.Image", spacing_z=1) -> "sitk.Image":
     spacing = img_sitk.GetSpacing()
     if len(spacing) == 2:
         # prepend an additional axis for 2D images to make them 3D
-        img_np = sitk.GetArrayFromImage(img_sitk)[None]
+        img_np = convert_img(img_sitk)[None]
         spacing = list(spacing) + [spacing_z]
-        img_sitk = sitk.GetImageFromArray(img_np)
+        img_sitk = convert_img(img_np)
         img_sitk.SetSpacing(spacing)
     return img_sitk
 
@@ -366,14 +366,14 @@ def read_sitk_files(
             raise FileNotFoundError(
                 "could not find file {}".format(filename_sitk))
         img_sitk, _ = read_sitk(filename_sitk)
-        img_np = sitk.GetArrayFromImage(img_sitk)
+        img_np = convert_img(img_sitk)
     
     if make_3d:
         # convert 2D images to 3D
         # TODO: consider converting img_np to 3D regardless so array in
         #   Image5d is at least 4D
         img_sitk = _make_3d(img_sitk)
-        img_np = sitk.GetArrayFromImage(img_sitk)
+        img_np = convert_img(img_sitk)
     
     if config.resolutions is None:
         # fallback to determining metadata directly from sitk file
@@ -467,7 +467,7 @@ def load_registered_img(
     
     if not get_sitk:
         # convert to ndarray
-        reg_img = sitk.GetArrayFromImage(reg_img)
+        reg_img = convert_img(reg_img)
     
     # return image, including path if flagged
     return (reg_img, reg_img_path) if return_path else reg_img
@@ -498,7 +498,7 @@ def find_atlas_labels(
             os.path.dirname(labels_ref_path),
             config.RegNames.IMG_LABELS.value))
         if orig_labels_sitk is not None:
-            config.labels_img_orig = sitk.GetArrayFromImage(orig_labels_sitk)
+            config.labels_img_orig = convert_img(orig_labels_sitk)
             return np.unique(config.labels_img_orig).tolist()
     # fall back to using all labels in ontology reference, including any
     # hierarchical labels
@@ -730,11 +730,11 @@ def load_numpy_to_sitk(
     
     if rotate:
         # rotate 180 deg
-        # TODO: consider deprecating, deferring to atlas_refier.transpose_img
+        # TODO: consider deprecating, deferring to atlas_refiner.transpose_img
         roi = np.rot90(roi, 2, (1, 2))
     
     # get sitk image and transfer metadata to it
-    sitk_img = sitk.GetImageFromArray(roi)
+    sitk_img = convert_img(roi)
     spacing = config.resolutions[0]
     sitk_img.SetSpacing(spacing[::-1])
     # TODO: consider setting z-origin to 0 since image generally as
@@ -759,7 +759,7 @@ def sitk_to_itk_img(sitk_img: "sitk.Image") -> "itk.Image":
     
     # construct an ITK Image through the ndarray extracted from the sitk Image
     itk_img = itk.GetImageFromArray(
-        sitk.GetArrayFromImage(sitk_img),
+        convert_img(sitk_img),
         is_vector=sitk_img.GetNumberOfComponentsPerPixel() > 1)
     
     # transfer metadata

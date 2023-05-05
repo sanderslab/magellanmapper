@@ -17,7 +17,7 @@ from skimage import transform
 
 from magmap.atlas import labels_meta
 from magmap.cv import chunking, cv_nd, segmenter
-from magmap.io import df_io, export_stack, importer, libmag, np_io, sitk_io
+from magmap.io import df_io, export_stack, importer, libmag, sitk_io
 from magmap.plot import colormaps, plot_3d, plot_support
 from magmap.settings import atlas_prof, config, profiles
 
@@ -279,7 +279,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
     rotation = rotate["rotation"] if rotate else None
     
     # cast to int that takes the full range of the labels image
-    img_np = sitk.GetArrayFromImage(img)
+    img_np = sitk_io.convert_img(img)
     label_ids_orig = np.unique(img_np)
     try:
         signed = True if mirror_mult == -1 else None
@@ -292,7 +292,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # fallback to large signed data type
         print(e)
         img_np.astype(np.int32)
-    img_ref_np = sitk.GetArrayFromImage(img_ref)
+    img_ref_np = sitk_io.convert_img(img_ref)
     tot_planes = len(img_np)
     
     # lateral edges of atlas labels (ie low z in sagittal orientation) are 
@@ -686,8 +686,8 @@ def _smoothing(img_np, img_np_orig, filter_size, spacing=None):
     
     print("\nMeasuring foreground overlap of labels after smoothing:")
     measure_overlap_labels(
-        make_labels_fg(sitk.GetImageFromArray(img_np)), 
-        make_labels_fg(sitk.GetImageFromArray(img_np_orig)))
+        make_labels_fg(sitk_io.convert_img(img_np)), 
+        make_labels_fg(sitk_io.convert_img(img_np_orig)))
     
     return filter_size, df_metrics, df_raw
 
@@ -908,8 +908,8 @@ def smooth_labels(
     # show DSC for labels
     print("\nMeasuring overlap of labels:")
     measure_overlap_labels(
-        sitk.GetImageFromArray(labels_img_np_orig), 
-        sitk.GetImageFromArray(labels_img_np))
+        sitk_io.convert_img(labels_img_np_orig), 
+        sitk_io.convert_img(labels_img_np))
     
     # weighted pixel ratio metric of volume change
     weighted_size_ratio = 0
@@ -1154,9 +1154,9 @@ def transpose_img(
         return img_sitk
     
     # transform as a np array
-    img = sitk.GetArrayFromImage(img_sitk)
-    spacing = img_sitk.GetSpacing()[::-1]
-    origin = img_sitk.GetOrigin()[::-1]
+    img = sitk_io.convert_img(img_sitk)
+    spacing = list(img_sitk.GetSpacing())[::-1]
+    origin = list(img_sitk.GetOrigin())[::-1]
     transposed = img
     is_2d = transposed.ndim == 2
     
@@ -1228,29 +1228,29 @@ def transpose_img(
         spacing = np.multiply(spacing, target_size_res)
     
     # convert back to sitk image
-    transposed = sitk.GetImageFromArray(transposed)
+    transposed = sitk_io.convert_img(transposed)
     transposed.SetSpacing(spacing[::-1])
     transposed.SetOrigin(origin[::-1])
     return transposed
 
 
 def match_atlas_labels(img_atlas, img_labels, metrics=None):
-    """Apply register profile settings to labels and match atlas image 
+    """Apply register profile settings to labels and match atlas image
     accordingly.
     
     Args:
         img_atlas (:obj:`sitk.Image`): Reference image, such as histology.
         img_labels (:obj:`sitk.Image`): Labels image.
-        metrics (:obj:`dict`): Dictionary to store metrics; defaults to 
+        metrics (:obj:`dict`): Dictionary to store metrics; defaults to
             None, in which case metrics will not be measured.
     
     Returns:
-        Tuple: ``img_atlas``, the updated atlas; ``img_labels``, the 
-        updated labels; ``img_borders``, a new (:obj:`sitk.Image`) of the 
-        same shape as the prior images except an extra channels dimension 
-        as given by :func:``_curate_labels``; ``df_sm``, a 
-        data frame of smoothing stats, or None if smoothing was not performed; 
-        and ``df_sm_raw``, a data frame of raw smoothing stats, or 
+        Tuple: ``img_atlas``, the updated atlas; ``img_labels``, the
+        updated labels; ``img_borders``, a new (:obj:`sitk.Image`) of the
+        same shape as the prior images except an extra channels dimension
+        as given by :func:``_curate_labels``; ``df_sm``, a
+        data frame of smoothing stats, or None if smoothing was not performed;
+        and ``df_sm_raw``, a data frame of raw smoothing stats, or
         None if smoothing was not performed.
     """
     pre_plane = config.atlas_profile["pre_plane"]
@@ -1267,11 +1267,11 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
     far_hem_neg = config.atlas_profile["make_far_hem_neg"]
     
     if pre_plane:
-        # images in the correct desired orientation may need to be 
-        # transposed prior to label curation since mirroring assumes 
+        # images in the correct desired orientation may need to be
+        # transposed prior to label curation since mirroring assumes
         # a sagittal orientation
-        img_atlas_np = sitk.GetArrayFromImage(img_atlas)
-        img_labels_np = sitk.GetArrayFromImage(img_labels)
+        img_atlas_np = sitk_io.convert_img(img_atlas)
+        img_labels_np = sitk_io.convert_img(img_labels)
         arrs_3d, _ = plot_support.transpose_images(
             pre_plane, [img_atlas_np, img_labels_np])
         img_atlas_np = arrs_3d[0]
@@ -1308,7 +1308,7 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
             print()
     
     # adjust atlas with same settings
-    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+    img_atlas_np = sitk_io.convert_img(img_atlas)
     if rotation:
         for rot in rotation:
             img_atlas_np = cv_nd.rotate_nd(
@@ -1368,11 +1368,11 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
     
     if metrics is not None:
         
-        # meas DSC of labeled hemisphere, using the sagittal midline 
+        # meas DSC of labeled hemisphere, using the sagittal midline
         # to define the hemispheric boundaries
         dsc = measure_overlap_combined_labels(
-            sitk.GetImageFromArray(img_atlas_np[:extis[1]]), 
-            sitk.GetImageFromArray(img_labels_np[:extis[1]]), 
+            sitk_io.convert_img(img_atlas_np[:extis[1]]),
+            sitk_io.convert_img(img_labels_np[:extis[1]]),
             config.atlas_profile["overlap_meas_add_lbls"])
         metrics[config.AtlasMetrics.DSC_ATLAS_LABELS_HEM] = [dsc]
         
@@ -1384,10 +1384,10 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
             img_labels_np[:extis[0]] != 0, thresh_atlas[:extis[0]])
         # simply treat rest of hem as labeled to focus on unlabeled lat portion
         metrics[config.AtlasMetrics.LAT_UNLBL_VOL] = 1 - (
-            (np.sum(lbl_edge) + np.sum(thresh_atlas[extis[0]:extis[1]])) 
+            (np.sum(lbl_edge) + np.sum(thresh_atlas[extis[0]:extis[1]]))
             / np.sum(thresh_atlas[:extis[1]]))
 
-        # meas frac of planes that are at least partially labeled, using 
+        # meas frac of planes that are at least partially labeled, using
         # mask labels since from atlas portion that should be labeled
         frac = 0   # mask labels fully covered, so fully labeled by this def
         if mask_lbls is not None:
@@ -1510,12 +1510,12 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     if truncate:
         # truncate labels
         img_labels_np = truncate_labels(
-            sitk.GetArrayFromImage(img_labels), *truncate)
+            sitk_io.convert_img(img_labels), *truncate)
         img_labels = sitk_io.replace_sitk_with_numpy(img_labels, img_labels_np)
     
     # show labels
     print("labels output data type:", img_labels.GetPixelIDTypeAsString())
-    img_labels_np = sitk.GetArrayFromImage(img_labels)
+    img_labels_np = sitk_io.convert_img(img_labels)
     label_ids = np.unique(img_labels_np)
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
@@ -1529,7 +1529,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
         imgs_write, name_prefix, copy_to_suffix=True, 
         ext=os.path.splitext(path_atlas)[1])
     config.resolutions = [img_atlas.GetSpacing()[::-1]]
-    img_ref_np = sitk.GetArrayFromImage(img_atlas)
+    img_ref_np = sitk_io.convert_img(img_atlas)
     img_ref_np = img_ref_np[None]
     importer.save_np_image(img_ref_np, name_prefix, 0)
 
@@ -1560,7 +1560,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     lbls_meta = labels_meta.LabelsMeta(name_prefix)
     lbls_meta.path_ref = config.atlas_labels[config.AtlasLabels.PATH_REF]
     lbls_meta.region_ids_orig = np.unique(
-        sitk.GetArrayFromImage(img_labels)).tolist()
+        sitk_io.convert_img(img_labels)).tolist()
     lbls_meta.save()
     # create relative symlink to only PATH_LABELS_META in the atlas dir for
     # registering by giving the dir alone
@@ -1602,7 +1602,7 @@ def measure_atlas_refinement(
     
     # compactness of whole atlas (non-label) image; use lower threshold for 
     # compactness measurement to minimize noisy surface artifacts
-    img_atlas_np = sitk.GetArrayFromImage(img_atlas)
+    img_atlas_np = sitk_io.convert_img(img_atlas)
     thresh = atlas_profile["atlas_threshold_all"]
     thresh_atlas = img_atlas_np > thresh
     compactness, _, _ = cv_nd.compactness_3d(
@@ -1646,9 +1646,9 @@ def measure_overlap(
     """
     # upper threshold does not seem be set with max despite docs for
     # sitk.BinaryThreshold, so need to set with max explicitly
-    img1_np = sitk.GetArrayFromImage(img1)
+    img1_np = sitk_io.convert_img(img1)
     thresh_img1_up = float(np.amax(img1_np))
-    img2_np = sitk.GetArrayFromImage(img2)
+    img2_np = sitk_io.convert_img(img2)
     thresh_img2_up = float(np.amax(img2_np))
     
     # use threshold mean if lower thresholds not given
@@ -1663,7 +1663,7 @@ def measure_overlap(
     # similar to simple binary thresholding via Numpy
     binary_img1 = sitk.BinaryThreshold(
         img1, thresh_img1, thresh_img1_up)
-    binary_img1_np = sitk.GetArrayFromImage(binary_img1)
+    binary_img1_np = sitk_io.convert_img(binary_img1)
     if add_to_img1_mask is not None:
         # add mask to foreground of img1
         binary_img1_np[add_to_img1_mask] = True
@@ -1684,7 +1684,7 @@ def measure_overlap(
     except RuntimeError as e:
         _logger.warn(e)
     if return_masks:
-        return total_dsc, binary_img1_np, sitk.GetArrayFromImage(binary_img2)
+        return total_dsc, binary_img1_np, sitk_io.convert_img(binary_img2)
     return total_dsc
 
 
@@ -1716,7 +1716,7 @@ def make_labels_fg(labels_sitk):
     Returns:
         :obj:`sitk.Image`: Labels foreground image.
     """
-    fg_img = sitk.GetArrayFromImage(labels_sitk)
+    fg_img = sitk_io.convert_img(labels_sitk)
     fg_img[fg_img != 0] = 1
     fg_img_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, fg_img)
     return fg_img_sitk
@@ -1745,17 +1745,18 @@ def measure_overlap_combined_labels(base_img, labels_img, add_lbls=None,
     lbls_fg = make_labels_fg(labels_img)
     mask = None
     if add_lbls is not None:
-        # build mask from labels to add to fixed image's foreground, such 
-        # as labeled ventricles; TODO: get children of labels rather than 
-        # taking labels range, but would need to load labels reference; 
-        # TODO: consider using "atlas_threshold_all" profile setting 
-        # instead, but would need to ensure that fixed thresholds work 
-        # for both atlas and sample histology
-        labels_np_abs = np.absolute(sitk.GetArrayFromImage(labels_img))
+        # build mask from labels to add to fixed image's foreground, such
+        # as labeled ventricles
+        # TODO: get children of labels rather than taking labels range,
+        #   but would need to load labels reference;
+        # TODO: consider using "atlas_threshold_all" profile setting
+        #   instead, but would need to ensure that fixed thresholds work
+        #   for both atlas and sample histology
+        labels_np_abs = np.absolute(sitk_io.convert_img(labels_img))
         mask = np.zeros_like(labels_np_abs, dtype=bool)
         for lbl in add_lbls:
             print("adding abs labels within", lbl)
-            mask[np.all([labels_np_abs >= lbl[0], 
+            mask[np.all([labels_np_abs >= lbl[0],
                          labels_np_abs < lbl[1]], axis=0)] = True
     print("DSC of thresholded fixed image compared with combined labels:")
     return measure_overlap(

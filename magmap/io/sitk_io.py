@@ -73,7 +73,7 @@ def reg_out_path(file_path, reg_name, match_ext=False):
 
 def convert_img(
         img: Union["sitk.Image", "itk.Image", np.ndarray],
-        multichannel: bool = None, to_sitk: bool = False
+        multichannel: Optional[bool] = None, to_sitk: Optional[bool] = None
 ) -> Union["sitk.Image", "itk.Image", np.ndarray]:
     """Convert SimpleITK, ITK, and NumPy images.
     
@@ -84,13 +84,18 @@ def convert_img(
             multichannel. Defaults to None, which will attempt to auto-detect
             multichannel images. Only used if ``img`` is a NumPy array.
         to_sitk: True to convert a NumPy ``img`` to a SimpleITK Image. If
-            False (default), an ITK Image is output instead. Ignored if
-            ``img`` is not a NumPy array.
+            False, an ITK Image is output instead. If None, the parameter will
+            be True if the SimpleITK library is found. Ignored if ``img`` is
+            not a NumPy array.
 
     Returns:
         The converted image.
 
     """
+    if to_sitk is None:
+        # default to convert to SimpleITK if the library is present
+        to_sitk = sitk is not None
+    
     conv = img
     if sitk and isinstance(img, sitk.Image):
         # convert an sitk Image to an np array

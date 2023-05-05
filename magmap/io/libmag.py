@@ -162,6 +162,37 @@ def pad_seq(
     return seq
 
 
+def replace_seq(
+        seq: Sequence[Any], replacement: Sequence[Any]) -> np.ndarray:
+    """Replace elements in one sequence with those from another.
+    
+    Sequences will be converted to NumPy arrays to support multiple dimensions.
+    
+    Args:
+        seq: Sequence to be replaced.
+        replacement: Sequence to replace in ``seq``. Must be of the same
+            shape and type as those of ``seq``.
+
+    Returns:
+        ``seq`` as a new NumPy array with as many values ass possible replaced
+        by ``replacement``.
+
+    """
+    # convert to np to support multi-dimensional arrays
+    seq_np = np.array(seq)
+    tgt_np = np.array(replacement)
+    
+    # truncate to smallest shape in all dimension
+    shape = np.minimum(seq_np.shape, tgt_np.shape)
+    slices = []
+    for s in shape:
+        slices.append(slice(s))
+    slices = tuple(slices)
+    seq_np[slices] = tgt_np[slices]
+    
+    return seq_np
+
+
 def combine_arrs(arrs, filter_none=True, fn=None, **kwargs):
     """Combine arrays with array filtering.
     

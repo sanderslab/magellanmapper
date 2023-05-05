@@ -10,6 +10,29 @@ from magmap.io import libmag
 
 class TestLibmag(unittest.TestCase):
     
+    def test_pad_seq(self):
+        seq = ["a", "b", "c"]
+        self.assertSequenceEqual(libmag.pad_seq(list(seq), 2), ["a", "b"])
+        self.assertSequenceEqual(libmag.pad_seq(list(seq), 3), ["a", "b", "c"])
+        self.assertSequenceEqual(
+            libmag.pad_seq(list(seq), 4), ["a", "b", "c", None])
+        self.assertSequenceEqual(
+            libmag.pad_seq(list(seq), 4, 1), ["a", "b", "c", 1])
+        self.assertSequenceEqual(
+            libmag.pad_seq(list(seq), 5, [1, 2, 3, 4, 5]), ["a", "b", "c", 4, 5])
+        
+        # fills with last pad value since pad is shorter than seq is
+        self.assertSequenceEqual(
+            libmag.pad_seq(list(seq), 5, [1, 2]), ["a", "b", "c", 2, 2])
+        
+        # modifies the original sequence
+        self.assertSequenceEqual(libmag.pad_seq(tuple(seq), 4), ["a", "b", "c", None])
+        self.assertSequenceEqual(seq, ["a", "b", "c"])
+        
+        # modifies the original sequence
+        self.assertSequenceEqual(libmag.pad_seq(seq, 4), ["a", "b", "c", None])
+        self.assertSequenceEqual(seq, ["a", "b", "c", None])
+    
     def test_flatten(self):
         self.assertSequenceEqual(
             list(libmag.flatten(["a", "b"])), ["a", "b"])

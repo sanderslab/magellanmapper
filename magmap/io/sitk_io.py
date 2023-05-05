@@ -100,7 +100,7 @@ def convert_img(
     if sitk and isinstance(img, sitk.Image):
         # convert an sitk Image to an np array
         conv = sitk.GetArrayFromImage(img)
-    elif itk and isinstance(img, itk.Image):
+    elif itk and isinstance(img, (itk.Image, itk.VectorImage)):
         # convert an ITK image to an np array
         conv = itk.GetArrayFromImage(img)
     elif sitk and to_sitk:
@@ -108,6 +108,9 @@ def convert_img(
         conv = sitk.GetImageFromArray(img, multichannel)
     elif itk:
         # convert an np array to ITK Image
+        if multichannel is None:
+            # default to treat 4D+ images as multichannel
+            multichannel = img.ndim > 3
         conv = itk.GetImageFromArray(img, multichannel)
     return conv
 

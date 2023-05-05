@@ -1,5 +1,5 @@
 # ROI exporter for MagellanMapper
-# Author: David Young, 2017, 2019
+# Author: David Young, 2017, 2023
 """ROI exporter for MagellanMapper.
 
 Convert images and corresponding database entries into formats for 
@@ -15,14 +15,11 @@ import pandas as pd
 from matplotlib import pyplot as plt
 import SimpleITK as sitk
 
-from magmap.settings import config
-from magmap.cv import cv_nd
-from magmap.cv import detector
-from magmap.io import libmag
-from magmap.io import sqlite
-from magmap.plot import plot_3d
+from magmap.cv import cv_nd, detector
 from magmap.gui import roi_editor
-from magmap.io import df_io
+from magmap.io import df_io, libmag, sitk_io, sqlite
+from magmap.plot import plot_3d
+from magmap.settings import config
 from magmap.stats import vols
 
 if TYPE_CHECKING:
@@ -152,11 +149,11 @@ def export_rois(
             # WORKAROUND: for some reason SimpleITK gives a conversion error 
             # when converting from uint16 (>u2) Numpy array
             img3d = img3d.astype(np.float64)
-            img3d_sitk = sitk.GetImageFromArray(img3d)
+            img3d_sitk = sitk_io.convert_img(img3d)
             '''
             print(img3d_sitk)
             print("orig img:\n{}".format(img3d[0]))
-            img3d_back = sitk.GetArrayFromImage(img3d_sitk)
+            img3d_back = sitk_io.convert_img(img3d_sitk)
             print(img3d.shape, img3d.dtype, img3d_back.shape, img3d_back.dtype)
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
@@ -198,7 +195,7 @@ def export_rois(
             _logger.debug("Exporting truth ROI of shape: %s", img3d_truth.shape)
             np.save(path_img_annot, img3d_truth)
             sitk.WriteImage(
-                sitk.GetImageFromArray(img3d_truth), path_img_annot_nifti, 
+                sitk_io.convert_img(img3d_truth), path_img_annot_nifti, 
                 False)
             _logger.info(
                 "Wrote NIfTI formatted images: %s", path_img_annot_nifti)

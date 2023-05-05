@@ -1,5 +1,5 @@
 # Segmentation based on edge detection
-# Author: David Young, 2019
+# Author: David Young, 2019, 2023
 """Re-segment atlases based on edge detections.
 """
 import os
@@ -116,13 +116,13 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         # load labels registered to sample image
         labels_sitk = sitk_io.load_registered_img(
             mod_path, labels_suffix, get_sitk=True)
-    labels_img_np = None if labels_sitk is None else sitk.GetArrayFromImage(
+    labels_img_np = None if labels_sitk is None else sitk_io.convert_img(
         labels_sitk)
     # load atlas image, set resolution from it
     atlas_sitk = sitk_io.load_registered_img(
         path_atlas, atlas_suffix, get_sitk=True)
     config.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
-    atlas_np = sitk.GetArrayFromImage(atlas_sitk)
+    atlas_np = sitk_io.convert_img(atlas_sitk)
     
     if config.rgb:
         # convert RGB atlas image to grayscale for single channel
@@ -296,10 +296,10 @@ def edge_aware_segmentation(
         load_path, config.RegNames.IMG_LABELS_MARKERS.value, get_sitk=True)
     
     # get Numpy arrays of images
-    atlas_img_np = sitk.GetArrayFromImage(atlas_sitk)
-    atlas_edge = sitk.GetArrayFromImage(atlas_sitk_edge)
-    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
-    markers = sitk.GetArrayFromImage(labels_sitk_markers)
+    atlas_img_np = sitk_io.convert_img(atlas_sitk)
+    atlas_edge = sitk_io.convert_img(atlas_sitk_edge)
+    labels_img_np = sitk_io.convert_img(labels_sitk)
+    markers = sitk_io.convert_img(labels_sitk_markers)
     
     # segment image from markers
     sym_axis = atlas_refiner.find_symmetric_axis(atlas_img_np)
@@ -433,7 +433,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if erode["markers"]:
             # use default minimal post-erosion size (not setting erosion frac)
             markers, df = erode_labels(
-                sitk.GetArrayFromImage(labels_sitk), erosion,
+                sitk_io.convert_img(labels_sitk), erosion,
                 mirrored=mirrored, mirror_mult=mirror_mult)
             labels_sitk_markers = sitk_io.replace_sitk_with_numpy(
                 labels_sitk, markers)
@@ -474,7 +474,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
         if meas_edge_dist or erode_interior:
             labels_sitk = sitk_io.load_registered_img(
                 mod_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-            labels_np = sitk.GetArrayFromImage(labels_sitk)
+            labels_np = sitk_io.convert_img(labels_sitk)
             if meas_edge_dist:
                 # make edge distance images and stats
                 dist_to_orig, labels_edge = edge_distances(
@@ -570,7 +570,7 @@ def make_sub_segmented_labels(img_path, suffix=None):
         img_path, config.RegNames.IMG_ATLAS_EDGE.value)
     
     # sub-divide the labels and save to file
-    labels_img_np = sitk.GetArrayFromImage(labels_sitk)
+    labels_img_np = sitk_io.convert_img(labels_sitk)
     labels_subseg = segmenter.sub_segment_labels(labels_img_np, atlas_edge)
     labels_subseg_sitk = sitk_io.replace_sitk_with_numpy(
         labels_sitk, labels_subseg)

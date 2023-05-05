@@ -244,8 +244,8 @@ def curate_img(
         with the curated ``labels_img``, followed by the images in ``imgs``.
     
     """
-    fixed_img_np = sitk.GetArrayFromImage(fixed_img)
-    labels_img_np = sitk.GetArrayFromImage(labels_img)
+    fixed_img_np = sitk_io.convert_img(fixed_img)
+    labels_img_np = sitk_io.convert_img(labels_img)
     
     # ensure that labels image is first
     if imgs:
@@ -268,7 +268,7 @@ def curate_img(
         # in-paint and remove pixels from result image where fixed image is
         # below threshold
         img = imgs[i]
-        result_img_np = sitk.GetArrayFromImage(img)
+        result_img_np = sitk_io.convert_img(img)
         if inpaint:
             result_img_np = cv_nd.in_paint(result_img_np, to_fill)
         if carve:
@@ -714,7 +714,7 @@ def register(
     # TODO: assume fixed image is preprocessed before starting this reg?
     fixed_img_orig = fixed_img
     if settings["preprocess"]:
-        img_np = sitk.GetArrayFromImage(fixed_img)
+        img_np = sitk_io.convert_img(fixed_img)
         #img_np = plot_3d.saturate_roi(img_np)
         img_np = plot_3d.denoise_roi(img_np)
         fixed_img = sitk_io.replace_sitk_with_numpy(fixed_img, img_np)
@@ -761,7 +761,7 @@ def register(
     truncate_labels = settings["truncate_labels"]
     if truncate_labels is not None:
         # generate a truncated/cropped version of the labels image
-        labels_trunc_np = sitk.GetArrayFromImage(labels_img)
+        labels_trunc_np = sitk_io.convert_img(labels_img)
         atlas_refiner.truncate_labels(labels_trunc_np, *truncate_labels)
         labels_trunc = sitk_io.replace_sitk_with_numpy(
             labels_img, labels_trunc_np)
@@ -783,11 +783,11 @@ def register(
         labels_img, target_size_res=rescale, rotate_deg=rotate_deg, order=0)
 
     # get Numpy arrays of moving images for preprocessing
-    moving_img_np = sitk.GetArrayFromImage(moving_img)
-    labels_img_np = sitk.GetArrayFromImage(labels_img)
+    moving_img_np = sitk_io.convert_img(moving_img)
+    labels_img_np = sitk_io.convert_img(labels_img)
     moving_mask_np = None
     if moving_mask is not None:
-        moving_mask_np = sitk.GetArrayFromImage(moving_mask)
+        moving_mask_np = sitk_io.convert_img(moving_mask)
 
     crop_out_labels = config.atlas_profile["crop_out_labels"]
     if crop_out_labels is not None:
@@ -972,7 +972,7 @@ def register(
         fixed_img_orig, labels_moved)
     
     # measure compactness of fixed image
-    fixed_img_orig_np = sitk.GetArrayFromImage(fixed_img_orig)
+    fixed_img_orig_np = sitk_io.convert_img(fixed_img_orig)
     thresh_atlas = fixed_img_orig_np > filters.threshold_mean(fixed_img_orig_np)
     compactness, _, _ = cv_nd.compactness_3d(
         thresh_atlas, fixed_img_orig.GetSpacing()[::-1])
@@ -1233,7 +1233,7 @@ def register_group(
         chl = config.channel[0] if config.channel else 0
         img = sitk_io.load_numpy_to_sitk(img_file, rot, chl)
         size = img.GetSize()
-        img_np = sitk.GetArrayFromImage(img)
+        img_np = sitk_io.convert_img(img)
         if img_np_template is None:
             img_np_template = np.copy(img_np)
 
@@ -1315,7 +1315,7 @@ def register_group(
     for i in range(num_images):
         extract_filter.SetIndex([0, 0, 0, i])  # x, y, z, t
         img = extract_filter.Execute(transformed_img)
-        img_np = sitk.GetArrayFromImage(img)
+        img_np = sitk_io.convert_img(img)
         # resize to original shape of first image, all aligned to position
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
@@ -1369,7 +1369,7 @@ def register_group(
             os.makedirs(name_prefix)
         print("writing {}".format(out_path))
         sitk.WriteImage(transformed_img, out_path, False)
-        img_np = sitk.GetArrayFromImage(transformed_img)
+        img_np = sitk_io.convert_img(transformed_img)
         config.resolutions = [transformed_img.GetSpacing()[::-1]]
         importer.save_np_image(img_np[None], out_path, config.series)
     
@@ -1484,11 +1484,11 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     moving_sitk = sitk.ReadImage(out_path)
     moving_sitk = atlas_refiner.transpose_img(
         moving_sitk, plane, rotate)
-    moving_img = sitk.GetArrayFromImage(moving_sitk)
+    moving_img = sitk_io.convert_img(moving_sitk)
     
     # get the registered atlas file, which should already be transposed
     transformed_sitk = sitk_io.load_registered_img(name_prefix, get_sitk=True)
-    transformed_img = sitk.GetArrayFromImage(transformed_sitk)
+    transformed_img = sitk_io.convert_img(transformed_sitk)
     
     # get the registered labels file, which should also already be transposed
     labels_img = sitk_io.load_registered_img(
@@ -1760,7 +1760,7 @@ def volumes_by_id(
                 libmag.warn("will load atlas image instead")
                 img_sitk = sitk_io.load_registered_img(
                     mod_path, config.RegNames.IMG_ATLAS.value, get_sitk=True)
-            img_np = sitk.GetArrayFromImage(img_sitk)
+            img_np = sitk_io.convert_img(img_sitk)
             spacing = img_sitk.GetSpacing()[::-1]
             
             # load labels in order of priority: config > full labels
@@ -1951,7 +1951,7 @@ def volumes_by_id_compare(img_paths, labels_ref_paths, unit_factor=None,
                 img = sitk_io.load_registered_img(
                     img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
             labels_imgs_sitk.append(img)
-        labels_imgs = [sitk.GetArrayFromImage(img) for img in labels_imgs_sitk]
+        labels_imgs = [sitk_io.convert_img(img) for img in labels_imgs_sitk]
         spacing = labels_imgs_sitk[0].GetSpacing()[::-1]
         
         # load heat map of nuclei per voxel if available based on 1st path
@@ -2102,7 +2102,7 @@ def _test_region_from_id():
         path = os.path.join(
             config.filenames[1], config.RegNames.IMG_LABELS.value)
         labels_img = sitk.ReadImage(path)
-        labels_img = sitk.GetArrayFromImage(labels_img)
+        labels_img = sitk_io.convert_img(labels_img)
         scaling = np.ones(3)
         print("loaded labels image from {}".format(path))
     else:
@@ -2111,7 +2111,7 @@ def _test_region_from_id():
             config.filename, config.RegNames.IMG_LABELS.value)
         if config.filename.endswith(".mhd"):
             img = sitk.ReadImage(config.filename)
-            img = sitk.GetArrayFromImage(img)
+            img = sitk_io.convert_img(img)
             image5d = img[None]
         else:
             img5d = importer.read_file(config.filename, config.series)

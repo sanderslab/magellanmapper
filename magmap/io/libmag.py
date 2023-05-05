@@ -117,30 +117,37 @@ def roll_elements(arr, shift, axis=None):
     return arr
 
 
-def pad_seq(seq, n, pad=None):
-    """Pad a sequence with a given value or truncate the sequence to fit 
-    a given length.
+def pad_seq(
+        seq: Sequence[Any], n: int, pad: Optional[Any] = None) -> Sequence[Any]:
+    """Pad a sequence with a given value or truncate to fit a given length.
     
     Args:
-        seq (List): Sequence to fill in-place.
-        n (int): Target length.
-        pad (float, List): Value with which to fill; defaults to None.
-            If a sequence, filling with start with the first corresponding
-            missing value in ``seq``.
+        seq: Sequence to fill in-place.
+        n: Target length.
+        pad: Value with which to fill; defaults to None.
+            If a sequence, missing values in ``seq`` will be filled with
+            corresponding values in ``pad``.
     
     Returns:
-        :List: A truncated view of ``seq`` if the sequence is longer than ``n``
-        or ``seq`` as a List with ``pad`` appended to reach a length of ``n``.
+        A truncated view of ``seq`` if the sequence is longer than ``n``
+        or ``seq`` with ``pad`` appended to reach a length of ``n``. ``seq``
+        is modified in-place if it is extended and not a NumPy array.
+    
     """
     len_seq = len(seq)
     if len_seq >= n:
         # truncate if seq is longer than n is
         seq = seq[:n]
+    
     else:
-        # pad with the given value
         if isinstance(seq, np.ndarray):
             # convert to list if ndarray to allow mixing with None values
             seq = seq.tolist()
+        elif isinstance(seq, tuple):
+            # convert to list to allow adding values
+            seq = list(seq)
+
+        # pad with the given value
         if is_seq(pad):
             if len(pad) > len_seq:
                 # fill starting with corresponding first missing value
@@ -151,6 +158,7 @@ def pad_seq(seq, n, pad=None):
         else:
             # fill with pad value repeats
             seq += [pad] * (n - len_seq)
+    
     return seq
 
 

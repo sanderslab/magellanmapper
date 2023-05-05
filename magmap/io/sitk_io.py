@@ -129,10 +129,10 @@ def replace_sitk_with_numpy(
         img_np, multichannel, sitk and isinstance(img_sitk, sitk.Image))
     
     # transfer original settings to new Image, matching length for ITK
-    spacing = libmag.pad_seq(tuple(spacing), len(img_sitk_back.GetSpacing()), 1)
-    origin = libmag.pad_seq(tuple(origin), len(img_sitk_back.GetOrigin()), 1)
-    img_sitk_back.SetSpacing(tuple(spacing))
-    img_sitk_back.SetOrigin(tuple(origin))
+    spacing = libmag.replace_seq(img_sitk_back.GetSpacing(), spacing)
+    origin = libmag.replace_seq(img_sitk_back.GetOrigin(), origin)
+    img_sitk_back.SetSpacing(spacing)
+    img_sitk_back.SetOrigin(origin)
     
     # convert directions to 2D arrays if necessary
     dir_np = np.array(direction)
@@ -144,8 +144,7 @@ def replace_sitk_with_numpy(
             np.array(dir_back), [len(img_sitk_back.GetSpacing())] * 2)
     
     # fill target direction with source, truncating it if necessary for ITK
-    shape = np.minimum(dir_np.shape, dir_back.shape)
-    dir_back[:shape[0], :shape[1]] = dir_np[:shape[0], :shape[1]]
+    dir_back = libmag.replace_seq(dir_back, dir_np)
     if is_dir_1d:
         dir_back = np.ravel(dir_back)
     

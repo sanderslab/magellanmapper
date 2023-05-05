@@ -4,6 +4,7 @@
 
 import unittest
 
+import numpy as np
 
 from magmap.io import libmag
 
@@ -32,6 +33,14 @@ class TestLibmag(unittest.TestCase):
         # modifies the original sequence
         self.assertSequenceEqual(libmag.pad_seq(seq, 4), ["a", "b", "c", None])
         self.assertSequenceEqual(seq, ["a", "b", "c", None])
+    
+    def test_replace_seq(self):
+        seq = [1, 2, 3]
+        np.testing.assert_array_equal(
+            libmag.replace_seq(seq, [10, 20]), [10, 20, 3])
+        np.testing.assert_array_equal(
+            libmag.replace_seq(seq, [10, 20, 30, 40]), [10, 20, 30])
+        np.testing.assert_array_equal(libmag.replace_seq(seq, []), [1, 2, 3])
     
     def test_flatten(self):
         self.assertSequenceEqual(

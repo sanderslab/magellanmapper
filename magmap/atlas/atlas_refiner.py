@@ -8,6 +8,10 @@ import os
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Any
 
 import SimpleITK as sitk
+try:
+    import itk
+except ImportError:
+    itk = None
 import numpy as np
 import pandas as pd
 from skimage import filters
@@ -1615,19 +1619,22 @@ def measure_atlas_refinement(
 
 
 def measure_overlap(
-        img1: "sitk.Image", img2: "sitk.Image",
+        img1: Union["sitk.Image", "itk.Image", np.ndarray],
+        img2: Union["sitk.Image", "itk.Image", np.ndarray],
         thresh_img1: Optional[float] = None,
         thresh_img2: Optional[float] = None,
         add_to_img1_mask: Optional[np.ndarray] = None,
         return_masks: bool = False
-) -> Union[float, Tuple[float, "sitk.Image", np.ndarray]]:
+) -> Union[float, Tuple[float, Union[
+        "sitk.Image", "itk.Image", np.ndarray], np.ndarray]]:
     """Measure the Dice Similarity Coefficient (DSC) two images.
      
     Calculdate the DSC between the foreground of two images.
     
     Args:
-        img1: First image.
-        img2: Image to compare.
+        img1: Intensity image. The image type (:class:`itk.Image` or
+            :class:`sitk.Image`) will determine which library is used.
+        img2: Intensity mage to compare.
         thresh_img1: Threshold to determine the foreground of ``img1``;
             defaults to None to determine by a mean threshold.
         thresh_img2: Threshold to determine the foreground of ``img2``;
@@ -1643,7 +1650,11 @@ def measure_overlap(
         The DSC of the foreground of the two given images, or ``np.nan`` if
         the DSC cannot be computed. If`return_masks`` is True, also returns
         the masked images as NumPy arrays.
+    
     """
+    # determine library based on first image
+    is_sitk = sitk and isinstance(img1, sitk.Image)
+    
     # upper threshold does not seem be set with max despite docs for
     # sitk.BinaryThreshold, so need to set with max explicitly
     img1_np = sitk_io.convert_img(img1)
@@ -1661,28 +1672,61 @@ def measure_overlap(
         thresh_img1, thresh_img2)
     
     # similar to simple binary thresholding via Numpy
-    binary_img1 = sitk.BinaryThreshold(
-        img1, thresh_img1, thresh_img1_up)
+    if is_sitk:
+        binary_img1 = sitk.BinaryThreshold(
+            img1, thresh_img1, thresh_img1_up)
+    else:
+        # get ITK docs from:
+        # itk.itkBinaryThresholdImageFilterPython.binary_threshold_image_filter
+        binary_img1 = itk.binary_threshold_image_filter(
+            img1, lower_threshold=int(thresh_img1),
+            upper_threshold=int(thresh_img1_up))
+    
     binary_img1_np = sitk_io.convert_img(binary_img1)
     if add_to_img1_mask is not None:
         # add mask to foreground of img1
         binary_img1_np[add_to_img1_mask] = True
         binary_img1 = sitk_io.replace_sitk_with_numpy(
             binary_img1, binary_img1_np)
-    binary_img2 = sitk.BinaryThreshold(
-        img2, thresh_img2, thresh_img2_up)
-
+    
+    # threshold 2nd image
+    if is_sitk:
+        binary_img2 = sitk.BinaryThreshold(
+            img2, thresh_img2, thresh_img2_up)
+    else:
+        binary_img2 = itk.binary_threshold_image_filter(
+            img2, lower_threshold=int(thresh_img2),
+            upper_threshold=int(thresh_img2_up))
+    
     # match world info in case of slight rounding that might prevent the
     # filter from executing
     sitk_io.match_world_info(binary_img1, binary_img2)
-    overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
+    
+    # find overlap between thresholded images
     total_dsc = np.nan
     try:
-        overlap_filter.Execute(binary_img1, binary_img2)
+        if is_sitk:
+            overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
+            overlap_filter.Execute(binary_img1, binary_img2)
+        
+        else:
+            # ITK filter appears to only take unsigned char images, which
+            # should be set on instantiation to set the filter type
+            # get ITK docs from:
+            # itk.itkLabelOverlapMeasuresImageFilterPython.label_overlap_measures_image_filter
+            src_img = binary_img1.astype(itk.US)
+            tgt_img = binary_img2.astype(itk.US)
+            overlap_filter = itk.LabelOverlapMeasuresImageFilter.New(src_img)
+            
+            # set both images again since the image set in New is unclear
+            overlap_filter.SetSourceImage(src_img)
+            overlap_filter.SetTargetImage(tgt_img)
+        
         total_dsc = overlap_filter.GetDiceCoefficient()
         _logger.info("Foreground DSC: %s\n", total_dsc)
     except RuntimeError as e:
         _logger.warn(e)
+    
     if return_masks:
         return total_dsc, binary_img1_np, sitk_io.convert_img(binary_img2)
     return total_dsc

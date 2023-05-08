@@ -1627,7 +1627,7 @@ def measure_overlap(
         return_masks: bool = False
 ) -> Union[float, Tuple[float, Union[
         "sitk.Image", "itk.Image", np.ndarray], np.ndarray]]:
-    """Measure the Dice Similarity Coefficient (DSC) two images.
+    """Measure the Dice Similarity Coefficient between two intensity images.
      
     Calculdate the DSC between the foreground of two images.
     
@@ -1703,50 +1703,50 @@ def measure_overlap(
     sitk_io.match_world_info(binary_img1, binary_img2)
     
     # find overlap between thresholded images
-    total_dsc = np.nan
-    try:
-        if is_sitk:
-            overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
-            overlap_filter.Execute(binary_img1, binary_img2)
-        
-        else:
-            # ITK filter appears to only take unsigned char images, which
-            # should be set on instantiation to set the filter type
-            # get ITK docs from:
-            # itk.itkLabelOverlapMeasuresImageFilterPython.label_overlap_measures_image_filter
-            src_img = binary_img1.astype(itk.US)
-            tgt_img = binary_img2.astype(itk.US)
-            overlap_filter = itk.LabelOverlapMeasuresImageFilter.New(src_img)
-            
-            # set both images again since the image set in New is unclear
-            overlap_filter.SetSourceImage(src_img)
-            overlap_filter.SetTargetImage(tgt_img)
-        
-        total_dsc = overlap_filter.GetDiceCoefficient()
-        _logger.info("Foreground DSC: %s\n", total_dsc)
-    except RuntimeError as e:
-        _logger.warn(e)
+    total_dsc = measure_overlap_labels(binary_img1, binary_img2)
     
     if return_masks:
         return total_dsc, binary_img1_np, sitk_io.convert_img(binary_img2)
     return total_dsc
 
 
-def measure_overlap_labels(labels_img1, labels_img2):
-    """Measure the mean Dice Similarity Coefficient (DSC) between two 
-    labeled images.
+def measure_overlap_labels(
+        img1: Union["sitk.Image", "itk.Image"],
+        img2: Union["sitk.Image", "itk.Image"]) -> float:
+    """Measure the mean Dice Similarity Coefficient between two labeled images.
     
     Args:
-        labels_img1 (:obj:`sitk.Image`): Labels image 1.
-        labels_img2 (:obj:`sitk.Image`): Labels image 2.
+        img1: Labels image 1.
+        img2: Labels image 2.
     
     Returns:
-        float: The mean label-by-label DSC of the two given images.
+        The mean label-by-label DSC of the two given images.
+    
     """
-    overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
-    overlap_filter.Execute(labels_img1, labels_img2)
-    mean_region_dsc = overlap_filter.GetDiceCoefficient()
-    _logger.info("Mean label overlap DSC: {}".format(mean_region_dsc))
+    is_sitk = sitk and isinstance(img1, sitk.Image)
+    mean_region_dsc = np.nan
+    try:
+        if is_sitk:
+            overlap_filter = sitk.LabelOverlapMeasuresImageFilter()
+            overlap_filter.Execute(img1, img2)
+        
+        else:
+            # ITK filter appears to only take unsigned char images, which
+            # should be set on instantiation to set the filter type
+            # get ITK docs from:
+            # itk.itkLabelOverlapMeasuresImageFilterPython.label_overlap_measures_image_filter
+            src_img = img1.astype(itk.US)
+            tgt_img = img2.astype(itk.US)
+            overlap_filter = itk.LabelOverlapMeasuresImageFilter.New(src_img)
+            
+            # set both images again since the image set in New is unclear
+            overlap_filter.SetSourceImage(src_img)
+            overlap_filter.SetTargetImage(tgt_img)
+        
+        mean_region_dsc = overlap_filter.GetDiceCoefficient()
+        _logger.info("Mean label overlap DSC: %s\n", mean_region_dsc)
+    except RuntimeError as e:
+        _logger.warn(e)
     return mean_region_dsc
 
 

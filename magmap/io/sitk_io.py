@@ -199,6 +199,28 @@ def match_world_info(
                 direction, target.GetDirection())
 
 
+def read_img(path) -> Union["sitk.Image", "itk.Image"]:
+    """Read an image file into SimpleITK or ITK ``Image`` format.
+    
+    Args:
+        path: Path, including prioritized extension to check first.
+    
+    Returns:
+        Image object located at ``path``. Loads into SimpleITK format if the
+        library is available, otherwise into ITK format.
+    
+    """
+    if sitk:
+        # load as sitk Image if available
+        _logger.debug("Loading image with SimpleITK: %s", path)
+        img_sitk = sitk.ReadImage(path)
+    else:
+        # load as ITK image
+        _logger.debug("Loading image with ITK: %s", path)
+        img_sitk = itk.imread(path)
+    return img_sitk
+
+
 def read_sitk(
         path: str, dryrun: bool = False
 ) -> Tuple[Optional[Union["sitk.Image", "itk.Image"]], Optional[str]]:
@@ -214,7 +236,8 @@ def read_sitk(
     Returns:
         Tuple of:
         - ``img_sitk``: Image object located at ``path`` with the found
-          extension, or None if unable to load
+          extension, or None if unable to load. Type is determined by
+          :meth:`read_img`
         - ``path_loaded``: the loaded path, or None if no matching, existing
           path is found. If a file at ``path`` cannot be found, its extension
           is replaced successively with remaining extensions in
@@ -234,14 +257,15 @@ def read_sitk(
         img_path = path_split[0] + ext
         if os.path.exists(img_path):
             if not dryrun:
-                _logger.debug("Loading image with SimpleITK: %s", img_path)
-                img_sitk = sitk.ReadImage(img_path)
+                img_sitk = read_img(img_path)
             path_loaded = img_path
             break
+    
     if not dryrun and img_sitk is None:
         _logger.warn(
             "could not find image from %s and extensions %s", path_split[0],
             exts)
+    
     return img_sitk, path_loaded
 
 

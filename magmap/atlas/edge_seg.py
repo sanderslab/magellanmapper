@@ -6,9 +6,12 @@ import os
 from time import time
 from typing import List, Optional
 
-import SimpleITK as sitk
 import numpy as np
 import pandas as pd
+try:
+    import SimpleITK as sitk
+except ImportError:
+    sitk = None
 from skimage import color
 
 from magmap.atlas import atlas_refiner
@@ -111,7 +114,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         path_atlas = path_img
         path_labels = os.path.join(path_atlas_dir, labels_suffix)
         print("loading labels from", path_labels)
-        labels_sitk = sitk.ReadImage(path_labels)
+        labels_sitk = sitk_io.read_img(path_labels)
     elif labels_suffix:
         # load labels registered to sample image
         labels_sitk = sitk_io.load_registered_img(
@@ -182,7 +185,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
         config.RegNames.IMG_LABELS_INTERIOR.value: labels_sitk_interior, 
         config.RegNames.IMG_LABELS_DIST.value: dist_sitk, 
     }
-    if show:
+    if show and sitk:
         for img in imgs_write.values():
             if img: sitk.Show(img)
     
@@ -393,7 +396,7 @@ def edge_aware_segmentation(
     # show and write image to same directory as atlas with appropriate suffix
     sitk_io.write_reg_images(
         {config.RegNames.IMG_LABELS.value: labels_sitk_seg}, mod_path)
-    if show: sitk.Show(labels_sitk_seg)
+    if show and sitk: sitk.Show(labels_sitk_seg)
     return path_atlas
 
 
@@ -501,7 +504,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
             config.RegNames.IMG_LABELS_INTERIOR.value: labels_sitk_interior, 
         }
         sitk_io.write_reg_images(imgs_write, mod_path)
-        if show:
+        if show and sitk:
             for img in imgs_write.values():
                 if img: sitk.Show(img)
         print("finished {}".format(path))

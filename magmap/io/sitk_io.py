@@ -116,11 +116,6 @@ def replace_sitk_with_numpy(
         and direction as that of ``img_sitk`` and array replaced by ``img_np``.
     
     """
-    # get original settings
-    spacing = img_sitk.GetSpacing()
-    origin = img_sitk.GetOrigin()
-    direction = img_sitk.GetDirection()
-    
     # treat as vector (multichannel) image if source is multichannel
     if multichannel is None:
         multichannel = (
@@ -128,35 +123,8 @@ def replace_sitk_with_numpy(
     img_sitk_back = convert_img(
         img_np, multichannel, sitk and isinstance(img_sitk, sitk.Image))
     
-    # transfer original settings to new Image, matching length for ITK
-    spacing = libmag.replace_seq(img_sitk_back.GetSpacing(), spacing)
-    origin = libmag.replace_seq(img_sitk_back.GetOrigin(), origin)
-    img_sitk_back.SetSpacing(spacing)
-    img_sitk_back.SetOrigin(origin)
-    
-    # convert directions to 2D arrays if necessary
-    dir_np = np.array(direction)
-    dir_back = np.array(img_sitk_back.GetDirection())
-    is_dir_1d = dir_np.ndim == 1
-    if is_dir_1d:
-        dir_np = np.reshape(np.array(dir_np), [len(img_sitk.GetSpacing())] * 2)
-        dir_back = np.reshape(
-            np.array(dir_back), [len(img_sitk_back.GetSpacing())] * 2)
-    
-    # fill target direction with source, truncating it if necessary for ITK
-    dir_back = libmag.replace_seq(dir_back, dir_np)
-    if is_dir_1d:
-        dir_back = np.ravel(dir_back)
-    
-    try:
-        img_sitk_back.SetDirection(dir_back)
-    except RuntimeError:
-        # direction format and length may not be directly transferable, such
-        # as direction from groupwise reg image
-        _logger.warn(
-            "Could not replace image direction with: %s\n"
-            "Leaving default direction: %s",
-            direction, img_sitk_back.GetDirection())
+    # transfer original settings to new Image
+    match_world_info(img_sitk, img_sitk_back)
     
     return img_sitk_back
 
@@ -174,10 +142,10 @@ def match_world_info(
     metadata perhaps from founding that may prevent ITK filters from executing.
 
     Args:
-        source: Source object whose relevant metadata
-            will be copied into ``target``.
-        target: Target object whose corresponding
-            metadata will be overwritten by that of ``source``.
+        source: Source object whose relevant metadata will be copied into
+            ``target``.
+        target: Target object whose corresponding metadata will be
+            overwritten by that of ``source``.
         spacing: True to copy the spacing from ``source`` to ``target``, or
             the spacing to set in ``target``; defaults to True.
         origin: True to copy the origin from ``source`` to ``target``, or
@@ -194,17 +162,41 @@ def match_world_info(
     if direction is True:
         direction = source.GetDirection()
     
-    # set the values in the target
-    _logger.debug(
-        "Adjusting spacing from %s to %s, origin from %s to %s, "
-        "direction from %s to %s", target.GetSpacing(), spacing,
-        target.GetOrigin(), origin, target.GetDirection(), direction)
     if spacing:
+        # transfer spacing, truncating if necessary
+        spacing = libmag.replace_seq(target.GetSpacing(), spacing)
         target.SetSpacing(spacing)
+    
     if origin:
+        # transfer origin, truncating if necessary
+        origin = libmag.replace_seq(target.GetOrigin(), origin)
         target.SetOrigin(origin)
+    
     if direction:
-        target.SetDirection(direction)
+        # convert directions to 2D arrays if necessary
+        dir_np = np.array(direction)
+        dir_back = np.array(target.GetDirection())
+        is_dir_1d = dir_np.ndim == 1
+        if is_dir_1d:
+            # sitk uses a 1D array; determine number of dimensions from spacing
+            dir_np = np.reshape(np.array(dir_np), [len(source.GetSpacing())] * 2)
+            dir_back = np.reshape(
+                np.array(dir_back), [len(target.GetSpacing())] * 2)
+        
+        # fill target direction with source, truncating it if necessary for ITK
+        dir_back = libmag.replace_seq(dir_back, dir_np)
+        if is_dir_1d:
+            dir_back = np.ravel(dir_back)
+        
+        try:
+            target.SetDirection(dir_back)
+        except RuntimeError:
+            # direction format and length may not be directly transferable, such
+            # as direction from groupwise reg image
+            _logger.warn(
+                "Could not replace image direction with: %s\n"
+                "Leaving default direction: %s",
+                direction, target.GetDirection())
 
 
 def read_sitk(

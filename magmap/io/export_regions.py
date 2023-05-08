@@ -11,7 +11,10 @@ from collections import OrderedDict
 from time import time
 from typing import Dict, Optional, Sequence, Tuple
 
-import SimpleITK as sitk
+try:
+    import SimpleITK as sitk
+except ImportError:
+    sitk = None
 import numpy as np
 import pandas as pd
 
@@ -466,7 +469,7 @@ def make_labels_diff_img(img_path, df_path, meas, fn_avg, prefix=None,
     imgs_write = {reg_diff: labels_diff_sitk}
     out_path = prefix if prefix else img_path
     sitk_io.write_reg_images(imgs_write, out_path)
-    if show:
+    if show and sitk:
         for img in imgs_write.values():
             if img: sitk.Show(img)
 
@@ -525,7 +528,7 @@ def make_labels_level_img(
     }
     out_path = prefix if prefix else img_path
     sitk_io.write_reg_images(imgs_write, out_path)
-    if show:
+    if show and sitk:
         for img in imgs_write.values():
             if img: sitk.Show(img)
     

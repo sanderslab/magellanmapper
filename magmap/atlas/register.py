@@ -942,7 +942,7 @@ def register(
             imgs_write[suffix] = make_labels(moving_imgs[suffix])[0]
             print("transforming label", suffix, imgs_write[suffix])
 
-    if show_imgs:
+    if show_imgs and sitk:
         # show individual SimpleITK images in default viewer
         for img in imgs_write.values():
             if img is not None:
@@ -1111,7 +1111,7 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
         # distinct name to avoid overwriting previously registered images
         imgs_write[name] = img
     sitk_io.write_reg_images(imgs_write, output_base)
-    if show:
+    if show and sitk:
         for img in imgs_write.values(): sitk.Show(img)
 
 
@@ -1320,7 +1320,7 @@ def register_group(
         # of subject within first image
         img_large_np = np.zeros(size_orig[::-1])
         img_large_np[:, start_y:start_y+img_np.shape[1]] = img_np
-        if show_imgs:
+        if show_imgs and sitk:
             sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_large_np))
         imgs.append(img_large_np)
     
@@ -1357,7 +1357,7 @@ def register_group(
         imgs_to_show.append(img_unfilled)
         imgs_to_show.append(transformed_img)
     
-    if show_imgs:
+    if show_imgs and sitk:
         for img in imgs_to_show: sitk.Show(img)
     
     #transformed_img = img_raw
@@ -1424,7 +1424,8 @@ def register_labels_to_atlas(path_fixed):
     # perform the registration
     transform = elastix_img_filter.Execute()
     transformed_img = elastix_img_filter.GetResultImage()
-    sitk.Show(transformed_img)
+    if sitk:
+        sitk.Show(transformed_img)
     
     # set up filter to apply the same transformation to label file, 
     # ensuring that no new labels are interpolated
@@ -2137,10 +2138,11 @@ def _test_curate_img(path, prefix):
     result_imgs = curate_img(
         fixed_img, labels_img, [atlas_img], inpaint=False, 
         holes_area=holes_area)
-    sitk.Show(fixed_img)
-    sitk.Show(labels_img)
-    sitk.Show(result_imgs[0])
-    sitk.Show(result_imgs[1])
+    if sitk:
+        sitk.Show(fixed_img)
+        sitk.Show(labels_img)
+        sitk.Show(result_imgs[0])
+        sitk.Show(result_imgs[1])
 
 
 def _test_smoothing_metric():

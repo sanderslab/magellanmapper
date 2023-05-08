@@ -7,13 +7,16 @@ from enum import Enum
 import os
 from typing import Dict, List, Optional, Sequence, Tuple, Union, Any
 
-import SimpleITK as sitk
 try:
     import itk
 except ImportError:
     itk = None
 import numpy as np
 import pandas as pd
+try:
+    import SimpleITK as sitk
+except ImportError:
+    sitk = None
 from skimage import filters
 from skimage import measure
 from skimage import morphology
@@ -1238,24 +1241,31 @@ def transpose_img(
     return transposed
 
 
-def match_atlas_labels(img_atlas, img_labels, metrics=None):
+def match_atlas_labels(
+        img_atlas: Union["sitk.Image", "itk.Image"],
+        img_labels: Union["sitk.Image", "itk.Image"],
+        metrics: Optional[
+            Dict["config.AtlasMetrics", Union[float, Sequence[float]]]] = None
+) -> Tuple[Union["sitk.Image", "itk.Image"],
+           Union["sitk.Image", "itk.Image"],
+           Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """Apply register profile settings to labels and match atlas image
     accordingly.
     
     Args:
-        img_atlas (:obj:`sitk.Image`): Reference image, such as histology.
-        img_labels (:obj:`sitk.Image`): Labels image.
-        metrics (:obj:`dict`): Dictionary to store metrics; defaults to
-            None, in which case metrics will not be measured.
+        img_atlas: Reference image, such as histology.
+        img_labels: Labels image.
+        metrics: Dictionary of metrics. If None, metrics will not be measured.
     
     Returns:
-        Tuple: ``img_atlas``, the updated atlas; ``img_labels``, the
-        updated labels; ``img_borders``, a new (:obj:`sitk.Image`) of the
-        same shape as the prior images except an extra channels dimension
-        as given by :func:``_curate_labels``; ``df_sm``, a
-        data frame of smoothing stats, or None if smoothing was not performed;
-        and ``df_sm_raw``, a data frame of raw smoothing stats, or
-        None if smoothing was not performed.
+        Tuple of:
+        - ``img_atlas``: the updated atlas
+        - ``img_labels``: the updated labels
+        - ``df_sm``: a data frame of smoothing stats, or None if smoothing was
+          not performed
+        - ``df_sm_raw``: a data frame of raw smoothing stats, or None if
+          smoothing was not performed
+    
     """
     pre_plane = config.atlas_profile["pre_plane"]
     mirror = config.atlas_profile["labels_mirror"]
@@ -1290,12 +1300,12 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
         # include any lateral extension and mirroring if ACTIVE flag is on
         img_labels_np, extis, df_sm, df_sm_raw = (
             _curate_labels(
-                img_labels, img_atlas, mirror, edge, expand, rotate, smooth, 
+                img_labels, img_atlas, mirror, edge, expand, rotate, smooth,
                 affine))
     else:
         # turn off lateral extension and/or mirroring
         img_labels_np, _, df_sm, df_sm_raw = _curate_labels(
-            img_labels, img_atlas, mirror if is_mirror else None, 
+            img_labels, img_atlas, mirror if is_mirror else None,
             edge if is_edge else None, expand, rotate, smooth,
             affine)
         if metrics or crop and (
@@ -1306,7 +1316,7 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
                   "for measurements and any cropping:")
             resize = is_mirror and mirror["start"] is not None
             lbls_np_mir, extis, _, _ = _curate_labels(
-                img_labels, img_atlas, mirror, edge, expand, rotate, None, 
+                img_labels, img_atlas, mirror, edge, expand, rotate, None,
                 affine, resize)
             mask_lbls = lbls_np_mir != 0
             print()
@@ -1444,20 +1454,24 @@ def match_atlas_labels(img_atlas, img_labels, metrics=None):
     return img_atlas, img_labels, df_sm, df_sm_raw
 
 
-def import_atlas(atlas_dir, show=True, prefix=None):
-    """Import atlas from the given directory, processing it according 
-    to the register settings specified at :attr:``config.register_settings``.
+def import_atlas(
+        atlas_dir: str, show: bool = True, prefix: Optional[str] = None):
+    """Import atlas from the given directory.
+     
+    Process the atlas according to the register settings specified at
+    :attr:``config.register_settings``.
     
-    The imported atlas will be saved to a directory of the same path as 
-    ``atlas_dir`` except with ``_import`` appended to the end. DSC 
+    The imported atlas will be saved to a directory of the same path as
+    ``atlas_dir`` except with ``_import`` appended to the end. DSC
     will be calculated and saved as a CSV file in this directory as well.
     
     Args:
-        atlas_dir (str): Path to atlas directory.
-        show (bool): True to show the imported atlas.
-        prefix (str): Output path; defaults to None to ignore. If ends with
+        atlas_dir: Path to atlas directory.
+        show: True to show the imported atlas. Only supported for SimpleITK.
+        prefix: Output path; defaults to None to ignore. If ends with
             a file separator,``atlas_dir`` will still be used for the output
             filename; otherwise, the basename will be used for this filename.
+    
     """
     # load atlas and corresponding labels
     img_atlas, path_atlas = sitk_io.read_sitk(
@@ -1524,7 +1538,7 @@ def import_atlas(atlas_dir, show=True, prefix=None):
     print("number of labels: {}".format(label_ids.size))
     print(label_ids)
     
-    # write images with atlas saved as MagellanMapper/Numpy format to 
+    # write images with atlas saved as MagellanMapper/Numpy format to
     # allow opening as an image within MagellanMapper alongside the labels image
     imgs_write = {
         config.RegNames.IMG_ATLAS.value: img_atlas, 
@@ -1572,7 +1586,8 @@ def import_atlas(atlas_dir, show=True, prefix=None):
         os.path.relpath(lbls_meta.save_path, target_dir),
         os.path.join(target_dir, labels_meta.LabelsMeta.PATH_LABELS_META))
     
-    if show:
+    if show and sitk:
+        # show the atlas using the default viewer in SimpleITK
         sitk.Show(img_atlas)
         sitk.Show(img_labels)
 
@@ -1604,7 +1619,7 @@ def measure_atlas_refinement(
     metrics[config.AtlasMetrics.VOL_ATLAS] = [np.sum(atlas_mask)]
     metrics[config.AtlasMetrics.VOL_LABELS] = [np.sum(labels_mask)]
     
-    # compactness of whole atlas (non-label) image; use lower threshold for 
+    # compactness of whole atlas (non-label) image; use lower threshold for
     # compactness measurement to minimize noisy surface artifacts
     img_atlas_np = sitk_io.convert_img(img_atlas)
     thresh = atlas_profile["atlas_threshold_all"]
@@ -1615,7 +1630,7 @@ def measure_atlas_refinement(
 
     _logger.info("\nWhole atlas stats:")
     df = df_io.dict_to_data_frame(metrics, path, show=" ")
-    return df  
+    return df
 
 
 def measure_overlap(
@@ -1750,15 +1765,18 @@ def measure_overlap_labels(
     return mean_region_dsc
 
 
-def make_labels_fg(labels_sitk):
+def make_labels_fg(
+        labels_sitk: Union["sitk.Image", "itk.Image"]
+) -> Union["sitk.Image", "itk.Image"]:
     """Make a labels foreground image.
     
     Args:
-        labels_sitk (:obj:`sitk.Image`): Labels image where
-            0 = background, and all other values are considered foreground.
+        labels_sitk: Labels image where 0 = background, and all other values
+            are considered foreground.
     
     Returns:
-        :obj:`sitk.Image`: Labels foreground image.
+        Labels foreground image.
+    
     """
     fg_img = sitk_io.convert_img(labels_sitk)
     fg_img[fg_img != 0] = 1
@@ -1766,24 +1784,27 @@ def make_labels_fg(labels_sitk):
     return fg_img_sitk
 
 
-def measure_overlap_combined_labels(base_img, labels_img, add_lbls=None,
-                                    return_masks=False):
+def measure_overlap_combined_labels(
+        base_img: Union["sitk.Image", "itk.Image"],
+        labels_img: Union["sitk.Image", "itk.Image"],
+        add_lbls: Optional[Sequence[Tuple[int, int]]] = None,
+        return_masks: bool = False) -> float:
     """Measures the overlap of a combined labels images to another image
 
     Should be 1.0 by definition when using ``labels_img`` to curate another
     image.
 
     Args:
-        base_img (:obj:`sitk.Image`): Base image.
-        labels_img (:obj:`sitk.Image`): Labels image, where all non-zero
+        base_img: Base image.
+        labels_img: Labels image, where all non-zero
             values will be treated as foreground.
-        add_lbls (List[int]): Sequence of labels in ``labels_img`` to add
-            to the mask for ``base_img``; defaults to None.
-        return_masks (bool): True to return the thresholded, mask images
-            used for the overlap calculate; defaults to False.
+        add_lbls: Sequence of labels in ``labels_img`` to add
+            to the mask for ``base_img``.
+        return_masks: True to return the thresholded, mask images
+            used for the overlap calculate.
 
     Returns:
-        float: Dice Similarity Coefficient from :meth:`measure_overlap`.
+        Dice Similarity Coefficient from :meth:`measure_overlap`.
 
     """
     lbls_fg = make_labels_fg(labels_img)

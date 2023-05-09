@@ -194,14 +194,15 @@ These package versions are used for automated testing (continuous integration).
 |-----|-----|-----|
 | `most` | Import and GUI tools | Has `import`, `gui` |
 | `all` | All groups plus `seaborn`, `scikit-learn` | Has all below |
-| `import` | Imports proprietary image formats | |
-| `gui` | Main graphical interface | |
-| `pandas_plus` | Exports styled and Excel formats | |
-| `aws` | Tools for accessing AWS | |
-| `docs` | Tools for building docs | |
-| `jupyter` | Running Notebooks | |
-| `classifer` | Tensorflow | |
 | `3D` | 3D rendering | |
+| `aws` | Tools for accessing AWS | |
+| `classifer` | Tensorflow | |
+| `docs` | Tools for building docs | |
+| `gui` | Main graphical interface | |
+| `import` | Imports proprietary image formats | |
+| `jupyter` | Running Notebooks | |
+| `pandas_plus` | Exports styled and Excel formats | |
+| `simpleitk` | Custom SimpleITK with Elastix | |
 
 ### Optional Dependency Build and Runtime Requirements
 

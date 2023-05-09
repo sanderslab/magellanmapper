@@ -32,7 +32,14 @@ import numpy as np
 from magmap.settings import logs
 
 if TYPE_CHECKING:
-    import SimpleITK as sitk
+    try:
+        import itk
+    except ImportError:
+        itk = None
+    try:
+        import SimpleITK as sitk
+    except ImportError:
+        sitk = None
     from magmap.atlas import labels_meta, ontology
     from magmap.cv import detector
     from magmap.io import np_io
@@ -607,8 +614,6 @@ class RegNames(Enum):
     COMBINED = "combined.mhd"  # spliced into other registered names
 
 
-#: Path to labels image metadata file. 
-
 #: Loaded labels metadata.
 labels_metadata: Optional["labels_meta.LabelsMeta"] = None
 
@@ -620,10 +625,10 @@ labels_level: Optional[int] = None
 #: Numpy array of a labels image file, typically corresponding to ``img5d``.
 labels_img: Optional = None
 #: Labels image as a SimpleITK Image instance.
-labels_img_sitk: Optional["sitk.Image"] = None
+labels_img_sitk: Optional[Union["sitk.Image", "itk.Image"]] = None
 #: Original labels image, before any processing.
 labels_img_orig: Optional[np.ndarray] = None
-#: Scaling factors from ``labels_img`` to ``img5d``. 
+#: Scaling factors from ``labels_img`` to ``img5d``.
 labels_scaling: Optional[Sequence[float]] = None
 #: Labels reference IDs corresponding to the labels image values.
 labels_ref: Optional["ontology.LabelsRef"] = None
@@ -632,8 +637,8 @@ borders_img = None
 
 VOL_KEY = "volume"
 BLOBS_KEY = "blobs"
-VARIATION_BLOBS_KEY = "var_blobs" # variation in blob density
-VARIATION_EXP_KEY = "var_exp" # variation in experiment intensity
+VARIATION_BLOBS_KEY = "var_blobs"  # variation in blob density
+VARIATION_EXP_KEY = "var_exp"  # variation in experiment intensity
 GENOTYPE_KEY = "Geno"
 SUB_SEG_MULT = 100  # labels multiplier for sub-segmentations
 REGION_ALL = "all"

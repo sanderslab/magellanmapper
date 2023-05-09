@@ -50,6 +50,13 @@ _EXTRAS_GUI = [
 #: Optional dependencies for the 3D viewer.
 _EXTRAS_3D = ["mayavi"]
 
+#: Optional pre-built SimpleITK with Elastix.
+_SIMPLEITK = [
+    "simpleitk==2.0.2rc2.dev785+g8ac4f ; python_version < '3.8'",
+    "simpleitk==2.3.0.dev117+g0640d ; python_version >= '3.8'",
+]
+
+
 # installation configuration
 config = {
     "name": "magellanmapper",
@@ -75,7 +82,6 @@ config = {
         "pandas",
         
         # image registration toolkits
-        "simpleitk",
         "itk",
         "itk-elastix",
         
@@ -100,6 +106,7 @@ config = {
         "classifier": _EXTRAS_CLASSIFER,
         "gui": _EXTRAS_GUI,
         "3d": _EXTRAS_3D,
+        "simplitk": _SIMPLEITK,
         
         # dependencies for most common tasks
         "most": [

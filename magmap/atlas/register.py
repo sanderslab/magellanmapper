@@ -1056,14 +1056,14 @@ def register_rev(fixed_path, moving_path, reg_base=None, reg_names=None,
             defaults to None.
         show: True to show images after registration; defaults to True.
     """
-    fixed_img = sitk.ReadImage(fixed_path)
+    fixed_img = sitk_io.read_img(fixed_path)
     mod_path = moving_path
     if suffix is not None:
         # adjust image path to load with suffix
         mod_path = libmag.insert_before_ext(mod_path, suffix)
     if reg_base is None:
         # load the image directly from given path
-        moving_img = sitk.ReadImage(mod_path)
+        moving_img = sitk_io.read_img(mod_path)
     else:
         # treat the path as a base path to which a reg suffix will be combined
         moving_img = sitk_io.load_registered_img(
@@ -1477,11 +1477,10 @@ def overlay_registered_imgs(fixed_file, moving_file_dir, plane=None,
     image5d = img5d.img
     roi = image5d[0, ...]  # not using time dimension
     
-    # get the atlas file and transpose it to match the orientation of the 
+    # get the atlas file and transpose it to match the orientation of the
     # experiment image
     out_path = os.path.join(moving_file_dir, config.RegNames.IMG_ATLAS.value)
-    print("Reading in {}".format(out_path))
-    moving_sitk = sitk.ReadImage(out_path)
+    moving_sitk = sitk_io.read_img(out_path)
     moving_sitk = atlas_refiner.transpose_img(
         moving_sitk, plane, rotate)
     moving_img = sitk_io.convert_img(moving_sitk)
@@ -2101,7 +2100,7 @@ def _test_region_from_id():
         # been given similarly to register fn
         path = os.path.join(
             config.filenames[1], config.RegNames.IMG_LABELS.value)
-        labels_img = sitk.ReadImage(path)
+        labels_img = sitk_io.read_img(path)
         labels_img = sitk_io.convert_img(labels_img)
         scaling = np.ones(3)
         print("loaded labels image from {}".format(path))
@@ -2110,7 +2109,7 @@ def _test_region_from_id():
         labels_img = sitk_io.load_registered_img(
             config.filename, config.RegNames.IMG_LABELS.value)
         if config.filename.endswith(".mhd"):
-            img = sitk.ReadImage(config.filename)
+            img = sitk_io.read_img(config.filename)
             img = sitk_io.convert_img(img)
             image5d = img[None]
         else:

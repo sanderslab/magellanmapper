@@ -521,6 +521,27 @@ def find_atlas_labels(
     return list(labels_ref_lookup.keys())
 
 
+def write_img(
+        img: Union["sitk.Image", "itk.Image"], path: str,
+        compression: bool = False, **kwargs):
+    """Write SimpleITK/ITK images.
+    
+    Args:
+        img: Image as SimpleITK or ITK type.
+        path: Path to save the image.
+        compression: True to use compression.
+        kwargs: Additional arguments to underlying :meth:`sitk.WriteImage`
+            or :meth:`itk.imwrite`.
+
+    """
+    # write using the available ITK-based library
+    if sitk and isinstance(img, sitk.Image):
+        sitk.WriteImage(img, path, compression, **kwargs)
+    else:
+        itk.imwrite(img, path, compression, **kwargs)
+    _logger.info("Wrote image to: %s", path)
+
+
 def write_registered_image(
         img_np: np.ndarray, img_path: str, reg_name: str,
         img_sitk: Optional["sitk.Image"] = None,
@@ -582,7 +603,7 @@ def write_registered_image(
     if img_sitk:
         # copy the template and replace its array with the given array to save
         reg_img = replace_sitk_with_numpy(img_sitk, img_np)
-        sitk.WriteImage(reg_img, reg_img_path, False)
+        write_img(reg_img, reg_img_path)
         print("wrote {} with current registered image".format(reg_img_path))
         return reg_img
     else:
@@ -592,7 +613,7 @@ def write_registered_image(
 
 
 def write_reg_images(
-        imgs_write: Dict[str, "sitk.Image"], prefix: str,
+        imgs_write: Dict[str, Union["sitk.Image", "itk.Image"]], prefix: str,
         copy_to_suffix: bool = False, ext: Optional[str] = None,
         prefix_is_dir: bool = False):
     """Write registered images to file.
@@ -600,7 +621,7 @@ def write_reg_images(
     Args:
         imgs_write: Dictionary of ``{suffix: image}``, where ``suffix``
             is a registered images suffix, such as :const:``IMAGE_LABELS``,
-            and ``image`` is a SimpleITK image object. If the image does
+            and ``image`` is a SimpleITK or ITK image object. If the image does
             not exist, the file will not be written.
         prefix: Base path from which to construct registered file paths.
             Parent directories will be created if necessary.
@@ -624,14 +645,16 @@ def write_reg_images(
         if img is None: continue
         if ext: suffix = libmag.match_ext(ext, suffix)
         out_path = reg_out_path(prefix, suffix)
-        sitk.WriteImage(img, out_path, False)
-        print("wrote registered image to", out_path)
+        
+        # write using the available ITK-based library
+        write_img(img, out_path)
+        
         if copy_to_suffix:
             # copy metadata file to allow opening images from bare suffix name,
             # such as when this atlas becomes the new atlas for registration
             out_path_copy = os.path.join(target_dir, suffix)
             shutil.copy(out_path, out_path_copy)
-            print("also copied to", out_path_copy)
+            _logger.info("Also copied to: %s", out_path_copy)
 
 
 def write_pts(path: str, pts: Sequence[Sequence[int]], pt_type: str = "index"):

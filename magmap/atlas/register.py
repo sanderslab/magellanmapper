@@ -1367,8 +1367,7 @@ def register_group(
         out_path = os.path.join(name_prefix, config.RegNames.IMG_GROUPED.value)
         if not os.path.exists(name_prefix):
             os.makedirs(name_prefix)
-        print("writing {}".format(out_path))
-        sitk.WriteImage(transformed_img, out_path, False)
+        sitk_io.write_img(transformed_img, out_path)
         img_np = sitk_io.convert_img(transformed_img)
         config.resolutions = [transformed_img.GetSpacing()[::-1]]
         importer.save_np_image(img_np[None], out_path, config.series)

@@ -13,7 +13,6 @@ from typing import List, Optional, TYPE_CHECKING
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-import SimpleITK as sitk
 
 from magmap.cv import cv_nd, detector
 from magmap.gui import roi_editor
@@ -157,7 +156,7 @@ def export_rois(
             print(img3d.shape, img3d.dtype, img3d_back.shape, img3d_back.dtype)
             print("sitk img:\n{}".format(img3d_back[0]))
             '''
-            sitk.WriteImage(img3d_sitk, path_img_nifti, False)
+            sitk_io.write_img(img3d_sitk, path_img_nifti)
             roi_ed = roi_editor.ROIEditor(img5d)
             print("shape", img3d.shape)
             roi_ed.plot_roi(
@@ -194,9 +193,8 @@ def export_rois(
                 img3d_truth[img3d_truth < 0.5] = 0
             _logger.debug("Exporting truth ROI of shape: %s", img3d_truth.shape)
             np.save(path_img_annot, img3d_truth)
-            sitk.WriteImage(
-                sitk_io.convert_img(img3d_truth), path_img_annot_nifti, 
-                False)
+            sitk_io.write_img(
+                sitk_io.convert_img(img3d_truth), path_img_annot_nifti)
             _logger.info(
                 "Wrote NIfTI formatted images: %s", path_img_annot_nifti)
             # avoid smoothing interpolation, using "nearest" instead

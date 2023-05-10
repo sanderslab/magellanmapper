@@ -87,9 +87,7 @@ config = {
         "imagecodecs",
         # part of stdlib in Python >= 3.7
         "dataclasses ; python_version < '3.7'",
-        # BrainGlobe dependencies for access to cloud-hosted atlases, pinned
-        # to last commit supporting Python >= 3.6
-        "bg-atlasapi @ https://github.com/brainglobe/bg-atlasapi/archive/dbecd16b2f63a8e167543f3358452a756bad0e64.tar.gz",
+        "bg-atlasapi",
         "typing_extensions",
     ],
     "extras_require": {

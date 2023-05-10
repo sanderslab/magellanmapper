@@ -82,24 +82,35 @@ class AccessAtlasThread(QtCore.QThread):
         self.signal.connect(fn_success)
         self.progress.connect(fn_progress)
     
-    def update_prog(self, done, tot):
-        """Update progress bar."""
+    def update_prog(self, done: float, tot: float):
+        """Update progress bar for downloading an atlas.
+        
+        Args:
+            done: Amount completed.
+            tot: Total amount for completion. 0 indicates that the done
+                and total amounts are unknown.
+
+        """
+        msg = f"Downloading '{self.name}' atlas"
         if tot == 0:
-            # content-header may return 0
-            pct = 0
-            tot_form = "Unknown"
+            # flag % as unknown, eg when content-header is 0
+            pct = -1
         else:
             # show % downloaded and size in human-readable units
             pct = (done / tot) * 100
-            tot_form = f"{libmag.format_bytes(tot)} ({pct:.1f}%)"
-        msg = f"Downloaded {libmag.format_bytes(done)} of {tot_form}"
+            msg += f": {libmag.format_bytes(done)} of " \
+                   f"{libmag.format_bytes(tot)} ({pct:.1f}%)"
         self.progress.emit(pct, msg)
 
     def run(self):
         """Access the atlas, including download if necessary."""
-        self.progress.emit(
-            1, f"Accessing atlas '{self.name}', downloading if necessary...")
+        # reset progress bar
+        self.progress.emit(0, None)
+        
+        # get atlas
         atlas = self.bg_mm.get_atlas(self.name, fn_update=self.update_prog)
+        
+        # show retrieved atlas
         self.progress.emit(100, f"Atlas '{self.name}' accessed")
         self.signal.emit(atlas)
 

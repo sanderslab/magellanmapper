@@ -591,8 +591,9 @@ class Visualization(HasTraits):
     # Status bar
     
     _status_bar_msg = Str()  # text for status bar
-    _prog_pct = Int(0)
-    _prog_msg = Str()
+    _prog_pct = Int(0)  # progress bar percentage
+    _prog_pct_max = Int(100)  # progress bar max percentage
+    _prog_msg = Str()  # progress bar message
 
     # ROI selector panel
     panel_roi_selector = VGroup(
@@ -724,7 +725,7 @@ class Visualization(HasTraits):
         # generate progress bar but give essentially no height since it will
         # be moved to the status bar in the handler
         Item("_prog_pct", show_label=False, height=-2,
-             editor=ProgressEditor(min=0, max=100)),
+             editor=ProgressEditor(min=0, max_name="_prog_pct_max")),
         
         HGroup(
             Item("btn_redraw", show_label=False),
@@ -2412,18 +2413,29 @@ class Visualization(HasTraits):
         curr_roi_size = self.roi_array[0].astype(int)
         self._update_structure_level(curr_offset, curr_roi_size)
     
-    def _update_prog(self, pct: int, msg: str):
-        """Update progress bar.
-        
-        Also updates the logger.
+    def _update_prog(self, pct: int, msg: Optional[str]):
+        """Update progress bar and message.
         
         Args:
-            pct: Percentage completed.
-            msg: Message.
+            pct: Percentage completed. Can be -1 to indicate that progress is
+                unknown, which will change the bar to a busy indicator.
+            msg: Message. If None, the message will not be updated.
 
         """
+        if pct == -1:
+            # progress is unknown; change to busy indicator
+            self._prog_pct_max = 0
+            pct = 0
+        elif not self._prog_pct_max:
+            # reset progress bar
+            self._prog_pct_max = 100
+        
+        # set progress percentage
         self._prog_pct = pct
-        self._prog_msg = msg
+        
+        if msg:
+            # set message
+            self._prog_msg = msg
     
     @on_trait_change("_structure_remap_btn")
     def _remap_structure(self):

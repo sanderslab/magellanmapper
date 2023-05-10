@@ -50,10 +50,16 @@ _EXTRAS_GUI = [
 #: Optional dependencies for the 3D viewer.
 _EXTRAS_3D = ["mayavi"]
 
-#: Optional pre-built SimpleITK with Elastix.
-_SIMPLEITK = [
+#: Optional pre-built SimpleITK with Elastix for image I/O and registration.
+_EXTRAS_SIMPLEITK = [
     "simpleitk==2.0.2rc2.dev785+g8ac4f ; python_version < '3.8'",
     "simpleitk==2.3.0.dev117+g0640d ; python_version >= '3.8'",
+]
+
+#: Optional ITK and Elastix for image I/O and registration.
+_EXTRAS_ITK = [
+    "itk",
+    "itk-elastix",
 ]
 
 
@@ -80,11 +86,6 @@ config = {
         # PlotEditor performance regression with 3.3.0-3.3.1
         "matplotlib != 3.3.0, != 3.3.1",
         "pandas",
-        
-        # image registration toolkits
-        "itk",
-        "itk-elastix",
-        
         "PyYAML",
         "appdirs",
         # part of stdlib in Python >= 3.8
@@ -106,13 +107,15 @@ config = {
         "classifier": _EXTRAS_CLASSIFER,
         "gui": _EXTRAS_GUI,
         "3d": _EXTRAS_3D,
-        "simplitk": _SIMPLEITK,
+        "itk": _EXTRAS_ITK,
+        "simplitk": _EXTRAS_SIMPLEITK,
         
         # dependencies for most common tasks
         "most": [
             "matplotlib_scalebar",
             "pyamg",  # for Random-Walker segmentation "cg_mg" mode
             *_EXTRAS_GUI,
+            *_EXTRAS_ITK,
             *_EXTRAS_IMPORT,
         ],
         
@@ -124,6 +127,7 @@ config = {
             "scikit-learn",
             *_EXTRAS_GUI,
             *_EXTRAS_PANDAS,
+            *_EXTRAS_ITK,
             *_EXTRAS_IMPORT,
             *_EXTRAS_AWS,
             *_EXTRAS_JUPYTER,

@@ -81,6 +81,9 @@
 - Landmark distance measurements save the raw distances and no longer require spacing (#147)
 - Masks with angle planes can be constructed (#252)
 - `register.RegImgs` is a data class to track registered images (#335)
+- Supports image I/O and registration through ITK (#495)
+  - `ITK-Elastix` support has been added as an alternative to `SimpleITK`
+  - Both libraries are now optional rather than required dependencies
 - Fixed changes to large label IDs during registration (#303)
 
 #### Cell detection

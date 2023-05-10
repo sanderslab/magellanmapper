@@ -1,6 +1,6 @@
 """BrainGlobe model for integration in MagellanMapper"""
 
-from requests.exceptions import ConnectionError
+from requests.exceptions import ChunkedEncodingError, ConnectionError
 import shutil
 from typing import Callable, Dict, Optional
 
@@ -63,16 +63,28 @@ class BrainGlobeMM:
             name: Name of atlas to retrieve.
             download: True to download the atlas if not available locally;
                 False to return None if the atlas is not present.
-            fn_update: Handler for progress updates during atlas download;
-                defaults to None.
+            fn_update: Handler for progress updates during atlas download.
 
         Returns:
-            The BrainGlobe atlas instance.
+            The BrainGlobe atlas instance. None if the atlas could not be
+            found or downloaded.
 
         """
         if not download and name not in self.atlases_local:
             return None
-        atlas = bg_atlas.BrainGlobeAtlas(name, fn_update=fn_update)
+        
+        try:
+            try:
+                # get atlas with progress handler using bg-atlasapi > v1.0.2
+                atlas = bg_atlas.BrainGlobeAtlas(name, fn_update=fn_update)
+            except TypeError:
+                # fall back to showing a busy progress indicator
+                fn_update(0, 0)
+                atlas = bg_atlas.BrainGlobeAtlas(name)
+        except ChunkedEncodingError as e:
+            # download error
+            _logger.error("Error downloading atlas: %s", e)
+            return None
         
         # add an attribute to store the path to the structures file
         atlas.structures_path = atlas.root_dir / descriptors.STRUCTURES_FILENAME

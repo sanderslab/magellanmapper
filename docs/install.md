@@ -200,6 +200,7 @@ These package versions are used for automated testing (continuous integration).
 | `docs` | Tools for building docs | |
 | `gui` | Main graphical interface | |
 | `import` | Imports proprietary image formats | |
+| `itk` | ITK-Elastix | |
 | `jupyter` | Running Notebooks | |
 | `pandas_plus` | Exports styled and Excel formats | |
 | `simpleitk` | Custom SimpleITK with Elastix | |

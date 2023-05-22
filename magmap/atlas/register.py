@@ -191,13 +191,21 @@ def _show_overlays(imgs, translation, fixed_file, plane):
 
 
 def _handle_transform_file(fixed_file, transform_param_map=None):
+    # read or write transformation file
     base_name = sitk_io.reg_out_path(fixed_file, "")
     filename = base_name + "transform.txt"
-    param_map = None
     if transform_param_map is None:
-        param_map = sitk.ReadParameterFile(filename)
+        if sitk:
+            param_map = sitk.ReadParameterFile(filename)
+        else:
+            param_map = itk.ParameterObject.New()
+            param_map.ReadParameterFile(filename)
     else:
-        sitk.WriteParameterFile(transform_param_map[0], filename)
+        if sitk:
+            sitk.WriteParameterFile(transform_param_map[0], filename)
+        else:
+            param = itk.ParameterObject.New()
+            param.WriteParameterFile(transform_param_map[0], filename)
         param_map = transform_param_map[0]
     return param_map, None # TODO: not using translation parameters
     transform = np.array(param_map["TransformParameters"]).astype(float)
@@ -213,6 +221,7 @@ def _handle_transform_file(fixed_file, transform_param_map=None):
     else:
         print("Transform parameters do not match scaling dimensions")
     return param_map, translation
+    return param_map, None  # TODO: not using translation parameters
 
 
 def curate_img(
@@ -1177,20 +1186,21 @@ def register_group(
     Registration parameters are assumed to be in a "b-spline"
     :class:`magmap.settings.atlas_prof.RegParamMap`.
     
+    Performs registration using SimpleITK if the package is present, otherwise
+    using ITK-Elastix.
+    
     Args:
         img_files: Paths to image files to register. A minimum of 4 images
             is required for groupwise registration.
         rotate: List of number of 90 degree rotations for images
             corresponding to ``img_files``; defaults to None, in which
             case the `config.transform` rotate attribute will be used.
-        show_imgs: True if the output images should be displayed; defaults to
-            True.
-        write_imgs: True if the images should be written to file; defaults to
-            True.
+        show_imgs: True if the output images should be displayed.
+        write_imgs: True if the images should be written to file.
         name_prefix: Path with base name where registered files will be output;
             defaults to None, in which case the fixed_file path will be used.
         scale: Rescaling factor as a scalar value, used to find the rescaled,
-            smaller images corresponding to ``img_files``. Defaults to None.
+            smaller images corresponding to ``img_files``.
     
     """
     start_time = time()
@@ -1200,23 +1210,26 @@ def register_group(
         rotate = config.transform[config.Transforms.ROTATE]
     target_size = config.atlas_profile["target_size"]
     
-    '''
-    # TESTING: assuming first file is a raw groupwise registered image,
-    # import it for post-processing
-    img = sitk.ReadImage(img_files[0])
-    img_np = sitk.GetArrayFromImage(img)
-    print("thresh mean: {}".format(filters.threshold_mean(img_np)))
-    carve_threshold = config.register_settings["carve_threshold"]
-    holes_area = config.register_settings["holes_area"]
-    img_np, img_np_unfilled = plot_3d.carve(
-        img_np, thresh=carve_threshold, holes_area=holes_area,
-        return_unfilled=True)
-    sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_np_unfilled))
-    sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_np))
-    return
-    '''
+    if not itk and not sitk:
+        raise ImportError(
+            config.format_import_err(
+                "itk-elastix", "ITK-Elastix or SimpleITK with Elastix",
+                "groupwise image registration"))
     
-    img_vector = sitk.VectorOfImage()
+    imgs = None
+    img_vector = None  # for sitk
+    reg_params = None  # for ITK
+    if sitk:
+        # register with SimpleITK if present
+        _logger.info("Groupwise registering images using SimpleITK with Elastix")
+        img_vector = sitk.VectorOfImage()
+        
+    else:
+        # set up ITK-Elastix parameters
+        _logger.info("Groupwise registering images using ITK-Elastix")
+        reg_params = itk.ParameterObject.New()
+        imgs = []
+    
     # image properties of 1st image, in SimpleITK format
     origin = None
     size_orig = None
@@ -1232,7 +1245,7 @@ def register_group(
         rot = rotate and libmag.get_if_within(rotate, i, 0) >= 2
         chl = config.channel[0] if config.channel else 0
         img = sitk_io.load_numpy_to_sitk(img_file, rot, chl)
-        size = img.GetSize()
+        size = img.GetSize() if sitk else itk.size(img)
         img_np = sitk_io.convert_img(img)
         if img_np_template is None:
             img_np_template = np.copy(img_np)
@@ -1267,7 +1280,7 @@ def register_group(
         if origin is None:
             origin = img.GetOrigin()
             size_orig = size
-            size_cropped = img.GetSize()
+            size_cropped = img.GetSize() if sitk else tuple(itk.size(img))
             spacing = img.GetSpacing()
             start_y = y_cropped
             print("size_cropped: ", size_cropped, ", size_orig", size_orig)
@@ -1278,52 +1291,91 @@ def register_group(
             # favor of comparing shapes of large original and registered images
             img.SetOrigin(origin)
             img.SetSpacing(spacing)
-        print("img_file: {}\n{}".format(img_file, img))
-        img_vector.push_back(img)
-        #sitk.Show(img)
+        
+        if img_vector is not None:
+            img_vector.push_back(img)
+        else:
+            imgs.append(img)
+    
     #sitk.ProcessObject.SetGlobalDefaultDirectionTolerance(1)
     #sitk.ProcessObject.SetGlobalDefaultCoordinateTolerance(100)
-    img_combined = sitk.JoinSeries(img_vector)
     
-    # add b-spline registration parameter map
+    if img_vector is not None:
+        # sitk provides an array to register images of different sizes
+        img_combined = sitk.JoinSeries(img_vector)
+        elastix_img_filter = sitk.ElastixImageFilter()
+        elastix_img_filter.SetFixedImage(img_combined)
+        elastix_img_filter.SetMovingImage(img_combined)
+    else:
+        # assume all images are of the same size for ITK
+        imgs_np = [sitk_io.convert_img(m) for m in imgs]
+        imgs_np = np.array(imgs_np)
+        img_combined = sitk_io.convert_img(imgs_np, False).astype(itk.F)
+        sitk_io.match_world_info(imgs[0], img_combined)
+        elastix_img_filter = itk.ElastixRegistrationMethod.New(
+            img_combined, img_combined)
+    
+    _logger.info("Images to groupwise register:\n%s", img_combined)
+    
+    # get custom parameters from b-spline registration profile
     settings = config.atlas_profile
     reg = settings["reg_bspline"]
-    elastix_img_filter = sitk.ElastixImageFilter()
-    elastix_img_filter.SetFixedImage(img_combined)
-    elastix_img_filter.SetMovingImage(img_combined)
-    param_map = sitk.GetDefaultParameterMap("groupwise")
-    param_map["FinalGridSpacingInVoxels"] = [
-        reg["grid_space_voxels"]]
+    
+    # get default parameters for groupwise registeration
+    reg_name = "groupwise"
+    if reg_params:
+        param_map = reg_params.GetDefaultParameterMap(reg_name)
+    else:
+        param_map = sitk.GetDefaultParameterMap(reg_name)
+    
+    # change spacing to voxels
+    param_map["FinalGridSpacingInVoxels"] = [reg["grid_space_voxels"]]
     del param_map["FinalGridSpacingInPhysicalUnits"]  # avoid conflict with vox
+    
+    # set iterations
     param_map["MaximumNumberOfIterations"] = [reg["max_iter"]]
     # TESTING:
-    #param_map["MaximumNumberOfIterations"] = ["0"]
+    # param_map["MaximumNumberOfIterations"] = ["0"]
+    
+    # add a set of axis resolutions for each resolution level
     _config_reg_resolutions(
         reg["grid_spacing_schedule"], param_map, img_np_template.ndim)
-    elastix_img_filter.SetParameterMap(param_map)
-    elastix_img_filter.PrintParameterMap()
-    transform_filter = elastix_img_filter.Execute()
-    transformed_img = elastix_img_filter.GetResultImage()
     
-    # extract individual 3D images from 4D result image
-    extract_filter = sitk.ExtractImageFilter()
-    size = list(transformed_img.GetSize())
-    size[3] = 0 # set t to 0 to collapse this dimension
-    extract_filter.SetSize(size)
-    imgs = []
-    num_images = len(img_files)
-    for i in range(num_images):
-        extract_filter.SetIndex([0, 0, 0, i])  # x, y, z, t
-        img = extract_filter.Execute(transformed_img)
-        img_np = sitk_io.convert_img(img)
-        # resize to original shape of first image, all aligned to position
-        # of subject within first image
-        img_large_np = np.zeros(size_orig[::-1])
-        img_large_np[:, start_y:start_y+img_np.shape[1]] = img_np
-        if show_imgs and sitk:
-            sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_large_np))
-        imgs.append(img_large_np)
+    if sitk:
+        # groupwise register images in sitk
+        elastix_img_filter.SetParameterMap(param_map)
+        elastix_img_filter.PrintParameterMap()
+        elastix_img_filter.Execute()
+        transformed_img = elastix_img_filter.GetResultImage()
+        extract_filter = sitk.ExtractImageFilter()
+        
+        # extract individual 3D images from 4D result image
+        size = list(transformed_img.GetSize())
+        size[3] = 0  # set t to 0 to collapse this dimension
+        extract_filter.SetSize(size)
+        imgs = []
+        num_images = len(img_files)
+        for i in range(num_images):
+            extract_filter.SetIndex([0, 0, 0, i])  # x, y, z, t
+            img = extract_filter.Execute(transformed_img)
+            img_np = sitk_io.convert_img(img)
+            # resize to original shape of first image, all aligned to position
+            # of subject within first image
+            img_large_np = np.zeros(size_orig[::-1])
+            img_large_np[:, start_y:start_y + img_np.shape[1]] = img_np
+            if show_imgs and sitk:
+                sitk.Show(sitk_io.replace_sitk_with_numpy(img, img_large_np))
+            imgs.append(img_large_np)
     
+    else:
+        # groupwise register images in ITK
+        reg_params.AddParameterMap(param_map)
+        elastix_img_filter.SetParameterObject(reg_params)
+        elastix_img_filter.SetLogToConsole(config.verbose)
+        elastix_img_filter.UpdateLargestPossibleRegion()
+        transformed_img = elastix_img_filter.GetOutput()
+        imgs = sitk_io.convert_img(transformed_img)
+
     # combine all images by taking their mean
     img_mean = np.mean(imgs, axis=0)
     extend_borders = settings["extend_borders"]
@@ -1342,8 +1394,7 @@ def register_group(
     img_raw = sitk_io.replace_sitk_with_numpy(transformed_img, img_mean)
     
     # carve groupwise registered image if given thresholds
-    imgs_to_show = []
-    imgs_to_show.append(img_raw)
+    imgs_to_show = [img_raw]
     holes_area = settings["holes_area"]
     if carve_threshold and holes_area:
         img_mean, _, img_mean_unfilled = cv_nd.carve(
@@ -1369,11 +1420,11 @@ def register_group(
             os.makedirs(name_prefix)
         sitk_io.write_img(transformed_img, out_path)
         img_np = sitk_io.convert_img(transformed_img)
-        config.resolutions = [transformed_img.GetSpacing()[::-1]]
+        config.resolutions = [tuple(transformed_img.GetSpacing())[::-1]]
         importer.save_np_image(img_np[None], out_path, config.series)
     
-    print("time elapsed for groupwise registration (s): {}"
-          .format(time() - start_time))
+    _logger.info(
+        "Time elapsed for groupwise registration (s): %s", time() - start_time)
 
 
 def register_labels_to_atlas(path_fixed):

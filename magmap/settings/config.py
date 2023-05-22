@@ -695,7 +695,6 @@ RegisterTypes = Enum(
         "MAKE_EDGE_IMAGES",
         "MAKE_EDGE_IMAGES_EXP",
         "MERGE_ATLAS_SEGS",
-        "REG_LABELS_TO_ATLAS",
         "VOL_STATS",
         "VOL_COMPARE",
         "MAKE_DENSITY_IMAGES",

@@ -82,7 +82,7 @@
 - Masks with angle planes can be constructed (#252)
 - `register.RegImgs` is a data class to track registered images (#335)
 - Supports image I/O and registration through ITK
-  - `ITK-Elastix` support has been added as an alternative to `SimpleITK` (#495)
+  - `ITK-Elastix` support has been added as an alternative to `SimpleITK` (#495, #500)
   - Both libraries are now optional rather than required dependencies (#497)
   - Better support for image direction metadata (#497)
 - Fixed changes to large label IDs during registration (#303)
@@ -204,7 +204,8 @@
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
-- The SimpleElastix custom binaries have been switched to SimpleITK with Elastix (#379)
+- The SimpleElastix custom binaries are now built on SimpleITK with Elastix and is no longer a required dependency (#379, #501)
+- ITK-Elastix is now supported for image registration (#501)
 - Custom dependency binaries are now built for Python 3.8-3.11 (#379)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by installing PyQt <= 5.15.7 (#431)

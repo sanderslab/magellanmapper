@@ -135,6 +135,7 @@
 - Use core fonts in PDF/PS file exports to keep vector text (#486)
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
+- Fixed parsing some metadata when importing files with Bio-Formats (#502)
 
 #### Server pipelines
 

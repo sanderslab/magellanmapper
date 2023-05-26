@@ -807,7 +807,9 @@ class ImageOverlayer:
         # small annotations with subtle background in case label is dark
         args = dict(
             fontsize="x-small", clip_on=True, horizontalalignment="center",
-            verticalalignment="center", bbox=bbox, transform=self._transform)
+            verticalalignment="center", bbox=bbox)
+        if self._transform and self._transform.transform:
+            args["transform"] = self._transform.transform
         text_color = "k"
         facecolor = "xkcd:silver"
         for label_id, label in labels.items():

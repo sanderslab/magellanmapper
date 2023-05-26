@@ -402,7 +402,7 @@ def _curate_labels(img, img_ref, mirror=None, edge=None, expand=None,
         # be overwritten
         img_smoothed = img_np[:mirrori]
         img_smoothed_orig = np.copy(img_smoothed)
-        spacing = img.GetSpacing()[::-1]
+        spacing = tuple(img.GetSpacing())[::-1]
         if libmag.is_seq(smooth):
             # test sequence of filter sizes via multiprocessing for metrics
             # only, in which case the images will be left unchanged
@@ -1546,7 +1546,7 @@ def import_atlas(
     sitk_io.write_reg_images(
         imgs_write, name_prefix, copy_to_suffix=True, 
         ext=os.path.splitext(path_atlas)[1])
-    config.resolutions = [img_atlas.GetSpacing()[::-1]]
+    config.resolutions = [tuple(img_atlas.GetSpacing())[::-1]]
     img_ref_np = sitk_io.convert_img(img_atlas)
     img_ref_np = img_ref_np[None]
     importer.save_np_image(img_ref_np, name_prefix, 0)
@@ -1625,7 +1625,7 @@ def measure_atlas_refinement(
     thresh = atlas_profile["atlas_threshold_all"]
     thresh_atlas = img_atlas_np > thresh
     compactness, _, _ = cv_nd.compactness_3d(
-        thresh_atlas, img_atlas.GetSpacing()[::-1])
+        thresh_atlas, tuple(img_atlas.GetSpacing())[::-1])
     metrics[config.SmoothingMetrics.COMPACTNESS] = [compactness]
 
     _logger.info("\nWhole atlas stats:")

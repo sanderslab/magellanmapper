@@ -396,7 +396,7 @@ def read_sitk_files(
         _logger.warn(
             "MagellanMapper image metadata file not loaded; will fallback to "
             "%s for metadata", loaded_path)
-        config.resolutions = np.array([img_sitk.GetSpacing()[::-1]])
+        config.resolutions = np.array([tuple(img_sitk.GetSpacing())[::-1]])
         _logger.debug("set resolutions to %s", config.resolutions)
     
     # add time axis and insert into Image5d with original name

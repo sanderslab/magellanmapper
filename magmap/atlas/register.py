@@ -984,7 +984,7 @@ def register(
     fixed_img_orig_np = sitk_io.convert_img(fixed_img_orig)
     thresh_atlas = fixed_img_orig_np > filters.threshold_mean(fixed_img_orig_np)
     compactness, _, _ = cv_nd.compactness_3d(
-        thresh_atlas, fixed_img_orig.GetSpacing()[::-1])
+        thresh_atlas, tuple(fixed_img_orig.GetSpacing())[::-1])
     
     # save basic metrics in CSV file
     basename = libmag.get_filename_without_ext(fixed_file)
@@ -1734,7 +1734,7 @@ def volumes_by_id(
                 img_sitk = sitk_io.load_registered_img(
                     mod_path, config.RegNames.IMG_ATLAS.value, get_sitk=True)
             img_np = sitk_io.convert_img(img_sitk)
-            spacing = img_sitk.GetSpacing()[::-1]
+            spacing = tuple(img_sitk.GetSpacing())[::-1]
             
             # load labels in order of priority: config > full labels
             # > truncated labels; required so give exception if not found
@@ -1925,7 +1925,7 @@ def volumes_by_id_compare(img_paths, labels_ref_paths, unit_factor=None,
                     img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
             labels_imgs_sitk.append(img)
         labels_imgs = [sitk_io.convert_img(img) for img in labels_imgs_sitk]
-        spacing = labels_imgs_sitk[0].GetSpacing()[::-1]
+        spacing = tuple(labels_imgs_sitk[0].GetSpacing())[::-1]
         
         # load heat map of nuclei per voxel if available based on 1st path
         try:

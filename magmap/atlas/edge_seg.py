@@ -124,7 +124,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     # load atlas image, set resolution from it
     atlas_sitk = sitk_io.load_registered_img(
         path_atlas, atlas_suffix, get_sitk=True)
-    config.resolutions = np.array([atlas_sitk.GetSpacing()[::-1]])
+    config.resolutions = np.array([tuple(atlas_sitk.GetSpacing())[::-1]])
     atlas_np = sitk_io.convert_img(atlas_sitk)
     
     if config.rgb:
@@ -172,7 +172,7 @@ def make_edge_images(path_img, show=True, atlas=True, suffix=None,
     labels_sitk_edge = None
     if config.atlas_profile["meas_edge_dists"]:
         dist_to_orig, labels_edge = edge_distances(
-            labels_img_np, atlas_edge, spacing=atlas_sitk.GetSpacing()[::-1])
+            labels_img_np, atlas_edge, spacing=tuple(atlas_sitk.GetSpacing())[::-1])
         dist_sitk = sitk_io.replace_sitk_with_numpy(atlas_sitk, dist_to_orig)
         labels_sitk_edge = sitk_io.replace_sitk_with_numpy(
             labels_sitk, labels_edge)
@@ -341,7 +341,7 @@ def edge_aware_segmentation(
         cond.append("smoothing")
         df_aggr, df_raw = atlas_refiner.smooth_labels(
             labels_seg, smoothing, smoothing_mode,
-            meas_smoothing, labels_sitk.GetSpacing()[::-1])
+            meas_smoothing, tuple(labels_sitk.GetSpacing())[::-1])
         df_base_path = os.path.splitext(mod_path)[0]
         if df_raw is not None:
             # write raw smoothing metrics
@@ -482,7 +482,7 @@ def merge_atlas_segmentations(img_paths, show=True, atlas=True, suffix=None):
                 # make edge distance images and stats
                 dist_to_orig, labels_edge = edge_distances(
                     labels_np, path=path,
-                    spacing=labels_sitk.GetSpacing()[::-1])
+                    spacing=tuple(labels_sitk.GetSpacing())[::-1])
                 dist_sitk = sitk_io.replace_sitk_with_numpy(
                     labels_sitk, dist_to_orig)
                 labels_sitk_edge = sitk_io.replace_sitk_with_numpy(

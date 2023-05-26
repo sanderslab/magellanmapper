@@ -39,7 +39,7 @@ pytz==2023.3
 PyWavelets==1.4.1
 PyYAML==6.0
 requests==2.31.0
-rich==13.3.3
+rich==13.3.5
 scikit-image==0.20.0
 scipy==1.9.1
 SimpleITK==2.3.0.dev117+g0640d

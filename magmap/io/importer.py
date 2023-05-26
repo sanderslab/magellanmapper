@@ -169,25 +169,30 @@ def parse_ome_raw(
         metadata: Metadata as a string in OME XML format.
     
     Returns:
-        The ``names``, an array of names of seriess within the file;
-        ``sizes``, an array of tuples with dimensions for each series, where
-        dimensions are given as ``(time, z, y, x, channels)``; and
-        a ``dict`` of :attr:`magmap.settings.config.MetaKeys.RESOLUTIONS`, an
-        array of resolutions/scaling, in the same dimensions as sizes;
-        :attr:`magmap.settings.config.MetaKeys.MAGNIFICATION`, the objective
-        magnification;
-        :attr:`magmap.settings.config.MetaKeys.ZOOM`, the zoom level; and
-        :attr:`magmap.settings.config.MetaKeys.DTYPE`, the pixel data type as
-        a string.
+        Tuple of:
+        - ``names``: an array of names of seriess within the file
+        - ``sizes``: an array of tuples with dimensions for each series, where
+          dimensions are given as ``(time, z, y, x, channels)``; and
+        - ``md``: a dictionary of metadata containing
+          :attr:`magmap.settings.config.MetaKeys.RESOLUTIONS`, an
+          array of resolutions/scaling, in the same dimensions as sizes;
+          :attr:`magmap.settings.config.MetaKeys.MAGNIFICATION`, the objective
+          magnification;
+          :attr:`magmap.settings.config.MetaKeys.ZOOM`, the zoom level; and
+          :attr:`magmap.settings.config.MetaKeys.DTYPE`, the pixel data type as
+          a string.
     
     """
     array_order = "TZYXC"  # desired dimension order
     names, sizes, resolutions = [], [], []
+    
     # names for sizes in all dimensions
     size_tags = ["Size" + c for c in array_order]
+    
     # names for resolutions only in XYZ dimensions
     spatial_array_order = [c for c in array_order if c in "XYZ"]
     res_tags = ["PhysicalSize" + c for c in spatial_array_order]
+    
     zoom = 1
     magnification = 1
     pixel_type = None
@@ -203,13 +208,15 @@ def parse_ome_raw(
                     if zoom is not None:
                         zoom = float(zoom)
                 elif grandchild.tag.endswith("Objective"):
-                    magnification = grandchild.attrib["NominalMagnification"]
+                    magnification = grandchild.attrib.get(
+                        "NominalMagnification")
                     if magnification is not None:
                         magnification = float(magnification)
+        
         elif child.tag.endswith("Image"):
             # image file info
             if "Name" in child.attrib:
-                names.append(child.attrib["Name"])
+                names.append(child.attrib.get("Name"))
             for grandchild in child:
                 if grandchild.tag.endswith("Pixels"):
                     att = grandchild.attrib
@@ -222,11 +229,14 @@ def parse_ome_raw(
                     # assumes pixel type is same for all images
                     if pixel_type is None:
                         pixel_type = att.get("Type")
+    
+    # collect metadata into dictionary
     md = dict.fromkeys(config.MetaKeys)
     md[config.MetaKeys.RESOLUTIONS] = resolutions
     md[config.MetaKeys.MAGNIFICATION] = magnification
     md[config.MetaKeys.ZOOM] = zoom
     md[config.MetaKeys.DTYPE] = pixel_type
+    
     _logger.debug(
         "Extracted OME-XML metadata:\nnames: %s\nsizes: %s\n%s", names, sizes,
         pprint.pformat(md))

@@ -82,7 +82,7 @@
 - Masks with angle planes can be constructed (#252)
 - `register.RegImgs` is a data class to track registered images (#335)
 - Supports image I/O and registration through ITK
-  - `ITK-Elastix` support has been added as an alternative to `SimpleITK` (#495, #500)
+  - `ITK-Elastix` support has been added as an alternative to `SimpleITK` (#495, #500, #504)
   - Both libraries are now optional rather than required dependencies (#497)
   - Better support for image direction metadata (#497)
 - Fixed changes to large label IDs during registration (#303)

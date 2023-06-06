@@ -778,7 +778,7 @@ class Visualization(HasTraits):
              editor=RangeEditor(
                  low_name="_scale_detections_low",
                  high_name="_scale_detections_high",
-                 mode="slider", format="%.3g")),
+                 mode="slider", format_str="%.3g")),
         Item("_segs_mask", label="3D blobs mask size",
              editor=RangeEditor(
                  low_name="_segs_mask_low",
@@ -859,28 +859,28 @@ class Visualization(HasTraits):
         HGroup(
             Item("_imgadj_min", label="Minimum", editor=RangeEditor(
                      low_name="_imgadj_min_low", high_name="_imgadj_min_high",
-                     mode="slider", format="%.4g")),
+                     mode="slider", format_str="%.4g")),
             Item("_imgadj_min_auto", label="Auto", editor=BooleanEditor()),
         ),
         HGroup(
             Item("_imgadj_max", label="Maximum", editor=RangeEditor(
                      low_name="_imgadj_max_low", high_name="_imgadj_max_high",
-                     mode="slider", format="%.4g")),
+                     mode="slider", format_str="%.4g")),
             Item("_imgadj_max_auto", label="Auto", editor=BooleanEditor()),
         ),
         HGroup(
             Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
                      low_name="_imgadj_brightness_low",
                      high_name="_imgadj_brightness_high", mode="slider",
-                     format="%.4g"))
+                     format_str="%.4g"))
         ),
         HGroup(
             Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
-                     low=0.0, high=2.0, mode="slider", format="%.3g")),
+                     low=0.0, high=2.0, mode="slider", format_str="%.3g")),
         ),
         HGroup(
             Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
-                 low=0.0, high=1.0, mode="slider", format="%.3g")),
+                 low=0.0, high=1.0, mode="slider", format_str="%.3g")),
         ),
         
         HGroup(
@@ -888,7 +888,7 @@ class Visualization(HasTraits):
             Item("_imgadj_alpha_blend_check", label="Blend",
                  enabled_when="not _merge_chls"),
             Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
-                 low=0.0, high=1.0, mode="slider", format="%.3g"),
+                 low=0.0, high=1.0, mode="slider", format_str="%.3g"),
                  enabled_when="_imgadj_alpha_blend_check"),
         ),
         label="Adjust Image",

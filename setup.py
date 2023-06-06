@@ -42,8 +42,7 @@ _EXTRAS_CLASSIFER = ["tensorflow"]
 _EXTRAS_GUI = [
     # backend error with 5.15.8
     "PyQt5 != 5.15.8",
-    # awaiting TraitsUI support for Pyface 8
-    "pyface < 8.0.0",
+    "pyface",
     "traitsui",
 ]
 

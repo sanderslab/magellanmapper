@@ -51,7 +51,10 @@ from traitsui.api import ArrayEditor, BooleanEditor, CheckListEditor, \
     EnumEditor, HGroup, HSplit, Item, NullEditor, ProgressEditor, RangeEditor, \
     StatusItem, TextEditor, VGroup, View, Tabbed, TabularEditor
 from traitsui.basic_editor_factory import BasicEditorFactory
-from traitsui.qt4.editor import Editor
+try:
+    from traitsui.qt.editor import Editor
+except ModuleNotFoundError:
+    from traitsui.qt4.editor import Editor
 from traitsui.tabular_adapter import TabularAdapter
 
 try:

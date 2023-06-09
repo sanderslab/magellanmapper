@@ -9,7 +9,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 ## Quick Reference
 
-- **NEW**: [Full docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
+- **NEW**: [Docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
 - [Installation](#installation) (more [details](docs/install.md))
 - [Intro to running MagellanMapper](#run-magellanmapper)
 - [Using the viewers](docs/viewers.md)
@@ -33,9 +33,9 @@ conda activate mag
 mm
 ```
 
-<sup>*</sup> `mm` was added in v1.6.0 to launch from installed packages. When installed [from source](docs/install.md#developer-installs), `python run.py` still works!
+<sup>*</sup> `mm` was added in v1.6.0 to launch from installed packages
 
-Or install using Pip (virtual environment [recommended](https://realpython.com/python-virtual-environments-a-primer/)):
+Or install using Pip ([virtual environment]((https://realpython.com/python-virtual-environments-a-primer/)) recommended):
 
 ```shell
 pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
@@ -45,9 +45,22 @@ The extra index accesses a few [customized dependencies](docs/install.md#custom-
 
 Conda installs Java to import proprietary image file formats, which can also be installed separately when using Pip (eg from [here](https://www.azul.com/downloads/?package=jdk)).
 
+For the latest updates and fixes, download from Git and install:
+
+```shell
+git clone https://github.com/sanderslab/magellanmapper.git
+conda env create -n mag -f environment.yml
+pip install -e ".[most]" --extra-index-url https://pypi.fury.io/dd8/
+python run.py
+```
+
+Or for Pip, replace `"magellanmapper[most]"` with `".[most]"`.
+
+
 ### More ways to install and run
 
-- [Developer installs](docs/install.md#developer-installs) from source code
+See the [install docs](docs/install.md) for more details, including:
+
 - [Installer scripts](docs/install.md#installer-scripts), which install Miniconda and MagellanMapper without requiring command-line usage
 - [Installer packages](docs/install.md#installer-packages), for point-and-click installation
 

@@ -208,6 +208,7 @@
 - The SimpleElastix custom binaries are now built on SimpleITK with Elastix and is no longer a required dependency (#379, #501)
 - ITK-Elastix is now supported for image registration (#501)
 - Custom dependency binaries are now built for Python 3.8-3.11 (#379)
+- Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by installing PyQt <= 5.15.7 (#431)
 

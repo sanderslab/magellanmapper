@@ -26,7 +26,7 @@ numpy==1.24.2
 packaging==23.0
 pandas==1.5.3
 Pillow==9.5.0
-pyamg==4.2.3
+pyamg==5.0.0
 pyface==8.0.0
 Pygments==2.14.0
 pyparsing==3.0.9

@@ -369,7 +369,7 @@ class Visualization(HasTraits):
     _blob_color_style = List  # blob coloring
     _segments = Array  # table of blobs
     _segs_moved = []  # orig seg of moved blobs to track for deletion
-    _scale_detections_low = 0.0
+    _scale_detections_low = Float(0)
     _scale_detections_high = Float  # needs to be trait to dynamically update
     scale_detections = Float(
         tooltip="Change the size of blobs in the 3D viewer"
@@ -430,15 +430,15 @@ class Visualization(HasTraits):
     _imgadj_chls_names = Instance(TraitsList)
     _imgadj_chls = Str
     _imgadj_min = Float
-    _imgadj_min_low = Float
+    _imgadj_min_low = Float(0)
     _imgadj_min_high = Float
     _imgadj_min_auto = Bool
     _imgadj_max = Float
-    _imgadj_max_low = Float
+    _imgadj_max_low = Float(0)
     _imgadj_max_high = Float
     _imgadj_max_auto = Bool
     _imgadj_brightness = Float
-    _imgadj_brightness_low = Float
+    _imgadj_brightness_low = Float(0)
     _imgadj_brightness_high = Float
     _imgadj_contrast = Float
     _imgadj_alpha = Float

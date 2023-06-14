@@ -170,12 +170,13 @@ Sometimes a virtual environment update is required for new depdendencies.
 
 ### Python version support
 
-| MagellanMapper Version | Python Versions Supported | Deprecations |
+| MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
-| < 1.4 | 3.6 | None |
-| 1.4-1.5 | 3.6-3.9 (no GUI support in 3.9) | None |
-| 1.6a1-a3 | 3.6-3.9 (GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI) | 3.6-3.7 to be removed in MM 1.7 |
-| 1.6b1 | 3.6-3.11 (no GUI support in 3.10-3.11 as of 2022-12-30) | Same |
+| 1.7 (planned) | 3.8-3.11 | 3.6-3.7 to be removed |
+| 1.6b1-b2 | 3.6-3.11 | GUI support added for 3.10-3.11 in 1.6b2 |
+| 1.6a1-a3 | 3.6-3.9 | GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI |
+| 1.4-1.5 | 3.6-3.9 | No GUI support in 3.9 |
+| < 1.4 | 3.6 | Initial releases |
 
 As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
 

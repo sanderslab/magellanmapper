@@ -49,5 +49,5 @@ traits==6.4.1
 traitsui==8.0.0
 treelib==1.6.4
 typing_extensions==4.5.0
-urllib3==1.26.15
+urllib3==2.0.3
 zipp==3.15.0

@@ -192,7 +192,10 @@
 
 #### Python Dependency Changes
 
+- Python 3.10-3.11 are now supported (#379, #517)
 - Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
+- Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
+- Custom dependency binaries are now built for Python 3.8-3.11 (#379)
 - The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75, #443, #498)
 - The `dataclasses` backport is installed for Python < 3.7
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
@@ -204,10 +207,8 @@
 - Mayavi/VTK are now optional, installed in the `3d` group (#455)
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
-- Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
 - The SimpleElastix custom binaries are now built on SimpleITK with Elastix and is no longer a required dependency (#379, #501)
 - ITK-Elastix is now supported for image registration (#501)
-- Custom dependency binaries are now built for Python 3.8-3.11 (#379)
 - Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by installing PyQt <= 5.15.7 (#431)

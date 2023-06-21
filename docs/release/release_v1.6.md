@@ -7,12 +7,14 @@
 - Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
 - Available as binary wheel to install without requiring the source code
 - Faster, lighter installation with fewer required dependency packages
+- Extends suppor to Python 3.11
 - Simpler entry point to launch MagellanMapper: `mm`
+- Supports ITK-Elastix for image registration
 - Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
 - Atlas regions can be searched (see "Atlases > Region")
 - Atlas Editor planes can be reordered or turned off
 - Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
-- Images can be viewed as RGB (see "ROI > Channels")
+- Images can be viewed as RGB (see "ROI > Channels") or merged channels
 - [Jupyter Notebook tutorial](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
 
 ### Changes
@@ -211,7 +213,7 @@
 - ITK-Elastix is now supported for image registration (#501)
 - Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
-- Fixed `qt4 backend` error by installing PyQt <= 5.15.7 (#431)
+- Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)
 
 #### R Dependency Changes
 

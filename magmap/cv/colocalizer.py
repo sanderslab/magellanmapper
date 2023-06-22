@@ -390,7 +390,12 @@ def colocalize_blobs(roi, blobs, thresh=None):
         mask = np.copy(mask_roi) * -1
         mask[tuple(libmag.coords_for_indexing(
             blobs_roi[blobs_chl_mask, :3].astype(int)))] = blobs_range
-        mask = morphology.dilation(mask, selem=selem)
+        try:
+            # Scikit-image >= v0.20
+            mask = morphology.dilation(mask, footprint=selem)
+        except TypeError:
+            # Scikit-image < v0.20
+            mask = morphology.dilation(mask, selem=selem)
         mask_roi_chls.append(mask)
         
         if thresh == "min":

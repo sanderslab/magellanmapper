@@ -24,7 +24,7 @@ itk-registration==5.3.0
 itk-segmentation==5.3.0
 javabridge==1.0.19.post9+gc8c12b4
 kiwisolver==1.4.4
-lazy_loader==0.2
+lazy_loader==0.3
 markdown-it-py==3.0.0
 matplotlib==3.7.1
 matplotlib-scalebar==0.8.1

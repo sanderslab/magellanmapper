@@ -52,7 +52,7 @@ rich==13.4.2
 scikit-image==0.21.0
 scipy==1.10.1
 six==1.16.0
-tifffile==2023.4.12
+tifffile==2023.7.10
 traits==6.4.1
 traitsui==8.0.0
 treelib==1.6.4

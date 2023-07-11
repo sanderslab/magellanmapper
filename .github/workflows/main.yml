@@ -24,9 +24,6 @@ jobs:
       matrix:
         os: [ubuntu-20.04, ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8, 3.9]
-        include:
-          - os: macos-latest
-            python-version: 3.7.16
         exclude:
           - os: ubuntu-20.04
             python-version: 3.7
@@ -36,12 +33,10 @@ jobs:
             python-version: 3.9
           - os: ubuntu-latest
             python-version: 3.6
-          - os: macos-latest
-            python-version: 3.7
     
     env:
       # set requirements path based on Python version
-      REQS: ${{ matrix.python-version == '3.6' && 'envs/requirements_py36' || matrix.python-version == '3.7' && 'envs/requirements_py37' || matrix.python-version == '3.7.16' && 'envs/requirements_py37' || 'envs/requirements.txt'}}
+      REQS: ${{ matrix.python-version == '3.6' && 'envs/requirements_py36' || matrix.python-version == '3.7' && 'envs/requirements_py37' || 'envs/requirements.txt'}}
 
     steps:
       - name: Check out repo

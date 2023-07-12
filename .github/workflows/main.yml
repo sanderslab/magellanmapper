@@ -59,6 +59,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Cache pip
         uses: actions/cache@v3
+        if: ${{ matrix.dependencies == 'pinned' }}
         with:
           # python environment path from setup-python
           path: ${{ env.pythonLocation }}

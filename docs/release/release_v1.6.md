@@ -189,6 +189,7 @@
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
 - Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225)
 - Default arguments are documented in API auto-docs (#485)
+- Expand continuous integration testing to both pinned and fresh dependencies across Python 3.6-3.11 (#75, #101, #252, #342, #538)
 
 ### Dependency Updates
 

@@ -10,7 +10,7 @@ cycler==0.11.0
 fonttools==4.40.0
 future==0.18.3
 idna==3.4
-imagecodecs==2023.3.16
+imagecodecs==2023.9.4
 imageio==2.31.1
 importlib-metadata==6.7.0
 importlib-resources==5.12.0

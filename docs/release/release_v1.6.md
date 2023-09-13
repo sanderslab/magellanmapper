@@ -42,7 +42,7 @@
 - Atlas Editor planes can be reordered or turned off (#180)
 - EXPERIMENTAL: New viewer that displays each blob separately to verify blob classifications (#193)
 - Image adjustment
-  - "Merge" option in the ROI panel to merge channels using additive blending (#492)
+  - "Merge" option in the ROI panel to merge channels using additive blending (#492, #552)
   - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89, #450)
   - Image adjustment channels are radio buttons for easier selection (#212)
   - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)

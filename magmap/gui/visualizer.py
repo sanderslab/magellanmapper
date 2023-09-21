@@ -1115,7 +1115,7 @@ class Visualization(HasTraits):
                 rc_params = [config.Themes.DARK]
         
         # ROI and Atlas Editors are currently designed for Seaborn style
-        plot_2d.setup_style("seaborn", rc_params)
+        plot_2d.setup_style(rc_params=rc_params)
         
         # set up ROI and Atlas Editor figures without constrained layout
         # because of performance impact at least as of Matplotlib 3.2

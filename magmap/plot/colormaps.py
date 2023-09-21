@@ -37,7 +37,7 @@ def make_dark_linear_cmap(name, color):
     Returns:
         A `LinearSegmentedColormap` object.
     """
-    return colors.LinearSegmentedColormap.from_list(name, ("black", color))
+    return colors.LinearSegmentedColormap.from_list(name, ["black", color])
 
 
 def setup_cmaps():

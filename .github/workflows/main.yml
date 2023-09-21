@@ -43,7 +43,7 @@ jobs:
     
     env:
       # set requirements path based on Python version
-      REQS: ${{ matrix.python-version == '3.6' && 'envs/requirements_py36' || matrix.python-version == '3.7' && 'envs/requirements_py37' || 'envs/requirements.txt'}}
+      REQS: ${{ matrix.python-version == '3.6' && 'envs/requirements_py36' || matrix.python-version == '3.7' && 'envs/requirements_py37' || matrix.python-version == '3.8' && 'envs/requirements_py38' || 'envs/requirements.txt'}}
 
     steps:
       - name: Check out repo

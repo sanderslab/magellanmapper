@@ -1055,7 +1055,7 @@ def plot_swarm(
         ax: Matplotlib axes; defaults to None.
         rotation: x-axis ttext angle rotation in degrees. Defaults to None,
             which will rotate by 45 degrees.
-        legend_title: Legened title; defaults to None.
+        legend_title: Legend title; defaults to None.
         kwargs_plot: Dictionary of arguments to :meth:`sns.swarmplot`; defaults
             to None.
         **kwargs: Additional arguments, passed to :meth:`decorate_plot`.

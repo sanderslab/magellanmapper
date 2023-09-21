@@ -754,6 +754,9 @@ def load_numpy_to_sitk(
     Returns:
         The image in SimpleITK format.
     
+    Raises:
+        `FileNotFoundError`: if the image is None.
+    
     """
     if isinstance(img5d, str):
         # load path
@@ -761,6 +764,8 @@ def load_numpy_to_sitk(
     
     # get np array without time dimension
     image5d = img5d.img
+    if image5d is None:
+        raise FileNotFoundError(f"Unable to load image from: {img5d.path_img}")
     roi = image5d[0]
     
     if channel is not None and len(roi.shape) >= 4:

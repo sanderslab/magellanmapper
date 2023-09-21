@@ -1375,8 +1375,14 @@ def setup_style(
         style = config.matplotlib_style
     if rc_params is None:
         rc_params = config.rc_params
-    _logger.debug("Setting up Matplotlib style: %s", style)
-    plt.style.use(style)
+    
+    try:
+        # set up Matplotlib style
+        plt.style.use(style)
+        _logger.debug("Set up Matplotlib style: %s", style)
+    except OSError as e:
+        _logger.warn("Unable to set Matplotlib style: %s", style)
+        _logger.debug(e, exc_info=True)
     
     # use core fonts for PDF/PS exports to avoid embedding fonts and ensure
     # text is editable in some viewers

@@ -196,7 +196,7 @@
 #### Python Dependency Changes
 
 - Python 3.10-3.11 are now supported (#379, #517)
-- Python 3.8 is the default version now that Python 3.6 has reached End-of-Life
+- Python 3.9 is the default version now that Python 3.6 has reached End-of-Life, and NumPy no longer supports Python 3.8 (#559)
 - Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
 - Custom dependency binaries are now built for Python 3.8-3.11 (#379)
 - The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75, #443, #498)

@@ -173,7 +173,7 @@ Sometimes a virtual environment update is required for new depdendencies.
 | MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
 | 1.7 (planned) | 3.8-3.11 | 3.6-3.7 to be removed |
-| 1.6b1-b2 | 3.6-3.11 | GUI support added for 3.10-3.11 in 1.6b2 |
+| >=1.6b1 | 3.6-3.11 | Defaults to 3.9. GUI support added for 3.10-3.11 in MM 1.6b2. |
 | 1.6a1-a3 | 3.6-3.9 | GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI |
 | 1.4-1.5 | 3.6-3.9 | No GUI support in 3.9 |
 | < 1.4 | 3.6 | Initial releases |
@@ -183,7 +183,8 @@ As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without
 ### Pinned packages
 
 We've provided a few sets of pinned dependency versions:
-- Python >= 3.8: `envs/requirements.txt`
+- Python >= 3.9: `envs/requirements.txt`
+- Python 3.8: `envs/requirements_py38`
 - Python 3.7: `envs/requirements_py37`
 - Python 3.6: `envs/requirements_py36`
 
@@ -216,7 +217,7 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 |-----|-----|-----|-----|-----|
 | Python-Javabridge | Precompiled with later updates than current release | Python 3.6-3.11, Java 8+ | JDK, C compiler| For Python-Bioformats |
 | Python-Bioformats | Extended support for older NumPy releases | Python 3.6+ | JDK, C compiler | Import proprietary image formats |
-| SimpleITK with Elastix | Yes, via custom package | Python 3.6-3.11 | C, C++ compilers | Load medical 3D formats, image regsitration |
+| SimpleITK with Elastix | Yes, via custom package. Replaced by ITK-Elastix in MM v1.6b2. | Python 3.6-3.11 | C, C++ compilers | Load medical 3D formats, image regsitration |
 
 C compilers by platform:
 

@@ -187,7 +187,7 @@
 - Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)
 - Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
-- Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225)
+- Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225, #563)
 - Default arguments are documented in API auto-docs (#485)
 - Expand continuous integration testing to both pinned and fresh dependencies across Python 3.6-3.11 (#75, #101, #252, #342, #538)
 
@@ -196,8 +196,8 @@
 #### Python Dependency Changes
 
 - Python 3.10-3.11 are now supported (#379, #517)
-- Python 3.9 is the default version now that Python 3.6 has reached End-of-Life, and NumPy no longer supports Python 3.8 (#559)
-- Python 3.6 and 3.7 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
+- Python 3.9 is the default version now that Python 3.6 has reached End-of-Life, and NumPy no longer supports Python 3.8 (#559, #563)
+- Python 3.6-8 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
 - Custom dependency binaries are now built for Python 3.8-3.11 (#379)
 - The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75, #443, #498)
 - The `dataclasses` backport is installed for Python < 3.7

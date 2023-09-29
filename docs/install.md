@@ -35,7 +35,7 @@ The `mm` entry points was added in v1.6.0 to facilitate launching from installed
 
 ### Install using Pip
 
-Install using Pip with Python >= 3.6 (see [Python versions](#python-version-support); [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
+Install using Pip with Python >= 3.6 (see [Python versions](#python-version-support); Python >= 3.9 and [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
 
 ```shell
 pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
@@ -172,7 +172,7 @@ Sometimes a virtual environment update is required for new depdendencies.
 
 | MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
-| 1.7 (planned) | 3.8-3.11 | 3.6-3.7 to be removed |
+| 1.7 (planned) | 3.9-3.11 | 3.6-3.8 to be removed |
 | >=1.6b1 | 3.6-3.11 | Defaults to 3.9. GUI support added for 3.10-3.11 in MM 1.6b2. |
 | 1.6a1-a3 | 3.6-3.9 | GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI |
 | 1.4-1.5 | 3.6-3.9 | No GUI support in 3.9 |

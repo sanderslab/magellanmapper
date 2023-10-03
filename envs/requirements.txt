@@ -32,7 +32,7 @@ mdurl==0.1.2
 meshio==5.3.4
 networkx==3.1
 numpy==1.26.0
-packaging==23.1
+packaging==23.2
 pandas==2.1.1
 Pillow==10.0.1
 pyamg==5.0.1

@@ -207,6 +207,16 @@ These package versions are used for automated testing (continuous integration).
 | `pandas_plus` | Exports styled and Excel formats | |
 | `simpleitk` | Custom SimpleITK with Elastix | |
 
+To add an install group:
+
+```shell
+pip install "magellanmapper[3d]" # add "3d" group
+pip install "magellanmapper[3d,gui]" # add two groups
+pip install -e ".[3d]" # same but for editable install from clone
+```
+
+The same commands can be run to add groups after initial installation.
+
 ### Optional Dependency Build and Runtime Requirements
 
 #### Custom packages

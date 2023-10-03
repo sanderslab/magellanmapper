@@ -857,30 +857,30 @@ class Visualization(HasTraits):
                      name="object._imgadj_chls_names.selections", cols=8)),
         ),
         HGroup(
-            Item("_imgadj_min", label="Minimum", editor=RangeEditor(
+            Item("_imgadj_min", label="Min", editor=RangeEditor(
                      low_name="_imgadj_min_low", high_name="_imgadj_min_high",
-                     mode="slider", format_str="%.4g")),
+                     mode="xslider", format_str="%.1g")),
             Item("_imgadj_min_auto", label="Auto", editor=BooleanEditor()),
         ),
         HGroup(
-            Item("_imgadj_max", label="Maximum", editor=RangeEditor(
+            Item("_imgadj_max", label="Max", editor=RangeEditor(
                      low_name="_imgadj_max_low", high_name="_imgadj_max_high",
-                     mode="slider", format_str="%.4g")),
+                     mode="xslider", format_str="%.1g")),
             Item("_imgadj_max_auto", label="Auto", editor=BooleanEditor()),
         ),
         HGroup(
             Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
                      low_name="_imgadj_brightness_low",
                      high_name="_imgadj_brightness_high", mode="slider",
-                     format_str="%.4g"))
+                     format_str="%.1g"))
         ),
         HGroup(
             Item("_imgadj_contrast", label="Contrast", editor=RangeEditor(
-                     low=0.0, high=2.0, mode="slider", format_str="%.3g")),
+                     low=0.0, high=2.0, mode="slider", format_str="%.1g")),
         ),
         HGroup(
             Item("_imgadj_alpha", label="Opacity", editor=RangeEditor(
-                 low=0.0, high=1.0, mode="slider", format_str="%.3g")),
+                 low=0.0, high=1.0, mode="slider", format_str="%.1g")),
         ),
         
         HGroup(
@@ -888,7 +888,7 @@ class Visualization(HasTraits):
             Item("_imgadj_alpha_blend_check", label="Blend",
                  enabled_when="not _merge_chls"),
             Item("_imgadj_alpha_blend", show_label=False, editor=RangeEditor(
-                 low=0.0, high=1.0, mode="slider", format_str="%.3g"),
+                 low=0.0, high=1.0, mode="slider", format_str="%.1g"),
                  enabled_when="_imgadj_alpha_blend_check"),
         ),
         label="Adjust Image",
@@ -1281,24 +1281,15 @@ class Visualization(HasTraits):
 
     @on_trait_change("_imgadj_name")
     def _update_imgadj_limits(self):
+        """Update image intensity limits."""
         img3d = self._img3ds.get(self._imgadj_name)
         if img3d is None: return
         info = libmag.get_dtype_info(img3d)
         self._setup_imgadj_channels()
 
-        # min/max based on near min/max pre-calculated from whole image
-        # including all channels, falling back to data type range; cannot
-        # used percentile or else need to load whole image from disk
-        min_inten = 0
-        if config.near_min is not None:
-            min_near_min = min(config.near_min)
-            if min_near_min < 0:
-                # set min to 0 unless near min is < 0
-                min_inten = 2 * min_near_min
-        # default near max is an array of -1; assume that measured near
-        # max values are positive
-        max_near_max = -1 if config.near_max is None else max(config.near_max)
-        max_inten = info.max if max_near_max < 0 else max_near_max * 2
+        # min/max based data type; slider has range adjustments
+        min_inten = info.min
+        max_inten = info.max
         self._imgadj_min_low = min_inten
         self._imgadj_min_high = max_inten
         self._imgadj_max_low = min_inten

@@ -30,7 +30,7 @@
 
 #### GUI
 
-- More preferences are saved, such as the figure save location and ROI Editor layout (#138, #201)
+- More preferences are saved, such as the figure save location and ROI Editor layout (#138, #201, #575)
 - Drag and remove loaded profiles in the Profiles tab table
 - "Help" buttons added to open the online documentation (#109)
 - Default confirmation labels can be set before detection (#115)

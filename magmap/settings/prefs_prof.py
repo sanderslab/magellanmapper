@@ -23,6 +23,9 @@ class PrefsProfile(profiles.SettingsDict):
 
     #: Import directory path.
     import_dir: str = ""
+    
+    #: Path to last opened image.
+    img_open_path: str = ""
 
     def __init__(self, *args, **kwargs):
         """Initialize a preferences profile dictionary.

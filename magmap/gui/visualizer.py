@@ -2201,11 +2201,15 @@ class Visualization(HasTraits):
     @observe("_filename_btn")
     def _filename_updated(self, evt):
         """Open a Pyface file dialog to set the main image path."""
-        open_dialog = FileDialog(
-            action="open", default_path=os.path.dirname(self._filename))
+        # get path from currently opened file or preferences
+        path = os.path.dirname(
+            self._filename) if self._filename else config.prefs.img_open_path
+        open_dialog = FileDialog(action="open", default_path=path)
+        
         if open_dialog.open() == OK:
-            # get user selected path
+            # get user selected path and save in preferences
             self._filename = open_dialog.path
+            config.prefs.img_open_path = self._filename
 
     @on_trait_change("_filename")
     def _image_path_updated(self):
@@ -2245,6 +2249,7 @@ class Visualization(HasTraits):
             self._setup_for_image()
             self.redraw_selected_viewer()
             self.update_imgadj_for_img()
+            config.prefs.img_open_path = self._filename
         else:
             print("Could not parse filename", self._filename)
         

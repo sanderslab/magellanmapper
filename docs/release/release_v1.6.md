@@ -47,6 +47,7 @@
   - Image adjustment channels are radio buttons for easier selection (#212)
   - Fixed synchronization between the ROI Editor and image adjustment controls after initialization (#142)
   - Fixed redundant triggers when adjusting the displayed image (#474)
+  - Fixed intensity sliders to cover the full range (#572)
 - Images are rotated by dynamic transformation (#214, #471, #505)
 - Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation (#317, #335, #359, #367)
 - Atlas labels adapt better in zoomed images to stay within each plot (#317)

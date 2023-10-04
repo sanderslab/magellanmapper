@@ -207,6 +207,16 @@ These package versions are used for automated testing (continuous integration).
 | `pandas_plus` | Exports styled and Excel formats | |
 | `simpleitk` | Custom SimpleITK with Elastix | |
 
+To add an install group:
+
+```shell
+pip install "magellanmapper[3d]" # add "3d" group
+pip install "magellanmapper[3d,gui]" # add two groups
+pip install -e ".[3d]" # same but for editable install from clone
+```
+
+The same commands can be run to add groups after initial installation.
+
 ### Optional Dependency Build and Runtime Requirements
 
 #### Custom packages
@@ -378,6 +388,27 @@ Additional errors:
 - PyQt5 5.12 may give an `FT_Get_Font_Format` error, requiring manual downgrade to 5.11.3, though 5.12 works on Ubuntu 18.04
 
 ### Mayavi/VTK errors
+
+```
+root - ERROR - The traitsui.qt4.* modules have moved to traitsui.qt.*.
+
+Applications which require backwards compatibility can either:
+
+- set the ETS_QT4_IMPORTS environment variable
+- set the ETS_TOOLKIT environment variable to "qt4",
+- the ETSConfig.toolkit to "qt4"
+- install a ShadowedModuleFinder into sys.meta_path::
+
+    import sys
+    from pyface.ui import ShadowedModuleFinder
+
+    sys.meta_path.append(ShadowedModuleFinder(
+        package="traitsui.qt4.",
+        true_package="traitsui.qt.",
+    ))
+```
+
+At least as of Mayavi 4.8.1, Mayavi will not load TraitsUI 8. Workaround is to run in the shell before launching MM: `export ETS_TOOLKIT="qt4"`
 
 ```
 Numpy is required to build Mayavi correctly, please install it first

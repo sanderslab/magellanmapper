@@ -49,7 +49,7 @@ PyWavelets==1.4.1
 PyYAML==6.0.1
 requests==2.31.0
 rich==13.6.0
-scikit-image==0.21.0
+scikit-image==0.22.0
 scipy==1.11.3
 six==1.16.0
 tifffile==2023.9.26

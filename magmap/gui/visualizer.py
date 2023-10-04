@@ -83,6 +83,7 @@ from magmap.settings import config, prefs_prof, profiles
 
 if TYPE_CHECKING:
     from bg_atlasapi import BrainGlobeAtlas
+    from matplotlib import colors as mpl_colors
     from magmap.plot import plot_support
 
 # logging instance
@@ -429,6 +430,9 @@ class Visualization(HasTraits):
     _imgadj_name = Str
     _imgadj_chls_names = Instance(TraitsList)
     _imgadj_chls = Str
+    _imgadj_color_name = Str(
+        tooltip="Colormap for the channel. Start typing to search.")
+    _imgadj_color_names = Instance(TraitsList)
     _imgadj_min = Float
     _imgadj_min_low = Float(0)
     _imgadj_min_high = Float
@@ -856,6 +860,12 @@ class Visualization(HasTraits):
                  editor=EnumEditor(
                      name="object._imgadj_chls_names.selections", cols=8)),
         ),
+        # channel colormap selector
+        Item("_imgadj_color_name", label="Color",
+             editor=EnumEditor(
+                 name="object._imgadj_color_names.selections",
+                 completion_mode="popup", evaluate=True)),
+        # use large range sliders to adjust min/max range
         HGroup(
             Item("_imgadj_min", label="Minimum", editor=RangeEditor(
                      low_name="_imgadj_min_low", high_name="_imgadj_min_high",
@@ -1058,6 +1068,15 @@ class Visualization(HasTraits):
             # check "surface" if set in profile
             self._check_list_3d.append(Vis3dOptions.SURFACE.value)
         # self._structure_scale = self._structure_scale_high
+        
+        # set up channel colormap selections
+        self._imgadj_color_names = TraitsList()
+        if not colormaps.CMAPS:
+            colormaps.setup_cmaps()
+        self._imgadj_colors: Dict[str, "mpl_colors.Colormap"] = {
+            k.value: v for k, v in colormaps.CMAPS.items()}
+        self._imgadj_colors.update(matplotlib.colormaps)
+        self._imgadj_color_names.selections = list(self._imgadj_colors.keys())
         
         # set up atlas region names
         self._region_names = TraitsList()
@@ -1352,6 +1371,11 @@ class Visualization(HasTraits):
         # ignore triggers
         self._imgadj_ignore_update = True
         
+        # populate channel colormap
+        cmap = colormaps.get_cmap(config.cmaps, int(self.imgadj_chls))
+        if cmap:
+            self._imgadj_color_name = cmap.name
+        
         # populate controls with intensity settings
         self._imgadj_brightness = plot_ax_img.brightness
         self._imgadj_contrast = plot_ax_img.contrast
@@ -1432,6 +1456,18 @@ class Visualization(HasTraits):
             if self._imgadj_max != vmax:
                 self._imgadj_max_ignore_update = True
                 self._imgadj_max = vmax
+
+    @observe("_imgadj_color_name")
+    def _adjust_img_color(self, evt):
+        """Update the image colormap."""
+        if self._imgadj_ignore_update: return
+        # set colormap based on the selected name and refresh image
+        cmap = self._imgadj_colors[self._imgadj_color_name]
+        chl = int(self.imgadj_chls)
+        if chl < len(config.cmaps):
+            # config should have cmaps for all the image's channels
+            config.cmaps[chl] = cmap
+            self._adjust_displayed_imgs(True)
 
     @on_trait_change("_imgadj_min")
     def _adjust_img_min(self):

@@ -1,10 +1,10 @@
 # Colormaps for MagellanMapper
-# Author: David Young, 2018, 2020
+# Author: David Young, 2018, 2023
 """Custom colormaps for MagellanMapper.
 """
 
 from enum import Enum, auto
-from typing import Optional, Sequence, Tuple, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
 from matplotlib import cm
@@ -15,7 +15,7 @@ from magmap.io import libmag
 
 #: Dict[:class:`config.Cmaps`, :obj:`colors.LinearSegmentedColormap`]:
 # Default colormaps.
-CMAPS = {}
+CMAPS: Dict["config.Cmaps", colors.LinearSegmentedColormap] = {}
 
 _logger = config.logger.getChild(__name__)
 
@@ -507,22 +507,24 @@ def setup_labels_cmap(
     return cmap_labels
 
 
-def get_cmap(cmap, n=None):
+def get_cmap(
+        cmap: Union[str, "config.Cmaps"], n: Optional[int] = None
+) -> Optional[colors.LinearSegmentedColormap]:
     """Get colormap from a list of colormaps, string, or enum.
     
-    If ``n`` is given, ``cmap`` is assumed to be a list from which a colormap 
-    will be retrieved. Colormaps that are strings will be converted to 
-    the associated standard `Colormap` object, while enums in 
-    :class:``config.Cmaps`` will be used to retrieve a `Colormap` object 
+    If ``n`` is given, ``cmap`` is assumed to be a list from which a colormap
+    will be retrieved. Colormaps that are strings will be converted to
+    the associated standard `Colormap` object, while enums in
+    :class:``config.Cmaps`` will be used to retrieve a `Colormap` object
     from :const:``CMAPS``, which is assumed to have been initialized.
     
     Args:
         cmap: Colormap given as a string of Enum or list of colormaps.
-        n: Index of `cmap` to retrieve a colormap, assuming that `cmap` 
+        n: Index of `cmap` to retrieve a colormap, assuming that `cmap`
             is a sequence. Defaults to None to use `cmap` directly.
     
     Returns:
-        The ``Colormap`` object, or None if no corresponding colormap 
+        The ``Colormap`` object, or None if no corresponding colormap
         is found.
     """
     if n is not None:

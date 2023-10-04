@@ -518,9 +518,10 @@ def setup_images(
         config.img5d.img = config.image5d
         config.image5d_is_roi = True
 
-    # add any additional image5d thresholds for multichannel images, such 
+    # add any additional image5d thresholds for multichannel images, such
     # as those loaded without metadata for these settings
-    colormaps.setup_cmaps()
+    if not colormaps.CMAPS:
+        colormaps.setup_cmaps()
     num_channels = get_num_channels(config.image5d)
     config.near_max = libmag.pad_seq(config.near_max, num_channels, -1)
     config.near_min = libmag.pad_seq(config.near_min, num_channels, 0)

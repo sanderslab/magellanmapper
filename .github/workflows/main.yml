@@ -94,6 +94,7 @@ jobs:
           python -u -m magmap.tests.test_cv_nd
           python -u -m magmap.tests.test_detector
           python -u -m magmap.tests.test_libmag
+          python -u -m magmap.tests.test_np_io
           # TODO: add UI testing
           #python -u -m magmap.tests.test_visualizer
           # TODO: add image artifacts

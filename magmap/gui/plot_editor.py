@@ -15,7 +15,7 @@ import numpy as np
 from skimage import draw
 
 from magmap.gui import image_viewer, pixel_display
-from magmap.io import libmag
+from magmap.io import libmag, np_io
 from magmap.settings import config
 from magmap.atlas import ontology
 from magmap.plot import plot_support
@@ -605,7 +605,7 @@ class PlotEditor:
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
         # reasons
-        nchls = self.img3d.shape[3] if self.img3d.ndim >= 4 else 1
+        nchls = np_io.get_num_channels(self.img3d, True)
         ax_imgs = self.overlayer.overlay_images(
             imgs2d, self._channels, cmaps,
             # expand for all intensity channels

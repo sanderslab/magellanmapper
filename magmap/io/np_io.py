@@ -546,18 +546,21 @@ def setup_images(
         blobs.scaling = scaling
 
 
-def get_num_channels(image5d):
-    """Get the number of channels in a 5D image.
+def get_num_channels(img: np.ndarray, is_3d: bool = False) -> int:
+    """Get the number of image channels based on expected dimensions.
 
     Args:
-        image5d (:obj:`np.ndarray`): Numpy arry in the order, `t,z,y,x[,c]`.
+        img: Numpy array.
+        is_3d: True if ``img` is a 3D+ array with ``z,y,x[,c]`` order.
+            Otherwise, assumes that the image is in 5D (4D+channel),
+            `t,z,y,x[,c]` order.
 
     Returns:
-        int: Number of channels inferred based on the presence and length
-        of the 5th dimension.
+        Inferred number of channels.
 
     """
-    return 1 if image5d is None or image5d.ndim <= 4 else image5d.shape[4]
+    chl_dim = 3 if is_3d else 4
+    return 1 if img is None or img.ndim <= chl_dim else img.shape[chl_dim]
 
 
 def write_raw_file(arr, path):

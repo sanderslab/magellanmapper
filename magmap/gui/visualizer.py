@@ -1372,9 +1372,6 @@ class Visualization(HasTraits):
         self._imgadj_contrast = plot_ax_img.contrast
         self._imgadj_alpha = plot_ax_img.alpha
 
-        # populate intensity limits, auto-scaling, and current val (if not auto)
-        self._adapt_imgadj_limits(plot_ax_img)
-        
         if plot_ax_img.vmin is None:
             self._imgadj_min_auto = True
         else:
@@ -1390,51 +1387,10 @@ class Visualization(HasTraits):
         # respond to triggers
         self._imgadj_ignore_update = False
     
-    def _adapt_imgadj_limits(self, plot_ax_img: "plot_editor.PlotAxImg"):
-        """Adapt image adjustment slider limits based on values in the
-        given plotted image.
-        
-        Args:
-            plot_ax_img: Plotted image.
-
-        """
-        if plot_ax_img is None: return
-        norm = plot_ax_img.ax_img.norm
-        input_img = plot_ax_img.input_img
-        inten_lim = (np.amin(input_img), np.amax(input_img))
-
-        if inten_lim[0] < self._imgadj_max_low:
-            # ensure that lower limit is beyond current plane's lower limit;
-            # bottom out at 0 unless current low is < 0
-            low_thresh = inten_lim[0] if norm.vmin is None else min(
-                inten_lim[0], norm.vmin)
-            low = 2 * low_thresh if low_thresh < 0 else 0
-            self._imgadj_min_low = low
-            self._imgadj_max_low = low
-        
-        high = None
-        if inten_lim[1] > self._imgadj_max_high:
-            # ensure that upper limit is beyond current plane's limits;
-            # cap at 0 if current high is < 0 in case image is fully neg
-            high_thresh = inten_lim[1] if norm.vmax is None else max(
-                inten_lim[1], norm.vmax)
-            high = 2 * high_thresh if high_thresh > 0 else 0
-        elif (0 < inten_lim[1] < 0.1 * self._imgadj_max_high
-              and self._imgadj_max_high >= 0):
-            # reduce upper limit if current max is comparatively very small
-            high = 10 * inten_lim[1]
-        if high is not None:
-            # make brightness symmetric around upper limit
-            self._imgadj_min_high = high
-            self._imgadj_max_high = high
-            self._imgadj_brightness_low = -high
-            self._imgadj_brightness_high = high
-    
     def _set_inten_min_to_curr(self, plot_ax_img):
         """Set min intensity to current image value."""
         if plot_ax_img is not None:
             vmin = plot_ax_img.ax_img.norm.vmin
-            self._adapt_imgadj_limits(plot_ax_img)
             if self._imgadj_min != vmin:
                 self._imgadj_min_ignore_update = True
                 self._imgadj_min = vmin
@@ -1443,7 +1399,6 @@ class Visualization(HasTraits):
         """Set max intensity to current image value."""
         if plot_ax_img is not None:
             vmax = plot_ax_img.ax_img.norm.vmax
-            self._adapt_imgadj_limits(plot_ax_img)
             if self._imgadj_max != vmax:
                 self._imgadj_max_ignore_update = True
                 self._imgadj_max = vmax

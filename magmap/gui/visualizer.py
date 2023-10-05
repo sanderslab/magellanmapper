@@ -865,7 +865,7 @@ class Visualization(HasTraits):
              editor=EnumEditor(
                  name="object._imgadj_color_names.selections",
                  completion_mode="popup", evaluate=True)),
-        # use large range sliders to adjust min/max range
+        # use large range sliders to adjust min/max range and brightness
         HGroup(
             Item("_imgadj_min", label="Min", editor=RangeEditor(
                      low_name="_imgadj_min_low", high_name="_imgadj_min_high",
@@ -881,7 +881,7 @@ class Visualization(HasTraits):
         HGroup(
             Item("_imgadj_brightness", label="Brightness", editor=RangeEditor(
                      low_name="_imgadj_brightness_low",
-                     high_name="_imgadj_brightness_high", mode="slider",
+                     high_name="_imgadj_brightness_high", mode="xslider",
                      format_str="%.1g"))
         ),
         HGroup(

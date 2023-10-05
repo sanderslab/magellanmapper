@@ -574,7 +574,7 @@ class ImageOverlayer:
             self, imgs2d: Sequence[np.ndarray],
             channels: Optional[List[List[int]]],
             cmaps: Sequence[Union[
-                str, "colors.Colormap", colormaps.DiscreteColormap]],
+                str, "colors.Colormap", Sequence["colors.Colormap"]]],
             alphas: Optional[Union[
                 float, Sequence[Union[float, Sequence[float]]]]] = None,
             vmins: Optional[Union[
@@ -596,35 +596,42 @@ class ImageOverlayer:
             imgs2d: Sequence of 2D images to display,
                 where the first image may be 2D+channel.
             channels: A nested list of channels to display for
-                each image, or None to use :attr:``config.channel`` for the
+                each image, or None to use
+                :attr:``magmap.settings.config.channel`` for the
                 first image and 0 for all subsequent images.
-            cmaps: Either a single colormap for all images or a list of
-                colormaps corresponding to each image. Colormaps of type
-                :class:`colormaps.DiscreteColormap` will have their
-                normalization object applied as well. If a color is given for
-                :obj:`config.AtlasLabels.BINARY` in :attr:`config.atlas_labels`,
-                images with :class:`colormaps.DiscreteColormap` will be
+            cmaps: Either a single colormap for all images or a sequence of
+                colormaps corresponding to each image. If a sequence, the first
+                value should be another sequence corresponding to all channels,
+                including channels not included in ``channels``. Colormaps of
+                type :class:`magmap.plot.colormaps.DiscreteColormap` will have
+                their normalization object applied as well. If a color is
+                given for :obj:`magmap.settings.config.AtlasLabels.BINARY`
+                in :attr:`magmap.settings.config.atlas_labels`, images with
+                :class:`magmap.plot.colormaps.DiscreteColormap` will be
                 converted to NaN for foreground to use this color.
-            alphas: Either a single alpha for all images or a list of
-                alphas corresponding to each image. Defaults to None to use
-                :attr:`config.alphas`, filling with 0.9 for any additional
-                values required and :attr:`config.plot_labels` for the first value.
-            vmins: A list of vmins for each image; defaults to None to use
-                :attr:``config.vmins`` for the first image and None for all others.
-            vmaxs: A list of vmaxs for each image; defaults to None to use
-                :attr:``config.vmax_overview`` for the first image and None
-                for all others.
+            alphas: Image opacity, given in the same format as for ``cmaps``.
+                ``None`` to use :attr:`magmap.settings.config.alphas`,
+                filling with 0.9 for any additional values required and
+                :attr:`magmap.settings.config.plot_labels` for the first value.
+            vmins: Minimum intensities, given in the same format as for
+                ``cmaps``. ``None`` to use
+                :attr:``magmap.settings.config.vmins`` for the first
+                 image and None for all others.
+            vmaxs: Maximum intensities, given in the same format as for
+                ``cmaps``. ``None`` to use
+                :attr:``magmap.settings.config.vmax_overview`` for
+                the first image and None for all others.
             check_single: True to check for images with a single unique
-                value displayed with a :class:`colormaps.DiscreteColormap`, which
+                value displayed with a
+                :class:`magmap.plot.colormaps.DiscreteColormap`, which
                 will not update for unclear reasons. If found, the final value
                 will be incremented by one as a workaround to allow updates.
-                Defaults to False.
-            alpha_blends: Opacity blending values for each image in ``imgs2d``;
-                defaults to None.
+            alpha_blends: Opacity blending values for each image in ``imgs2d``.
         
         Returns:
-            Nested list containing a list of Matplotlib image objects 
+            Nested list containing a list of Matplotlib image objects
             corresponding to display of each ``imgs2d`` image.
+        
         """
         ax_imgs = []
         num_imgs2d = len(imgs2d)

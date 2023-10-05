@@ -512,7 +512,8 @@ class PlotEditor:
         # with settings for each channel within this main image
         imgs2d = [self._get_img2d(0, self.img3d, self.max_intens_proj)]
         self._channels = [config.channel]
-        cmaps = [config.cmaps]
+        cmaps = [config.cmaps]  # for all channels in image, even if not shown
+        # rest of settings are only for channels in config.channel
         alphas = list(self.alpha_img3d)
         alpha_is_default = True
         alpha_blends = [None]
@@ -521,6 +522,7 @@ class PlotEditor:
         vmins = [None]
         brightnesses = [None]
         contrasts = [None]
+        
         if self._plot_ax_imgs:
             # use vmin/vmax from norm values in previously displayed images
             # if available; None specifies auto-scaling
@@ -585,13 +587,29 @@ class PlotEditor:
                 shapes.append(self._img3d_shapes[imgi][1:3])
                 vmaxs.append(None)
                 vmins.append(None)
-
+        
+        def make_abs_chls(vals):
+            # `overlay_images` requires channel-specific settings to be given
+            # for all channels of first (intensity) image in absolute rather
+            # than relative position
+            if libmag.is_seq(vals[0]):
+                # initialize for all channels and slot in channel-specific vals
+                vals_chls = [None] * nchls
+                for chl, v in zip(config.channel, vals[0]):
+                    vals_chls[chl] = v
+                vals = list(vals)
+                vals[0] = vals_chls
+            return vals
+        
         # overlay all images and set labels for footer value on mouseover;
         # if first time showing image, need to check for images with single
         # value since they fail to update on subsequent updates for unclear
         # reasons
+        nchls = self.img3d.shape[3] if self.img3d.ndim >= 4 else 1
         ax_imgs = self.overlayer.overlay_images(
-            imgs2d, self._channels, cmaps, alphas, vmins, vmaxs,
+            imgs2d, self._channels, cmaps,
+            # expand for all intensity channels
+            make_abs_chls(alphas), make_abs_chls(vmins), make_abs_chls(vmaxs),
             check_single=(self._ax_img_labels is None),
             alpha_blends=alpha_blends)
         

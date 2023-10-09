@@ -6,7 +6,7 @@ certifi==2023.7.22
 charset-normalizer==3.3.0
 click==8.1.7
 contourpy==1.1.1
-cycler==0.12.0
+cycler==0.12.1
 fonttools==4.43.0
 future==0.18.3
 idna==3.4

@@ -2,7 +2,7 @@
 
 ## Command-Line argument reference
 
-Argument | Sub-argument | Function | Ver Added | Last updated
+<div style="width:150px">Argument</div> | Sub-argument | Function | Ver Added | Last updated
 --- | --- | --- | --- | ---
 `--img` | `<path> [path2] ...` | Image paths. `--img` can be omitted if paths are given as the first argument. Can be given as the original filename (eg `myvolume.tiff`), the imported name, (`myvolume_image5d.npy`), a sub-image name (`myvolume_(x,y,z)x(x,y,z)_subimg.npy`), or a registered image (`myvolume_atlasVolume.mhd`). | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 `--meta` | `<metadata-path> [path2] ...` | Metadata paths corresponding to images from `--img`. | v1.0.0 | v1.0.0
@@ -18,7 +18,6 @@ Argument | Sub-argument | Function | Ver Added | Last updated
 `--size` | `<x,y,z> [x2,y2,z2] ...` | ROI size given as `x, y, z`. | v1.0.0 | v1.0.0
 `--db` | `<path>` | The main to the main SQlite database. | v1.0.0 | v1.0.0
 `--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | [v1.3.6](#changes-in-magellanmapper-v13)
-`--cpus` | `<n>` | The number of CPUs to use during multiprocessing tasks. `none` (default) can be given to use the max number of processors. | v1.3.6 | v1.3.6
 `--load` | `blobs=<path> blob_matches=<path>` | Paths to load data. `blobs` are objects detected as blobs. `blob_matches` are co-localized blobs among channels. | v1.4.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 `--proc` | `<task1>=[sub-task1,...] <task2>` | Image processing tasks; see `config.ProcessTypes` | v1.0.0 | [v1.5.0](#changes-in-magellanmapper-v15)
 `--register` | `<task>` | Registration and other atlas-related tasks; see `config.RegisterTypes` | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)

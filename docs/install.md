@@ -59,19 +59,19 @@ Next, install it:
 - For Conda:
 
 ```shell
-conda env create -n mag -f environment.yml
+conda env create -n mag -f magellanmapper/environment.yml
 ```
 
 - Or Pip:
 
 ```shell
-pip install -e ".[most]" --extra-index-url https://pypi.fury.io/dd8/
+pip install -e "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 MagellanMapper can be run using `mm` and `mm-cli` as above, or through the run script:
 
 ```shell
-python run.py
+python magellanmapper/run.py
 ```
 
 ### Installer packages

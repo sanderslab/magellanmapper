@@ -589,6 +589,9 @@ def register_duo(
                 #param_map["Metric2Weight"] = ["0.5"]
                 elastix_img_filter.SetFixedPointSetFileName(fix_pts_path)
                 elastix_img_filter.SetMovingPointSetFileName(move_pts_path)
+                msg = "{} image corresponding points loaded from: %s"
+                _logger.info(msg.format("Fixed"), fix_pts_path)
+                _logger.info(msg.format("Moving"), move_pts_path)
         
         if param_map_vector is not None:
             param_map_vector.append(param_map)

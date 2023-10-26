@@ -3,7 +3,7 @@ appdirs==1.4.4
 bg-atlasapi==1.0.2
 bg-space==0.6.0
 certifi==2023.7.22
-charset-normalizer==3.3.0
+charset-normalizer==3.3.1
 click==8.1.7
 contourpy==1.1.1
 cycler==0.12.1

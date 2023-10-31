@@ -39,7 +39,7 @@ pyamg==5.0.1
 pyface==8.0.0
 Pygments==2.16.1
 pyparsing==3.1.1
-PyQt5==5.15.9
+PyQt5==5.15.10
 PyQt5-Qt5==5.15.2
 PyQt5-sip==12.13.0
 python-bioformats==4.0.7.post5+g52309d1

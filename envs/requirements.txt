@@ -7,7 +7,7 @@ charset-normalizer==3.3.2
 click==8.1.7
 contourpy==1.2.0
 cycler==0.12.1
-fonttools==4.43.1
+fonttools==4.44.0
 future==0.18.3
 idna==3.4
 imagecodecs==2023.9.18

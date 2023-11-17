@@ -12,25 +12,35 @@ _logger = config.logger.getChild(__name__)
 
 
 def build_labels_diff_images(paths: Optional[Sequence[str]] = None):
-    """Build labels difference images for given metrics.
+    """Build labels difference images or regional heat maps for given metrics.
     
-    Replaces each label in an atlas labels image with the value of the effect
-    size of the given metric.
+    Replaces each label in an atlas labels image with the metric value.
     
     :class:`magmap.settings.config.PlotLabels.X_COL` in
     :attr:`magmap.settings.config.plot_labels` can be used to change the
-    metric column.
+    metric column, which otherwise defaults to "vals.effect".
     
     Args:
-        paths: Paths to volume stat files output from the R pipeline.
+        paths: Paths to volume stat files output from the R pipeline or
+            output from the ``--register vol_stats`` pipeline
+            (:meth:`magmap.atlas.register.volumes_by_id`).
 
     """
+    # set the measurement column
+    col_meas = config.plot_labels[config.PlotLabels.X_COL]
+    if not col_meas:
+        col_meas = "vals.effect"
+    
     if paths:
         # set up metrics from filenames after first (image) filename;
         # extract metrics from R stats filename format
         path_dfs = paths
         metrics = [re.search(r"vols_stats_(.*).csv", p) for p in path_dfs]
         metrics = [m.group(1) if m else m for m in metrics]
+        if not metrics[0]:
+            # fall back to the measurement column, eg for metrics from the
+            # vol_stats pipeline
+            metrics[0] = col_meas
     else:
         # set up default metrics and assume corresponding CSVs are in
         # current working directory
@@ -43,11 +53,6 @@ def build_labels_diff_images(paths: Optional[Sequence[str]] = None):
             #vols.MetricCombos.HOMOGENEITY.value[0], 
         )
         path_dfs = [f"vols_stats_{m}.csv" for m in metrics]
-    
-    # set the measurement column
-    col_meas = config.plot_labels[config.PlotLabels.X_COL]
-    if not col_meas:
-        col_meas = "vals.effect"
     
     for path_df, metric in zip(path_dfs, metrics):
         if not os.path.exists(path_df):

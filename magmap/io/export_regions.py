@@ -271,7 +271,7 @@ def make_density_image(
         labels_img = sitk_io.convert_img(labels_img_sitk)
         
         is_2d = labels_img.ndim == 2
-        labels_res = list(labels_img_sitk.GetSpacing()[::-1])
+        labels_res = list(labels_img_sitk.GetSpacing())[::-1]
         if is_2d:
             # temporarily convert 2D images to 3D
             labels_img = labels_img[None]

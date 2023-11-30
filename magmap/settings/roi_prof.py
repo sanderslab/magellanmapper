@@ -36,7 +36,6 @@ class ROIProfile(profiles.SettingsDict):
         "segment_size",
         "denoise_size",
         "prune_tol_factor",
-        "verify_tol_factor",
         "sub_stack_max_pixels",
         "isotropic",
     )

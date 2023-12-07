@@ -958,7 +958,13 @@ class PlotEditor:
                 plot_ax_img, brightness, contrast)
         if alpha is not None:
             # adjust and store opacity
-            plot_ax_img.ax_img.set_alpha(alpha)
+            try:
+                plot_ax_img.ax_img.set_alpha(alpha)
+            except ValueError:
+                # WORKAROUND: matplotlib v3.8 give an error when stored alpha
+                #   is an array and new alpha is a scalar
+                plot_ax_img.ax_img._alpha = None
+                plot_ax_img.ax_img.set_alpha(alpha)
             plot_ax_img.alpha = alpha
         return plot_ax_img
 

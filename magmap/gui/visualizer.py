@@ -1306,8 +1306,18 @@ class Visualization(HasTraits):
         info = libmag.get_dtype_info(img3d)
         self._setup_imgadj_channels()
 
+        # default to only include non-neg intensities
+        min_inten = 0
+        if config.near_min is not None:
+            # check for neg intensities from min/max pre-calculated from whole
+            # image for all channels; cannot used percentile or else need to
+            # load whole image from disk
+            min_near_min = min(config.near_min)
+            if min_near_min < 0:
+                min_inten = info.min
+        
         # min/max based data type; slider has range adjustments
-        min_inten = info.min
+        min_inten = min_inten
         max_inten = info.max
         self._imgadj_min_low = min_inten
         self._imgadj_min_high = max_inten

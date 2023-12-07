@@ -117,12 +117,13 @@
 - Fixed match-based colocalizations when no matches are found (#117, #120)
 - Fixed slow loading of match-based colocalizations (#119, #123)
 
-#### Volumetric image processing
+#### Block processing
 
 - Match-based colocalizations use larger processing blocks to avoid gaps (#120)
 - Voxel density maps no longer require a registered image, or it can be used in place of full-size image metadata (#125, #226)
 - Grid search profiles are now layered on top of one another rather than applied in sequential runs for consistency with ROI and atlas profiles (#138)
 - Fixed 3D surface area measurement with Scikit-image >= v0.19
+- Fixed preprocessing to use the same blocks even if `verify_tol_factor` differs (#603)
 
 #### I/O
 

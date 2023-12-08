@@ -44,7 +44,7 @@
 - Image adjustment
   - Select colormaps for each channel (#574)
   - "Merge" option in the ROI panel to merge channels using additive blending (#492, #552)
-  - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89, #450)
+  - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89, #450, #607)
   - Image adjustment channels are radio buttons for easier selection (#212)
   - Fixed synchronization with image adjustment controls (#142, #576)
   - Fixed redundant triggers when adjusting the displayed image (#474)

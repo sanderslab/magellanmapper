@@ -129,7 +129,7 @@
 
 - Images can be viewed and exported as RGB(A) using the `RGB` button or the `--rgb` CLI argument (#142, #445)
 - EXPERIMENTAL: Some TIF files can be loaded directly, without importing the file first (#90, #213, #242, #445)
-- The `--proc export_planes` task can export a subset of image planes specified by `--slice`, or an ROI specified by `--offset` and `--size`
+- The `--proc export_planes` task can export a subset of raw image planes without processing, specified by `--slice`, or an ROI specified by `--offset` and `--size`
 - Image metadata is stored in the `Image5d` image object (#115)
 - Better 2D image support
   - Extended zero-crossing detection to 2D cases (#142)
@@ -141,6 +141,7 @@
 - Fixed re-importing an image after loading it (#117)
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 - Fixed parsing some metadata when importing files with Bio-Formats (#502)
+- Fixed `--proc extract` for extracting a slice of multiple planes (#611)
 
 #### Server pipelines
 

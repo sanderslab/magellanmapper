@@ -1028,7 +1028,8 @@ def plot_swarm(
         size: Optional[Sequence[float]] = None,
         ax: Optional["axes.Axes"] = None, rotation: Optional[float] = None,
         legend_title: Optional[str] = None,
-        kwargs_plot: Optional[Dict[str, Any]] = None, **kwargs) -> "axes.Axes":
+        kwargs_plot: Optional[Dict[str, Any]] = None, fn_plot: Callable = None,
+        **kwargs) -> "axes.Axes":
     """Generate a swarm/jitter plot in Seaborn.
     
     Supports x-axis scaling and vertical spans.
@@ -1050,7 +1051,7 @@ def plot_swarm(
         col_vspan: Column for delineating vertical span groups. Groups
             are determined by contiguous values after reordering by ``x_order``.
             Defaults to None.
-        vspan_fmt: Vertical span label string format; defaulst to None.
+        vspan_fmt: Vertical span label string format.
         size: Figure size in ``width, height`` as inches; defaults to None.
         ax: Matplotlib axes; defaults to None.
         rotation: x-axis ttext angle rotation in degrees. Defaults to None,
@@ -1058,6 +1059,9 @@ def plot_swarm(
         legend_title: Legend title; defaults to None.
         kwargs_plot: Dictionary of arguments to :meth:`sns.swarmplot`; defaults
             to None.
+        fn_plot: Plotting function. If None (default), will use
+            :meth:`sns.swarmplot`. Typically, only similar Seaborn functions
+            are compatible.
         **kwargs: Additional arguments, passed to :meth:`decorate_plot`.
 
     Returns:
@@ -1067,10 +1071,12 @@ def plot_swarm(
         `ImportError` if Seaborn is not available.
 
     """
-    
-    if sns is None:
-        raise ImportError(
-            config.format_import_err("seaborn", task="swarm plots"))
+    if fn_plot is None:
+        # default to generating a swarm plot in Seaborn
+        if sns is None:
+            raise ImportError(
+                config.format_import_err("seaborn", task="swarm plots"))
+        fn_plot = sns.swarmplot
     
     if kwargs_plot is None:
         kwargs_plot = {}
@@ -1096,7 +1102,7 @@ def plot_swarm(
     plot_support.set_scinot(ax, lbls=(y_label, x_label), units=(y_unit, x_unit))
     
     # plot in seaborn
-    ax = sns.swarmplot(
+    ax = fn_plot(
         x=x_cols, y=y_cols, hue=group_col, hue_order=legend_names,
         order=x_order, data=df, ax=ax, **kwargs_plot)
     

@@ -1120,6 +1120,8 @@ def plot_swarm(
 
     if col_vspan is not None:
         # add vertical spans
+        if x_order is None:
+            libmag.warn("Need to set `x_order` for vertical spans")
         vspans, vspan_lbls = plot_support.setup_vspans(
             df_vspan, col_vspan, vspan_fmt)
         plot_support.add_vspans(ax, vspans, vspan_lbls, 1, True)

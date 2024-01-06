@@ -1315,7 +1315,7 @@ def scale_xticks(
     if libmag.is_number(font_size):
         # scale font size of x-axis labels by a sigmoid function to rapidly
         # decrease size for larger numbers of labels so they don't overlap
-        font_size *= (math.atan(len(x_labels) / 10 - 5) * -2 / math.pi + 1) / 2
+        font_size *= (math.atan(len(x_labels) / 30 - 5) * -2 / math.pi + 1) / 2
     font_dict = {"fontsize": font_size}
     
     # draw x-ticks based on number of bars per group and align to right

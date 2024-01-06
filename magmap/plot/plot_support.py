@@ -1389,6 +1389,7 @@ def add_vspans(
         for i, x in enumerate(xs):
             if i % 2 == 0: continue
             end = xs[i + 1] if i < num_xs - 1 else num_groups
+            ax.margins(x=0)  # otherwise axvspan increases x-margin
             ax.axvspan(x, end, facecolor="k", alpha=0.2, zorder=0)
 
     if vspan_lbls is not None:

@@ -501,19 +501,21 @@ def setup_stack(
 
 def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
                  subimg_size=None, animated=False, suffix=None):
-    """Build an image file from a stack of images in a directory or an 
-    array, exporting as an animated GIF or movie for multiple planes or 
+    """Build an image file from a stack of images in a directory or an
+    array, exporting as an animated GIF or movie for multiple planes or
     extracting a single plane to a standard image file format.
     
     Writes the file to the parent directory of path.
     
     Args:
-        paths (List[str]): Image paths, which can each be either an image 
-            directory or a base path to a single image, including 
-            volumetric images.
+        paths (List[str]): Image paths, which can each be either an image
+            directory or a base path to a single image, including
+            volumetric images. If more than one path is given, a collage of
+            images will be generated with the layout set by
+            :attr:`magmap.settings.config.plot_labels[config.PlotLabels.LAYOUT]`.
         roi_offset (Sequence[int]): Tuple of offset given in user order
             ``x,y,z``; defaults to None. Requires ``roi_size`` to not be None.
-        roi_size (Sequence[int]): Size of the region of interest in user order 
+        roi_size (Sequence[int]): Size of the region of interest in user order
             ``x,y,z``; defaults to None. Requires ``roi_offset`` to not be None.
         series (int): Image series number; defaults to None.
         subimg_offset (List[int]): Sub-image offset as (z,y,x) to load;
@@ -521,7 +523,7 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
         subimg_size (List[int]): Sub-image size as (z,y,x) to load;
             defaults to None.
         animated (bool): True to export as an animated image; defaults to False.
-        suffix (str): String to append to output path before extension; 
+        suffix (str): String to append to output path before extension;
             defaults to None to ignore.
 
     """
@@ -535,6 +537,11 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
     path_base = paths[0]
     for i in range(nrows):
         for j in range(ncols):
+            # load image and display selected planes:
+            # - for collages, typically one plane of the image is shown as a
+            #   subplot of a single fig
+            # - for non-collages: one or more planes are shown, each in a
+            #   separate fig and axes except animations, which share one fig
             n = i * ncols + j
             if n >= num_paths: break
             
@@ -564,18 +571,21 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
             if not stacker.images: continue
             ax = None
             for k in range(len(stacker.images[0])):
-                # create or retrieve fig; animation has only 1 fig
+                # create or retrieve fig for the given images; animation and
+                # collage have only 1 fig, whereas stack of multiple planes
+                # has a separate fig for each plane
                 planei = 0 if animated else (
                         stacker.img_slice.start + k * stacker.img_slice.step)
                 fig_dict = figs.get(planei)
                 if not fig_dict:
-                    # set up new fig
+                    # set up new fig for each new plane unless animated
                     fig, gs = plot_support.setup_fig(
                         nrows, ncols, config.plot_labels[config.PlotLabels.SIZE])
                     fig_dict = {"fig": fig, "gs": gs, "imgs": []}
                     figs[planei] = fig_dict
-                if ax is None:
-                    # generate new axes for the gridspec position
+                if ax is None or not animated:
+                    # generate new axes for the gridspec position; share
+                    # axes for animation
                     ax = fig_dict["fig"].add_subplot(fig_dict["gs"][i, j])
                 if title:
                     ax.title.set_text(title)

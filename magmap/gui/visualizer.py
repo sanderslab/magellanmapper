@@ -1397,6 +1397,25 @@ class Visualization(HasTraits):
         # respond to triggers
         self._imgadj_ignore_update = False
     
+    def _restore_imgadj(self):
+        """Restore image adjustment settings."""
+        # populate with current settings
+        adj = dict(
+            brightness=self._imgadj_brightness,
+            contrast=self._imgadj_contrast,
+            alpha=self._imgadj_alpha,
+        )
+        
+        # only add min/max if not auto
+        if not self._imgadj_min_auto:
+            adj["minimum"] = self._imgadj_min
+        
+        if not self._imgadj_max_auto:
+            adj["maximum"] = self._imgadj_max
+        
+        # update image
+        self._adjust_displayed_imgs(**adj)
+    
     def _set_inten_min_to_curr(self, plot_ax_img):
         """Set min intensity to current image value."""
         if plot_ax_img is not None:
@@ -2248,7 +2267,7 @@ class Visualization(HasTraits):
                 config.filename, offset=offset, size=size, allow_import=False,
                 labels_ref_path=self._labels_ref_path)
             self._setup_for_image()
-            self.redraw_selected_viewer()
+            self.redraw_selected_viewer(restore_imgadj=False)
             self.update_imgadj_for_img()
             config.prefs.img_open_path = self._filename
         else:
@@ -2322,7 +2341,7 @@ class Visualization(HasTraits):
             self._update_imgadj_limits()
             
             # redraw viewer in selected RGB mode
-            self.redraw_selected_viewer()
+            self.redraw_selected_viewer(restore_imgadj=False)
 
     def reset_stale_viewers(self, val=vis_handler.StaleFlags.IMAGE):
         """Reset the stale viewer flags for all viewers.
@@ -2492,11 +2511,13 @@ class Visualization(HasTraits):
         """Respond to profiles panel help button presses."""
         self._open_help_docs(config.DocsURLs.DOCS_URL_SETTINGS.value)
     
-    def redraw_selected_viewer(self, clear=True):
+    def redraw_selected_viewer(
+            self, clear: bool =True, restore_imgadj: bool =True):
         """Redraw the selected viewer.
         
         Args:
-            clear (bool): True to clear the ROI and blobs; defaults to True.
+            clear: True to clear the ROI and blobs.
+            restore_imgadj: True to restore the current image settings.
         
         """
         def confirm(ed, fn):
@@ -2558,6 +2579,10 @@ class Visualization(HasTraits):
             # launch 3D Viewer
             self.show_3d()
             self._post_3d_display()
+        
+        if restore_imgadj:
+            # restore user image adjustment settings
+            self._restore_imgadj()
     
     @on_trait_change("scene.activated")
     def orient_camera(self):
@@ -4207,7 +4232,7 @@ class Visualization(HasTraits):
         np_io.setup_images(
             config.filename, allow_import=False, bg_atlas=bg_atlas)
         self._setup_for_image()
-        self.redraw_selected_viewer()
+        self.redraw_selected_viewer(restore_imgadj=False)
         self.update_imgadj_for_img()
     
     def _setup_brain_globe(self):

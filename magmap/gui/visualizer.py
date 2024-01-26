@@ -1238,7 +1238,9 @@ class Visualization(HasTraits):
             self._segs_chls_names.selections = list(
                 self._channel_names.selections)
         
-        # pre-select channels for both main and profiles selector
+        # pre-select channels for both main and profiles selector; ignore
+        # channel handler to avoid redrawing the viewer
+        self._imgadj_ignore_update = True
         if not chls_pre and config.channel:
             # use config if all chls were unchecked, eg if setting for 1st time
             self._channel = sorted([
@@ -1246,6 +1248,7 @@ class Visualization(HasTraits):
         else:
             # select all channels
             self._channel = self._channel_names.selections
+        self._imgadj_ignore_update = False
         
         # select detection and profile channels to match main channels
         self._segs_chls = list(self._channel)
@@ -2326,14 +2329,20 @@ class Visualization(HasTraits):
     
     @on_trait_change("_channel")
     def update_channel(self):
-        """Update the selected channel and image adjustment controls.
+        """Update the selected channel and redraw the viewer.
         """
         if not self._channel:
             # resetting channel names triggers channel update as empty array
             return
+        
+        # update the configured channels
         config.channel = sorted([int(n) for n in self._channel])
-        self._setup_imgadj_channels()
-        print("Changed channel to {}".format(config.channel))
+        _logger.debug("Changed channel to %s", config.channel)
+        
+        if not self._imgadj_ignore_update:
+            # fully refresh the viewer with the channel update; need to ignore
+            # during channel control initialization
+            self.redraw_selected_viewer(restore_imgadj=False)
     
     @observe("_rgb", post_init=True)
     def _update_rgb(self, event):

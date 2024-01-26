@@ -1360,9 +1360,8 @@ class Visualization(HasTraits):
         viewer and channel.
 
         """
-        if not self.imgadj_chls:
-            # resetting image adjustment channel names triggers update as
-            # empty array
+        if not self.imgadj_chls or self._imgadj_ignore_update:
+            # initializations trigger imgadj_chls with empty value
             return
 
         # get currently displayed image
@@ -2512,7 +2511,7 @@ class Visualization(HasTraits):
         self._open_help_docs(config.DocsURLs.DOCS_URL_SETTINGS.value)
     
     def redraw_selected_viewer(
-            self, clear: bool =True, restore_imgadj: bool =True):
+            self, clear: bool = True, restore_imgadj: bool = True):
         """Redraw the selected viewer.
         
         Args:
@@ -2553,6 +2552,11 @@ class Visualization(HasTraits):
             if self._rois_selections.selections:
                 self.rois_check_list = self._rois_selections.selections[0]
 
+        # relaunching an editor may trigger an image adjustment channel control
+        # event, populating settings with the current image instead of leaving
+        # them to be restored; set to ignore this trigger
+        self._imgadj_ignore_update = restore_imgadj
+        
         # redraw the currently selected viewer tab
         if self.selected_viewer_tab is vis_handler.ViewerTabs.ROI_ED:
             # disconnect existing ROI and Verifier Editors, which share the fig
@@ -2583,6 +2587,7 @@ class Visualization(HasTraits):
         if restore_imgadj:
             # restore user image adjustment settings
             self._restore_imgadj()
+            self._imgadj_ignore_update = False
     
     @on_trait_change("scene.activated")
     def orient_camera(self):

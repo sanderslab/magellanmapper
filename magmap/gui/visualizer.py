@@ -2588,6 +2588,9 @@ class Visualization(HasTraits):
             # restore user image adjustment settings
             self._restore_imgadj()
             self._imgadj_ignore_update = False
+        else:
+            # synchronize adjustment controls with the redrawn image
+            self.update_imgadj_for_img()
     
     @on_trait_change("scene.activated")
     def orient_camera(self):

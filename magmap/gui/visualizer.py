@@ -3039,12 +3039,16 @@ class Visualization(HasTraits):
         roi_editor.verify = self._DEFAULTS_2D[1] in self._check_list_2d
         roi = None
         if self._DEFAULTS_2D[0] in self._check_list_2d:
-            print("showing processed 2D images")
+            _logger.debug("Showing processed 2D images")
             # denoised ROI processed during 3D display
             roi = self.roi
             if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
                 roi = plot_3d.threshold(roi)
+            
+            # scale ROI to original image since filtering it changes its range
+            roi = libmag.normalize(
+                roi, min(config.near_min), max(config.near_max))
         
         blobs_truth_roi = None
         if config.truth_db is not None:

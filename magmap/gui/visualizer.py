@@ -1326,9 +1326,18 @@ class Visualization(HasTraits):
             if min_near_min < 0:
                 min_inten = info.min
         
-        # min/max based data type; slider has range adjustments
-        min_inten = min_inten
+        # default to max intensity based data type
         max_inten = info.max
+        if config.near_max is not None:
+            max_near_max = max(config.near_max)
+            if -1 < max_near_max < 10:
+                # RangeEditor xslider does not scale below 10, which can make
+                # scrolling difficult for small values; workaround by using
+                # image max, still allowing higher values by the text field;
+                # ignore if default (-1)
+                max_inten = 2 * max_near_max
+        
+        # set min/max; slider has range adjustments
         self._imgadj_min_low = min_inten
         self._imgadj_min_high = max_inten
         self._imgadj_max_low = min_inten
@@ -1511,6 +1520,10 @@ class Visualization(HasTraits):
         
         # # intensity min may have been adjusted to remain <= max
         # self._set_inten_min_to_curr(plot_ax_img)
+        
+        if self._imgadj_max > self._imgadj_max_high:
+            # expand range if increased above max, eg entered in text field
+            self._imgadj_max_high = self._imgadj_min_high = self._imgadj_max
 
     @on_trait_change("_imgadj_brightness")
     def _adjust_img_brightness(self):

@@ -404,6 +404,7 @@ def setup_images(
         _logger.info(
             "Main image is not set, falling back to registered image with "
             "suffix %s", atlas_suffix)
+    
     # use prefix to get images registered to a different image, eg a
     # downsampled version, or a different version of registered images
     path = config.prefix if config.prefix else path
@@ -413,6 +414,11 @@ def setup_images(
             config.img5d = sitk_io.read_sitk_files(
                 path, atlas_suffix, make_3d=True)
             config.image5d = config.img5d.img
+            
+            if config.img5d.img is not None:
+                # get near min/max across whole image
+                config.near_min, config.near_max = \
+                    importer.calc_intensity_bounds(config.img5d.img)
         except FileNotFoundError as e:
             print(e)
     

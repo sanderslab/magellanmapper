@@ -147,7 +147,7 @@
 
 #### Python stats and plots
 
-- Generate swarm and category plots in Seaborn (#137, #253)
+- Generate swarm and category plots in Seaborn (#137, #253, #612)
 - Color bars can be configured in ROI profiles using [settings in Matplotlib](https://matplotlib.org/3.5.0/api/_as_gen/matplotlib.pyplot.colorbar.html), update dynamically, and no longer repeat in animations (#128)
 - New plot label sub-arguments (#135):
   - `--plot labels err_col_abs=<col>`: plot error bars with a column of absolute rather than relative values, now that Clrstats gives absolute values for effect sizes
@@ -160,7 +160,7 @@
 - The figure save wrapper (`plot_support.save_fig`) is more flexible (#215)
 - 2D plots can be set not to save (#445)
 - Discrete colormaps can use [Matplotlib named colors](https://matplotlib.org/stable/gallery/color/named_colors.html) and use them for symmetric colors (#226)
-- Vertical span labels adapt to the axes rather than data limits (#472)
+- Vertical span labels adapt to the axes rather than data limits (#472, #612)
 - Scatter plots support jitter and x-tick rotation (#486)
 - Fixed errors when generating labels difference heat maps, and conditions can be set through `--plot_labels condition=cond1,cond2,...` (#132)
 - Fixed alignment of headers and columns in data frames printed to console (#109)

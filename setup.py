@@ -47,7 +47,11 @@ _EXTRAS_GUI = [
 ]
 
 #: Optional dependencies for the 3D viewer.
-_EXTRAS_3D = ["mayavi"]
+_EXTRAS_3D = [
+    "mayavi",
+    # WORKAROUND: error in VTK 9.3.0 with Mayavi 4.8.1
+    "vtk < 9.3.0",
+]
 
 #: Optional pre-built SimpleITK with Elastix for image I/O and registration.
 _EXTRAS_SIMPLEITK = [

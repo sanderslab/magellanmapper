@@ -41,6 +41,13 @@ except AttributeError:
     pass
 
 # import PyFace components after HiDPI adjustment
+try:
+    # WORKAROUND: Mayavi as of v4.8.1 uses the older qt4 instead of qt
+    from traits.etsconfig.api import ETSConfig
+    ETSConfig.toolkit = "qt4"
+except AttributeError:
+    print("Could not set Traits ETSConfig")
+    pass
 from pyface import confirmation_dialog
 from pyface.api import DirectoryDialog, FileDialog, OK, YES, CANCEL
 from pyface.image_resource import ImageResource

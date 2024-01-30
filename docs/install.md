@@ -408,6 +408,9 @@ Applications which require backwards compatibility can either:
     ))
 ```
 
+**UPDATE 2024-01-30**: A workaround in #618 fixes this error. VTK < 9.3 is also required at this time.
+
+*Previously*:
 At least as of Mayavi 4.8.1, Mayavi will not load TraitsUI 8. Workaround is to run in the shell before launching MM: `export ETS_TOOLKIT="qt4"`
 
 ```

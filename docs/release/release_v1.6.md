@@ -211,7 +211,7 @@
 - Seaborn as an optional dependency for additional plot support (currently only swarm plots, #137)
 - Scikit-learn is an optional rather than a required dependency (#150)
 - The AWS-related dependencies (`boto3`, `awscli`) are now optional, installed in the `aws` group (#150, #379)
-- Mayavi/VTK are now optional, installed in the `3d` group (#455)
+- Mayavi/VTK are now optional, installed in the `3d` group (#455, #618)
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - The SimpleElastix custom binaries are now built on SimpleITK with Elastix and is no longer a required dependency (#379, #501)

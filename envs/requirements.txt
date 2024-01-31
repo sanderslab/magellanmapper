@@ -50,7 +50,7 @@ PyYAML==6.0.1
 requests==2.31.0
 rich==13.7.0
 scikit-image==0.22.0
-scipy==1.11.3
+scipy==1.12.0
 six==1.16.0
 tifffile==2023.9.26
 traits==6.4.3

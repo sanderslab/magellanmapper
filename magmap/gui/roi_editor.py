@@ -1202,7 +1202,6 @@ class ROIEditor(plot_support.ImageSyncMixin):
             size = libmag.swap_elements(size, 0, 2, image5d_shape_offset)
             size = libmag.swap_elements(size, 0, 1, image5d_shape_offset)
         z = offset[2]
-        ax.set_title("{}={}".format(plane_axis, z))
         if border is not None:
             # boundaries of border region, with xy point of corner in first
             # elements and [width, height] in 2nd, allowing flip for yz plane
@@ -1260,7 +1259,9 @@ class ROIEditor(plot_support.ImageSyncMixin):
             plot_ed.alpha_img3d = [alpha]
             plot_ed.coord = (0, 0, 0)
             plot_ed.show_overview()
-            #print("roi shape: {} for z_relative: {}".format(roi.shape, z_relative))
+            
+            # add title after showing overview, which cleared the axes
+            ax.set_title("{}={}".format(plane_axis, z))
 
             # show labels if provided and within ROI
             if labels is not None:

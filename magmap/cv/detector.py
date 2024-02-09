@@ -1146,15 +1146,12 @@ def get_blobs_in_roi(
 ) -> Tuple[np.ndarray, np.ndarray]:
     """Get blobs within an ROI based on offset and size.
     
-    Note that dimensions are in x,y,z for natural ordering but may change for
-    consistency with z,y,x ordering used throughout MagellanMapper.
-    
     Args:
         blobs: The blobs to retrieve, given as 2D array of
             ``[n, [z, row, column, radius, ...]]``.
-        offset: Offset coordinates in ``x,y,z``.
-        size: Size of ROI in ``x,y,z``.
-        margin: Additional space outside the ROI to include in ``x,y,z``.
+        offset: Offset coordinates in ``z,y,x``.
+        size: Size of ROI in ``z,y,x``.
+        margin: Additional space outside the ROI to include in ``z,y,x``.
         reverse: True to reverse the order of ``offset`` and ``size``,
             assuming that they are in ``x,y,z`` rather than ``z,y,x`` order.
             Defaults to True for backward compatibility with the ROI
@@ -1169,6 +1166,7 @@ def get_blobs_in_roi(
     if reverse:
         offset = offset[::-1]
         size = size[::-1]
+        margin = margin[::-1]
     mask = np.all([
         blobs[:, 0] >= offset[0] - margin[0],
         blobs[:, 0] < offset[0] + size[0] + margin[0],

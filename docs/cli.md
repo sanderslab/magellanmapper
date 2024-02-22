@@ -2,7 +2,7 @@
 
 ## Command-Line argument reference
 
-<div style="width:150px">Argument</div> | Sub-argument | Function | Ver Added | Last updated
+Argument | Sub-argument | Function | Ver Added | Last updated
 --- | --- | --- | --- | ---
 `--img` | `<path> [path2] ...` | Image paths. `--img` can be omitted if paths are given as the first argument. Can be given as the original filename (eg `myvolume.tiff`), the imported name, (`myvolume_image5d.npy`), a sub-image name (`myvolume_(x,y,z)x(x,y,z)_subimg.npy`), or a registered image (`myvolume_atlasVolume.mhd`). | v1.0.0 | [v1.4.0](#changes-in-magellanmapper-v14)
 `--meta` | `<metadata-path> [path2] ...` | Metadata paths corresponding to images from `--img`. | v1.0.0 | v1.0.0

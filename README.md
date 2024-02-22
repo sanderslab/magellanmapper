@@ -9,7 +9,8 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 ## Quick Reference
 
-- **NEW**: [Docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
+- [Docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
+- **NEW**: [Vignette of pipelines](bin/sample_cmds_bash.ipynb)
 - [Installation](#installation) (more [details](docs/install.md))
 - [Intro to running MagellanMapper](#run-magellanmapper)
 - [Using the viewers](docs/viewers.md)
@@ -20,20 +21,18 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 ## Installation
 
-If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment:
+If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment named `mag`:
 
 ```shell
 conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
 ```
 
-To run in this new environment named `mag`<sup>*</sup>:
+Then activate the environment and run MagellanMapper:
 
 ```shell
 conda activate mag
 mm
 ```
-
-<sup>*</sup> `mm` was added in v1.6.0 to launch from installed packages
 
 Or install using Pip ([virtual environment]((https://realpython.com/python-virtual-environments-a-primer/)) recommended):
 

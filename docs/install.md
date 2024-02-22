@@ -162,7 +162,7 @@ If installed from source:
 
 ### Update the Conda or Venv environment
 
-Sometimes a virtual environment update is required for new depdendencies.
+Sometimes a virtual environment update is required for new dependencies.
 - To update a Conda environment, rerun the `bin/setup_conda` (macOS/Linux) or `bin\setup_conda.bat` (Windows) script
 - To update a Venv environment, rerun the `bin/setup_venv.sh` (macOS/Linux) or `bin\setup_venv.bat` (Windows) script
 
@@ -194,7 +194,7 @@ These package versions are used for automated testing (continuous integration).
 
 | Group | Packages | Collection |
 |-----|-----|-----|
-| `most` | Import and GUI tools | Has `import`, `gui` |
+| `most` | Import, GUI, and registration tools | Has `import`, `gui`, `itk` |
 | `all` | All groups plus `seaborn`, `scikit-learn` | Has all below |
 | `3D` | 3D rendering | |
 | `aws` | Tools for accessing AWS | |

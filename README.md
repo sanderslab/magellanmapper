@@ -49,12 +49,16 @@ For the latest updates and fixes, download from Git and install:
 
 ```shell
 git clone https://github.com/sanderslab/magellanmapper.git
+cd magellanmapper
 conda env create -n mag -f environment.yml
-pip install -e ".[most]" --extra-index-url https://pypi.fury.io/dd8/
 python run.py
 ```
 
-Or for Pip, replace `"magellanmapper[most]"` with `".[most]"`.
+Or for Pip, replace the `conda` line with:
+
+```shell
+pip install -e ".[most]" --extra-index-url https://pypi.fury.io/dd8/
+```
 
 
 ### More ways to install and run

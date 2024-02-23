@@ -37,7 +37,7 @@ pandas==2.2.0
 Pillow==10.2.0
 pyamg==5.0.1
 pyface==8.0.0
-Pygments==2.16.1
+Pygments==2.17.2
 pyparsing==3.1.1
 PyQt5==5.15.10
 PyQt5-Qt5==5.15.2

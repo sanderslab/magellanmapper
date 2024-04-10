@@ -60,8 +60,9 @@ _EXTRAS_SIMPLEITK = [
 ]
 
 #: Optional ITK and Elastix for image I/O and registration.
+#: `itk` not included since it does not load properly when installed with rest
+#: of dependencies. `itk-elastix` also installs a later `itk` version.
 _EXTRAS_ITK = [
-    "itk",
     "itk-elastix",
 ]
 

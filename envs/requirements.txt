@@ -48,7 +48,7 @@ pytz==2023.3.post1
 PyWavelets==1.5.0
 PyYAML==6.0.1
 requests==2.31.0
-rich==13.7.0
+rich==13.7.1
 scikit-image==0.22.0
 scipy==1.12.0
 six==1.16.0

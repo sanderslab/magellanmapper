@@ -56,7 +56,7 @@ tifffile==2023.9.26
 traits==6.4.3
 traitsui==8.0.0
 treelib==1.7.0
-typing_extensions==4.8.0
+typing_extensions==4.11.0
 tzdata==2024.1
 urllib3==2.0.7
 zipp==3.17.0

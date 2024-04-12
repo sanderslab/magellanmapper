@@ -9,7 +9,7 @@ contourpy==1.2.0
 cycler==0.12.1
 fonttools==4.44.3
 future==0.18.3
-idna==3.6
+idna==3.7
 imagecodecs==2023.9.18
 imageio==2.33.1
 importlib-metadata==7.1.0

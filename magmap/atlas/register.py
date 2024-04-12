@@ -366,9 +366,17 @@ def register_repeat(
         # perform the transformation
         transformix_img_filter.UpdateLargestPossibleRegion()
         transf_img = transformix_img_filter.GetOutput()
+        
+        # cast image back to original data type
+        transf_img_orig = transf_img
         cast_filter = itk.CastImageFilter[type(transf_img), pixel_id].New()
         cast_filter.SetInput(transf_img)
         transf_img = cast_filter.GetOutput()
+        if all(np.equal(transf_img.shape, 0)):
+            # WORKAROUND: at least as of ITK v5.4rc3, CastImageFilter may
+            # give an empty Image object that gives a None array; cast
+            # directly to signed short, typically used for labels image
+            transf_img = transf_img_orig.astype(itk.SS)
     
     if preserve_idents:
         # map indices back to original values

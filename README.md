@@ -11,7 +11,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 
 - [Docs are now on ReadTheDocs!](https://magellanmapper.readthedocs.io/en/latest/)
 - **NEW**: [Vignette of pipelines](bin/sample_cmds_bash.ipynb)
-- [Installation](#installation) (more [details](docs/install.md))
+- [Installation](#quick-install) (more [details](docs/install.md))
 - [Intro to running MagellanMapper](#run-magellanmapper)
 - [Using the viewers](docs/viewers.md)
 - [Command-line interface](docs/cli.md)
@@ -19,30 +19,42 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 - [Publications](#related-publications-and-datasets)
 
 
-## Installation
+## Quick Install
 
-If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment named `mag`:
+Install MagellanMapper with its graphical interface and registration tools:
+
+```shell
+pip install "magellanmapper[gui,itk]"
+```
+
+Then launch MagellanMapper:
+
+```shell
+mm
+```
+
+## Full Install
+
+Alternatively, [Conda](https://docs.conda.io/en/latest/miniconda.html) can be used to install MagellanMapper along with support for importing proprietary image file formats (*note: not currently working on Apple Silicon (Mac M-chip) platforms*):
 
 ```shell
 conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
 ```
 
-Then activate the environment and run MagellanMapper:
+Then activate the environment (`mag`) and run MagellanMapper:
 
 ```shell
 conda activate mag
 mm
 ```
 
-Or install using Pip ([virtual environment]((https://realpython.com/python-virtual-environments-a-primer/)) recommended):
+If you have [Java](https://www.azul.com/downloads/?package=jdk), you can do the same through Pip:
 
 ```shell
 pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 The extra index accesses a few [customized dependencies](docs/install.md#custom-packages) for MagellanMapper.
-
-Conda installs Java to import proprietary image file formats, which can also be installed separately when using Pip (eg from [here](https://www.azul.com/downloads/?package=jdk)).
 
 For the latest updates and fixes, download from Git and install:
 

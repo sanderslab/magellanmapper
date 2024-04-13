@@ -77,7 +77,7 @@ config = {
     "url": "https://github.com/sanderslab/magellanmapper",
     "author_email": "david@textflex.com",
     "license": "BSD-3",
-    "version": "1.6b3",
+    "version": "1.6b4",
     "packages": setuptools.find_packages(),
     "scripts": [],
     "python_requires": ">=3.6",

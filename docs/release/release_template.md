@@ -18,7 +18,7 @@
 
 #### Cell detection
 
-#### Volumetric image processing
+#### Block processing
 
 #### I/O
 

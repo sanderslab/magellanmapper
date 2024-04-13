@@ -7,7 +7,7 @@
 - Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
 - Available as binary wheel to install without requiring the source code
 - Faster, lighter installation with fewer required dependency packages
-- Extends suppor to Python 3.11
+- Extends suppor to Python 3.11 and defaults to Python 3.9
 - Simpler entry point to launch MagellanMapper: `mm`
 - Supports ITK-Elastix for image registration
 - Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
@@ -16,6 +16,7 @@
 - Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
 - Images can be viewed as RGB (see "ROI > Channels") or merged channels
 - [Jupyter Notebook tutorial](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
+- Fixed installation on Apple Silicon (Mac M-chip) platforms (#634)
 
 ### Changes
 
@@ -27,6 +28,7 @@
 - Removed Conda `environment_light.yml` (no GUI) and OS-specific specs (#187)
 - No-GUI (headless) install is now by default, with a new `gui` install group to include the GUI (#317)
 - Fixed instructions for installing by Pip in ZSH terminals (#485)
+- Fixed installation on Apple Silicon (Mac M-chip) platforms
 
 #### GUI
 
@@ -46,9 +48,9 @@
   - Settings are preserved when redrawing the image (#613)
   - "Merge" option in the ROI panel to merge channels using additive blending (#492, #552)
   - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89, #450, #607)
-  - Synced range of "filtered" ROI and overview images (#613)
+  - Synced intensity range of "filtered" ROI and overview images (#613)
   - Image adjustment channels are radio buttons for easier selection (#212)
-  - Fixed synchronization with image adjustment controls (#142, #576)
+  - Fixed synchronization between images and adjustment controls (#142, #576)
   - Fixed redundant triggers when adjusting the displayed image (#474)
   - Fixed intensity sliders to cover the full range (#572, #576, #606, #613)
 - Images are rotated by dynamic transformation (#214, #471, #505)
@@ -219,7 +221,7 @@
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - The SimpleElastix custom binaries are now built on SimpleITK with Elastix and is no longer a required dependency (#379, #501)
-- ITK-Elastix is now supported for image registration (#501)
+- ITK-Elastix is now supported for image registration (#501, #634)
 - Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)

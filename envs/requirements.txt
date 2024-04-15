@@ -42,7 +42,7 @@ pytz==2024.1
 PyYAML==6.0.1
 requests==2.31.0
 rich==13.7.1
-scikit-image==0.22.0
+scikit-image==0.23.1
 scipy==1.13.0
 six==1.16.0
 tifffile==2024.2.12

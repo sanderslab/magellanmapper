@@ -110,4 +110,4 @@ To try out functions with sample images, download any of these files:
 
 Licensed under the open-source [BSD-3 license](LICENSE.txt)
 
-Author: David Young, 2017, 2023, Stephan Sanders Lab
+Author: David Young, 2017, 2024, Stephan Sanders Lab

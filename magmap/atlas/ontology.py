@@ -344,20 +344,22 @@ class LabelsRef:
         return self
 
 
-def convert_itksnap_to_df(path):
-    """Convert an ITK-SNAP labels description file to a CSV file 
-    compatible with MagellanMapper.
+def convert_itksnap_to_df(path: str):
+    """Convert an ITK-SNAP labels description file to a CSV file.
+    
+    MagellanMapper can read this type of CSV file.
 
     Args:
         path: Path to description file.
 
     Returns:
         Pandas data frame of the description file.
+    
     """
-    # load description file and convert contiguous spaces to separators, 
+    # load description file and convert contiguous spaces to separators,
     # remove comments, and add headers
     df = pd.read_csv(
-        path, sep="\s+", comment="#",
+        path, sep=r"\s+", comment="#",
         names=[e.value for e in config.ItkSnapLabels])
     return df
 

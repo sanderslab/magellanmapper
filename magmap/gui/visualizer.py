@@ -441,16 +441,16 @@ class Visualization(HasTraits):
         tooltip="Colormap for the channel. Start typing to search.")
     _imgadj_color_names = Instance(TraitsList)
     _imgadj_min = Float
-    _imgadj_min_low = Float(0)
-    _imgadj_min_high = Float
+    _imgadj_min_low = Float(0)  # must have val in Python >= 3.10
+    _imgadj_min_high = Float(1)  # must have val > min in Python >= 3.12
     _imgadj_min_auto = Bool
     _imgadj_max = Float
     _imgadj_max_low = Float(0)
-    _imgadj_max_high = Float
+    _imgadj_max_high = Float(1)
     _imgadj_max_auto = Bool
     _imgadj_brightness = Float
     _imgadj_brightness_low = Float(0)
-    _imgadj_brightness_high = Float
+    _imgadj_brightness_high = Float(1)
     _imgadj_contrast = Float
     _imgadj_alpha = Float
     _imgadj_alpha_blend = Float(0.5)

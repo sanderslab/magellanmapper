@@ -14,7 +14,25 @@
 
 MagellanMapper supports several Python setups.
 
-### Install using Conda
+### Quick Install
+
+Install MagellanMapper with its graphical interface and registration tools:
+
+```shell
+pip install "magellanmapper[gui,itk]"
+```
+
+Then launch MagellanMapper:
+
+```shell
+mm
+```
+
+See [below](#dependencies) for supported Python versions and adding install groups.
+
+See our [vignette](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for getting started on MM!
+
+### Full install using Conda
 
 If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment named `mag` (or replace with desired name):
 
@@ -33,7 +51,7 @@ Conda will also install Java, which we use to read proprietary image formats.
 
 The `mm` entry points was added in v1.6.0 to facilitate launching from installed packages.
 
-### Install using Pip
+### Full install using Pip
 
 Install using Pip with Python >= 3.6 (see [Python versions](#python-version-support); Python >= 3.9 and [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
 
@@ -173,7 +191,7 @@ Sometimes a virtual environment update is required for new dependencies.
 | MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
 | 1.7 (planned) | 3.9-3.11 | 3.6-3.8 to be removed |
-| >=1.6b1 | 3.6-3.11 | Defaults to 3.9. GUI support added for 3.10-3.11 in MM 1.6b2. |
+| >=1.6b1 | 3.6-3.11 | Defaults to 3.9. GUI support added for 3.10-3.11 in MM 1.6b2, 3.12 in MM 1.6b5. |
 | 1.6a1-a3 | 3.6-3.9 | GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI |
 | 1.4-1.5 | 3.6-3.9 | No GUI support in 3.9 |
 | < 1.4 | 3.6 | Initial releases |

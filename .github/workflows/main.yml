@@ -41,14 +41,19 @@ jobs:
         include:
           - os: ubuntu-20.04
             python-version: 3.6
+            dependencies: ["pinned", "fresh"]
           - os: macos-13
             python-version: 3.6
+            dependencies: ["pinned", "fresh"]
           - os: macos-13
             python-version: 3.7
+            dependencies: ["pinned", "fresh"]
           - os: macos-13
             python-version: 3.8
+            dependencies: ["pinned", "fresh"]
           - os: macos-13
             python-version: 3.9
+            dependencies: ["pinned", "fresh"]
     
     env:
       # set requirements path based on Python version

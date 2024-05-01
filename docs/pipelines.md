@@ -1,8 +1,12 @@
 # Running Pipelines in MagellanMapper
 
-TODO: update for new pipelines
+## Vignette
+
+See our [vignette](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for examples on using MM.
 
 ## Start a processing pipeline
+
+**Note**: This pipeline script is deprecated. See our vignette above for running similar pipelines.
 
 Automated processing will attempt to scale based on your system resources but may require some manual intervention. This pipeline has been tested on a Macbook Pro laptop and AWS EC2 Linux (RHEL and Amazon Linux based) instances.
 

@@ -65,19 +65,23 @@ def _parse_coords(arg: str, rev: bool = False) -> List[Tuple[int, ...]]:
 
 
 def _parse_none(
-        arg: Any, fn: Optional[Callable] = None) -> Any:
+        arg: Any, fn: Optional[Callable] = None,
+        none: Sequence[str] = ("none", "0")) -> Any:
     """Parse arguments with support for conversion to None.
     
     Args:
         arg: Argument to potentially convert.
         fn: Function to apply to ``arg`` if not converted; defaults to None.
+        none: Sequence of strings to convert to None.
 
     Returns:
         None if ``arg`` is "none" or "0"; otherwise, returns ``fn(arg)`` if
         ``fn`` is given, or ``arg`` unchanged.
 
     """
-    if arg.lower() in ("none", "0"):
+    if not libmag.is_seq(none):
+        none = tuple(none)
+    if arg.lower() in none:
         return None
     return arg if fn is None else fn(arg)
 
@@ -645,11 +649,11 @@ def process_cli_args():
         print("Set plot_2d type to {}".format(config.plot_2d_type))
 
     if args.slice:
-        # specify a generic slice by command-line, assuming same order 
-        # of arguments as for slice built-in function and interpreting 
+        # specify a generic slice by command-line, assuming same order
+        # of arguments as for slice built-in function and interpreting
         # "none" string as None
         config.slice_vals = args.slice.split(",")
-        config.slice_vals = [_parse_none(val.lower(), int)
+        config.slice_vals = [_parse_none(val.lower(), int, "none")
                              for val in config.slice_vals]
         print("Set slice values to {}".format(config.slice_vals))
     if args.delay:
@@ -718,7 +722,7 @@ def process_cli_args():
         print("Set vmins to", config.vmins)
     
     if args.vmax:
-        # specify vmax levels and copy to vmax overview used for plotting 
+        # specify vmax levels and copy to vmax overview used for plotting
         # and updated for normalization
         config.vmaxs = [
             libmag.get_int(val) for val in args.vmax.split(",")]

@@ -623,6 +623,7 @@ def register_duo(
 
     else:
         # perform registration in ITK-Elastix
+        _logger.info("Elastix parameters:\n%s", reg_params)
         elastix_img_filter.SetParameterObject(reg_params)
         elastix_img_filter.SetLogToConsole(config.verbose)
         elastix_img_filter.UpdateLargestPossibleRegion()

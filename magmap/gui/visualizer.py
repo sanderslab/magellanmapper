@@ -2280,11 +2280,11 @@ class Visualization(HasTraits):
 
         # load image if possible without allowing import, deconstructing
         # filename from the selected imported image
-        filename, offset, size, reg_suffixes = importer.deconstruct_img_name(
-            self._filename)
+        filename, offset, size, reg_suffixes, suffix = \
+            importer.deconstruct_img_name(self._filename)
         if filename is not None:
             importer.parse_deconstructed_name(
-                filename, offset, size, reg_suffixes)
+                filename, offset, size, reg_suffixes, suffix)
             np_io.setup_images(
                 config.filename, offset=offset, size=size, allow_import=False,
                 labels_ref_path=self._labels_ref_path)

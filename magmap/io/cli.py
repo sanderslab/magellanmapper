@@ -808,9 +808,10 @@ def setup_image(
 
     """
     # deconstruct user-supplied image filename
-    filename, offset, size, reg_suffixes = importer.deconstruct_img_name(path)
+    filename, offset, size, reg_suffixes, suffix = \
+        importer.deconstruct_img_name(path)
     set_subimg, _ = importer.parse_deconstructed_name(
-        filename, offset, size, reg_suffixes)
+        filename, offset, size, reg_suffixes, suffix)
     
     if not set_subimg:
         # sub-image parameters set in filename takes precedence for

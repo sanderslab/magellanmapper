@@ -1,6 +1,8 @@
 ---
 # 3D blob detection parameters
-# Copy this configuration template to a new file to customize settings
+# Copy this configuration template to a new file to customize settings.
+# For more details on parameters and ranges, see:
+# https://github.com/sanderslab/magellanmapper/blob/master/magmap/settings/roi_prof.py#L72-L97
 
 # many of these settings are used in the method described here:
 # https://scikit-image.org/docs/dev/api/skimage.feature.html#skimage.feature.blob_log
@@ -13,4 +15,23 @@ overlap: 0.5 # blob overlap fraction from 0-1; remove blob if above overlap
 # pixels to exclude along border after blob detection to avoid clumping
 # along image borders
 exclude_border: null # sequence in z,y,x
+
+# Preprocessing
+
+# intensity contrast stretching, from 0-100
+clip_vmin: 5
+clip_vmax: 99.5
+
+# intensity clipping after stretch, from 0-1
+clip_min: 0.2
+clip_max: 1.0
+
+# denoising, typical default is 0.1
+tot_var_denoise: null
+
+# anisotropic resizing factor; setting any value triggers resizing to be
+# isotropic, and the vals given here are multipliers in z,y,x after this
+# isotropic scaling; eg (0.7, 1, 1) rescales the z-axis to be 0.7x isotropic
+isotropic_vis: null
+
 ...

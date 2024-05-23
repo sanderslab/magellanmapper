@@ -646,13 +646,10 @@ class Blobs:
         return cls.shift_blobs(
             blob, cls._get_abs_inds(), np.multiply, factor, True)
 
-    @classmethod
-    def remove_abs_blob_coords(
-            cls, blobs: np.ndarray, remove_extra: bool = False) -> np.ndarray:
+    def remove_abs_blob_coords(self, remove_extra: bool = False) -> np.ndarray:
         """Remove blob absolute coordinate columns.
         
         Args:
-            blobs: 2D array of blobs.
             remove_extra: True to also remove any extra columns not in
                 :attr:`cols_inds`; defaults to False.
 
@@ -660,8 +657,16 @@ class Blobs:
             ``blob`` modified in-place.
 
         """
-        inds = cls._col_inds.values() if remove_extra else slice(blobs.shape[1])
-        return blobs[:, [i for i in inds if i not in cls._get_abs_inds()]]
+        # get indices to keep potentially
+        inds = Blobs._col_inds.values() if remove_extra else slice(
+            self.blobs.shape[1])
+        
+        # remove absolute coordinate indices and update columns
+        inds = [i for i in inds if i not in Blobs._get_abs_inds()]
+        self.cols = [self.cols[i] for i in inds]
+        self.blobs = self.blobs[:, inds]
+        
+        return self.blobs
     
     @classmethod
     def replace_rel_with_abs_blob_coords(cls, blobs: np.ndarray) -> np.ndarray:

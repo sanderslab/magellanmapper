@@ -446,10 +446,12 @@ def detect_blobs_blocks(
     if segments_all is not None:
         # remove the duplicated elements that were used for pruning
         blobs.replace_rel_with_abs_blob_coords(segments_all)
+        blobs.blobs = segments_all
         if coloc:
             colocs = segments_all[:, 10:10+num_chls_roi].astype(np.uint8)
+        
         # remove absolute coordinate and any co-localization columns
-        segments_all = blobs.remove_abs_blob_coords(segments_all, True)
+        segments_all = blobs.remove_abs_blob_coords(True)
         
         # compare detected blobs with truth blobs
         # TODO: assumes ground truth is relative to any ROI offset,

@@ -1,6 +1,6 @@
 appdirs==1.4.4
 bg-atlasapi==1.0.3
-brainglobe_space==1.0.0
+brainglobe_space==1.0.2
 certifi==2024.2.2
 charset-normalizer==3.3.2
 click==8.1.7

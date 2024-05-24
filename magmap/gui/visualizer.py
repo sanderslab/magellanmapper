@@ -589,10 +589,11 @@ class Visualization(HasTraits):
     # label to display a tooltip
     _region_id = Str(
         tooltip="IDs: IDs of labels to navigate to. Add +/- to including both\n"
-                "sides. Separate multiple IDs by commas.\n"
+                "sides. Separate multiple IDs by commas. To also show loaded\n"
+                "blobs, check the blob channels in the \"Detect\" panel.\n\n"
                 "Both sides: include correspondings labels from opposite sides"
                 "\nChildren: include all children of the label\n"
-                "Append: append label IDs; uncheck to navigate to group\n"
+                "Append: append selected region\n"
                 "Show all: show abbreviations for all visible labels")
     _region_options = List
     
@@ -1995,6 +1996,13 @@ class Visualization(HasTraits):
         name = os.path.splitext(os.path.basename(config.filename))[0]
         self._post_3d_display(
             title="label3d_{}".format(name), show_orientation=False)
+        
+        blobs = config.blobs
+        if blobs is not None and self._segs_chls:
+            # show 3D blobs if loaded the any blob channel is checked
+            regions = blobs.get_blob_col(blobs.blobs, blobs.Cols.REGION)
+            blobs_in = blobs.blobs[np.isin(regions, label_id), ]
+            self.detect_blobs(blobs_in)
         
         # turn off stale flag from ROI changes
         self.stale_viewers[vis_handler.ViewerTabs.MAYAVI] = None

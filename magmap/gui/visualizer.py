@@ -2673,16 +2673,21 @@ class Visualization(HasTraits):
         """Detect blobs when triggered by a button."""
         self.detect_blobs()
     
-    def detect_blobs(self, segs=None, blob_matches=None):
+    def detect_blobs(
+            self, segs: Optional[np.ndarray] = None,
+            blob_matches: Optional[
+                Sequence["magmap.cv.colocalizer.BlobMatch"]] = None,
+            add_border: bool = False):
         """Detect blobs within the current ROI.
         
         Args:
-            segs (:obj:`np.ndarray`): Blobs to display, typically loaded
-                from a database. Defaults to None, in which case blobs will
+            segs: Blobs to display, typically loaded from a database.
+                Defaults to None, in which case blobs will
                 be taken from a :attr:`config.blobs` if available or detected
                 directly from the image.
-            blob_matches (List[:obj:`sqlite.BlobMatch`): Sequence of blob
-                matches; defaults to None.
+            blob_matches: Sequence of blob matches.
+            add_border: True to add blobs from border region to ``segs``,
+                detecting these blobs in the intensity image.
 
         """
         if config.image5d is None:
@@ -2710,7 +2715,7 @@ class Visualization(HasTraits):
         
         if not libmag.is_binary(self.roi):
             # preprocess ROI in prep for showing filtered 2D view and blob
-            # detectionsn; include all channels in case of spectral unmixing
+            # detections; include all channels in case of spectral unmixing
             self.roi = plot_3d.saturate_roi(self.roi)
             self.roi = plot_3d.denoise_roi(self.roi)
         else:
@@ -2791,19 +2796,23 @@ class Visualization(HasTraits):
             f"{0 if segs_all is None else len(segs_all)}")
         
         if segs is not None:
-            # segs are typically loaded from DB for a sub-ROI within the
-            # current ROI, so fill in the padding area from segs_all
-            # TODO: remove since blobs from different sources may be confusing?
-            _, segs_in_mask = detector.get_blobs_in_roi(
-                segs_all, np.zeros(3),
-                roi_size, np.multiply(self.border, -1))
-            segs_outside = segs_all[np.logical_not(segs_in_mask)]
-            print("segs_outside:\n{}".format(segs_outside))
+            # set up given blobs, moving from absolute to relative position
             segs[:, :3] = np.subtract(segs[:, :3], offset[::-1])
             blobs_segs = detector.Blobs(segs)
             blobs_segs.format_blobs()
             segs = blobs_segs.blobs_in_channel(blobs_segs.blobs, chls)
-            segs_all = np.concatenate((segs, segs_outside), axis=0)
+            
+            if add_border:
+                # segs are typically loaded from DB for a sub-ROI within the
+                # current ROI, so fill in the border area from segs_all
+                _, segs_in_mask = detector.get_blobs_in_roi(
+                    segs_all, np.zeros(3),
+                    roi_size, np.multiply(self.border, -1))
+                segs_outside = segs_all[np.logical_not(segs_in_mask)]
+                _logger.debug("segs_outside:\n%s", segs_outside)
+                segs_all = np.concatenate((segs, segs_outside), axis=0)
+            else:
+                segs_all = segs
             self.blobs.blobs = segs_all
             
         if segs_all is not None and len(segs_all) > 0:

@@ -2684,7 +2684,7 @@ class Visualization(HasTraits):
     def detect_blobs(
             self, segs: Optional[np.ndarray] = None,
             blob_matches: Optional[
-                Sequence["magmap.cv.colocalizer.BlobMatch"]] = None,
+                Sequence["colocalizer.BlobMatch"]] = None,
             add_border: bool = False):
         """Detect blobs within the current ROI.
         

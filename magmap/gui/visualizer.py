@@ -3575,25 +3575,25 @@ class Visualization(HasTraits):
     
     @on_trait_change("_region_id")
     def _region_id_changed(self):
-        """Center the viewer on the region specified in the corresponding 
+        """Center the viewer on the region specified in the corresponding
         text box.
         
-        :const:``_PREFIX_BOTH_SIDES`` can be given to specify IDs with 
-        both positive and negative values. All other non-integers will 
+        :const:``_PREFIX_BOTH_SIDES`` can be given to specify IDs with
+        both positive and negative values. All other non-integers will
         be ignored.
         """
         print("region ID: {}".format(self._region_id))
         if RegionOptions.APPEND.value in self._region_options:
-            self._roi_feedback = (
+            self._bg_feedback = (
                 "Add more regions, then uncheck \"Append\" to view them")
             return
         
         if config.labels_img is None:
-            self._roi_feedback = "No labels image loaded to find region"
+            self._bg_feedback = "No labels image loaded to find region"
             return
 
         if config.labels_ref is None or config.labels_ref.ref_lookup is None:
-            self._roi_feedback = "No labels reference loaded to find region"
+            self._bg_feedback = "No labels reference loaded to find region"
             return
 
         # user-given region can be a comma-delimited list of region IDs
@@ -3614,7 +3614,7 @@ class Visualization(HasTraits):
                 region_id = int(region_id)
             except ValueError:
                 # return if cannot convert to an integer
-                self._roi_feedback = (
+                self._bg_feedback = (
                     "Region ID must be an integer, or preceded by \"+/-n\" "
                     "to include labels from both sides"
                 )
@@ -3626,7 +3626,7 @@ class Visualization(HasTraits):
             config.labels_scaling, both_sides=both_sides,
             incl_children=incl_chil)
         if centroid is None:
-            self._roi_feedback = (
+            self._bg_feedback = (
                 "Could not find the region corresponding to ID {}"
                 .format(self._region_id))
             return

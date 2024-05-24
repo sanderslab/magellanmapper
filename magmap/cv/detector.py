@@ -65,7 +65,8 @@ class Blobs:
     #: 2: added archive version number
     #: 3: added colocs
     #: 4: added "columns" for column names
-    BLOBS_NP_VER: int = 4
+    #: 5: fixed columns for removal of abs coords
+    BLOBS_NP_VER: int = 5
     
     class Keys(Enum):
         """Numpy archive metadata keys as enumerations."""
@@ -188,7 +189,7 @@ class Blobs:
 
             if self.Keys.VER.value in info:
                 # load archive version number
-                self.basename = info[self.Keys.VER.value]
+                self.ver = info[self.Keys.VER.value]
             
             # set column indices
             if self.Keys.COLS.value in info:
@@ -232,7 +233,17 @@ class Blobs:
                 _logger.info("Loaded %s blobs", len(self.blobs))
                 if config.verbose:
                     self.show_blobs_per_channel(self.blobs)
-            
+        
+        # upgrade metadata
+        if self.ver <= 4:
+            # remove abs coords from column names since the columns but not
+            # their names were removed during detection
+            self.cols = self.cols[:len(self.cols)-3]
+            _logger.info("Updated blobs columns: %s", self.cols)
+        
+        # update version number to latest
+        self.ver = self.BLOBS_NP_VER
+        
         return self
 
     def save_archive(self, to_add=None, update=False):

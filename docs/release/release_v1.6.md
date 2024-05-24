@@ -148,6 +148,7 @@
 - Fixed to store the image path when loading a registered image as the main image, which fixes saving the experiment name used when saving blobs (#139)
 - Fixed parsing some metadata when importing files with Bio-Formats (#502)
 - Fixed `--proc extract` for extracting a slice of multiple planes (#611)
+- Fixed slice arguments such as `--slice "0,3"` to not interpret `0` as `None` (#649)
 
 #### Server pipelines
 
@@ -225,6 +226,7 @@
 - Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)
+- Fixed erro on deprecated Matplotlib colormap access (#649)
 
 #### R Dependency Changes
 

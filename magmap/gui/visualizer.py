@@ -1071,8 +1071,7 @@ class Visualization(HasTraits):
             prefs.roi_styles, Styles2D.SQUARE.value, Styles2D)]
         # self._check_list_2d = [self._DEFAULTS_2D[1]]
         
-        self._check_list_3d = [
-            Vis3dOptions.RAW.value, Vis3dOptions.SURFACE.value]
+        self._check_list_3d = [Vis3dOptions.SURFACE.value]
         if (config.roi_profile["vis_3d"].lower()
                 == Vis3dOptions.SURFACE.value.lower()):
             # check "surface" if set in profile
@@ -3625,19 +3624,18 @@ class Visualization(HasTraits):
             self._img_region, config.resolutions[0])[:2]
 
         if Vis3dOptions.RAW.value in self._check_list_3d:
-            # in "raw" mode, simply center the current ROI on the label
+            # "raw" mode:; simply center the current ROI on the label
             # centroid, which may lie within a sub-label
             curr_roi_size = self.roi_array[0].astype(int)
             corner = np.subtract(
-                centroid, 
+                centroid,
                 np.around(np.divide(curr_roi_size[::-1], 2)).astype(int))
             self.z_offset, self.y_offset, self.x_offset = corner
             self._check_roi_position()
             self.show_3d()
         else:
-            # in non-"raw" mode, show the full label including sub-labels 
-            # without non-label areas; TODO: consider making default or 
-            # only option
+            # non-"raw", label mode: show the full label including sub-labels
+            # without non-label areas
             self.show_label_3d(region_ids)
         # sync with atlas editor to point at center of region
         self.sync_atlas_eds_coords(centroid)

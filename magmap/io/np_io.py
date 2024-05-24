@@ -553,6 +553,14 @@ def setup_images(
             blobs.blobs[:, :4] = ontology.scale_coords(
                 blobs.blobs[:, :4], scaling)
         blobs.scaling = scaling
+        
+        if config.labels_img is not None:
+            # assign blobs to regions
+            coords = blobs.blobs[:, :3]
+            regions = ontology.get_label_ids_from_position(
+                coords.astype(int), config.labels_img)
+            blobs.format_blobs()
+            blobs.set_blob_col(blobs.blobs, blobs.Cols.REGION, regions)
 
 
 def get_num_channels(img: np.ndarray, is_3d: bool = False) -> int:

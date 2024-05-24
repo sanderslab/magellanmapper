@@ -89,7 +89,10 @@ from magmap.plot import colormaps, plot_2d, plot_3d
 from magmap.settings import config, prefs_prof, profiles
 
 if TYPE_CHECKING:
-    from bg_atlasapi import BrainGlobeAtlas
+    try:
+        from brainglobe_atlasapi import BrainGlobeAtlas
+    except ImportError:
+        from bg_atlasapi import BrainGlobeAtlas
     from matplotlib import colors as mpl_colors
     from magmap.plot import plot_support
 

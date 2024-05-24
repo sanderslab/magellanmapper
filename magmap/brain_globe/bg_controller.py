@@ -8,7 +8,10 @@ from magmap.brain_globe import bg_model
 from magmap.io import libmag
 
 if TYPE_CHECKING:
-    from bg_atlasapi import BrainGlobeAtlas
+    try:
+        from brainglobe_atlasapi import BrainGlobeAtlas
+    except ImportError:
+        from bg_atlasapi import BrainGlobeAtlas
 
 
 class SetupAtlasesThread(QtCore.QThread):

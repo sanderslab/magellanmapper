@@ -18,7 +18,10 @@ from magmap.plot import colormaps, plot_3d
 from magmap.settings import config
 
 if TYPE_CHECKING:
-    from bg_atlasapi import BrainGlobeAtlas
+    try:
+        from brainglobe_atlasapi import BrainGlobeAtlas
+    except ImportError:
+        from bg_atlasapi import BrainGlobeAtlas
 
 _logger = config.logger.getChild(__name__)
 

@@ -2725,9 +2725,9 @@ class Visualization(HasTraits):
         # collect segments in ROI and padding region, ensuring coordinates
         # are relative to offset
         colocs = None
+        segs_all = None
         if config.blobs is None or config.blobs.blobs is None:
-            # on-the-fly blob detection, which includes border but not
-            # padding region; already in relative coordinates
+            # on-the-fly blob detection; already in relative coordinates
             roi = self.roi
             if config.roi_profile["thresholding"]:
                 # thresholds prior to blob detection
@@ -2746,9 +2746,10 @@ class Visualization(HasTraits):
                 if matches and len(matches) > 0:
                     # TODO: include all channel combos
                     self.blobs.blob_matches = matches[tuple(matches.keys())[0]]
-        else:
+        
+        elif segs is None or add_border or self._colocalize:
             # get all previously processed blobs in ROI plus additional
-            # padding region to show surrounding blobs
+            # margin for surrounding blobs and any colocalizations
             # TODO: set segs_all to None rather than empty list if no blobs?
             print("Selecting blobs in ROI from loaded blobs")
             segs_all, mask = detector.get_blobs_in_roi(

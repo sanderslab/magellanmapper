@@ -4,7 +4,11 @@ from requests.exceptions import ChunkedEncodingError, ConnectionError
 import shutil
 from typing import Callable, Dict, Optional
 
-from bg_atlasapi import bg_atlas, descriptors, list_atlases
+try:
+    from brainglobe_atlasapi import bg_atlas, descriptors, list_atlases
+except ImportError:
+    # BrainGlobe Atlas API package was renamed in v2
+    from bg_atlasapi import bg_atlas, descriptors, list_atlases
 
 from magmap.settings import config
 

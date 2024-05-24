@@ -81,16 +81,30 @@ class Blobs:
     
     class Cols(Enum):
         """Blob column names."""
+        #: z-coordinate.
         Z = "z"
+        #: y-coordinate.
         Y = "y"
+        #: x-coordinate.
         X = "x"
+        #: Radius.
         RADIUS = "radius"
+        #: Confirmation flag: -1 = unconfirmed, 0 = incorrect, 1 = correct.
         CONFIRMED = "confirmed"
+        #: "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched,
+        #: where a "matched" truth blob is one that has a detected blob within
+        #: a given tolerance.
         TRUTH = "truth"
+        #: Channel.
         CHANNEL = "channel"
+        #: Absolute z-coordinate.
         ABS_Z = "abs_z"
+        #: Absolute y-coordinate.
         ABS_Y = "abs_y"
+        #: Absolute x-coordinate.
         ABS_X = "abs_x"
+        #: Region ID.
+        REGION = "region"
     
     #: Dictionary of column types to column indices in :attr:`blobs`.
     _col_inds: Dict["Cols", int] = {c: i for i, c in enumerate(Cols)}
@@ -307,25 +321,17 @@ class Blobs:
     ) -> np.ndarray:
         """Format blobs with the full set of fields.
          
-        Blobs in MagellanMapper can be assumed to start with ``z, y, x, radius``
-        but should use this class's functions to manipulate other fields to
-        ensure that the correct columns are accessed. This function adds
-        these fields: ``confirmation, truth, channel, abs z, abs y, abs x``.
-
-        "Confirmed" is given as -1 = unconfirmed, 0 = incorrect, 1 = correct.
-
-        "Truth" is given as -1 = not truth, 0 = not matched, 1 = matched, where
-        a "matched" truth blob is one that has a detected blob within a given
-        tolerance.
-
+        Blobs in MagellanMapper can be assumed to start with
+        ``z, y, x, radius``. This function should be called to set up all
+        additional columns so that they are accessed in the correct order.
+        The remaining fields in :class:`Blobs.Cols` will be added.
+        
         Args:
             channel: Channel to set. Defaults to None, in which case the channel
                 will not be updated.
 
         Returns:
-            Blobs array formatted as
-            ``[[z, y, x, radius, confirmation, truth, channel,
-              abs_z, abs_y, abs_x], ...]``.
+            Blobs array formatted as ``[[z, y, x, radius, ...], ...]``.
         
         """
         # target num of cols minus current cols

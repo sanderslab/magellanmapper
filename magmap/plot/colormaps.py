@@ -7,7 +7,7 @@ from enum import Enum, auto
 from typing import Dict, Optional, Sequence, Tuple, Union
 
 import numpy as np
-from matplotlib import cm
+from matplotlib import colormaps
 from matplotlib import colors
 
 from magmap.settings import config
@@ -532,7 +532,7 @@ def get_cmap(
         cmap = config.cmaps[n] if n < len(cmap) else None
     if isinstance(cmap, str):
         # cmap given as a standard Matplotlib colormap name
-        cmap = cm.get_cmap(cmap)
+        cmap = colormaps[cmap]
     elif isinstance(cmap, config.Cmaps):
         # assume default colormaps have been initialized
         cmap = CMAPS[cmap]

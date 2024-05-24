@@ -1,5 +1,5 @@
 # Cell detection methods
-# Author: David Young, 2017, 2020
+# Author: David Young, 2017, 2024
 """Detects features within a 3D image stack.
 
 Prunes duplicates and verifies detections against truth sets.
@@ -353,13 +353,15 @@ class Blobs:
 
     @classmethod
     def get_blob_col(
-            cls, blob: np.ndarray, col: Union[int, Sequence[int]]
+            cls, blob: np.ndarray,
+            col: Union[int, "Blobs.Cols", Sequence[Union[int, "Blobs.Cols"]]]
     ) -> Union[int, float, np.ndarray]:
         """Get the value for the given column of a blob or blobs.
 
         Args:
             blob: 1D blob array or 2D array of blobs.
-            col: Column index in ``blob``.
+            col: Column index in ``blob``. Can also be a column enum or a
+                sequence of indices and/or enums.
 
         Returns:
             Single value if ``blob`` is a single blob or array of values if
@@ -371,6 +373,9 @@ class Blobs:
             # no column indicates that this column has not been set up for the
             # blob, so return None or an empty ndarray
             return np.array([]) if is_multi_d else None
+
+        # convert any column enums to indices
+        col = cls._get_col_as_ind(col)
         
         if is_multi_d:
             return blob[..., col]
@@ -439,6 +444,35 @@ class Blobs:
         ]
     
     @classmethod
+    def _get_col_as_ind(
+            cls,
+            col: Union[int, "Blobs.Cols", Sequence[Union[int, "Blobs.Cols"]]]
+    ) -> Union[int, Sequence[int]]:
+        """Get column enums as indices.
+        
+        Args:
+            col: Column index. Can also be a column enum or a  sequence of
+               indices and/or enums.
+
+        Returns:
+            Column index or sequence of indices.
+
+        """
+        # convert to sequence if not
+        is_seq = libmag.is_seq(col)
+        if not is_seq:
+            col = [col]
+
+        # convert enums to indices
+        col = [cls._col_inds[c] if isinstance(c, cls.Cols) else c for c in col]
+        
+        if not is_seq:
+            # convert back to single value if not originally a sequence
+            col = col[0]
+        
+        return col
+    
+    @classmethod
     def get_blob_abs_coords(cls, blobs: np.ndarray) -> np.ndarray:
         """Get blob absolute coordinates.
         
@@ -454,16 +488,19 @@ class Blobs:
 
     @classmethod
     def set_blob_col(
-            cls, blob: np.ndarray, col: Union[int, Sequence[int]],
+            cls, blob: np.ndarray,
+            col: Union[int, "Blobs.Cols", Sequence[Union[int, "Blobs.Cols"]]],
             val: Union[float, Sequence[float]],
             mask: Union[
-                np.ndarray, np.lib.index_tricks.IndexExpression] = np.s_[:], **kwargs
+                np.ndarray, np.lib.index_tricks.IndexExpression] = np.s_[:],
+            **kwargs
     ) -> np.ndarray:
         """Set the value for the given column of a blob or blobs.
 
         Args:
             blob: 1D blob array or 2D array of blobs.
-            col: Column index in ``blob``.
+            col: Column index in ``blob``. Can also be a column enum or a
+                sequence of indices and/or enums.
             val: New value. If ``blob`` is 2D, can be an array the length
                 of ``blob``.
             mask: Mask for the first axis; defaults to an index expression
@@ -473,6 +510,9 @@ class Blobs:
             ``blob`` after modifications.
 
         """
+        # convert any column enums to indices
+        col = cls._get_col_as_ind(col)
+        
         if blob.ndim > 1:
             # set value for col in last axis, applying mask for first axis
             blob[mask, ..., col] = val

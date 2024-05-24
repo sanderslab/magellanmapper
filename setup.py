@@ -99,7 +99,8 @@ config = {
         "imagecodecs",
         # part of stdlib in Python >= 3.7
         "dataclasses ; python_version < '3.7'",
-        "brainglobe-atlasapi",
+        "brainglobe-atlasapi ; python_version >= '3.9'",
+        "bg-atlasapi ; python_version < '3.9'",
         "typing_extensions",
     ],
     "extras_require": {

@@ -356,7 +356,8 @@ class Vis3D:
             segs_in_mask: np.ndarray,
             cmap: np.ndarray,
             roi_offset: Sequence[int], roi_size: Sequence[int],
-            show_shadows: bool = False, flipz: bool = None
+            show_shadows: bool = False, flipz: bool = None,
+            clear: bool = False
     ) -> Tuple[float, float]:
         """Show 3D blobs as points.
 
@@ -375,6 +376,7 @@ class Vis3D:
             flipz: True to invert blobs along the z-axis to match
                 the handedness of Matplotlib with z progressing upward;
                 defaults to False.
+            clear: Clear existing blobs before showing new ones.
 
         Returns:
             Tuple of:
@@ -388,13 +390,15 @@ class Vis3D:
             return 0, 0
         if roi_offset is None:
             roi_offset = np.zeros(3, dtype=int)
-        if self.blobs3d:
+        if self.blobs3d and clear:
             for blob in self.blobs3d:
                 # remove existing blob glyphs from the pipeline
                 blob.remove()
+            self.blobs3d = []
+        elif not self.blobs3d:
+            self.blobs3d = []
         self.blobs3d_in = None
         self.matches3d = None
-        self.blobs3d = []
         
         settings = config.roi_profile
         # copy blobs with duplicate columns to access original values for

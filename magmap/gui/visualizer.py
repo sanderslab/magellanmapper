@@ -2943,9 +2943,12 @@ class Visualization(HasTraits):
         # get blobs in ROI and display as spheres in Mayavi viewer
         roi_size = self.roi_array[0].astype(int)
         show_shadows = Vis3dOptions.SHADOWS.value in self._check_list_3d
+        clear = (Vis3dOptions.CLEAR.value in self._check_list_3d or
+                 Vis3dOptions.RAW.value in self._check_list_3d)
         scale, mask_size = self._vis3d.show_blobs(
             self.blobs, self.segs_in_mask, self.segs_cmap,
-            self._curr_offset()[::-1], roi_size[::-1], show_shadows, self.flipz)
+            self._curr_offset()[::-1], roi_size[::-1], show_shadows,
+            self.flipz, clear)
         
         # set the max scaling based on the starting value
         self._scale_detections_high = scale * 5

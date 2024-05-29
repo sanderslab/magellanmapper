@@ -43,16 +43,6 @@
 - "Show all" in the Regions section of the ROI panel shows names for all labels (#145)
 - Atlas Editor planes can be reordered or turned off (#180)
 - EXPERIMENTAL: New viewer that displays each blob separately to verify blob classifications (#193)
-- Image adjustment
-  - Select colormaps for each channel (#574)
-  - Settings are preserved when redrawing the image (#613)
-  - "Merge" option in the ROI panel to merge channels using additive blending (#492, #552)
-  - "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89, #450, #607)
-  - Synced intensity range of "filtered" ROI and overview images (#613)
-  - Image adjustment channels are radio buttons for easier selection (#212)
-  - Fixed synchronization between images and adjustment controls (#142, #576)
-  - Fixed redundant triggers when adjusting the displayed image (#474)
-  - Fixed intensity sliders to cover the full range (#572, #576, #606, #613)
 - Images are rotated by dynamic transformation (#214, #471, #505)
 - Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation (#317, #335, #359, #367)
 - Atlas labels adapt better in zoomed images to stay within each plot (#317)
@@ -68,6 +58,25 @@
 - Fixed saving additional, old figures when using the save shortcut (#256)
 - Fixed lag in zoom direction change (#359)
 - Fixed conflict between shortcut to add blob and jumping to ROI plane (`ctrl+click`) by changing the jump shortcut to `j+click` (#456)
+- Fixed atlas messages to show up in the atlas tab
+
+##### 3D visualization
+
+- Cells can be shown for specific atlas regions (#651)
+- Multiple sets of 3D cells can be layered (#651)
+- "Raw" mode is disabled by default when atlas regions are present (#651)
+
+##### Image adjustment
+
+- Select colormaps for each channel (#574)
+- Settings are preserved when redrawing the image (#613)
+- "Merge" option in the ROI panel to merge channels using additive blending (#492, #552)
+- "Blend" option in the image adjustment panel to visualize alignment in overlaid images (#89, #450, #607)
+- Synced intensity range of "filtered" ROI and overview images (#613)
+- Image adjustment channels are radio buttons for easier selection (#212)
+- Fixed synchronization between images and adjustment controls (#142, #576)
+- Fixed redundant triggers when adjusting the displayed image (#474)
+- Fixed intensity sliders to cover the full range (#572, #576, #606, #613)
 
 #### CLI
 
@@ -123,7 +132,7 @@
 - Fixed match-based colocalizations when no matches are found (#117, #120)
 - Fixed slow loading of match-based colocalizations (#119, #123)
 
-#### Block processing
+##### Block processing
 
 - Match-based colocalizations use larger processing blocks to avoid gaps (#120)
 - Voxel density maps no longer require a registered image, or it can be used in place of full-size image metadata (#125, #226)
@@ -195,7 +204,7 @@
 
 #### Code base and docs
 
-- Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133)
+- Blob column accessors are encapsulated in the `Blobs` class, which allows for flexibility in column inclusion and order (#133, #651)
 - Settings profiles are being migrated from dictionaries to data classes to document and configure settings more easily (#138)
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122)
 - Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225, #563)

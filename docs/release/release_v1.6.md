@@ -210,7 +210,7 @@
 - Python 3.9 is the default version now that Python 3.6 has reached End-of-Life, and NumPy no longer supports Python 3.8 (#559, #563)
 - Python 3.6-8 have been deprecated for removal in MM v1.7 and have separate pinned dependencies (`envs/requirements_py3<n>`) (#232, #379)
 - Custom dependency binaries are now built for Python 3.8-3.11 (#379)
-- The BrainGlobe Atlas API package (`bg-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75, #443, #498)
+- The BrainGlobe Atlas API package (`brainglobe-atlasapi`) dependency has been added to access a suite of cloud-based atlases (#75, #443, #498, #650)
 - The `dataclasses` backport is installed for Python < 3.7
 - `Tifffile` is now a direct dependency, previously already installed as a sub-dependency of other required packages
 - `Imagecodecs` is optional for `tifffile` but required for its uses here as of `tifffile v2022.7.28` and thus added as a dependency (#153)

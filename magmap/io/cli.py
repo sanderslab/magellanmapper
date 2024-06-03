@@ -25,6 +25,7 @@ https://github.com/sanderslab/magellanmapper/blob/master/docs/cli.md
 
 import argparse
 import dataclasses
+import pprint
 from enum import Enum
 import logging
 import os
@@ -789,11 +790,11 @@ def process_cli_args():
               .format(mode, config.truth_db_mode))
     
     # notify user of full args list, including unrecognized args
-    _logger.debug(f"All command-line arguments: {sys.argv}")
+    _logger.info(f"All command-line arguments:\n{pprint.pformat(sys.argv)}")
     if args_unknown:
         _logger.info(
             f"The following command-line arguments were unrecognized and "
-            f"ignored: {args_unknown}")
+            f"ignored:\n{pprint.pformat(args_unknown)}")
 
 
 def setup_image(

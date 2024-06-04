@@ -101,8 +101,14 @@ def export_region_ids(
     df = df_io.dict_to_data_frame(data, path_csv)
     
     if rgbs is not None:
-        # color cells in RGB column
-        df = df.style.apply(color_cells, subset="RGB")
+        try:
+            # color cells in RGB column
+            df = df.style.apply(color_cells, subset="RGB")
+        except ImportError:
+            _logger.warn(
+                "Skipping RGB coloring. %s",
+                config.format_import_err(
+                    "Jinja2", task="coloring table cells"))
     
     path_xlsx = "{}.xlsx".format(os.path.splitext(path)[0])
     try:
@@ -110,8 +116,10 @@ def export_region_ids(
         df.to_excel(path_xlsx)
         _logger.info("Exported regions to styled spreadsheet: %s", path_xlsx)
     except ModuleNotFoundError:
-        raise ModuleNotFoundError(
-            config.format_import_err("openpyxl", task="formatting Excel files"))
+        _logger.warn(
+            "Skipping Excel export. %s",
+            config.format_import_err(
+                "openpyxl", task="formatting Excel files"))
     
     return df
 

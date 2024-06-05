@@ -20,7 +20,7 @@ import pandas as pd
 
 from magmap.io import libmag
 from magmap.io import np_io
-from magmap.atlas import ontology
+from magmap.atlas import labels_meta, ontology
 from magmap.cv import chunking, colocalizer, cv_nd, detector
 from magmap.io import df_io, sitk_io, sqlite
 from magmap.plot import colormaps
@@ -496,7 +496,12 @@ def make_labels_level_img(
 ) -> Dict[str, "sitk.Image"]:
     """Replace labels in an image with their parents at the given level.
     
+    Parents will be determined from the labels ontology file, which will be
+    loaded from the image's labels metadata if available. This file can also
+    be set in :config:`load_labels`.
     Labels that do not fall within a parent at that level will remain in place.
+    
+    Also generates edge images.
     
     Args:
         img_path: Path to the base image from which the corresponding
@@ -521,18 +526,27 @@ def make_labels_level_img(
         # use the globally set up image stored in config
         labels_sitk = config.labels_img_sitk
         ref = config.labels_ref
+        
     else:
-        # load original labels image and setup ontology dictionary
+        # load original labels image
         labels_sitk = sitk_io.load_registered_img(
             img_path, config.RegNames.IMG_LABELS.value, get_sitk=True)
-        ref = ontology.LabelsRef(config.load_labels).load()
-    labels_np = sitk_io.convert_img(labels_sitk)
+        
+        # set up ontology dict
+        path_ref = config.load_labels
+        if path_ref is None:
+            # find ontology path from labels metadata
+            lbls_meta = labels_meta.LabelsMeta(img_path).load()
+            path_ref = lbls_meta.path_ref
+        ref = ontology.LabelsRef(path_ref).load()
     
     # remap labels to given level
+    labels_np = sitk_io.convert_img(labels_sitk)
     labels_np = ontology.make_labels_level(labels_np, ref, level)
     labels_level_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_np)
     
     # generate an edge image at this level
+    # TODO: consider moving into separate function
     labels_edge = vols.LabelToEdge.make_labels_edge(labels_np)
     labels_edge_sitk = sitk_io.replace_sitk_with_numpy(labels_sitk, labels_edge)
     

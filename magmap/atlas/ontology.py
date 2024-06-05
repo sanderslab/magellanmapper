@@ -7,7 +7,7 @@ import os
 from collections import OrderedDict
 from enum import Enum
 import json
-from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -455,6 +455,50 @@ def get_children_from_id(labels_ref_lookup, label_id, incl_parent=True,
         region_ids = _mirror_label_ids(region_ids)
     #print("region IDs: {}".format(region_ids))
     return region_ids
+
+
+def get_children_from_id_df(
+        df: pd.DataFrame,
+        label_id: Union[int, Sequence[int]],
+        label_col: str,
+        parent_col: str,
+        incl_parent: bool = True,
+        ids: Optional[List[int]] = None
+) -> List[int]:
+    """Get the children of a given atlas ID from a data frame.
+    
+    Args:
+        df: Data frame, which must include a column of label IDs and another
+            column of the immediate parent ID for each label.
+        label_id: ID or sequence of IDs whose children will be returned.
+        label_col: Name of label ID column.
+        parent_col: Name of immediate parent ID column.
+        incl_parent: True to include ``label_ids`` in the output.
+        ids: List of children, only for recursion.
+
+    Returns:
+        List of children, including parent(s) unless ``incl_parent`` is False.
+
+    """
+    if not libmag.is_seq(label_id):
+        # convert to sequence of IDs
+        label_id = [label_id]
+    
+    # get all immediate children, assuming parent col contains immediate parents
+    children = df.loc[df[parent_col].isin(label_id), label_col]
+    children = children.unique().tolist()
+    
+    if ids is None:
+        # initialize output
+        ids = label_id if incl_parent else []
+    
+    if len(children) > 0:
+        # recursively get children of children
+        ids.extend(children)
+        return get_children_from_id_df(
+            df, children, label_col, parent_col, incl_parent, ids)
+    
+    return ids
 
 
 def labels_to_parent(labels_ref_lookup, level=None,

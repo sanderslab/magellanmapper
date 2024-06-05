@@ -398,8 +398,8 @@ class PlotEditor:
             self.vline.set_visible(show)
             if show:
                 # update positions of current crosshairs
-                self.hline.set_ydata(coord[1])
-                self.vline.set_xdata(coord[2])
+                self.hline.set_ydata([coord[1]])
+                self.vline.set_xdata([coord[2]])
     
     def set_show_label(self, val):
         """Set whether to show labels on hover.

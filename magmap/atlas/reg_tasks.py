@@ -66,6 +66,6 @@ def build_labels_diff_images(paths: Optional[Sequence[str]] = None):
         
         # generate difference image
         col_wt = vols.get_metric_weight_col(metric)
-        export_regions.make_labels_diff_img(
+        export_regions.map_metric_to_labels_img(
             config.filename, path_df, col_meas, None, config.prefix, 
             config.show, config.labels_level, metric, col_wt)

@@ -2466,7 +2466,7 @@ def main():
         ]
         for metric in metrics:
             col_wt = vols.get_metric_weight_col(metric[0])
-            export_regions.make_labels_diff_img(
+            export_regions.map_metric_to_labels_img(
                 config.filename, path_df, *metric, config.prefix, config.show,
                 config.labels_level, col_wt=col_wt)
 

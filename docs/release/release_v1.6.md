@@ -235,7 +235,7 @@
 - Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)
-- Fixed erro on deprecated Matplotlib colormap access (#649)
+- Fixed for deprecations through Matplotlib v3.9 (#649, #657)
 
 #### R Dependency Changes
 

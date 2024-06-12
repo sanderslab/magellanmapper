@@ -86,6 +86,7 @@
 - Density/heat maps can be specified through `--reg_suffixes density=<suffix>` (#129)
 - Write point files for corresponding-point-based registration (#195)
 - Quieter console output by default (#335)
+- CLI arguments are logged by default (#658)
 - Fixed to only remove the final extension from image paths, and paths given by the `--prefix <path>` CLI argument do not undergo any stripping (#115)
 
 #### Atlas refinement
@@ -104,6 +105,7 @@
   - `ITK-Elastix` support has been added as an alternative to `SimpleITK` (#495, #500, #504)
   - Both libraries are now optional rather than required dependencies (#497)
   - Better support for image direction metadata (#497)
+- Easier to map stats like cell metrics to labels (#658)
 - Fixed changes to large label IDs during registration (#303)
 
 #### Cell detection

@@ -51,5 +51,5 @@ traitsui==8.0.0
 treelib==1.7.0
 typing_extensions==4.11.0
 tzdata==2024.1
-urllib3==2.2.1
+urllib3==2.2.2
 zipp==3.18.1

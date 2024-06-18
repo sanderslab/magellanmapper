@@ -16,6 +16,12 @@ import pprint
 from typing import Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+try:
+    # np >= v2
+    from numpy.lib._index_tricks_impl import IndexExpression
+except ModuleNotFoundError:
+    # np < v2
+    from numpy.lib.index_tricks import IndexExpression
 from skimage.feature import blob_log
 
 from magmap.cv import colocalizer, cv_nd
@@ -497,8 +503,7 @@ class Blobs:
             cls, blob: np.ndarray,
             col: Union[int, "Blobs.Cols", Sequence[Union[int, "Blobs.Cols"]]],
             val: Union[float, Sequence[float]],
-            mask: Union[
-                np.ndarray, np.lib.index_tricks.IndexExpression] = np.s_[:],
+            mask: Union[np.ndarray, IndexExpression] = np.s_[:],
             **kwargs
     ) -> np.ndarray:
         """Set the value for the given column of a blob or blobs.

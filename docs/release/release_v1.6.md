@@ -238,6 +238,7 @@
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)
 - Fixed for deprecations through Matplotlib v3.9 (#649, #657)
+- Fixed for NumPy v2 (#661)
 
 #### R Dependency Changes
 

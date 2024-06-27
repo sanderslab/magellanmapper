@@ -482,7 +482,8 @@ def make_binary_cmap(binary_colors):
 
 
 def setup_labels_cmap(
-        labels_img: np.ndarray, binary_colors: Optional[Sequence[str]] = None,
+        labels_img: Optional[np.ndarray],
+        binary_colors: Optional[Sequence[str]] = None,
         **kwargs) -> "DiscreteColormap":
     """Wrapper to set up a colormap for a labels image.
     

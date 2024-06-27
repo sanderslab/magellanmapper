@@ -77,11 +77,16 @@ def export_region_ids(
     data = OrderedDict()
     label_ids = sitk_io.find_atlas_labels(
         config.load_labels, drawn_labels_only, labels_ref_lookup)
-    cm = colormaps.get_labels_discrete_colormap(None, 0, use_orig_labels=True)
     
-    # prep RGB values for labels, only available if showing drawn labels
+    # set up label image colormap for RGB values using original labels,
+    # which are only available if showing drawn labels; use same settings
+    # as in image setup, including duplicate set of colors for neg values
+    # since the color randomization depends on the exact number of colors
+    cm = colormaps.setup_labels_cmap(None, use_orig_labels=True)
     rgbs = cm.cmap_labels
     if rgbs is not None:
+        # remove colors for duplicated labels, keeping second half
+        rgbs = rgbs[len(rgbs)//2:]
         cols.append("RGB")
     
     for i, key in enumerate(label_ids):

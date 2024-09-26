@@ -17,7 +17,7 @@ itk-core==5.4rc3
 itk-elastix==0.19.2
 itk-filtering==5.4rc3
 itk-io==5.4rc3
-itk-numerics==5.4rc3
+itk-numerics==5.4.0
 itk-registration==5.4rc3
 itk-segmentation==5.4rc3
 kiwisolver==1.4.5

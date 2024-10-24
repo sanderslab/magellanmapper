@@ -93,7 +93,8 @@
 
 - The atlas transformer (`atlas_refiner.transpose_img`) provides a more comprehensive set of typical transformations before atlas refinement or registration, such as rotation to any angle, flipping along any axis, and resizing (#195, #214)
 - Edge/perimeter thickness can be customized (#307)
-- Fixed groupwise registration for current atlas profiles, turned off default cropping (#444)
+- Fixed groupwise registration for current atlas profiles, turned off default cropping (#444)i
+- Fixed exporting regions' RGB values (#675)
 
 #### Atlas registration
 
@@ -238,7 +239,7 @@
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)
 - Fixed for deprecations through Matplotlib v3.9 (#649, #657)
-- Fixed for NumPy v2 (#661)
+- Fixed for NumPy v2 (#661, #675)
 
 #### R Dependency Changes
 

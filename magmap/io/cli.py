@@ -81,7 +81,7 @@ def _parse_none(
 
     """
     if not libmag.is_seq(none):
-        none = tuple(none)
+        none = [none]
     if arg.lower() in none:
         return None
     return arg if fn is None else fn(arg)

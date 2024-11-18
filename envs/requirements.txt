@@ -15,7 +15,7 @@ importlib_resources==6.4.0
 itk==5.4rc3
 itk-core==5.4rc3
 itk-elastix==0.19.2
-itk-filtering==5.4rc3
+itk-filtering==6.0a1
 itk-io==5.4rc3
 itk-numerics==5.4rc3
 itk-registration==5.4rc3

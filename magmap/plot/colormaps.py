@@ -122,12 +122,13 @@ class DiscreteColormap(colors.ListedColormap):
         if labels is None: return
         labels_unique = np.unique(labels)
         if dup_for_neg and np.sum(labels_unique < 0) == 0:
-            # for labels that are only >= 0, duplicate the pos portion
-            # as neg so that images with or without negs use the same colors
+            # for multiple labels whose values are only >= 0, make identical
+            # neg vals so that images with or without negs use the same colors
             lbls = np.array(labels_unique[labels_unique > 0][::-1])
-            labels_unique = np.append(
-                -1 * lbls.astype(libmag.dtype_within_range(
-                    min(lbls), max(lbls), signed=True)), labels_unique)
+            if lbls.size > 0:
+                labels_unique = np.append(
+                    -1 * lbls.astype(libmag.dtype_within_range(
+                        min(lbls), max(lbls), signed=True)), labels_unique)
         num_colors = len(labels_unique)
 
         labels_offset = 0

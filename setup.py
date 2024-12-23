@@ -63,7 +63,7 @@ _EXTRAS_SIMPLEITK = [
 #: `itk` not included since it does not load properly when installed with rest
 #: of dependencies. `itk-elastix` also installs a later `itk` version.
 _EXTRAS_ITK = [
-    "itk-elastix",
+    "itk-elastix==0.20",
 ]
 
 

@@ -61,7 +61,7 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt-get update
-          sudo apt-get install libsm6 libgl1-mesa-glx
+          sudo apt-get install libsm6 libgl1 libglx-mesa0
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:

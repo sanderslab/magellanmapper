@@ -212,7 +212,7 @@
 - Jupyter Notebook as a tutorial for running various tasks in the CLI (#122, #659)
 - Documentation is now [hosted on ReadTheDocs](https://magellanmapper.readthedocs.io/en/latest/index.html), using the Furo theme (#225, #563)
 - Default arguments are documented in API auto-docs (#485)
-- Expand continuous integration testing to both pinned and fresh dependencies across Python 3.6-3.12 (#75, #101, #252, #342, #538, #640)
+- Expand continuous integration testing to both pinned and fresh dependencies across Python 3.6-3.12 (#75, #101, #252, #342, #538, #640, #682)
 
 ### Dependency Updates
 
@@ -234,7 +234,7 @@
 - The `jupyter` install group installs packages for running the Jupyter sample commands notebook in a Bash kernel (#122)
 - Missing dependencies are starting to use more consistent error messages and instructions (#226)
 - The SimpleElastix custom binaries are now built on SimpleITK with Elastix and is no longer a required dependency (#379, #501)
-- ITK-Elastix is now supported for image registration (#501, #634)
+- ITK-Elastix is now supported for image registration (#501, #634, #682)
 - Supports TraitsUI v8 (#510)
 - Fixed error on deprecated NumPy data type aliases (#364)
 - Fixed `qt4 backend` error by avoiding PyQt v5.15.8 (#431)

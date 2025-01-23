@@ -2,7 +2,7 @@ appdirs==1.4.4
 brainglobe-atlasapi==2.0.6
 brainglobe_space==1.0.2
 certifi==2024.12.14
-charset-normalizer==3.4.0
+charset-normalizer==3.4.1
 click==8.1.8
 colorama==0.4.6
 contourpy==1.3.0

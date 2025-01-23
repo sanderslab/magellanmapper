@@ -17,4 +17,4 @@ updates:
       - dependency-name: "python-bioformats"
       - dependency-name: "javabridge"
       - dependency-name: "SimpleITK"
-open-pull-requests-limit: 10
+    open-pull-requests-limit: 10

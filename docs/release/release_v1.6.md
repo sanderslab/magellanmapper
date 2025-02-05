@@ -4,19 +4,21 @@
 
 ### Highlights
 
-- Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
-- Available as binary wheel to install without requiring the source code
-- Faster, lighter installation with fewer required dependency packages
-- Extends support to Python 3.12 and defaults to Python 3.9
-- Simpler entry point to launch MagellanMapper: `mm`
-- Supports ITK-Elastix for image registration
-- Atlases can be downloaded directly through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
-- Atlas regions can be searched (see "Atlases > Region")
-- Atlas Editor planes can be reordered or turned off
-- Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
-- Images can be viewed as RGB (see "ROI > Channels") or merged channels
-- [Jupyter Notebook tutorial](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
-- Fixed installation on Apple Silicon (Mac M-chip) platforms (#634)
+- **Atlas navigation**
+  - Smoother, faster interactions with main plots, including atlas label name display, label editing, and pan and zoom navigation
+  - Atlas regions can be searched (see "Atlases > Region")
+  - Atlas Editor orthogonal planes can be reordered or turned off
+  - Detection channels can be selected independently of the loaded image to overlay prior detections or compare channels (see "Detect > Chl")
+  - Images can be viewed as RGB (see "ROI > Channels") or merged channels
+  - New atlases can be downloaded through [`BrainGlobe`](https://github.com/brainglobe/bg-atlasapi) (see the new "Atlases" panel)
+- **Installation simplification**
+  - Simpler entry point to launch MagellanMapper: `mm`
+  - Available as binary wheel to install without requiring the source code
+  - Faster, lighter installation with fewer required dependency packages
+  - Extends support to Python 3.12 and defaults to Python 3.9 (**note**: this is the last release to officially support Python 3.6-3.9)
+  - Supports ITK-Elastix for image registration
+  - Fixed installation on Apple Silicon (Mac M-chip) platforms (#634)
+- **Tutorial**: [Jupyter Notebook](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for running common tasks
 
 ### Changes
 
@@ -162,8 +164,6 @@
 - Fixed `--proc extract` for extracting a slice of multiple planes (#611)
 - Fixed slice arguments such as `--slice "0,3"` to not interpret `0` as `None` (#649)
 
-#### Server pipelines
-
 #### Python stats and plots
 
 - Generate swarm and category plots in Seaborn (#137, #253, #612)
@@ -244,5 +244,3 @@
 #### R Dependency Changes
 
 - `effectsize` is a suggested dependency for Cohen's d, used in t-tests (#135)
-
-#### Server dependency Changes

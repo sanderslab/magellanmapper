@@ -80,7 +80,7 @@ config = {
     "version": "1.7a1",
     "packages": setuptools.find_packages(),
     "scripts": [],
-    "python_requires": ">=3.6",
+    "python_requires": ">=3.10",
     "entry_points": {
         # gui_scripts doesn't load because of TraitsUI issue #1032
         "console_scripts": ["mm = magmap.io.load_env:launch_magmap"],

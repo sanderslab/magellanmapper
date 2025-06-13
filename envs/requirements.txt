@@ -12,7 +12,7 @@ idna==3.10
 imagecodecs==2024.9.22
 imageio==2.36.1
 importlib_metadata==8.5.0
-importlib_resources==6.4.5
+importlib_resources==6.5.2
 itk==5.4.0
 itk-core==5.4.0
 itk-elastix==0.20.0

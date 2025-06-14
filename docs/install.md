@@ -190,7 +190,7 @@ Sometimes a virtual environment update is required for new dependencies.
 
 | MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
-| 1.7 (planned) | 3.9-3.11 | 3.6-3.8 to be removed |
+| 1.7a1 | 3.10-3.13 | Defaults to 3.10. 3.6-3.9 support removed. |
 | >=1.6b1 | 3.6-3.11 | Defaults to 3.9. GUI support added for 3.10-3.11 in MM 1.6b2, 3.12 in MM 1.6b5. |
 | 1.6a1-a3 | 3.6-3.9 | GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI |
 | 1.4-1.5 | 3.6-3.9 | No GUI support in 3.9 |
@@ -201,10 +201,10 @@ As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without
 ### Pinned packages
 
 We've provided a few sets of pinned dependency versions:
-- Python >= 3.9: `envs/requirements.txt`
-- Python 3.8: `envs/requirements_py38`
-- Python 3.7: `envs/requirements_py37`
-- Python 3.6: `envs/requirements_py36`
+- Python >= 3.10: `envs/requirements.txt`
+- Python 3.8 (deprecated): `envs/requirements_py38`
+- Python 3.7 (deprecated): `envs/requirements_py37`
+- Python 3.6 (deprecated): `envs/requirements_py36`
 
 These package versions are used for automated testing (continuous integration).
 
@@ -245,7 +245,7 @@ In most cases MagellanMapper can be installed without a compiler by using custom
 |-----|-----|-----|-----|-----|
 | Python-Javabridge | Precompiled with later updates than current release | Python 3.6-3.11, Java 8+ | JDK, C compiler| For Python-Bioformats |
 | Python-Bioformats | Extended support for older NumPy releases | Python 3.6+ | JDK, C compiler | Import proprietary image formats |
-| SimpleITK with Elastix | Yes, via custom package. Replaced by ITK-Elastix in MM v1.6b2. | Python 3.6-3.11 | C, C++ compilers | Load medical 3D formats, image regsitration |
+| SimpleITK with Elastix | Precompiled with Elastix support. **Deprecated**: Defaults to ITK-Elastix in MM v1.6b2. | Python 3.6-3.11 | C, C++ compilers | Load medical 3D formats, image regsitration |
 
 C compilers by platform:
 
@@ -268,6 +268,8 @@ Java versions:
 - MeshLab for 3D surface clean-up
 
 ### SimpleITK with Elastix dependency
+
+**Deprecated**: As of MM v1.6b2, ITK-Elastix will be installed instead. SimpleITK is still supported but no longer the default, and custom binaries are no longer generated.
 
 SimpleITK with Elastix is used for loading many 3D image formats (eg `.mhd/.raw` and `.nii`) and registration tasks in MagellanMapper. The library in the standard [PyPi](https://pypi.org/) is not currently built with Elastix support. As the buid process is not trivial, we have uploaded binaries to a [third-party PyPi server](https://pypi.fury.io/dd8/). On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022) is required to run this package.
 

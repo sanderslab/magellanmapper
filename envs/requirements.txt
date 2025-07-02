@@ -32,7 +32,7 @@ pandas==2.3.0
 pillow==11.3.0
 pyarrow==20.0.0
 pyface==8.0.0
-Pygments==2.19.1
+Pygments==2.19.2
 pyparsing==3.2.3
 PyQt5==5.15.11
 PyQt5-Qt5==5.15.17 ; sys_platform == "darwin"

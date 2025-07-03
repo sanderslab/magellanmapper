@@ -11,7 +11,7 @@ fonttools==4.58.2
 idna==3.10
 imagecodecs==2025.3.30
 imageio==2.37.0
-itk==5.4.3
+itk==5.4.4.post1
 itk-core==5.4.3
 itk-elastix==0.20.0
 itk-filtering==5.4.3

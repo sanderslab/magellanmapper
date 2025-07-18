@@ -50,7 +50,7 @@ six==1.17.0
 tifffile==2025.5.10
 traits==7.0.2
 traitsui==8.0.0
-treelib==1.7.1
+treelib==1.8.0
 typing_extensions==4.14.0
 tzdata==2025.2
 urllib3==2.5.0

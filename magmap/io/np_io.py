@@ -687,6 +687,22 @@ def read_tif(
     img5d.img = tif_memmap
     img5d.path_img = path
     img5d.img_io = config.LoadIO.TIFFFILE
+
+    # save image5d metadata to file
+    filename_image5d, filename_meta = importer.make_filenames(
+        libmag.splitext(path)[0], keep_ext=True)
+    importer.save_image_info(
+        filename_meta, [os.path.basename(path)], [tif_memmap.shape],
+        md[config.MetaKeys.RESOLUTIONS],
+        md[config.MetaKeys.MAGNIFICATION],
+        md[config.MetaKeys.ZOOM], [0.], [0.])
+    
+    # save image5d to an NPY file using memory mapping
+    image5d = np.lib.format.open_memmap(
+        filename_image5d, mode="w+", dtype=tif_memmap.dtype,
+        shape=tif_memmap.shape)
+    image5d[:] = tif_memmap[:]
+    image5d.flush()
     
     return img5d, md
 

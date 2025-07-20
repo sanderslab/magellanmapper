@@ -583,7 +583,7 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
                 print("bounds for plane {}: {}, {}".format(i, low, high))
                 lows.append(low)
                 highs.append(high)
-            near_mins, near_maxs = _calc_near_intensity_bounds(
+            near_mins, near_maxs = calc_near_intensity_bounds(
                 near_mins, near_maxs, lows, highs)
         info["near_min"] = near_mins
         info["near_max"] = near_maxs
@@ -1148,7 +1148,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                 print("Multiple channels imported per plane, will assume "
                       "all channels are imported and end channel import")
                 break
-            near_mins, near_maxs = _calc_near_intensity_bounds(
+            near_mins, near_maxs = calc_near_intensity_bounds(
                 near_mins, near_maxs, lows, highs)
             chli += 1
         if rdr is not None:
@@ -1405,7 +1405,16 @@ def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):
     return lows, highs
 
 
-def _calc_near_intensity_bounds(near_mins, near_maxs, lows, highs):
+def calc_near_intensity_bounds(near_mins, near_maxs, lows, highs):
+    """Calculate near min/max intensity values from lists of low/high values.
+    
+    Args:
+        near_mins: List of near min values.
+        near_maxs: List of near max values.
+        lows: List of low values for each channel.
+        highs: List of high values for each channel.
+    
+    """
     # get the extremes from lists of near-min/max vals
     if lows:
         num_channels = len(lows[0])

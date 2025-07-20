@@ -6,6 +6,7 @@ import os
 import pathlib
 import pprint
 import re
+from time import time
 from typing import Any, Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
 import numpy as np
@@ -692,27 +693,66 @@ def read_tif(
     img5d.img_io = config.LoadIO.TIFFFILE
 
     if config.savefig and config.savefig.lower() == "npy":
-        # save image5d metadata to file
-        filename_image5d, filename_meta = importer.make_filenames(
-            libmag.splitext(path)[0], keep_ext=True)
-        _logger.info(
-            "Saving image metadata to '%s' and image to '%s'...",
-            filename_meta, filename_image5d)
-        importer.save_image_info(
-            filename_meta, [os.path.basename(path)], [tif_memmap.shape],
-            md[config.MetaKeys.RESOLUTIONS],
-            md[config.MetaKeys.MAGNIFICATION],
-            md[config.MetaKeys.ZOOM], [0.], [0.])
-        
-        # save image5d to an NPY file using memory mapping
-        image5d = np.lib.format.open_memmap(
-            filename_image5d, mode="w+", dtype=tif_memmap.dtype,
-            shape=tif_memmap.shape)
-        image5d[:] = tif_memmap[:]
-        image5d.flush()
-        _logger.info("...saved image")
+        write_npy(tif_memmap, md, path)
     
     return img5d, md
+
+
+def write_npy(
+        image5d: np.ndarray, md: Dict[Union[str, config.MetaKeys], Any],
+        path: Union[str, pathlib.Path], find_near_bounds: bool = True):
+    """Write a NumPy array to NPY file.
+    
+    Args:
+        image5d: NumPy array in ``t, z, y, x, c`` dimension order.
+        md: Metadata dictionary with keys such as
+            :attr:`magmap.settings.config.MetaKeys.RESOLUTIONS`.
+        path: Base output path.
+        find_near_bounds: True to find near min/max bounds for each channel.
+    
+    """
+    
+    # set up filenames for NPY and metadata files
+    time_start = time()
+    filename_image5d, filename_meta = importer.make_filenames(
+        libmag.splitext(path)[0], keep_ext=True)
+    _logger.info(
+        "Saving image metadata to '%s' and image to '%s'...",
+        filename_meta, filename_image5d)
+    
+    near_mins = []
+    near_maxs = []
+    if find_near_bounds:
+        # find near min/max bounds for each channel
+        lows = []
+        highs = []
+        for img in image5d[0]:
+            # near max/min bounds per channel for the given plane
+            low, high = importer.calc_intensity_bounds(img, dim_channel=2)
+            lows.append(low)
+            highs.append(high)
+        near_mins, near_maxs = importer.calc_near_intensity_bounds(
+            near_mins, near_maxs, lows, highs)
+    else:
+        near_mins.append(0.)
+        near_maxs.append(0.)
+    
+    # save image5d metadata to file
+    importer.save_image_info(
+        filename_meta, [os.path.basename(path)], [image5d.shape],
+        md[config.MetaKeys.RESOLUTIONS],
+        md[config.MetaKeys.MAGNIFICATION],
+        md[config.MetaKeys.ZOOM],
+        near_mins, near_maxs)
+    
+    # save image5d to an NPY file using memory mapping
+    img_mmap = np.lib.format.open_memmap(
+        filename_image5d, mode="w+", dtype=image5d.dtype,
+        shape=image5d.shape)
+    img_mmap[:] = image5d[:]
+    img_mmap.flush()
+    _logger.info("...saved image")
+    _logger.info("file save time: {}".format(time() - time_start))
 
 
 def write_tif(

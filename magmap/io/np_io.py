@@ -648,10 +648,15 @@ def read_tif(
                     nrot = int(rotate.group().split("=")[1]) // -90
                     
         for i, name in enumerate(("YResolution", "XResolution")):
-            # parse x/y-resolution from standard TIF metadata
-            axis_res = tif.pages[0].tags[name].value
-            if axis_res and len(axis_res) > 1 and axis_res[0]:
-                res[0, i + 1] = axis_res[1] / axis_res[0]
+            try:
+                # parse x/y-resolution from standard TIF metadata
+                axis_res = tif.pages[0].tags[name].value
+                if axis_res and len(axis_res) > 1 and axis_res[0]:
+                    res[0, i + 1] = axis_res[1] / axis_res[0]
+            except KeyError:
+                # no resolution found, default to 1
+                _logger.info(
+                    "No %s tag found in TIF metadata, defaulting to 1", name)
     md[config.MetaKeys.RESOLUTIONS] = res
     
     # load TIFF by memory mapping

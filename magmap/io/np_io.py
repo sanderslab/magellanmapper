@@ -602,6 +602,8 @@ def read_tif(
         path: str, img5d: Image5d = None
 ) -> Tuple[Image5d, Dict[config.MetaKeys, Any]]:
     """Read TIF files with Tifffile with lazy access through memory mapping.
+
+    Save this file to NPY format if :attr:`config.savefig` is set to "npy".
     
     Args:
         path: Path to file.
@@ -678,6 +680,7 @@ def read_tif(
         # TODO: check scenarios requiring flipping
         tif_memmap = cv_nd.rotate90(tif_memmap, nrot, (2, 3), ndim >= 5)
         tif_memmap = tif_memmap[:, :, :, ::-1]
+    md[config.MetaKeys.SHAPE] = tif_memmap.shape
     
     if config.verbose:
         _logger.debug("Parsed TIF metadata:\n%s", pprint.pformat(md))
@@ -688,21 +691,26 @@ def read_tif(
     img5d.path_img = path
     img5d.img_io = config.LoadIO.TIFFFILE
 
-    # save image5d metadata to file
-    filename_image5d, filename_meta = importer.make_filenames(
-        libmag.splitext(path)[0], keep_ext=True)
-    importer.save_image_info(
-        filename_meta, [os.path.basename(path)], [tif_memmap.shape],
-        md[config.MetaKeys.RESOLUTIONS],
-        md[config.MetaKeys.MAGNIFICATION],
-        md[config.MetaKeys.ZOOM], [0.], [0.])
-    
-    # save image5d to an NPY file using memory mapping
-    image5d = np.lib.format.open_memmap(
-        filename_image5d, mode="w+", dtype=tif_memmap.dtype,
-        shape=tif_memmap.shape)
-    image5d[:] = tif_memmap[:]
-    image5d.flush()
+    if config.savefig and config.savefig.lower() == "npy":
+        # save image5d metadata to file
+        filename_image5d, filename_meta = importer.make_filenames(
+            libmag.splitext(path)[0], keep_ext=True)
+        _logger.info(
+            "Saving image metadata to '%s' and image to '%s'...",
+            filename_meta, filename_image5d)
+        importer.save_image_info(
+            filename_meta, [os.path.basename(path)], [tif_memmap.shape],
+            md[config.MetaKeys.RESOLUTIONS],
+            md[config.MetaKeys.MAGNIFICATION],
+            md[config.MetaKeys.ZOOM], [0.], [0.])
+        
+        # save image5d to an NPY file using memory mapping
+        image5d = np.lib.format.open_memmap(
+            filename_image5d, mode="w+", dtype=tif_memmap.dtype,
+            shape=tif_memmap.shape)
+        image5d[:] = tif_memmap[:]
+        image5d.flush()
+        _logger.info("...saved image")
     
     return img5d, md
 

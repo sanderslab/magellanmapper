@@ -24,6 +24,10 @@
 
 #### I/O
 
+- TIF files can be imported without Javabridge/Bioformats by loading a TIF image directly with the flag, `--savefig npy` (#738)
+- Fixed loading TIF files without resolution metadata (#738)
+- Fixed saving/loading rescaled images using Numpy 2 (#738)
+
 #### Server pipelines
 
 #### Python stats and plots

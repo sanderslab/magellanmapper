@@ -1407,6 +1407,28 @@ def setup_style(
         pylab.rcParams.update(rc.value)
 
 
+def _get_shared_axes(ax: "axes.Axes") -> Sequence["axes.Axes"]:
+    """Get shared axes for the given plot axes.
+
+    These axes include twin axes that share an x- or y-axis.
+    
+    Args:
+        ax: Matplotlib axis.
+    
+    Returns:
+        Shared axes for the given axes, including the given axis.
+    
+    """
+    axes = ax.get_figure().get_axes()
+    shared_axes = []
+    for a in axes:
+        if (a.get_shared_x_axes().joined(ax, a)
+            or a.get_shared_y_axes().joined(ax, a)):
+            # get axes that share x- or y-axis with the given axis
+            shared_axes.append(a)
+    return shared_axes
+
+
 def post_plot(ax, out_path=None, save_ext=None, show=False):
     """Post plot adjustments, followed by saving and display.
     
@@ -1420,12 +1442,15 @@ def post_plot(ax, out_path=None, save_ext=None, show=False):
         show (bool): True to show the plot.
 
     """
+    # if given, set axes limits for all shared axes
     x_lim = config.plot_labels[config.PlotLabels.X_LIM]
     y_lim = config.plot_labels[config.PlotLabels.Y_LIM]
-    if x_lim is not None:
-        ax.set_xlim(*x_lim)
-    if y_lim is not None:
-        ax.set_ylim(*y_lim)
+    axs = _get_shared_axes(ax)
+    for a in axs:
+        if x_lim is not None:
+            a.set_xlim(*x_lim)
+        if y_lim is not None:
+            a.set_ylim(*y_lim)
     if out_path and save_ext:
         plot_support.save_fig(out_path, save_ext)
     else:

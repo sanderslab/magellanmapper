@@ -6,12 +6,7 @@
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-# [tool.setuptools.packages.find]
-# where = ["."]
-# include = ["magmap"]
-# exclude = []
-# namespaces = false
-
+# specify source directory
 [tool.setuptools]
 packages = ["magmap"]
 
@@ -27,7 +22,6 @@ authors = [
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
 urls = { Homepage = "https://github.com/sanderslab/magellanmapper" }
-
 
 # main dependencies for the project
 dependencies = [
@@ -48,7 +42,8 @@ dependencies = [
 # optional dependencies for the project
 [project.optional-dependencies]
 
-# optional dependencies to import files via BioFormats, which req Java 8+
+# optional dependencies to import files via BioFormats, which req Java 8+;
+# must use pip arg `--extra-index-url https://pypi.fury.io/dd8/` to install
 import = [
     "javabridge==1.0.19.post4+gbebed64 ; python_version < '3.8'",
     "javabridge==1.0.19.post9+gc8c12b4 ; python_version >= '3.8'",

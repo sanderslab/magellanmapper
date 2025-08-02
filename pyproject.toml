@@ -1,0 +1,117 @@
+# MagellanMapper project configuration file
+# This file is used to define the build system and project metadata.
+
+# required for building the package
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# [tool.setuptools.packages.find]
+# where = ["."]
+# include = ["magmap"]
+# exclude = []
+# namespaces = false
+
+[tool.setuptools]
+packages = ["magmap"]
+
+# Project metadata
+[project]
+name = "magellanmapper"
+version = "1.7a1"
+description = "3D atlas analysis and annotation"
+readme = "README.md"
+authors = [
+    { name = "David Young", email = "david@textflex.com" }
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+urls = { Homepage = "https://github.com/sanderslab/magellanmapper" }
+
+
+# main dependencies for the project
+dependencies = [
+    "scikit-image",
+    "matplotlib != 3.3.0, != 3.3.1",
+    "pandas",
+    "PyYAML",
+    "appdirs",
+    "importlib-metadata >= 1.0 ; python_version < '3.8'",
+    "tifffile",
+    "imagecodecs",
+    "dataclasses ; python_version < '3.7'",
+    "brainglobe-atlasapi ; python_version >= '3.9'",
+    "bg-atlasapi ; python_version < '3.9'",
+    "typing_extensions",
+]
+
+# optional dependencies for the project
+[project.optional-dependencies]
+
+# optional dependencies to import files via BioFormats, which req Java 8+
+import = [
+    "javabridge==1.0.19.post4+gbebed64 ; python_version < '3.8'",
+    "javabridge==1.0.19.post9+gc8c12b4 ; python_version >= '3.8'",
+    "python-bioformats==4.0.5.post2+g51eb88a ; python_version < '3.8'",
+    "python-bioformats==4.0.7.post5+g52309d1 ; python_version >= '3.8'",
+]
+
+# optional dependencies for AWS interaction
+aws = ["boto3", "awscli"]
+
+# optional dependencies for Pandas
+pandas_plus = ["openpyxl", "jinja2"]
+
+# optional dependencies to build API documentation
+docs = ["sphinx", "sphinx-autodoc-typehints", "myst-parser", "furo"]
+
+# optional dependencies for Jupyter notebooks
+jupyter = ["jupyterlab", "bash_kernel"]
+
+# optional dependencies for classification
+classifier = ["tensorflow"]
+
+# optional dependencies for main GUI; note that this group is not necessary
+# for the Matplotlib-based viewers (eg ROI Editor, Atlas Editor)
+gui = ["PyQt5 != 5.15.8", "pyface", "traitsui"]
+
+# optional dependencies for the 3D viewer.
+3d = ["mayavi", "vtk < 9.3.0"]
+
+#: Optional ITK and Elastix for image I/O and registration.
+#: `itk` not included since it does not load properly when installed with rest
+#: of dependencies. `itk-elastix` also installs a later `itk` version.
+itk = ["itk-elastix==0.20"]
+
+# optional pre-built SimpleITK with Elastix for image I/O and registration.
+simplitk = [
+    "simpleitk==2.0.2rc2.dev785+g8ac4f ; python_version < '3.8'",
+    "simpleitk==2.3.0.dev117+g0640d ; python_version >= '3.8'",
+]
+
+# dependencies for most common tasks
+most = [
+    "matplotlib_scalebar",
+    "pyamg",
+    "magellanmapper[gui]",
+    "magellanmapper[itk]",
+    "magellanmapper[import]",
+]
+
+# (almost) all optional dependencies
+all = [
+    "matplotlib_scalebar",
+    "pyamg",
+    "seaborn",
+    "scikit-learn",
+    "magellanmapper[gui]",
+    "magellanmapper[docs]",
+    "magellanmapper[itk]",
+    "magellanmapper[import]",
+    "magellanmapper[aws]",
+    "magellanmapper[jupyter]",
+    "magellanmapper[3d]",
+]
+
+[project.scripts]
+mm = "magmap.io.load_env:launch_magmap"

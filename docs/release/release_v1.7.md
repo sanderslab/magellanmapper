@@ -32,6 +32,8 @@
 
 #### Python stats and plots
 
+- Fixed to apply plot setting across shared axes (#740)
+
 #### R stats and plots
 
 #### Code base and docs

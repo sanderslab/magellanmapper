@@ -10,6 +10,8 @@
 
 #### Installation
 
+- `project.toml` installation configuration replaces `setup.py` (#741)
+
 #### GUI
 
 #### CLI

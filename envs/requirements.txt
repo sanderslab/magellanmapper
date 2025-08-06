@@ -17,7 +17,7 @@ itk-elastix==0.20.0
 itk-filtering==5.4.3
 itk-io==5.4.3
 itk-numerics==5.4.3
-itk-registration==5.4.3
+itk-registration==5.4.4.post1
 itk-segmentation==5.4.3
 kiwisolver==1.4.8
 lazy_loader==0.4

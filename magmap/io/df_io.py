@@ -189,7 +189,7 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
     return dfs
 
 
-def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols, 
+def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None, 
                  df_base=None, fn=df_div):
     """Normalize columns from various conditions to the corresponding 
     values in another condition.
@@ -217,6 +217,11 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols,
         other conditions should be normalized to the original ``cond_base`` 
         values.
     """
+    if extra_cols is None:
+        # keep all columns if no extra columns are given
+        extra_cols = df.columns.difference(
+            (*id_cols, cond_col, *metric_cols))
+    
     # set up conditions, output columns, and data frame of base condition
     conds = np.unique(df[cond_col])
     cols = (*id_cols, cond_col, *extra_cols, *metric_cols)

@@ -8,7 +8,7 @@ Attributes:
 
 from enum import Enum
 import os
-from typing import Dict, List, Optional, Sequence, Union
+from typing import Callable, Dict, List, Optional, Sequence, Union
 import warnings
 
 import numpy as np
@@ -189,8 +189,12 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
     return dfs
 
 
-def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None, 
-                 df_base=None, fn=df_div, metric_suffix=""):
+def normalize_df(
+        df: pd.DataFrame, id_cols: Sequence[str], cond_col: str, cond_base: str,
+        metric_cols: Sequence[str], extra_cols: Optional[Sequence[str]] = None, 
+        df_base: Optional[pd.DataFrame] = None,
+        fn: Callable[[pd.DataFrame, pd.DataFrame], pd.DataFrame] = df_div,
+        metric_suffix: str = "") -> pd.DataFrame:
     """Normalize columns from various conditions to the corresponding 
     values in another condition.
     
@@ -206,9 +210,8 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None,
         extra_cols: Sequence of additional columns to include in the 
             output data frame.
         df_base: Data frame to which values will be normalized. If given, 
-            ``cond_base`` will be ignored; defaults to None.
-        fn: Function by which to normalize along axis 0; defaults to 
-            :meth:`df_div`.
+            ``cond_base`` will be ignored.
+        fn: Function by which to normalize along axis 0.
         metric_suffix: Output normalized metrics to new columns with this
             suffix appended to the original metric column names.
             Defaults to "" for no suffix, which will overwrite the original
@@ -220,6 +223,7 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None,
         to ``cond_base`` should be definition be 1 or NaN, while all 
         other conditions should be normalized to the original ``cond_base`` 
         values.
+    
     """
     if metric_suffix:
         # copy metric columns to new columns with suffix

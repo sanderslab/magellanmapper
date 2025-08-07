@@ -1101,7 +1101,8 @@ def plot_swarm(
     # plot's formatter may otherwise be incompatible
     plot_support.set_scinot(ax, lbls=(y_label, x_label), units=(y_unit, x_unit))
     
-    # plot in seaborn
+    # plot in seaborn; reset index to avoid issues with reindexing during plot
+    df = df.reset_index()
     ax = fn_plot(
         x=x_cols, y=y_cols, hue=group_col, hue_order=legend_names,
         order=x_order, data=df, ax=ax, **kwargs_plot)

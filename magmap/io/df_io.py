@@ -190,7 +190,7 @@ def exps_by_regions(path, filter_zeros=True, sample_delim="-"):
 
 
 def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None, 
-                 df_base=None, fn=df_div):
+                 df_base=None, fn=df_div, metric_suffix=""):
     """Normalize columns from various conditions to the corresponding 
     values in another condition.
     
@@ -209,6 +209,10 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None,
             ``cond_base`` will be ignored; defaults to None.
         fn: Function by which to normalize along axis 0; defaults to 
             :meth:`df_div`.
+        metric_suffix: Output normalized metrics to new columns with this
+            suffix appended to the original metric column names.
+            Defaults to "" for no suffix, which will overwrite the original
+            metric columns.
     
     Returns:
         New data frame with columns from ``id_cols``, ``cond_col``, 
@@ -217,6 +221,12 @@ def normalize_df(df, id_cols, cond_col, cond_base, metric_cols, extra_cols=None,
         other conditions should be normalized to the original ``cond_base`` 
         values.
     """
+    if metric_suffix:
+        # copy metric columns to new columns with suffix
+        metric_cols_out = [m + metric_suffix for m in metric_cols]
+        df[metric_cols_out] = df[metric_cols].copy()
+        metric_cols = metric_cols_out
+    
     if extra_cols is None:
         # keep all columns if no extra columns are given
         cols = slice(None)

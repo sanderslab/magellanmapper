@@ -89,6 +89,30 @@ The `all` group installs the GUI and file import tools (see [optional dependenci
 
 Java will be installed automatically in Conda to support more image formats. To install it for Pip, download it from [here](https://www.azul.com/downloads/?package=jdk) and install Java before installing MM.
 
+### Optional installation groups
+
+| Group | Packages | Collection |
+|-----|-----|-----|
+| `most` | GUI and registration tools | `gui`, `itk` |
+| `all` | All groups plus `seaborn`, `scikit-learn` | Has all below |
+| `3D` | 3D rendering | |
+| `aws` | Tools for accessing AWS | |
+| `classifer` | Tensorflow | |
+| `docs` | Tools for building docs | |
+| `gui` | Main graphical interface | |
+| `import` | Imports proprietary image formats | |
+| `itk` | ITK-Elastix | |
+| `jupyter` | Running Notebooks | |
+| `pandas_plus` | Exports styled and Excel formats | |
+| `simpleitk` | Custom SimpleITK with Elastix | |
+
+To add an install group from within the `magellenmapper` directory of developer installs:
+
+```shell
+pip install -e ".[3d]" # add "3d" group
+pip install -e ".[3d,gui]" # add two groups
+```
+
 ### DEPRECATED: Installer packages
 
 <details>
@@ -193,10 +217,10 @@ Note 2: it may be necessary to update your environment for changes in dependenci
 
 | MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
-| 1.7a1 | 3.10-3.13 | Defaults to 3.10. 3.6-3.9 support removed. |
-| >=1.6b1 | 3.6-3.11 | Defaults to 3.9. GUI support added for 3.10-3.11 in MM 1.6b2, 3.12 in MM 1.6b5. |
-| 1.6a1-a3 | 3.6-3.9 | GUI support added for 3.9; MM 1.6a2 base group no longer installs GUI |
-| 1.4-1.5 | 3.6-3.9 | No GUI support in 3.9 |
+| 1.7a1 | 3.10-3.13 | Defaults to Python 3.10. Python 3.6-3.9 support removed. |
+| >=1.6b1-1.6.x | 3.6-3.11 | Defaults to Python 3.9. GUI support added for Python 3.10-3.11 in MM 1.6b2, 3.12 in MM 1.6b5. |
+| 1.6a1-a3 | 3.6-3.9 | GUI support added for Python 3.9; MM 1.6a2 base group no longer installs GUI |
+| 1.4-1.5 | 3.6-3.9 | No GUI support in Python 3.9 |
 | < 1.4 | 3.6 | Initial releases |
 
 As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
@@ -210,31 +234,6 @@ We've provided a few sets of pinned dependency versions:
 - Python 3.6 (deprecated): `envs/requirements_py36`
 
 These package versions are used for automated testing (continuous integration).
-
-### Optional installation groups
-
-| Group | Packages | Collection |
-|-----|-----|-----|
-| `most` | Import, GUI, and registration tools | Has `import`, `gui`, `itk` |
-| `all` | All groups plus `seaborn`, `scikit-learn` | Has all below |
-| `3D` | 3D rendering | |
-| `aws` | Tools for accessing AWS | |
-| `classifer` | Tensorflow | |
-| `docs` | Tools for building docs | |
-| `gui` | Main graphical interface | |
-| `import` | Imports proprietary image formats | |
-| `itk` | ITK-Elastix | |
-| `jupyter` | Running Notebooks | |
-| `pandas_plus` | Exports styled and Excel formats | |
-| `simpleitk` | Custom SimpleITK with Elastix | |
-
-To add an install group:
-
-```shell
-pip install "magellanmapper[3d]" # add "3d" group
-pip install "magellanmapper[3d,gui]" # add two groups
-pip install -e ".[3d]" # same but for editable install from clone
-```
 
 The same commands can be run to add groups after initial installation.
 

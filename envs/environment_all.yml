@@ -1,0 +1,10 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - openjdk=8
+  - pip:
+    - --extra-index-url https://pypi.fury.io/dd8/
+    - -e .[all]

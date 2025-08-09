@@ -239,7 +239,9 @@ The same commands can be run to add groups after initial installation.
 
 ### Optional Dependency Build and Runtime Requirements
 
-#### Custom packages
+#### DEPRECATED: Custom packages
+
+<details>
 
 In most cases MagellanMapper can be installed without a compiler by using custom dependency packages that we have pre-built and hosted.
 
@@ -263,12 +265,6 @@ Java versions:
 - Python-Javabridge uses JDK v8+ (v12+ in Javabridge 1.0.19; see [below](#image-loading) for image loading times and setup troubleshooting with various Java versions)
 - ImageJ/Fiji currently supports Java 8 best in our experience
 
-#### Additional optional packages
-
-- R for additional stats
-- Zstd (fallback to Zip) for compression on servers
-- MeshLab for 3D surface clean-up
-
 ### SimpleITK with Elastix dependency
 
 **Deprecated**: As of MM v1.6b2, ITK-Elastix will be installed instead. SimpleITK is still supported but no longer the default, and custom binaries are no longer generated.
@@ -282,6 +278,13 @@ If you would prefer to build SimpleITK with Elastix yourself, we have provided a
 
 As an alternative, the SimpleITK package can provide much of the same functionality except for our image registration pipeline.
 
+</details>
+
+#### Additional optional packages
+
+- R for additional stats
+- Zstd (fallback to Zip) for compression on servers
+- MeshLab for 3D surface clean-up
 
 ## Uninstallation
 
@@ -341,7 +344,7 @@ MagellanMapper has been built and tested to build on:
 
 - MacOS, tested on 10.11-10.15
 - Linux, tested on RHEL 7.4-7.5, Ubuntu 18.04-20.04
-- Windows, tested on Windows 10 (see below for details) in various environments:
+- Windows, tested on Windows 10-11 (see below for details) in various environments:
   - Native command-prompt and PowerShell
   - Via built-in Windows Subsystem for Linux (WSL), tested on Ubuntu 18.04 and an X Server
   - Bash scripts in Cygwin (tested on Cygwin 2.10+) and MSYS2

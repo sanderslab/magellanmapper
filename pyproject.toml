@@ -90,10 +90,11 @@ most = [
     "pyamg",
     "magellanmapper[gui]",
     "magellanmapper[itk]",
-    "magellanmapper[import]",
 ]
 
-# (almost) all optional dependencies
+# (almost) all optional dependencies;
+# must use pip arg `--extra-index-url https://pypi.fury.io/dd8/` to install
+# because of the `import` group
 all = [
     "matplotlib_scalebar",
     "pyamg",

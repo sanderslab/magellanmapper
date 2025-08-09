@@ -14,12 +14,12 @@
 
 MagellanMapper supports several Python setups.
 
-### Quick Install
+### Quick install with Pip
 
-Install MagellanMapper with its graphical interface and registration tools:
+Install MagellanMapper with its graphical interface and registration tools with Python >= 3.10 (see [Python versions](#python-version-support); [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
 
 ```shell
-pip install "magellanmapper[gui,itk]"
+pip install "magellanmapper[most]"
 ```
 
 Then launch MagellanMapper:
@@ -28,11 +28,13 @@ Then launch MagellanMapper:
 mm
 ```
 
+Note: MM <1.7a1 installed import packages with `most`. For these versions, install with this command instead: `pip install "magellanmapper[gui,itk]"`
+
 See [below](#dependencies) for supported Python versions and adding install groups.
 
 See our [vignette](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for getting started on MM!
 
-### Full install using Conda
+### Quick install with Conda
 
 If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment named `mag` (or replace with desired name):
 
@@ -47,25 +49,9 @@ conda activate mag
 mm
 ```
 
-Conda will also install Java, which we use to read proprietary image formats.
-
-The `mm` entry points was added in v1.6.0 to facilitate launching from installed packages.
-
-### Full install using Pip
-
-Install using Pip with Python >= 3.6 (see [Python versions](#python-version-support); Python >= 3.9 and [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
-
-```shell
-pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
-```
-
-The `most` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
-
-Java will need to be installed to support more image formats (eg from [here](https://www.azul.com/downloads/?package=jdk)).
-
 ### Developer installs
 
-You can install directly from the source code for the latest updates.
+You can install directly from the source code, which lets you use the latest updates without reinstallation.
 
 First, download the repo:
 
@@ -73,30 +59,41 @@ First, download the repo:
 git clone https://github.com/sanderslab/magellanmapper.git
 ```
 
-Next, install it:
-- For Conda:
+Next, install it with Conda:
 
 ```shell
 conda env create -n mag -f magellanmapper/environment.yml
 ```
 
-- Or Pip:
+or with Pip:
 
 ```shell
 pip install -e "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
-MagellanMapper can be run using `mm` and `mm-cli` as above, or through the run script:
+MagellanMapper can be run using as above.
+
+**Alternative:** To install with all extra packages in Conda:
 
 ```shell
-python magellanmapper/run.py
+conda env create -n mag -f magellanmapper/environment_all.yml
 ```
 
-### Installer packages
+or with Pip:
 
-***Note**: We're in the process of determining how useful these are for the community. If you've liked them, please let us know! (And feedback welcome if you've run into any issues with them.)*
+```shell
+pip install -e "magellanmapper[all]" --extra-index-url https://pypi.fury.io/dd8/
+```
 
-The easiest way to install MagellanMapper is using one of the [installers](https://github.com/sanderslab/magellanmapper/releases) now available for Windows, macOS, and Linux.
+The `all` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
+
+Java will be installed automatically in Conda to support more image formats. To install it for Pip, download it from [here](https://www.azul.com/downloads/?package=jdk) and install Java before installing MM.
+
+### DEPRECATED: Installer packages
+
+<details>
+
+***Note**: We experiented with installer packages in MM v1.5 but discontinued them to streamline our efforts.*
 
 Windows users: The installer is not yet signed, meaning that Windows will still give some security warnings. If the Edge browser blocks the download, click the Downloads button -> the `...` button on the right of the file entry -> "Keep" -> "Show more" -> "Keep anyway". In the blue window after opening the file, click "More info" -> "Run anyway" to start the installer.
 
@@ -109,7 +106,11 @@ Windows users: The installer is not yet signed, meaning that Windows will still 
 
 On Windows and Mac, you can also use "Open with" on supported file types (eg `.npy`, `.mhd`, `.nii.gz`) to open them in MagellanMapper.
 
-### Installer scripts
+</details>
+
+### DEPRECATED: Installer scripts
+
+<details>
 
 We have also provided scripts to take care of installing Miniconda (if necessary), creating an environment, and installing MagellanMapper, without requiring command-line/terminal experience.
 
@@ -163,6 +164,8 @@ This setup script will check and install the following dependencies:
 - Performs a Pip install of MagellanMapper and all dependencies
 
 On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) (same package for all three years) is required.
+
+</details>
 
 ## Update MagellanMapper
 

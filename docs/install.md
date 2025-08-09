@@ -165,27 +165,27 @@ This setup script will check and install the following dependencies:
 
 On Windows, the [Microsoft Visual C++ Redistributable for Visual Studio 2015, 2017 and 2019](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2019) (same package for all three years) is required.
 
-</details>
-
-## Update MagellanMapper
-
-### Update the MagellanMapper package
-
-If installed from a Python package, enter your virtual environment and run:
-
-```shell
-pip install -U magellanmapper --extra-index-url https://pypi.fury.io/dd8/
-```
-
-If installed from source:
-- For a cloned Git repo: run `git pull` to pull in all software updates
-- From a source code release: download the desired [release](https://github.com/sanderslab/magellanmapper/releases), extract it, and run MagellanMapper from there
-
-### Update the Conda or Venv environment
+#### Update the Conda or Venv environment
 
 Sometimes a virtual environment update is required for new dependencies.
 - To update a Conda environment, rerun the `bin/setup_conda` (macOS/Linux) or `bin\setup_conda.bat` (Windows) script
 - To update a Venv environment, rerun the `bin/setup_venv.sh` (macOS/Linux) or `bin\setup_venv.bat` (Windows) script
+
+</details>
+
+## Update MagellanMapper
+
+For developer installs, simply run `git pull` to update the source code.
+
+If installed from a Python package, enter your virtual environment and run:
+
+```shell
+pip install -U magellanmapper
+```
+
+Note: add ` --extra-index-url https://pypi.fury.io/dd8/` if the `import` or `all` groups were installed.
+
+Note 2: it may be necessary to update your environment for changes in dependencies. If so, create a new environment as [above](#installation-options).
 
 ## Dependencies
 

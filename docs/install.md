@@ -12,8 +12,6 @@
 
 ## Installation Options
 
-MagellanMapper supports several Python setups.
-
 ### Quick install with Pip
 
 Install MagellanMapper with its graphical interface and registration tools with Python >= 3.10 (see [Python versions](#python-version-support); [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
@@ -68,26 +66,24 @@ conda env create -n mag -f magellanmapper/environment.yml
 or with Pip:
 
 ```shell
-pip install -e "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
+pip install -e "magellanmapper[most]"
 ```
 
-MagellanMapper can be run using as above.
+MagellanMapper can be run as above.
 
-**Alternative:** To install with all extra packages in Conda:
+**Alternative:** Install with all extra packages in Conda. Java will be installed automatically in Conda to support more image formats.
 
 ```shell
 conda env create -n mag -f magellanmapper/environment_all.yml
 ```
 
-or with Pip:
+Or with Pip. Java needs to be installed before MM. Download Java from [here](https://www.azul.com/downloads/?package=jdk).
 
 ```shell
 pip install -e "magellanmapper[all]" --extra-index-url https://pypi.fury.io/dd8/
 ```
 
 The `all` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
-
-Java will be installed automatically in Conda to support more image formats. To install it for Pip, download it from [here](https://www.azul.com/downloads/?package=jdk) and install Java before installing MM.
 
 ### Optional installation groups
 
@@ -112,6 +108,8 @@ To add an install group from within the `magellenmapper` directory of developer 
 pip install -e ".[3d]" # add "3d" group
 pip install -e ".[3d,gui]" # add two groups
 ```
+
+As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
 
 ### DEPRECATED: Installer packages
 
@@ -211,9 +209,7 @@ Note: add ` --extra-index-url https://pypi.fury.io/dd8/` if the `import` or `all
 
 Note 2: it may be necessary to update your environment for changes in dependencies. If so, create a new environment as [above](#installation-options).
 
-## Dependencies
-
-### Python version support
+## Python version support
 
 | MagellanMapper Version | Python Versions Supported | Notes |
 |-----|-----|-----|
@@ -223,7 +219,7 @@ Note 2: it may be necessary to update your environment for changes in dependenci
 | 1.4-1.5 | 3.6-3.9 | No GUI support in Python 3.9 |
 | < 1.4 | 3.6 | Initial releases |
 
-As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
+## Dependencies
 
 ### Pinned packages
 

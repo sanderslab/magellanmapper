@@ -4,6 +4,7 @@
 
 ### Highlights
 
+- Better multipage TIF file support, including import to NPY format without Javabridge/Bioformats
 - Minimum supported Python version is now 3.10 to reduce maintenance burden and improve testing on more recent versions of Python
 
 ### Changes
@@ -45,6 +46,7 @@
 #### Python Dependency Changes
 
 - Bumped minimum supported Python version to 3.10 (#712)
+- `import` group packages (Javabridge/Bioformats) are deprecated and no longer included in the `most` group install (#745)
 
 #### R Dependency Changes
 

@@ -34,6 +34,7 @@
 
 #### Python stats and plots
 
+- Make normalizing data frames more flexible (#746)
 - Fixed to apply plot setting across shared axes (#740)
 
 #### R stats and plots

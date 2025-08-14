@@ -7,7 +7,8 @@ import pathlib
 import pprint
 import re
 from time import time
-from typing import Any, Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, TYPE_CHECKING, Union, \
+    cast
 
 import numpy as np
 import tifffile
@@ -756,19 +757,24 @@ def write_npy(
 
 
 def write_tif(
-        image5d: np.ndarray, path: Union[str, pathlib.Path], **kwargs: Any):
+        img5d: "Image5d", path: Union[str, pathlib.Path], **kwargs: Any):
     """Write a NumPy array to TIF files.
     
     Each channel will be exported to a separate file.
     
     Args:
-        image5d: NumPy array in ``t, z, y, x, c`` dimension order.
+        img5d: ``Image5d`` object.
         path: Base output path. If ``image5d`` has multiple channels, they
             will be exported to files with ``_ch_<n>`` appended just before
             the extension.
         kwargs: Arguments passed to :meth:`tifffile.imwrite`.
 
     """
+    image5d = img5d.img
+    if image5d is None or img5d.meta is None:
+        _logger.error("No image5d to write to TIF files")
+        return
+    
     nchls = get_num_channels(image5d)
     for i in range(nchls):
         # export the given channel to a separate file, adding the channel to
@@ -783,8 +789,34 @@ def write_tif(
         if "imagej" in kwargs and kwargs["imagej"]:
             # ImageJ format assumes dimension order of TZCYXS
             img_chl = img_chl[:, :, np.newaxis]
+            axes = "TZCYXS"
+        else:
+            # default to TZYXC order, without channel
+            axes = "TZYX"
+        
+        # image metadata, currently only stored in "ImageDescription" tag
+        res = img5d.meta.get(config.MetaKeys.RESOLUTIONS, None)
+        if res is None:
+            res = [1] * 3  # default to 1 for x,y,z
+        else:
+            res = libmag.pad_seq(res, 3, 1)  # ensure 3D resolution
+        res = [float(n) for n in res]
+        metadata = {
+            "axes": axes,
+            "PhysicalSizeZ": res[0],
+            "PhysicalSizeY": res[1],
+            "PhysicalSizeX": res[2],
+        }
+        _logger.debug("metadata for TIF: %s", metadata)
+
+        # specify x/y-resolutions for TIF tag, which uses fractions
+        res_tif = cast(
+            Tuple[float, float], tuple(1 / r for r in res[2:0:-1]))
+        _logger.debug("TIF resolutions (fractions): %s", res_tif)
         
         # write to TIF
         _logger.info(
             "Exporting image of shape %s to '%s'", img_chl.shape, out_path)
-        tifffile.imwrite(out_path, img_chl, photometric="minisblack", **kwargs)
+        tifffile.imwrite(
+            out_path, img_chl, resolution=res_tif, metadata=metadata,
+            photometric="minisblack", **kwargs)

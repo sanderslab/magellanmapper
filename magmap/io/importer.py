@@ -162,7 +162,7 @@ def parse_ome(filename):
 
 def parse_ome_raw(
         metadata: str
-) -> Tuple[List[str], List[Tuple], Dict[config.MetaKeys, Any]]:
+) -> Tuple[List[str], List[Tuple], dict[str | config.MetaKeys, Any]]:
     """Parse Open Microscopy Environment XML to extract key metadata.
     
     Args:
@@ -231,7 +231,7 @@ def parse_ome_raw(
                         pixel_type = att.get("Type")
     
     # collect metadata into dictionary
-    md = dict.fromkeys(config.MetaKeys)
+    md: dict[str | config.MetaKeys, Any] = dict.fromkeys(config.MetaKeys)
     md[config.MetaKeys.RESOLUTIONS] = resolutions
     md[config.MetaKeys.MAGNIFICATION] = magnification
     md[config.MetaKeys.ZOOM] = zoom

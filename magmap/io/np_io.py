@@ -717,6 +717,12 @@ def write_npy(
     time_start = time()
     filename_image5d, filename_meta = importer.make_filenames(
         libmag.splitext(path)[0], keep_ext=True)
+    if os.path.exists(filename_image5d):
+        # if file already exists, warn and skip saving
+        # TODO: backup existing file, as in write_tif?
+        _logger.warning(
+            "File %s already exists, skipping saving image5d", filename_image5d)
+        return
     _logger.info(
         "Saving image metadata to '%s' and image to '%s'...",
         filename_meta, filename_image5d)
@@ -727,16 +733,21 @@ def write_npy(
         # find near min/max bounds for each channel
         lows = []
         highs = []
-        for img in image5d[0]:
+        for i, img in enumerate(image5d[0]):
             # near max/min bounds per channel for the given plane
+            _logger.info(
+                "Calculating near min/max bounds for plane %s of %s", i + 1,
+                image5d.shape[1])
             low, high = importer.calc_intensity_bounds(img, dim_channel=2)
             lows.append(low)
             highs.append(high)
         near_mins, near_maxs = importer.calc_near_intensity_bounds(
             near_mins, near_maxs, lows, highs)
     else:
-        near_mins.append(0.)
-        near_maxs.append(0.)
+        # default to full dtype range
+        dtype_info = libmag.get_dtype_info(image5d)
+        near_mins.append(dtype_info.min)
+        near_maxs.append(dtype_info.max)
     
     # save image5d metadata to file
     importer.save_image_info(

@@ -15,6 +15,8 @@
 
 #### GUI
 
+- Fixed display of label RGB values and coordinates in figure filenames (#753)
+
 #### CLI
 
 #### Atlas refinement
@@ -27,7 +29,8 @@
 
 #### I/O
 
-- TIF files can be imported without Javabridge/Bioformats by loading a TIF image directly with the flag, `--savefig npy` (#738)
+- TIF files can be imported without Javabridge/Bioformats by loading a TIF image directly with the flag, `--savefig npy` (#738, #753)
+- Read and write `PhysicalSpacingX`-style TIF resolutions (#753)
 - Fixed loading TIF files without resolution metadata (#738)
 - Fixed saving/loading rescaled images using Numpy 2 (#738)
 

@@ -761,8 +761,17 @@ def write_npy(
     img_mmap = np.lib.format.open_memmap(
         filename_image5d, mode="w+", dtype=image5d.dtype,
         shape=image5d.shape)
-    img_mmap[:] = image5d[:]
-    img_mmap.flush()
+    image5d_shape = image5d.shape
+    for t in range(image5d_shape[0]):
+        _logger.info("Writing time %s of %s", t + 1, image5d_shape[0])
+        for z in range(image5d_shape[1]):
+            # write plane-by-plane to show progress and reduce memory usage
+            # by flushing after each plane
+            _logger.info(
+                "Writing plane %s of %s", z + 1, image5d.shape[1])
+            img_mmap[t, z] = image5d[t, z]
+            img_mmap.flush()
+    
     _logger.info("...saved image")
     _logger.info("file save time: {}".format(time() - time_start))
 

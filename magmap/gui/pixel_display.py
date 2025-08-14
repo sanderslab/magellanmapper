@@ -96,7 +96,7 @@ class PixelDisplay(object):
                     else:
                         label_rgb = ax_img.cmap(ax_img.norm(px))
                     rgb = "RGB for label {}: {}".format(
-                        px, tuple(np.multiply(label_rgb[:3], 255).astype(int)))
+                        px, tuple(map(int, np.multiply(label_rgb[:3], 255))))
                 if isinstance(px, float): px = "{:.4f}".format(px)
 
             orig_coord = coord

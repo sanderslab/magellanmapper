@@ -670,12 +670,13 @@ def read_tif(
         # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
         # TODO: add any time "t" axis is absent?
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
-    if "z" not in axes:
-        # add a z-axis for 2D images
+    if "z" not in axes and "q" not in axes:
+        # add a z-axis for 2D images; skip if has axis "q" (other)
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
     if axes[0] == "c":
         # move channel dimension to end
         tif_memmap = np.swapaxes(tif_memmap, 2, -1)
+    _logger.debug("TIF output shape: %s", tif_memmap.shape)
     
     if nrot:
         # apply 90 deg rotations; appears to need flipping; both return views

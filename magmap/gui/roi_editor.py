@@ -1107,7 +1107,8 @@ class ROIEditor(plot_support.ImageSyncMixin):
         """
         ext = config.savefig if config.savefig else config.DEFAULT_SAVEFIG
         return "{}_{}{}.{}".format(naming.get_roi_path(
-            os.path.basename(self.filename), self.offset, self.roi_size),
+            os.path.basename(self.filename), self.offset,
+            map(int, self.roi_size)),
             plot_support.get_plane_axis(self.plane),
             self._z_overview, ext)
     

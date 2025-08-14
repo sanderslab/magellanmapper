@@ -2,6 +2,7 @@
 # Author: David Young, 2019, 2020
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
+import ast
 import os
 import pathlib
 import pprint
@@ -601,8 +602,8 @@ def write_raw_file(arr, path):
 
 
 def read_tif(
-        path: str, img5d: Image5d = None
-) -> Tuple[Image5d, Dict[config.MetaKeys, Any]]:
+        path: str, img5d: Optional[Image5d] = None
+) -> Tuple[Image5d, dict[str | config.MetaKeys, Any]]:
     """Read TIF files with Tifffile with lazy access through memory mapping.
 
     Save this file to NPY format if :attr:`config.savefig` is set to "npy".
@@ -621,15 +622,28 @@ def read_tif(
     
     # extract metadata
     tif = tifffile.TiffFile(path)
-    md = dict.fromkeys(config.MetaKeys)
+    md: dict[str | config.MetaKeys, Any] = dict.fromkeys(config.MetaKeys)
+
+    # get axes
     axes = tif.series[0].axes.lower()
     _logger.debug("TIF axes: %s", axes)
+
+    # get all tags
+    tags = getattr(tif.pages[0], "tags")
+    _logger.debug("TIF tags: %s", tags)
+
+    # parse image description
+    desc = tags["ImageDescription"].value
+    desc = ast.literal_eval(desc)
+    _logger.debug("TIF description: %s", desc)
+
     nrot = 0
     if tif.ome_metadata:
         # read OME-XML metadata
         names, sizes, md = importer.parse_ome_raw(tif.ome_metadata)
         res = np.array(md[config.MetaKeys.RESOLUTIONS])
         _logger.debug("OME-TIF metadata: %s", tif.ome_metadata)
+    
     else:
         # parse resolutions
         res = np.ones((1, 3))
@@ -650,17 +664,32 @@ def read_tif(
                 if rotate:
                     # TODO: use arbitrary degree rotation?
                     nrot = int(rotate.group().split("=")[1]) // -90
-                    
-        for i, name in enumerate(("YResolution", "XResolution")):
-            try:
-                # parse x/y-resolution from standard TIF metadata
-                axis_res = tif.pages[0].tags[name].value
-                if axis_res and len(axis_res) > 1 and axis_res[0]:
-                    res[0, i + 1] = axis_res[1] / axis_res[0]
-            except KeyError:
-                # no resolution found, default to 1
-                _logger.info(
-                    "No %s tag found in TIF metadata, defaulting to 1", name)
+        
+        res_names = ("PhysicalSizeZ", "PhysicalSizeX", "PhysicalSizeX")
+        if set(res_names).intersection(set(desc)):
+            # use these resolution settings if any are available
+            for i, name in enumerate(res_names):
+                try:
+                    # parse x/y/z-resolution from standard OME spec
+                    res[0, i] = desc[name]
+                except KeyError:
+                    # no resolution found, default to 1
+                    _logger.info(
+                        "No %s tag found in TIF metadata, defaulting to 1",
+                        name)
+        else:
+            for i, name in enumerate(("YResolution", "XResolution")):
+                try:
+                    # parse x/y-resolution from standard TIF metadata
+                    axis_res = tags[name].value
+                    if axis_res and len(axis_res) > 1 and axis_res[0]:
+                        res[0, i + 1] = axis_res[1] / axis_res[0]
+                except KeyError:
+                    # no resolution found, default to 1
+                    _logger.info(
+                        "No %s tag found in TIF metadata, defaulting to 1",
+                        name)
+    
     md[config.MetaKeys.RESOLUTIONS] = res
     
     # load TIFF by memory mapping

@@ -651,7 +651,12 @@ def read_tif(
 
     # parse image description
     desc = tags["ImageDescription"].value
-    desc = ast.literal_eval(desc)
+    try:
+        # parse description as a dictionary
+        desc = ast.literal_eval(desc)
+    except (ValueError, SyntaxError):
+        # if parsing fails, assume it is a string and store it as such
+        desc = {"description": desc}
     _logger.debug("TIF description: %s", desc)
 
     nrot = 0

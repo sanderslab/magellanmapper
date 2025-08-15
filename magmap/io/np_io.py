@@ -716,18 +716,25 @@ def read_tif(
     
     # load TIFF by memory mapping
     tif_memmap = tifffile.memmap(path)
+
+    # adjust axes based on TIF metadata to fit Image5d format, TZYX(C)
     ndim = len(tif_memmap.shape)
     if ndim < 4 or ndim == 4 and "c" in axes:
-        # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
+        # add a time dimension for 3D or 3D+C images
         # TODO: add any time "t" axis is absent?
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
+        axes = "t" + axes  # prepend time axis
     if "z" not in axes and "q" not in axes:
         # add a z-axis for 2D images; skip if has axis "q" (other)
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
-    if axes[0] == "c":
+        axes = "z" + axes  # prepend z axis
+    if "c" in axes:
         # move channel dimension to end
-        tif_memmap = np.swapaxes(tif_memmap, 2, -1)
+        c = axes.index("c")
+        tif_memmap = np.swapaxes(tif_memmap, c, -1)
+        axes = axes[:c] + axes[c + 1:] + "c"  # move c to end
     _logger.debug("TIF output shape: %s", tif_memmap.shape)
+    _logger.debug("TIF output axes: %s", axes)
     
     if nrot:
         # apply 90 deg rotations; appears to need flipping; both return views

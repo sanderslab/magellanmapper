@@ -192,7 +192,8 @@ def setup_images(
         allow_import: bool = True,
         fallback_main_img: bool = True,
         bg_atlas: Optional["BrainGlobeAtlas"] = None,
-        labels_ref_path: Optional[str] = None):
+        labels_ref_path: Optional[str] = None
+    ) -> Image5d:
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -216,6 +217,9 @@ def setup_images(
         labels_ref_path: Path to labels reference file. Defaults to None,
             in which case :att:`config.load_labels` and any loaded labels
             metadata will be used.
+    
+    Returns:
+        Image5d: Image5d instance with the main image and metadata loaded.
     
     """
     def add_metadata():
@@ -394,7 +398,6 @@ def setup_images(
                     img5d = img5d_read[0]  # take first image if multiple
                 else:
                     img5d = img5d_read
-                config.img5d = img5d
         except FileNotFoundError as e:
             _logger.exception(e)
             _logger.info("Could not load %s", path)
@@ -426,7 +429,6 @@ def setup_images(
                 img5d = img5d_read[0]  # take image without time dimension
             else:
                 img5d = img5d_read
-            config.img5d = img5d
             
             if img5d.img is not None:
                 # get near min/max across whole image
@@ -560,9 +562,9 @@ def setup_images(
         config.cmap_labels = colormaps.setup_labels_cmap(config.labels_img)
     
     if (blobs is not None and blobs.blobs is not None
-            and config.img5d.img is not None and blobs.roi_size is not None):
+            and img5d.img is not None and blobs.roi_size is not None):
         # scale blob coordinates to main image if shapes differ
-        scaling = np.divide(config.img5d.img.shape[1:4], blobs.roi_size)
+        scaling = np.divide(img5d.img.shape[1:4], blobs.roi_size)
         # scale radius by mean of other dimensions' scaling
         scaling = np.append(scaling, np.mean(scaling))
         if not np.all(scaling == 1):
@@ -579,8 +581,12 @@ def setup_images(
             blobs.format_blobs()
             blobs.set_blob_col(blobs.blobs, blobs.Cols.REGION, regions)
     
+    config.img5d = img5d
+
     # TODO: remove this once all images are loaded as Image5d
     config.image5d = img5d.img
+    
+    return img5d
 
 
 def get_num_channels(img: np.ndarray, is_3d: bool = False) -> int:

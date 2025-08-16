@@ -1173,6 +1173,8 @@ class Visualization(HasTraits):
         
         # set up rest of image adjustment during image setup
         self.stale_viewers = self.reset_stale_viewers()
+        #: Main image 5D object.
+        self.img5d: Optional["np_io.Image5d"] = config.img5d
         self._img3ds = None
         self._imgadj_min_ignore_update: bool = False
         self._imgadj_max_ignore_update: bool = False
@@ -1227,8 +1229,9 @@ class Visualization(HasTraits):
         self._channel_names = TraitsList()
         self._segs_chls_names = TraitsList()
         # 1 channel if no separate channel dimension
-        num_chls = (1 if config.image5d is None or config.image5d.ndim < 5
-                    else config.image5d.shape[4])
+        num_chls = (1 if not self.img5d or self.img5d.img is None
+                    or self.img5d.img.ndim < 5
+                    else self.img5d.img.shape[4])
         self._channel_names.selections = [str(i) for i in range(num_chls)]
 
         if config.blobs is not None and config.blobs.blobs is not None:
@@ -1263,7 +1266,7 @@ class Visualization(HasTraits):
         """
         # create entries for each possible image but only add existing images
         self._img3ds = {
-            "Main": config.image5d,
+            "Main": self.img5d.img if self.img5d else None,
             "Labels": config.labels_img,
             "Borders": config.borders_img}
         self._imgadj_names = TraitsList()
@@ -1904,7 +1907,7 @@ class Visualization(HasTraits):
         ROI will undergo full preprocessing in preparation for detection 
         and 2D filtered displays steps.
         """
-        if config.image5d is None:
+        if not self.img5d or self.img5d.img is None:
             print("Main image has not been loaded, cannot show 3D Viewer")
             return
         
@@ -1920,7 +1923,7 @@ class Visualization(HasTraits):
         if Vis3dOptions.RAW.value in self._check_list_3d:
             # show region of interest based on raw image
             self.roi = plot_3d.prepare_roi(
-                config.image5d, curr_offset, curr_roi_size)
+                self.img5d.img, curr_offset, curr_roi_size)
             
             if Vis3dOptions.SURFACE.value in self._check_list_3d:
                 # surface rendering, segmenting to clean up image 
@@ -1956,7 +1959,8 @@ class Visualization(HasTraits):
         Args:
             label_id: ID of label to display.
         """
-        if self.scene is None: return
+        if self.scene is None or not self.img5d or self.img5d.img is None:
+            return
         
         # get bounding box for label region
         bbox = cv_nd.get_label_bbox(config.labels_img, label_id)
@@ -1976,7 +1980,7 @@ class Visualization(HasTraits):
             label_mask = np.isin(config.labels_img[tuple(slices)], label_id)
         else:
             label_mask = config.labels_img[tuple(slices)] == label_id
-        self.roi = np.copy(config.image5d[0][tuple(slices)])
+        self.roi = np.copy(self.img5d.img[0][tuple(slices)])
         self.roi[~label_mask] = 0
         if Vis3dOptions.CLEAR.value in self._check_list_3d:
             self._vis3d.clear_scene()
@@ -2300,7 +2304,7 @@ class Visualization(HasTraits):
         if filename is not None:
             importer.parse_deconstructed_name(
                 filename, offset, size, reg_suffixes, suffix)
-            np_io.setup_images(
+            self.img5d = np_io.setup_images(
                 config.filename, offset=offset, size=size, allow_import=False,
                 labels_ref_path=self._labels_ref_path)
             self._setup_for_image()
@@ -2310,7 +2314,7 @@ class Visualization(HasTraits):
         else:
             print("Could not parse filename", self._filename)
         
-        if config.image5d is None:
+        if not self.img5d or self.img5d.img is None:
             # initiate import setup and direct user to import panel
             print("Could not open {}, directing to import panel"
                   .format(self._filename))
@@ -2703,7 +2707,7 @@ class Visualization(HasTraits):
                 detecting these blobs in the intensity image.
 
         """
-        if config.image5d is None:
+        if not self.img5d or self.img5d.img is None:
             print("Main image has not been loaded, cannot show detect blobs")
             return
         self._reset_segments()
@@ -2724,7 +2728,7 @@ class Visualization(HasTraits):
         self._segs_visible = [BlobsVisibilityOptions.VISIBLE.value]
         offset = self._curr_offset()
         roi_size = self.roi_array[0].astype(int)
-        self.roi = plot_3d.prepare_roi(config.image5d, offset, roi_size)
+        self.roi = plot_3d.prepare_roi(self.img5d.img, offset, roi_size)
         
         if not libmag.is_binary(self.roi):
             # preprocess ROI in prep for showing filtered 2D view and blob
@@ -2915,7 +2919,7 @@ class Visualization(HasTraits):
             try:
                 # classify blobs if model is set
                 classifier.classify_blobs(
-                    self._segs_model_path, config.image5d, offset[::-1],
+                    self._segs_model_path, self.img5d.img, offset[::-1],
                     roi_size[::-1], chls, self.blobs, blobs_relative=True)
             except ModuleNotFoundError as e:
                 _logger.exception(e)
@@ -3065,7 +3069,7 @@ class Visualization(HasTraits):
 
     def _launch_roi_editor(self):
         """Handle ROI Editor button events."""
-        if config.image5d is None:
+        if not self.img5d or self.img5d.img is None:
             print("Main image has not been loaded, cannot show ROI Editor")
             return
         
@@ -3193,7 +3197,7 @@ class Visualization(HasTraits):
         config.prefs.roi_styles = self._styles_2d[0]
 
     def launch_atlas_editor(self):
-        if config.image5d is None:
+        if not self.img5d or self.img5d.img is None:
             print("Main image has not been loaded, cannot show Atlas Editor")
             return
         # atlas editor; need to retain ref or else instance callbacks

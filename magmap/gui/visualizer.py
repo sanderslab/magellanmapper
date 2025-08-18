@@ -114,7 +114,7 @@ def main():
         vtk_out.SetInstance(vtk_out)
 
     # create Trait-enabled GUI
-    visualization = Visualization()
+    visualization = Visualization(config.img5d)
     visualization.configure_traits()
     
 
@@ -1050,10 +1050,18 @@ class Visualization(HasTraits):
         id=f"{__name__}.{__qualname__}",
     )
     
-    def __init__(self):
-        """Initialize GUI."""
+    def __init__(self, img5d=None):
+        """Initialize GUI.
+
+        Params:
+            img5d: Main image 5D object to display in the GUI.
+        
+        """
         HasTraits.__init__(self)
         
+        #: Main image 5D object.
+        self.img5d: Optional["np_io.Image5d"] = img5d
+
         # get saved preferences
         prefs = config.prefs
         
@@ -1173,8 +1181,6 @@ class Visualization(HasTraits):
         
         # set up rest of image adjustment during image setup
         self.stale_viewers = self.reset_stale_viewers()
-        #: Main image 5D object.
-        self.img5d: Optional["np_io.Image5d"] = config.img5d
         self._img3ds = None
         self._imgadj_min_ignore_update: bool = False
         self._imgadj_max_ignore_update: bool = False

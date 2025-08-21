@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 
 from magmap.cv import chunking, classifier, colocalizer, detector, verifier
-from magmap.io import cli, df_io, importer, libmag, naming
+from magmap.io import cli, df_io, importer, libmag, naming, np_io
 from magmap.plot import plot_3d
 from magmap.settings import config, roi_prof
 
@@ -464,8 +464,8 @@ def detect_blobs_blocks(
     if config.save_subimg:
         subimg_base_path = libmag.combine_paths(
             subimg_path_base, config.SUFFIX_SUBIMG)
-        if (isinstance(config.image5d, np.memmap) and
-                config.image5d.filename == os.path.abspath(subimg_base_path)):
+        if (isinstance(image5d, np.memmap) and
+                image5d.filename == os.path.abspath(subimg_base_path)):
             # file at sub-image save path may have been opened as a memmap
             # file, in which case saving would fail
             libmag.warn("{} is currently open, cannot save sub-image"
@@ -505,7 +505,9 @@ def detect_blobs_blocks(
 
 
 def detect_blobs_stack(
-        filename_base: str, subimg_offset: Optional[Sequence[int]] = None,
+        filename_base: str,
+        img5d: Optional["np_io.Image5d"],
+        subimg_offset: Optional[Sequence[int]] = None,
         subimg_size: Optional[Sequence[int]] = None, coloc: bool = False
 ) -> Tuple[Tuple[int, int, int], str, "detector.Blobs"]:
     """Detect blobs in a full stack, such as a whole large image.
@@ -515,10 +517,9 @@ def detect_blobs_stack(
     
     Args:
         filename_base: Base image filename, for saving files.
-        subimg_offset: Sub-image offset as ``z,y,x`` to load
-            from :attr:`config.image5d`; defaults to None.
-        subimg_size: Sub-image size as ``z,y,x`` to load
-            from :attr:`config.image5d`; defaults to None.
+        img5d: Image5d object with the image data to process.
+        subimg_offset: Sub-image offset as ``z,y,x`` to load from ``img5d``.
+        subimg_size: Sub-image size as ``z,y,x`` to load from ``img5d``.
         coloc: True to also detect blob-colocalizations based on image
             intensity; defaults to False. For match-based colocalizations,
             use the ``coloc_match`` task
@@ -534,7 +535,10 @@ def detect_blobs_stack(
           :attr:`magmap.settings.config.channel`
 
     """
-    channels = plot_3d.setup_channels(config.image5d, config.channel, 4)[1]
+    if img5d is None or img5d.img is None:
+        raise IOError("No image data available for blob detection")
+    
+    channels = plot_3d.setup_channels(img5d.img, config.channel, 4)[1]
     if roi_prof.ROIProfile.is_identical_settings(
             [config.get_roi_profile(c) for c in channels],
             roi_prof.ROIProfile.BLOCK_SIZES):
@@ -553,7 +557,7 @@ def detect_blobs_stack(
         if not libmag.is_seq(chl):
             chl = [chl]
         blobs_out = detect_blobs_blocks(
-            filename_base, config.image5d, subimg_offset, subimg_size,
+            filename_base, img5d.img, subimg_offset, subimg_size,
             chl, config.truth_db_mode is config.TruthDBModes.VERIFY,
             not config.grid_search_profile, config.image5d_is_roi, coloc)
         for col, val in zip(cols, blobs_out):

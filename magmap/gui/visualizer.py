@@ -3974,7 +3974,8 @@ class Visualization(HasTraits):
             profs[profs[:, 0] == ProfileCats.GRID.value, 1])
 
         # set up all profiles and showed the profile for the selected category
-        cli.setup_roi_profiles(roi_profs)
+        cli.setup_roi_profiles(
+            roi_profs, None if self.img5d is None else self.img5d.img)
         cli.setup_atlas_profiles(atlas_profs)
         cli.setup_grid_search_profiles(grid_profs)
         self._show_combined_profile()

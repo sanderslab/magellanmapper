@@ -1140,9 +1140,10 @@ def _detect_subimgs(
     for i in range(len(subimg_offsets)):
         size = (subimg_sizes[i] if roi_sizes_len > 1
                 else subimg_sizes[0])
-        np_io.setup_images(path, series, subimg_offsets[i], size)
+        img5d = np_io.setup_images(path, series, subimg_offsets[i], size)
         stat_roi, fdbk, _ = stack_detect.detect_blobs_stack(
-            importer.filename_to_base(path, series), subimg_offsets[i], size)
+            importer.filename_to_base(path, series), img5d,
+            subimg_offsets[i], size)
         if stat_roi is not None:
             stat = np.add(stat, stat_roi)
         summaries.append(
@@ -1251,10 +1252,15 @@ def process_file(
         
     elif proc_type in (
             config.ProcessTypes.DETECT, config.ProcessTypes.DETECT_COLOC):
-        # detect blobs in the full image, +/- co-localization
-        coloc = proc_type is config.ProcessTypes.DETECT_COLOC
-        stats, fdbk, _ = stack_detect.detect_blobs_stack(
-            filename_base, subimg_offset, subimg_size, coloc)
+        if img5d is not None and img5d.img is not None:
+            # detect blobs in the full image, +/- co-localization
+            coloc = proc_type is config.ProcessTypes.DETECT_COLOC
+            stats, fdbk, _ = stack_detect.detect_blobs_stack(
+                filename_base, img5d, subimg_offset, subimg_size, coloc)
+        else:
+            _logger.warning(
+                "No image data loaded to detect blobs with colocalization, " \
+                "skipping")
 
     elif proc_type is config.ProcessTypes.COLOC_MATCH:
         if config.blobs is not None and config.blobs.blobs is not None:

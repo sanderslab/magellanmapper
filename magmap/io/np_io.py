@@ -589,7 +589,8 @@ def setup_images(
     return img5d
 
 
-def get_num_channels(img: np.ndarray, is_3d: bool = False) -> int:
+def get_num_channels(
+        img: Optional[np.ndarray] = None, is_3d: bool = False) -> int:
     """Get the number of image channels based on expected dimensions.
 
     Args:

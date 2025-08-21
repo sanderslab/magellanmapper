@@ -613,7 +613,8 @@ def process_cli_args():
                 int(n) for n in shape.split(",")[::-1]]
 
     # set up ROI and register profiles
-    setup_roi_profiles(args.roi_profile)
+    setup_roi_profiles(
+        args.roi_profile, None if config.img5d is None else config.img5d.img)
     setup_atlas_profiles(args.atlas_profile)
     setup_grid_search_profiles(args.grid_search)
 
@@ -823,11 +824,11 @@ def setup_image(
     if proc_tasks:
         for proc_task, proc_val in proc_tasks.items():
             # set up image for the given task
-            np_io.setup_images(
+            img5d = np_io.setup_images(
                 filename, series, offset, size, proc_task,
                 fallback_main_img=False)
             process_file(
-                filename, proc_task, proc_val, series, offset, size,
+                img5d, filename, proc_task, proc_val, series, offset, size,
                 config.roi_offsets[0] if config.roi_offsets else None,
                 config.roi_sizes[0] if config.roi_sizes else None)
         
@@ -1000,7 +1001,8 @@ def main(process_args_only: bool = False, skip_dbs: bool = False):
     process_tasks()
 
 
-def setup_roi_profiles(roi_profiles_names: List[str]):
+def setup_roi_profiles(
+        roi_profiles_names: List[str], image5d: Optional[np.ndarray] = None):
     """Set up ROI profiles.
 
     If a profile is None, only a default set of profile settings
@@ -1010,6 +1012,7 @@ def setup_roi_profiles(roi_profiles_names: List[str]):
     Args:
         roi_profiles_names: Sequence of ROI and atlas profiles
             names to use for the corresponding channel.
+        image5d: Image to use for setting up colormaps.
 
     """
     # initialize ROI profile settings and update with modifiers
@@ -1031,7 +1034,7 @@ def setup_roi_profiles(roi_profiles_names: List[str]):
         else:
             _logger.info(
                 "Added channel %s ROI profile: %s", i, prof[prof.NAME_KEY])
-    colormaps.setup_colormaps(np_io.get_num_channels(config.image5d))
+    colormaps.setup_colormaps(np_io.get_num_channels(image5d))
 
 
 def setup_atlas_profiles(atlas_profiles_names: str, reset: bool = True):
@@ -1166,6 +1169,7 @@ def _grid_search(series_list: List[int]):
 
 
 def process_file(
+        img5d: Optional["np_io.Image5d"],
         path: str, proc_type: Enum, proc_val: Optional[Any] = None,
         series: Optional[int] = None,
         subimg_offset: Optional[List[int]] = None,
@@ -1178,6 +1182,7 @@ def process_file(
     Assumes that the image has already been set up.
     
     Args:
+        img5d: Image5d object with image data and metadata.
         path: Path to image from which MagellanMapper-style paths will
             be generated.
         proc_type: Processing type, which should be a one of
@@ -1257,16 +1262,21 @@ def process_file(
             shape = subimg_size
             if shape is None:
                 # get shape from loaded image, falling back to its metadata
-                if config.image5d is not None:
-                    shape = config.image5d.shape[1:]
-                else:
-                    shape = config.img5d.meta[config.MetaKeys.SHAPE][1:]
-            matches = colocalizer.StackColocalizer.colocalize_stack(
-                shape, config.blobs, config.channel)
-            # insert matches into database
-            colocalizer.insert_matches(config.db, matches)
+                if img5d is not None:
+                    if img5d.img is not None:
+                        shape = img5d.img.shape[1:]
+                    elif img5d.meta is not None:
+                        shape = img5d.meta[config.MetaKeys.SHAPE][1:]
+            if shape is not None:
+                matches = colocalizer.StackColocalizer.colocalize_stack(
+                    shape, config.blobs, config.channel)
+                # insert matches into database
+                colocalizer.insert_matches(config.db, matches)
+            else:
+                _logger.warning(
+                    "No shape provided for colocalization, skipping")
         else:
-            print("No blobs loaded to colocalize, skipping")
+            _logger.warning("No blobs loaded to colocalize, skipping")
     
     elif proc_type is config.ProcessTypes.CLASSIFY:
         # classify blobs
@@ -1278,29 +1288,46 @@ def process_file(
 
     elif proc_type in (config.ProcessTypes.EXPORT_PLANES,
                        config.ProcessTypes.EXPORT_PLANES_CHANNELS):
-        # export each plane as a separate image file
-        export_stack.export_planes(
-            config.image5d, config.savefig, config.channel,
-            proc_type is config.ProcessTypes.EXPORT_PLANES_CHANNELS)
+        if img5d is not None and img5d.img is not None:
+            # export each plane as a separate image file
+            export_stack.export_planes(
+                img5d.img, config.savefig, config.channel,
+                proc_type is config.ProcessTypes.EXPORT_PLANES_CHANNELS)
+        else:
+            _logger.warning(
+                "No image data loaded to export planes, skipping")
     
     elif proc_type is config.ProcessTypes.EXPORT_RAW:
-        # export the main image as a raw data file
-        out_path = libmag.combine_paths(config.filename, ".raw", sep="")
-        libmag.backup_file(out_path)
-        np_io.write_raw_file(config.image5d, out_path)
+        if img5d is not None and img5d.img is not None:
+            # export the main image as a raw data file
+            out_path = libmag.combine_paths(config.filename, ".raw", sep="")
+            libmag.backup_file(out_path)
+            np_io.write_raw_file(img5d.img, out_path)
+        else:
+            _logger.warning(
+                "No image data loaded to export raw, skipping")
 
     elif proc_type is config.ProcessTypes.EXPORT_TIF:
-        # export the main image as a TIF files for each channel
-        np_io.write_tif(config.img5d, config.filename)
+        if img5d is not None:
+            # export the main image as a TIF files for each channel
+            np_io.write_tif(img5d, config.filename)
+        else:
+            _logger.warning(
+                "No image data loaded to export TIF, skipping")
 
     elif proc_type is config.ProcessTypes.PREPROCESS:
-        # pre-process a whole image and save to file
-        # TODO: consider chunking option for larger images
-        out_path = config.prefix
-        if not out_path:
-            out_path = libmag.insert_before_ext(config.filename, "_preproc")
-        transformer.preprocess_img(
-            config.image5d, proc_val, config.channel, out_path)
+        if img5d is not None and img5d.img is not None:
+            # pre-process a whole image and save to file
+            # TODO: consider chunking option for larger images
+            out_path = config.prefix
+            if not out_path:
+                out_path = libmag.insert_before_ext(
+                    config.filename, "_preproc")
+            transformer.preprocess_img(
+                img5d.img, proc_val, config.channel, out_path)
+        else:
+            _logger.warning(
+                "No image data loaded to preprocess, skipping")
 
     return stats, fdbk
 

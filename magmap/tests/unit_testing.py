@@ -23,19 +23,23 @@ class TestImageStackProcessing(unittest.TestCase):
     def test_load_image(self):
         img5d = importer.read_file(
             config.filename, config.series)
-        config.image5d = img5d.img
-        if config.image5d is None:
+        if img5d.img is None:
             chls, import_path = importer.setup_import_multipage(
                 config.filename)
             import_md = importer.setup_import_metadata(chls, config.channel)
             img5d = importer.import_multiplane_images(
                 chls, import_path, import_md, channel=config.channel)
-            config.image5d = img5d.img
-        self.assertEqual(config.image5d.shape, (1, 51, 200, 200, 2))
+        config.img5d = img5d
+        assert(img5d is not None)
+        assert(img5d.img is not None)
+        self.assertEqual(img5d.img.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):
+        img5d = config.img5d
+        assert(img5d is not None)
+        assert(img5d.img is not None)
         _, _, blobs = stack_detect.detect_blobs_blocks(
-            config.filename, config.image5d, (30, 30, 8), (70, 70, 10),
+            config.filename, img5d.img, (30, 30, 8), (70, 70, 10),
             config.channel)
         self.assertEqual(len(blobs), 54)
 

@@ -260,13 +260,13 @@ class ClassifyImage:
         if image5d is None and config.img5d is not None:
             # get main image from config
             image5d = config.img5d.img
-            if image5d is None:
-                raise FileNotFoundError("No image found")
+        if image5d is None:
+            raise FileNotFoundError("No image found")
         
         if channels is None:
             # set up channels from config
             channels = plot_3d.setup_channels(
-                config.image5d, config.channel, 4)[1]
+                image5d, config.channel, 4)[1]
         
         if blobs is None:
             # get blobs from config

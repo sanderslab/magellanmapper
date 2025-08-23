@@ -359,8 +359,10 @@ def setup_images(
                 img5d_read = sitk_io.read_sitk_files(path, make_3d=True)
             elif not import_only and path_lower.endswith((".tif", ".tiff")):
                 # load TIF file directly
-                img5d_read, meta = read_tif(path)
-                config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
+                img5d_read = read_tif(path)
+                if img5d_read is not None and img5d_read.meta is not None:
+                    config.resolutions = img5d_read.meta[
+                        config.MetaKeys.RESOLUTIONS]
             else:
                 # load or import from MagellanMapper Numpy format
                 if not import_only:
@@ -627,7 +629,7 @@ def write_raw_file(arr, path):
 
 def read_tif(
         path: str, img5d: Optional[Image5d] = None
-) -> Tuple[Image5d, dict[str | config.MetaKeys, Any]]:
+) -> Image5d:
     """Read TIF files with Tifffile with lazy access through memory mapping.
 
     Save this file to NPY format if :attr:`config.savefig` is set to "npy".
@@ -637,7 +639,7 @@ def read_tif(
         img5d: Image5d storage class; defaults to None.
 
     Returns:
-        Image5d storage instance and dictionary of extracted metadata.
+        Image5d storage instance.
 
     """
     if img5d is None:
@@ -758,11 +760,12 @@ def read_tif(
     img5d.img = tif_memmap
     img5d.path_img = path
     img5d.img_io = config.LoadIO.TIFFFILE
+    img5d.meta = md
 
     if config.savefig and config.savefig.lower() == "npy":
         write_npy(tif_memmap, md, path)
     
-    return img5d, md
+    return img5d
 
 
 def write_npy(

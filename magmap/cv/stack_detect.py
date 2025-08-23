@@ -386,6 +386,8 @@ def detect_blobs_blocks(
     # by physical units to make more independent of resolution; use profile
     # from first channel to be processed for block settings
     time_detection_start = time()
+    if channels is None:
+        _, channels = plot_3d.setup_channels(roi, channels, 3)
     settings = config.get_roi_profile(channels[0])
     _logger.info("Profile for block settings: %s", settings[settings.NAME_KEY])
     blocks = setup_blocks(settings, roi.shape)

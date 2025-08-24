@@ -248,7 +248,6 @@ def setup_images(
     # LOAD MAIN IMAGE
     
     # reset image5d
-    config.image5d = None  # TODO: remove this in favor of Image5d
     config.image5d_is_roi = False
     img5d: Image5d = Image5d()
     config.img5d = img5d
@@ -584,9 +583,6 @@ def setup_images(
             blobs.set_blob_col(blobs.blobs, blobs.Cols.REGION, regions)
     
     config.img5d = img5d
-
-    # TODO: remove this once all images are loaded as Image5d
-    config.image5d = img5d.img
     
     return img5d
 

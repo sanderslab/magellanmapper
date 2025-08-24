@@ -192,7 +192,8 @@ def setup_images(
         allow_import: bool = True,
         fallback_main_img: bool = True,
         bg_atlas: Optional["BrainGlobeAtlas"] = None,
-        labels_ref_path: Optional[str] = None):
+        labels_ref_path: Optional[str] = None
+    ) -> Image5d:
     """Sets up an image and all associated images and metadata.
 
     Paths for related files such as registered images will generally be
@@ -216,6 +217,9 @@ def setup_images(
         labels_ref_path: Path to labels reference file. Defaults to None,
             in which case :att:`config.load_labels` and any loaded labels
             metadata will be used.
+    
+    Returns:
+        Image5d: Image5d instance with the main image and metadata loaded.
     
     """
     def add_metadata():
@@ -244,9 +248,10 @@ def setup_images(
     # LOAD MAIN IMAGE
     
     # reset image5d
-    config.image5d = None
+    config.image5d = None  # TODO: remove this in favor of Image5d
     config.image5d_is_roi = False
-    config.img5d = Image5d()
+    img5d: Image5d = Image5d()
+    config.img5d = img5d
     load_subimage = offset is not None and size is not None
     config.resolutions = None
     
@@ -279,16 +284,15 @@ def setup_images(
 
         try:
             # load sub-image if available
-            config.image5d = np.load(filename_subimg, mmap_mode="r")
-            config.image5d = importer.roi_to_image5d(config.image5d)
+            img5d.img = np.load(filename_subimg, mmap_mode="r")
+            img5d.img = importer.roi_to_image5d(img5d.img)
             config.image5d_is_roi = True
-            config.img5d.img = config.image5d
-            config.img5d.path_img = filename_subimg
-            config.img5d.img_io = config.LoadIO.NP
-            config.img5d.subimg_offset = offset
-            config.img5d.subimg_size = size
+            img5d.path_img = filename_subimg
+            img5d.img_io = config.LoadIO.NP
+            img5d.subimg_offset = offset
+            img5d.subimg_size = size
             print("Loaded sub-image from {} with shape {}"
-                  .format(filename_subimg, config.image5d.shape))
+                  .format(filename_subimg, img5d.img.shape))
 
             # after loading sub-image, load original image's metadata
             # for essential data such as vmin/vmax; will only warn if
@@ -335,10 +339,11 @@ def setup_images(
                 # blobs expected but not found
                 raise e2
     
-    if path and config.image5d is None and not atlas_suffix:
+    if path and img5d.img is None and not atlas_suffix:
         # load or import the main image stack
         print("Loading main image")
         try:
+            img5d_read = None
             path_lower = path.lower()
             import_only = proc_type is config.ProcessTypes.IMPORT_ONLY
             if bg_atlas:
@@ -351,18 +356,19 @@ def setup_images(
             elif path_lower.endswith(sitk_io.EXTS_3D):
                 # load format supported by SimpleITK and prepend time axis;
                 # if 2D, convert to 3D
-                img5d = sitk_io.read_sitk_files(path, make_3d=True)
+                img5d_read = sitk_io.read_sitk_files(path, make_3d=True)
             elif not import_only and path_lower.endswith((".tif", ".tiff")):
                 # load TIF file directly
-                img5d, meta = read_tif(path)
-                config.resolutions = meta[config.MetaKeys.RESOLUTIONS]
+                img5d_read = read_tif(path)
+                if img5d_read is not None and img5d_read.meta is not None:
+                    config.resolutions = img5d_read.meta[
+                        config.MetaKeys.RESOLUTIONS]
             else:
                 # load or import from MagellanMapper Numpy format
-                img5d = None
                 if not import_only:
                     # load previously imported image
-                    img5d = importer.read_file(path, series)
-                if allow_import and (img5d is None or img5d.img is None):
+                    img5d_read = importer.read_file(path, series)
+                if allow_import and (img5d_read is None or img5d_read.img is None):
                     # import image; will re-import over any existing image file 
                     if os.path.isdir(path) and all(
                             [r is None for r in config.reg_suffixes.values()]):
@@ -375,7 +381,7 @@ def setup_images(
                             prefix = os.path.join(
                                 os.path.dirname(path),
                                 importer.DEFAULT_IMG_STACK_NAME)
-                        img5d = importer.import_planes_to_stack(
+                        img5d_read = importer.import_planes_to_stack(
                             chls, prefix, import_md)
                     elif import_only:
                         # import multi-plane image
@@ -385,13 +391,15 @@ def setup_images(
                         import_md = importer.setup_import_metadata(
                             chls, config.channel, series)
                         add_metadata()
-                        img5d = importer.import_multiplane_images(
+                        img5d_read = importer.import_multiplane_images(
                             chls, prefix, import_md, series,
                             channel=config.channel)
-            if img5d is not None:
+            if img5d_read is not None:
                 # set loaded main image in config
-                config.img5d = img5d
-                config.image5d = config.img5d.img
+                if isinstance(img5d_read, tuple) and len(img5d_read) > 0:
+                    img5d = img5d_read[0]  # take first image if multiple
+                else:
+                    img5d = img5d_read
         except FileNotFoundError as e:
             _logger.exception(e)
             _logger.info("Could not load %s", path)
@@ -404,7 +412,7 @@ def setup_images(
         importer.assign_metadata(config.metadatas[0])
     
     # main image is currently required since many parameters depend on it
-    if fallback_main_img and atlas_suffix is None and config.image5d is None:
+    if fallback_main_img and atlas_suffix is None and img5d.img is None:
         # fallback to atlas if main image not already loaded
         atlas_suffix = config.RegNames.IMG_ATLAS.value
         _logger.info(
@@ -417,14 +425,17 @@ def setup_images(
     if path and atlas_suffix is not None:
         try:
             # will take the place of any previously loaded image5d
-            config.img5d = sitk_io.read_sitk_files(
+            img5d_read = sitk_io.read_sitk_files(
                 path, atlas_suffix, make_3d=True)
-            config.image5d = config.img5d.img
+            if isinstance(img5d_read, tuple) and len(img5d_read) > 0:
+                img5d = img5d_read[0]  # take image without time dimension
+            else:
+                img5d = img5d_read
             
-            if config.img5d.img is not None:
+            if img5d.img is not None:
                 # get near min/max across whole image
                 config.near_min, config.near_max = \
-                    importer.calc_intensity_bounds(config.img5d.img)
+                    importer.calc_intensity_bounds(img5d.img)
         except FileNotFoundError as e:
             print(e)
     
@@ -462,7 +473,7 @@ def setup_images(
                 pass
         if ref_paths and (labels_ref is None or labels_ref.ref_lookup is None):
             # warn if labels path given but none found
-            _logger.warn(
+            _logger.warning(
                 "Unable to load labels reference file from '%s', skipping",
                 ref_paths)
 
@@ -475,28 +486,37 @@ def setup_images(
             try:
                 # load labels image
                 # TODO: need to support multichannel labels images
-                img5d, config.labels_img_sitk = sitk_io.read_sitk_files(
+                annot_imgs = sitk_io.read_sitk_files(
                     path, annotation_suffix, True, True)
-                config.labels_img = img5d.img[0]
+                if isinstance(annot_imgs, tuple) and len(annot_imgs) > 1:
+                    img5d_annot, config.labels_img_sitk = annot_imgs
+                    if img5d_annot.img is not None:
+                        # take image without time dimension
+                        config.labels_img = img5d_annot.img[0]
             except FileNotFoundError as e:
                 print(e)
-                if config.image5d is not None:
+                if img5d.img is not None:
                     # create a blank labels images for custom annotation; colormap
                     # can be generated for the original labels loaded below
                     config.labels_img = np.zeros(
-                        config.image5d.shape[1:4], dtype=int)
+                        img5d.img.shape[1:4], dtype=int)
                     print("Created blank labels image from main image")
-        if config.image5d is not None and config.labels_img is not None:
+        if img5d.img is not None and config.labels_img is not None:
             # set up scaling factors by dimension between intensity and
             # labels images
             config.labels_scaling = importer.calc_scaling(
-                config.image5d, config.labels_img)
+                img5d.img, config.labels_img)
     
     if borders_suffix is not None:
         # load borders image, which can also be another labels image
         try:
-            config.borders_img = sitk_io.read_sitk_files(
-                path, borders_suffix, make_3d=True).img[0]
+            borders_imgs = sitk_io.read_sitk_files(
+                path, borders_suffix, make_3d=True)
+            if isinstance(borders_imgs, tuple) and len(borders_imgs) > 0:
+                borders_imgs = borders_imgs[0]
+                if borders_imgs.img is not None:
+                    # take image without time dimension
+                    config.borders_img = borders_imgs.img[0]
         except FileNotFoundError as e:
             print(e)
     
@@ -517,24 +537,22 @@ def setup_images(
                     "differ from the original image")
     
     load_rot90 = config.roi_profile["load_rot90"]
-    if load_rot90 and config.image5d is not None:
+    if load_rot90 and img5d.img is not None:
         # rotate main image specified num of times x90deg after loading since 
         # need to rotate images output by deep learning toolkit
-        config.image5d = np.rot90(config.image5d, load_rot90, (2, 3))
+        img5d.img = np.rot90(img5d.img, load_rot90, (2, 3))
 
-    if (config.image5d is not None and load_subimage
+    if (img5d.img is not None and load_subimage
             and not config.image5d_is_roi):
         # crop full image to bounds of sub-image
-        config.image5d = plot_3d.prepare_subimg(
-            config.image5d, offset, size)[None]
-        config.img5d.img = config.image5d
+        img5d.img = plot_3d.prepare_subimg(img5d.img, offset, size)[None]
         config.image5d_is_roi = True
 
     # add any additional image5d thresholds for multichannel images, such
     # as those loaded without metadata for these settings
     if not colormaps.CMAPS:
         colormaps.setup_cmaps()
-    num_channels = get_num_channels(config.image5d)
+    num_channels = get_num_channels(img5d.img)
     config.near_max = libmag.pad_seq(config.near_max, num_channels, -1)
     config.near_min = libmag.pad_seq(config.near_min, num_channels, 0)
     config.vmax_overview = libmag.pad_seq(
@@ -546,9 +564,9 @@ def setup_images(
         config.cmap_labels = colormaps.setup_labels_cmap(config.labels_img)
     
     if (blobs is not None and blobs.blobs is not None
-            and config.img5d.img is not None and blobs.roi_size is not None):
+            and img5d.img is not None and blobs.roi_size is not None):
         # scale blob coordinates to main image if shapes differ
-        scaling = np.divide(config.img5d.img.shape[1:4], blobs.roi_size)
+        scaling = np.divide(img5d.img.shape[1:4], blobs.roi_size)
         # scale radius by mean of other dimensions' scaling
         scaling = np.append(scaling, np.mean(scaling))
         if not np.all(scaling == 1):
@@ -564,9 +582,17 @@ def setup_images(
                 coords.astype(int), config.labels_img)
             blobs.format_blobs()
             blobs.set_blob_col(blobs.blobs, blobs.Cols.REGION, regions)
+    
+    config.img5d = img5d
+
+    # TODO: remove this once all images are loaded as Image5d
+    config.image5d = img5d.img
+    
+    return img5d
 
 
-def get_num_channels(img: np.ndarray, is_3d: bool = False) -> int:
+def get_num_channels(
+        img: Optional[np.ndarray] = None, is_3d: bool = False) -> int:
     """Get the number of image channels based on expected dimensions.
 
     Args:
@@ -603,7 +629,7 @@ def write_raw_file(arr, path):
 
 def read_tif(
         path: str, img5d: Optional[Image5d] = None
-) -> Tuple[Image5d, dict[str | config.MetaKeys, Any]]:
+) -> Image5d:
     """Read TIF files with Tifffile with lazy access through memory mapping.
 
     Save this file to NPY format if :attr:`config.savefig` is set to "npy".
@@ -613,7 +639,7 @@ def read_tif(
         img5d: Image5d storage class; defaults to None.
 
     Returns:
-        Image5d storage instance and dictionary of extracted metadata.
+        Image5d storage instance.
 
     """
     if img5d is None:
@@ -634,7 +660,12 @@ def read_tif(
 
     # parse image description
     desc = tags["ImageDescription"].value
-    desc = ast.literal_eval(desc)
+    try:
+        # parse description as a dictionary
+        desc = ast.literal_eval(desc)
+    except (ValueError, SyntaxError):
+        # if parsing fails, assume it is a string and store it as such
+        desc = {"description": desc}
     _logger.debug("TIF description: %s", desc)
 
     nrot = 0
@@ -694,18 +725,25 @@ def read_tif(
     
     # load TIFF by memory mapping
     tif_memmap = tifffile.memmap(path)
+
+    # adjust axes based on TIF metadata to fit Image5d format, TZYX(C)
     ndim = len(tif_memmap.shape)
     if ndim < 4 or ndim == 4 and "c" in axes:
-        # add a time dimension for 3D or 3D+C images to ensure TZYX(C) axes
+        # add a time dimension for 3D or 3D+C images
         # TODO: add any time "t" axis is absent?
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
+        axes = "t" + axes  # prepend time axis
     if "z" not in axes and "q" not in axes:
         # add a z-axis for 2D images; skip if has axis "q" (other)
         tif_memmap = np.expand_dims(tif_memmap, axis=0)
-    if axes[0] == "c":
+        axes = "z" + axes  # prepend z axis
+    if "c" in axes:
         # move channel dimension to end
-        tif_memmap = np.swapaxes(tif_memmap, 2, -1)
+        c = axes.index("c")
+        tif_memmap = np.swapaxes(tif_memmap, c, -1)
+        axes = axes[:c] + axes[c + 1:] + "c"  # move c to end
     _logger.debug("TIF output shape: %s", tif_memmap.shape)
+    _logger.debug("TIF output axes: %s", axes)
     
     if nrot:
         # apply 90 deg rotations; appears to need flipping; both return views
@@ -722,11 +760,12 @@ def read_tif(
     img5d.img = tif_memmap
     img5d.path_img = path
     img5d.img_io = config.LoadIO.TIFFFILE
+    img5d.meta = md
 
     if config.savefig and config.savefig.lower() == "npy":
         write_npy(tif_memmap, md, path)
     
-    return img5d, md
+    return img5d
 
 
 def write_npy(

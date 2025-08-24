@@ -360,7 +360,7 @@ def _setup_labels_cmaps(imgs, cmaps_labels=None):
 
 
 def setup_stack(
-        image5d: np.ndarray, path: Optional[str] = None,
+        image5d: Optional[np.ndarray], path: Optional[str] = None,
         offset: Optional[Sequence[int]] = None,
         roi_size: Optional[Sequence[int]] = None,
         slice_vals: Optional[Sequence[int]] = None,
@@ -550,13 +550,14 @@ def stack_to_img(paths, roi_offset, roi_size, series=None, subimg_offset=None,
             axs = []
             # TODO: test directory of images
             # TODO: consider not reloading first image
-            np_io.setup_images(path_sub, series, subimg_offset, subimg_size)
-            if config.img5d.img_io is config.LoadIO.TIFFFILE:
+            img5d = np_io.setup_images(
+                path_sub, series, subimg_offset, subimg_size)
+            if img5d.img_io is config.LoadIO.TIFFFILE:
                 # remove extension from TIF files, which needed ext to load
                 path_base = libmag.get_filename_without_ext(path_base)
             
             stacker = setup_stack(
-                config.image5d, path_sub, offset=roi_offset,
+                img5d.img, path_sub, offset=roi_offset,
                 roi_size=roi_size, slice_vals=config.slice_vals, 
                 rescale=config.transform[config.Transforms.RESCALE],
                 labels_imgs=(config.labels_img, config.borders_img))

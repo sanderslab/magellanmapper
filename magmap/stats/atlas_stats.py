@@ -476,10 +476,10 @@ def plot_clusters_by_label(path, z, suffix=None, show=True, scaling=None):
     plot_support.hide_axes(ax)
     
     # plot underlying atlas
-    np_io.setup_images(mod_path)
-    if config.reg_suffixes[config.RegSuffixes.ATLAS]:
+    img5d = np_io.setup_images(mod_path)
+    if config.reg_suffixes[config.RegSuffixes.ATLAS] and img5d is not None:
         # use atlas if explicitly set
-        img = config.image5d
+        img = img5d.img
     else:
         # default to black background
         img = np.zeros_like(config.labels_img)[None]

@@ -1717,7 +1717,7 @@ class Visualization(HasTraits):
             for seg in segs_to_delete:
                 feedback.append(self._format_seg(seg))
         exp_name = sqlite.get_exp_name(
-            config.img5d.path_img if config.img5d else None)
+            self.img5d.path_img if self.img5d else None)
         exp_id = config.db.select_or_insert_experiment(exp_name)
         roi_id, out = sqlite.select_or_insert_roi(
             config.db.conn, config.db.cur, exp_id, config.series, 
@@ -2073,9 +2073,9 @@ class Visualization(HasTraits):
         self._init_channels()
         self._vis3d = vis_3d.Vis3D(self.scene)
         self._vis3d.fn_update_coords = self.set_offset
-        if config.img5d and config.img5d.img is not None:
-            image5d = config.img5d.img
-            config.img5d.rgb = self._rgb
+        if self.img5d and self.img5d.img is not None:
+            image5d = self.img5d.img
+            self.img5d.rgb = self._rgb
             
             # TODO: consider subtracting 1 to avoid max offset being 1 above
             # true max, but currently convenient to display size and checked
@@ -2210,7 +2210,7 @@ class Visualization(HasTraits):
         
         # set up selector for loading past saved ROIs
         self._rois_dict = {self._ROI_DEFAULT: None}
-        img5d = config.img5d
+        img5d = self.img5d
         if config.db is not None and img5d and img5d.path_img is not None:
             self._rois = config.db.get_rois(sqlite.get_exp_name(
                 img5d.path_img))
@@ -2385,10 +2385,10 @@ class Visualization(HasTraits):
     @observe("_rgb", post_init=True)
     def _update_rgb(self, event):
         """Handle changes to the RGB button."""
-        if config.img5d:
+        if self.img5d:
             # change image RGB setting, which editors reference
-            config.img5d.rgb = self._rgb
-            _logger.debug("Changed RGB to %s", config.img5d.rgb)
+            self.img5d.rgb = self._rgb
+            _logger.debug("Changed RGB to %s", self.img5d.rgb)
             
             # update image adjustment channel options
             self._update_imgadj_limits()
@@ -3129,7 +3129,7 @@ class Visualization(HasTraits):
             # additional args with defaults
             self._full_border(self.border))
         roi_ed = roi_editor.ROIEditor(
-            config.img5d, config.labels_img, self._img_region,
+            self.img5d, config.labels_img, self._img_region,
             self.show_label_3d, self.update_status_bar_msg)
         self.roi_ed = roi_ed
         
@@ -3214,7 +3214,7 @@ class Visualization(HasTraits):
             # using the same title causes the windows to overlap
             title += " ({})".format(len(self.atlas_eds) + 1)
         atlas_ed = atlas_editor.AtlasEditor(
-            config.img5d, config.labels_img, config.channel,
+            self.img5d, config.labels_img, config.channel,
             self._curr_offset(center=False), self._atlas_ed_close_listener,
             config.borders_img, self.show_label_3d, title,
             self._refresh_atlas_eds, self._atlas_ed_fig,
@@ -3399,7 +3399,7 @@ class Visualization(HasTraits):
             self.verifier_ed.on_close()
         
         verifier_ed = verifier_editor.VerifierEditor(
-            config.img5d, self.blobs, "Verifier", self._roi_ed_fig,
+            self.img5d, self.blobs, "Verifier", self._roi_ed_fig,
             # necessary for immediate table refresh rather than after scroll
             self.update_segment)
         verifier_ed.additive_blend = self._merge_chls

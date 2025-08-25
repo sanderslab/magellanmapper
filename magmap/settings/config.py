@@ -157,7 +157,6 @@ roi_size = None  # current region of interest
 subimg_offsets = None
 subimg_sizes = None
 
-image5d = None  # numpy image array
 image5d_is_roi = False  # flag when image5d was loaded as an ROI
 #: Image5d object.
 img5d: Optional["np_io.Image5d"] = None

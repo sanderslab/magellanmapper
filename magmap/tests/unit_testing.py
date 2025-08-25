@@ -22,6 +22,9 @@ class TestImageStackProcessing(unittest.TestCase):
         cli.setup_roi_profiles(["lightsheet,4xnuc"])
     
     def test_read_tif_(self):
+        import os
+        print(f"Current dir: {os.getcwd()}")
+        print(f"Files: {os.listdir('.')}")
         img5d = np_io.read_tif(TEST_IMG_TIFF)
         config.img5d = img5d
         assert(img5d is not None)

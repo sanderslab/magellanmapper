@@ -68,6 +68,15 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           pip install .
+      - name: Download test data (for Linux and macOS)
+        if: ${{ runner.os == 'Linux' }} || ${{ runner.os == 'macOS' }}
+        run: |
+          curl -o sample_region.tif https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.tif
+      - name: Download test data (for Windows)
+        if: ${{ runner.os == 'Windows' }}
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/sanderslab/magellanmapper/releases/download/v1.1.3/sample_region.tif" -OutFile "sample_region.tif"
       - name: Lint with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -86,4 +95,4 @@ jobs:
           #python -u -m magmap.tests.test_visualizer
           # TODO: add image artifacts
           #python -u -m magmap.tests.test_img_equality
-          #python -u -m magmap.tests.unit_testing
+          python -u -m magmap.tests.unit_testing

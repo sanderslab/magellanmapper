@@ -37,6 +37,8 @@ class TestImageStackProcessing(unittest.TestCase):
         np_io.write_npy(config.img5d.img, config.img5d.meta, TEST_IMG_TIFF)
     
     def test_load_npy_image(self):
+        import os
+        print(f"Files: {os.listdir('.')}")
         img5d = importer.read_file(TEST_IMG_BASE)
         config.img5d = img5d
         assert(img5d is not None)

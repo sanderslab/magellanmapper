@@ -775,16 +775,19 @@ def read_file(
         FileNotFoundError: If metadata was set to be updated, but the
         main image could not be found to update the metadata.
     """
+    print("Reading image file {}".format(filename))
     if series is None:
         series = 0
     filename_image5d, filename_meta = make_filenames(filename, series)
     img5d = np_io.Image5d(
         None, filename_image5d, filename_meta, config.LoadIO.NP)
     image5d_ver_num = -1
+    print("Reading image5d from {}".format(filename_image5d))
     
     try:
         # load image5d metadata; if updating, only fully load if curr ver
         metadata, image5d_ver_num = load_metadata(filename_meta, update_info)
+        print("loaded metadata:", metadata)
         img5d.meta = metadata
 
         # load original image, using mem-mapped accessed for the image

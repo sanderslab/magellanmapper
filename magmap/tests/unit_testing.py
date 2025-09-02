@@ -27,9 +27,9 @@ class TestImageStackProcessing(unittest.TestCase):
         print(f"Files: {os.listdir('.')}")
         img5d = np_io.read_tif(TEST_IMG_TIFF)
         config.img5d = img5d
-        assert(img5d is not None)
-        assert(img5d.img is not None)
-        assert(img5d.meta is not None)
+        assert img5d is not None
+        assert img5d.img is not None
+        assert img5d.meta is not None
         config.resolutions = img5d.meta[config.MetaKeys.RESOLUTIONS]
         self.assertEqual(img5d.img.shape, (1, 51, 200, 200, 2))
     
@@ -41,8 +41,8 @@ class TestImageStackProcessing(unittest.TestCase):
         print(f"Files: {os.listdir('.')}")
         img5d = importer.read_file(TEST_IMG_BASE)
         config.img5d = img5d
-        assert(img5d is not None)
-        assert(img5d.img is not None)
+        assert img5d is not None
+        assert img5d.img is not None
         self.assertEqual(img5d.img.shape, (1, 51, 200, 200, 2))
     
     @unittest.skip("CZI files not yet supported in this test")
@@ -56,14 +56,14 @@ class TestImageStackProcessing(unittest.TestCase):
             img5d = importer.import_multiplane_images(
                 chls, import_path, import_md, channel=config.channel)
         config.img5d = img5d
-        assert(img5d is not None)
-        assert(img5d.img is not None)
+        assert img5d is not None
+        assert img5d.img is not None
         self.assertEqual(img5d.img.shape, (1, 51, 200, 200, 2))
     
     def test_process_whole_image(self):
         img5d = config.img5d
-        assert(img5d is not None)
-        assert(img5d.img is not None)
+        assert img5d is not None
+        assert img5d.img is not None
         _, _, blobs = stack_detect.detect_blobs_blocks(
             config.filename, img5d.img, (30, 30, 8), (70, 70, 10),
             config.channel)

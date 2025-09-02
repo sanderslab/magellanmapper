@@ -3,6 +3,7 @@
 """Unit testing for the MagellanMapper package.
 """
 
+import os
 import unittest
 
 from magmap.cv import stack_detect
@@ -22,7 +23,6 @@ class TestImageStackProcessing(unittest.TestCase):
         cli.setup_roi_profiles(["lightsheet,4xnuc"])
     
     def test_npy01_read_tif_(self):
-        import os
         print(f"Current dir: {os.getcwd()}")
         print(f"Files: {os.listdir('.')}")
         img5d = np_io.read_tif(TEST_IMG_TIFF)
@@ -37,7 +37,6 @@ class TestImageStackProcessing(unittest.TestCase):
         np_io.write_npy(config.img5d.img, config.img5d.meta, TEST_IMG_TIFF)
     
     def test_npy03_read_file(self):
-        import os
         print(f"Files: {os.listdir('.')}")
         img5d = importer.read_file(TEST_IMG_BASE)
         config.img5d = img5d

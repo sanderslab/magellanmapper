@@ -95,4 +95,4 @@ jobs:
           #python -u -m magmap.tests.test_visualizer
           # TODO: add image artifacts
           #python -u -m magmap.tests.test_img_equality
-          python -u -m magmap.tests.unit_testing
+          python -u -m magmap.tests.test_image_stack_integration

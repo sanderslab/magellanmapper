@@ -15,9 +15,9 @@ TEST_IMG_BASE = "sample_region"
 TEST_IMG_TIFF = f"{TEST_IMG_BASE}.tif"
 
 
-class TestImageStackProcessing(unittest.TestCase):
+class TestImageStackIntegration(unittest.TestCase):
     
-    def test_npy00_setup(self):
+    def setUp(self):
         config.filename = TEST_IMG_TIFF
         config.channel = None
         cli.setup_roi_profiles(["lightsheet,4xnuc"])

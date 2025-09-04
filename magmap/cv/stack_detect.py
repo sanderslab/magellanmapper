@@ -36,6 +36,7 @@ class StackDetector(object):
     without global variables.
     
     Attributes:
+        img5d: Image5d object, currently only used for metadata.
         img (:obj:`np.ndarray`): Full image array.
         last_coord (:obj:`np.ndarray`): Indices of last sub-ROI given as
             coordinates in z,y,x.
@@ -47,6 +48,7 @@ class StackDetector(object):
         channel (Sequence[int]): Sequence of channels; defaults to None to
             detect in all channels.
     """
+    img5d: Optional["np_io.Image5d"] = None  # only used for metadata
     img = None
     last_coord = None
     denoise_max_shape = None
@@ -73,14 +75,15 @@ class StackDetector(object):
         """
         return cls.detect_sub_roi(
             coord, offset, cls.last_coord,
-            cls.denoise_max_shape, cls.exclude_border, cls.img[sub_roi_slices],
-            cls.channel, coloc=cls.coloc)
+            cls.denoise_max_shape, cls.exclude_border, cls.img5d,
+            cls.img[sub_roi_slices], cls.channel, coloc=cls.coloc)
 
     @classmethod
     def detect_sub_roi(
             cls, coord: Sequence[int], offset: Sequence[int],
             last_coord: Sequence[int], denoise_max_shape: Sequence[int],
-            exclude_border: bool, sub_roi: np.ndarray, channel: Sequence[int],
+            exclude_border: bool, img5d: "np_io.Image5d", sub_roi: np.ndarray,
+            channel: Sequence[int],
             img_path: Optional[str] = None, coloc: bool = False
     ) -> Tuple[Sequence[int], np.ndarray]:
         """Perform 3D blob detection within a sub-ROI without accessing
@@ -92,6 +95,7 @@ class StackDetector(object):
             last_coord: See attributes.
             denoise_max_shape: See attributes.
             exclude_border: See attributes.
+            img5d: Image5d object, currently only used for metadata.
             sub_roi: Array in which to perform detections.
             img_path: Path from which to load metadatat; defaults to None.
                 If given, the command line arguments will be reloaded to
@@ -111,7 +115,7 @@ class StackDetector(object):
             # required if run from a spawned (not forked) process
             cli.process_cli_args()
             _, orig_info = importer.make_filenames(img_path)
-            importer.load_metadata(orig_info)
+            importer.load_metadata(orig_info, img5d=img5d)
         _logger.debug(
             "Detecting blobs in sub-ROI at %s of %s", coord, last_coord)
         
@@ -168,12 +172,13 @@ class StackDetector(object):
         return coord, segments
     
     @classmethod
-    def detect_blobs_sub_rois(cls, img, sub_roi_slices, sub_rois_offsets,
+    def detect_blobs_sub_rois(cls, img5d, img, sub_roi_slices, sub_rois_offsets,
                               denoise_max_shape, exclude_border, coloc,
                               channel):
         """Process blobs in chunked sub-ROIs via multiprocessing.
 
         Args:
+            img5d: Image5d object, currently only used for metadata.
             img (:obj:`np.ndarray`): Array in which to detect blobs.
             sub_roi_slices (:obj:`np.ndarray`): Numpy object array containing
                 chunked sub-ROIs within a stack.
@@ -204,6 +209,7 @@ class StackDetector(object):
         if is_fork:
             # set data as class attributes for direct access during forked
             # multiprocessing
+            cls.img5d = img5d
             cls.img = img
             cls.last_coord = last_coord
             cls.denoise_max_shape = denoise_max_shape
@@ -232,6 +238,7 @@ class StackDetector(object):
                             StackDetector.detect_sub_roi,
                             args=(coord, sub_rois_offsets[coord], last_coord,
                                   denoise_max_shape, exclude_border,
+                                  np_io.Image5d(),  # empty to fill with meta
                                   img[sub_roi_slices[coord]], channel,
                                   config.filename, coloc)))
     
@@ -329,7 +336,7 @@ def setup_blocks(
 
 
 def detect_blobs_blocks(
-        filename_base: str, image5d: np.ndarray,
+        filename_base: str, img5d: "np_io.Image5d",
         offset: Optional[Sequence[int]] = None,
         size: Optional[Sequence[int]] = None,
         channels: Optional[Sequence[int]] = None, verify: bool = False,
@@ -341,7 +348,7 @@ def detect_blobs_blocks(
     
     Args:
         filename_base: Base path to use file output.
-        image5d: Large image to process as a Numpy array of t,z,y,x,[c]
+        img5d: Large image to process.
         offset: Sub-image offset given as coordinates in z,y,x.
         size: Sub-image shape given in z,y,x.
         channels: Sequence of channels, where None detects in all channels.
@@ -361,6 +368,10 @@ def detect_blobs_blocks(
     """
     time_start = time()
     subimg_path_base = filename_base
+    if img5d.img is None:
+        raise ValueError("Image data is None")
+    image5d = img5d.img
+
     if size is None or offset is None:
         # uses the entire stack if no size or offset specified
         size = image5d.shape[1:4]
@@ -395,7 +406,7 @@ def detect_blobs_blocks(
     # TODO: option to distribute groups of sub-ROIs to different servers
     # for blob detection
     seg_rois = StackDetector.detect_blobs_sub_rois(
-        roi, blocks.sub_roi_slices, blocks.sub_rois_offsets,
+        img5d, roi, blocks.sub_roi_slices, blocks.sub_rois_offsets,
         blocks.denoise_max_shape, blocks.exclude_border, coloc, channels)
     detection_time = time() - time_detection_start
     _logger.info("Blob detection time (s): %s", detection_time)
@@ -559,7 +570,7 @@ def detect_blobs_stack(
         if not libmag.is_seq(chl):
             chl = [chl]
         blobs_out = detect_blobs_blocks(
-            filename_base, img5d.img, subimg_offset, subimg_size,
+            filename_base, img5d, subimg_offset, subimg_size,
             chl, config.truth_db_mode is config.TruthDBModes.VERIFY,
             not config.grid_search_profile, img5d.is_roi, coloc)
         for col, val in zip(cols, blobs_out):

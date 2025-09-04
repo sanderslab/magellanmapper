@@ -64,7 +64,7 @@ class TestImageStackIntegration(unittest.TestCase):
         assert img5d is not None
         assert img5d.img is not None
         _, _, blobs = stack_detect.detect_blobs_blocks(
-            config.filename, img5d.img, (30, 30, 8), (70, 70, 10),
+            config.filename, img5d, (30, 30, 8), (70, 70, 10),
             config.channel)
         nblobs = len(blobs.blobs) \
             if blobs is not None and blobs.blobs is not None else 0

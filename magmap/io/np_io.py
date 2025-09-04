@@ -63,6 +63,10 @@ class Image5d:
         self.rgb: bool = False
         #: True if image is a sub-image/ROI.
         self.is_roi: bool = False
+        #: 2D array of shapes per time point in
+        #: ``[n_time_point, n_shape]`` format in case image5d is not available
+        #: TODO: consider simplify to single shape as 1D array
+        self.shapes: np.ndarray = None
 
 
 def img_to_blobs_path(path):
@@ -299,7 +303,7 @@ def setup_images(
             # fails to load since metadata could be specified elsewhere
             _, orig_info = importer.make_filenames(path, series)
             print("load original image metadata from:", orig_info)
-            importer.load_metadata(orig_info)
+            importer.load_metadata(orig_info, img5d=img5d)
         except IOError:
             print("Ignored sub-image file from {} as unable to load"
                   .format(filename_subimg))
@@ -409,7 +413,7 @@ def setup_images(
         # for any loaded image5d
         # TODO: access metadata directly from given image5d's dict to allow
         # loading multiple image5d images simultaneously
-        importer.assign_metadata(config.metadatas[0])
+        importer.assign_metadata(img5d, config.metadatas[0])
     
     # main image is currently required since many parameters depend on it
     if fallback_main_img and atlas_suffix is None and img5d.img is None:

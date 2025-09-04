@@ -500,7 +500,7 @@ def process_cli_args():
         config.metadatas = []
         for path in config.metadata_paths:
             # load metadata to dictionary
-            md, _ = importer.load_metadata(path, assign=False)
+            md, _ = importer.load_metadata(path)
             config.metadatas.append(md)
 
     if args.channel is not None:

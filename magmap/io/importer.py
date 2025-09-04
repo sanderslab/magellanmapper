@@ -608,15 +608,16 @@ def _update_image5d_np_ver(curr_ver, image5d, info, filename_info_npz):
 
 
 def load_metadata(
-        path: str, check_ver: bool = False, assign: bool = True
+        path: str, check_ver: bool = False,
+        img5d: Optional["np_io.Image5d"] = None,
 ) -> Tuple[Optional[Dict[Union[str, config.MetaKeys], Any]], int]:
-    """Load image info, such as saved microscopy data and image ranges.
+    """Load image info like saved microscopy data from file.
     
     Args:
         path: Path to image info file.
         check_ver: True to stop loading if the archive's version number  
             is less than :const:``IMAGE5D_NP_VER``; defaults to False.
-        assign: True to assign values to module-level settings.
+        img5d: Image object in which to assign metadata.
     
     Returns:
         Tuple of ``output``, the dictionary with image info, and 
@@ -661,19 +662,24 @@ def load_metadata(
         print("loaded image5d version number {}".format(image5d_ver_num))
     except KeyError:
         print("could not find image5d version number")
-    if assign and (not check_ver or image5d_ver_num >= IMAGE5D_NP_VER):
+    
+    if img5d is not None and (
+            not check_ver or image5d_ver_num >= IMAGE5D_NP_VER):
         # load into various module variables unless checking version 
         # and below current version to avoid errors during loading
-        assign_metadata(output)
+        assign_metadata(img5d, output)
+    
     return output, image5d_ver_num
 
 
-def assign_metadata(md: Dict[Union[str, config.MetaKeys], Any]):
+def assign_metadata(
+        img5d: "np_io.Image5d", md: Dict[Union[str, config.MetaKeys], Any]):
     """Assign values from a metadata dictionary to module variables.
     
     Values are also added to :class:`magmap.settings.config.MetaKeys` entries.
     
     Args:
+        img5d: The image object in which to assign metadata.
         md: Dictionary of metadata.
 
     """
@@ -686,13 +692,12 @@ def assign_metadata(md: Dict[Union[str, config.MetaKeys], Any]):
     
     try:
         # image shapes for each series
-        config.image5d_shapes = md["sizes"]
+        img5d.shapes = md["sizes"]
         # get first series' shape
-        md[config.MetaKeys.SHAPE] = libmag.get_if_within(
-            config.image5d_shapes, 0)
-        print("sizes {}".format(config.image5d_shapes))
+        md[config.MetaKeys.SHAPE] = libmag.get_if_within(img5d.shapes, 0)
+        _logger.debug("Image shapes %", img5d.shapes)
     except KeyError:
-        print("could not find sizes")
+        _logger.debug("Could not find image sizes")
     
     try:
         # image resolutions for each series
@@ -784,7 +789,8 @@ def read_file(
     
     try:
         # load image5d metadata; if updating, only fully load if curr ver
-        metadata, image5d_ver_num = load_metadata(filename_meta, update_info)
+        metadata, image5d_ver_num = load_metadata(
+            filename_meta, update_info, img5d)
         img5d.meta = metadata
 
         # load original image, using mem-mapped accessed for the image
@@ -804,7 +810,8 @@ def read_file(
                 image5d_ver_num, image5d, metadata, filename_meta)
             if load_info:
                 # load updated archive
-                metadata, image5d_ver_num = load_metadata(filename_meta)
+                metadata, image5d_ver_num = load_metadata(
+                    filename_meta, img5d=img5d)
             img5d.meta = metadata
     
     except OSError as err:
@@ -1167,14 +1174,15 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
         [import_md[config.MetaKeys.RESOLUTIONS]],
         import_md[config.MetaKeys.MAGNIFICATION],
         import_md[config.MetaKeys.ZOOM], near_mins, near_maxs)
-    assign_metadata(md)
+    img5d = np_io.Image5d(
+        image5d, filename_image5d, filename_meta, config.LoadIO.NP)
+    assign_metadata(img5d, md)
     libmag.printcb("Completed multiplane image import planes to \"{}\" "
                    "with metadata:\n{}"
                    .format(filename_image5d, md), fn_feedback)
     if jb_attached:
         jb.detach()
-    return np_io.Image5d(
-        image5d, filename_image5d, filename_meta, config.LoadIO.NP)
+    return img5d
 
 
 def _parse_import_chls(paths):
@@ -1366,11 +1374,12 @@ def import_planes_to_stack(chl_paths, prefix, import_md, rgb_to_grayscale=True,
         [import_md[config.MetaKeys.RESOLUTIONS]],
         import_md[config.MetaKeys.MAGNIFICATION],
         import_md[config.MetaKeys.ZOOM], lows_chls, highs_chls)
-    assign_metadata(md)
+    img5d = np_io.Image5d(
+        image5d, filename_image5d_npz, filename_info_npz, config.LoadIO.NP)
+    assign_metadata(img5d, md)
     libmag.printcb("Saved image to \"{}\" with the following metadata:\n{}"
                    .format(filename_image5d_npz, md), fn_feedback)
-    return np_io.Image5d(
-        image5d, filename_image5d_npz, filename_info_npz, config.LoadIO.NP)
+    return img5d
 
 
 def calc_intensity_bounds(image5d, lower=0.5, upper=99.5, dim_channel=4):

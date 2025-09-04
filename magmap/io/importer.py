@@ -695,7 +695,7 @@ def assign_metadata(
         img5d.shapes = md["sizes"]
         # get first series' shape
         md[config.MetaKeys.SHAPE] = libmag.get_if_within(img5d.shapes, 0)
-        _logger.debug("Image shapes %", img5d.shapes)
+        _logger.debug("Image shapes %s", img5d.shapes)
     except KeyError:
         _logger.debug("Could not find image sizes")
     

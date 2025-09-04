@@ -59,8 +59,10 @@ class Image5d:
         self.subimg_offset: Optional[Sequence[int]] = None
         self.subimg_size: Optional[Sequence[int]] = None
         self.meta: Optional[Dict[Union[str, config.MetaKeys], Any]] = None
-        #: True if image is RGB(A); defaults to False. 
+        #: True if image is RGB(A). 
         self.rgb: bool = False
+        #: True if image is a sub-image/ROI.
+        self.is_roi: bool = False
 
 
 def img_to_blobs_path(path):
@@ -248,7 +250,6 @@ def setup_images(
     # LOAD MAIN IMAGE
     
     # reset image5d
-    config.image5d_is_roi = False
     img5d: Image5d = Image5d()
     config.img5d = img5d
     load_subimage = offset is not None and size is not None
@@ -285,7 +286,7 @@ def setup_images(
             # load sub-image if available
             img5d.img = np.load(filename_subimg, mmap_mode="r")
             img5d.img = importer.roi_to_image5d(img5d.img)
-            config.image5d_is_roi = True
+            img5d.is_roi = True
             img5d.path_img = filename_subimg
             img5d.img_io = config.LoadIO.NP
             img5d.subimg_offset = offset
@@ -541,11 +542,10 @@ def setup_images(
         # need to rotate images output by deep learning toolkit
         img5d.img = np.rot90(img5d.img, load_rot90, (2, 3))
 
-    if (img5d.img is not None and load_subimage
-            and not config.image5d_is_roi):
+    if (img5d.img is not None and load_subimage and not img5d.is_roi):
         # crop full image to bounds of sub-image
         img5d.img = plot_3d.prepare_subimg(img5d.img, offset, size)[None]
-        config.image5d_is_roi = True
+        img5d.is_roi = True
 
     # add any additional image5d thresholds for multichannel images, such
     # as those loaded without metadata for these settings

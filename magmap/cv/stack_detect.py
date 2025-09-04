@@ -561,7 +561,7 @@ def detect_blobs_stack(
         blobs_out = detect_blobs_blocks(
             filename_base, img5d.img, subimg_offset, subimg_size,
             chl, config.truth_db_mode is config.TruthDBModes.VERIFY,
-            not config.grid_search_profile, config.image5d_is_roi, coloc)
+            not config.grid_search_profile, img5d.is_roi, coloc)
         for col, val in zip(cols, blobs_out):
             detection_out.setdefault(col, []).append(val)
         _logger.info(f"\n{'-' * 80}")

@@ -163,11 +163,6 @@ img5d: Optional["np_io.Image5d"] = None
 #: Blobs object.
 blobs: Optional["detector.Blobs"] = None
 
-#: :obj:`np.ndarray`: 2D array of shapes per time point in
-# ``[n_time_point, n_shape]`` format in case image5d is not available
-# TODO: consider simplify to single shape as 1D array
-image5d_shapes = None
-
 
 class LoadIO(Enum):
     """Enumerations for I/O load packages."""

@@ -172,10 +172,6 @@ class LoadIO(Enum):
     TIFFFILE = auto()
 
 
-#: :obj:`LoadIO`: I/O source for image5d array.
-image5d_io = None
-
-
 class LoadData(Enum):
     """Enumerations for specifying data to load."""
     BLOBS = auto()

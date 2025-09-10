@@ -846,7 +846,8 @@ def write_npy(
 
 
 def write_tif(
-        img5d: "Image5d", path: Union[str, pathlib.Path], **kwargs: Any):
+        img5d: "Image5d", path: Union[str, pathlib.Path],
+        sep_chls: bool = False, **kwargs: Any):
     """Write a NumPy array to TIF files.
     
     Each channel will be exported to a separate file.
@@ -856,25 +857,20 @@ def write_tif(
         path: Base output path. If ``image5d`` has multiple channels, they
             will be exported to files with ``_ch_<n>`` appended just before
             the extension.
+        sep_chls: True to export each channel to a separate file.
         kwargs: Arguments passed to :meth:`tifffile.imwrite`.
 
     """
-    image5d = img5d.img
-    if image5d is None or img5d.meta is None:
+    if img5d is None or img5d.img is None or img5d.meta is None:
         _logger.error("No image5d to write to TIF files")
         return
     
-    nchls = get_num_channels(image5d)
-    for i in range(nchls):
-        # export the given channel to a separate file, adding the channel to
-        # the filename if multiple channels exist
-        img_chl = image5d if image5d.ndim <= 4 else image5d[..., i]
-        out_path = pathlib.Path(libmag.make_out_path(
-            f"{path}{f'_ch_{i}' if nchls > 1 else ''}.tif",
-            combine_prefix=True)).resolve()
+    def write():
+        # write the current img_chl to out_path
         pathlib.Path.mkdir(out_path.parent.resolve(), exist_ok=True)
         libmag.backup_file(out_path)
         
+        nonlocal img_chl
         if "imagej" in kwargs and kwargs["imagej"]:
             # ImageJ format assumes dimension order of TZCYXS
             img_chl = img_chl[:, :, np.newaxis]
@@ -909,3 +905,22 @@ def write_tif(
         tifffile.imwrite(
             out_path, img_chl, resolution=res_tif, metadata=metadata,
             photometric="minisblack", **kwargs)
+        _logger.info("Saved '%s'", out_path)
+
+    image5d = img5d.img
+    if sep_chls:
+        nchls = get_num_channels(image5d)
+        for i in range(nchls):
+            # export the given channel to a separate file, adding the channel to
+            # the filename if multiple channels exist
+            img_chl = image5d if image5d.ndim <= 4 else image5d[..., i]
+            out_path = pathlib.Path(libmag.make_out_path(
+                f"{path}{f'_ch_{i}' if nchls > 1 else ''}.tif",
+                combine_prefix=True)).resolve()
+            write()
+    else:
+        # export all channels to the same file
+        img_chl = image5d
+        out_path = pathlib.Path(libmag.make_out_path(
+            f"{path}.tif", combine_prefix=True)).resolve()
+        write()

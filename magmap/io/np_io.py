@@ -3,6 +3,7 @@
 """Import/export for Numpy-based archives such as ``.npy`` and ``.npz`` formats.
 """
 import ast
+import operator
 import os
 import pathlib
 import pprint
@@ -589,6 +590,21 @@ def setup_images(
     config.img5d = img5d
     
     return img5d
+
+def fix_memmap_shape(shape: np.ndarray | Sequence) -> Tuple[int, ...]:
+    """Fix shape tuple for Numpy 2 memmap if it contains np.int64 values.
+
+    Args:
+        shape: Shape array.
+    
+    Returns:
+        Shape tuple with primitive int values.
+    
+    """
+    # WORKAROUND: fix error in Numpy 2 when shape for open_memmap contains
+    # np.int64 values instead of primitive int (see:
+    # https://github.com/numpy/numpy/issues/28334)
+    return tuple([operator.index(s) for s in shape])
 
 
 def get_num_channels(

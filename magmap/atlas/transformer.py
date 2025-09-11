@@ -12,8 +12,7 @@ from skimage import transform
 
 from magmap.cv import chunking, cv_nd
 from magmap.settings import config
-from magmap.io import importer
-from magmap.io import libmag
+from magmap.io import importer, libmag, np_io
 from magmap.plot import plot_3d
 
 _logger = config.logger.getChild(__name__)
@@ -279,17 +278,10 @@ def transpose_img(
             rescaled_shape = np.concatenate(([1], rescaled_shape))
         print(f"rescaled_shape: {rescaled_shape}")
         
-        # WORKAROUND: fix error in Numpy 2 when shape for open_memmap contains
-        # np.int64 values instead of primitive int (see:
-        # https://github.com/numpy/numpy/issues/28334)
-        def fix_shape(shape):
-            import operator
-            return [operator.index(s) for s in rescaled_shape]
-
         # rescale chunks directly into memmap-backed array to minimize RAM usage
         image5d_transposed = np.lib.format.open_memmap(
             filename_image5d_npz, mode="w+", dtype=sub_rois[0, 0, 0].dtype,
-            shape=tuple(fix_shape(rescaled_shape)))
+            shape=np_io.fix_memmap_shape(rescaled_shape))
         chunking.merge_split_stack2(sub_rois, None, offset, image5d_transposed)
         
         if rescale is not None:

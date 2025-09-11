@@ -19,7 +19,7 @@ from time import time
 import glob
 import pprint
 import re
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 from xml import etree as et
 
 import numpy as np
@@ -41,10 +41,6 @@ except (ImportError, ValueError, RuntimeError) as e:
     # Java cannot be initialized, or a RuntimeError if Java home dir not found 
     jb = None
     bf = None
-    _logger.warn(
-        "%s could not be found, so there will be error when attempting to "
-        "import images into Numpy format",
-        e.name if isinstance(e, ImportError) else "Java")
 
 # pixel type enumeration based on:
 # http://downloads.openmicroscopy.org/bio-formats-cpp/5.1.8/api/classome_1_1xml_1_1model_1_1enums_1_1PixelType.html
@@ -1040,8 +1036,11 @@ def _update_shape_for_channels(shape, chl_paths, channel):
     return shape_in, shape_out
 
 
-def import_multiplane_images(chl_paths, prefix, import_md, series=None,
-                             offset=0, channel=None, fn_feedback=None):
+def import_multiplane_images(
+        chl_paths: Dict[Any, List[str]], prefix: str,
+        import_md: Dict[config.MetaKeys, Any], series: Optional[int] = None,
+        offset: int = 0, channel: Optional[List[int]] = None,
+        fn_feedback: Optional[Callable] = None) -> "np_io.Image5d":
     """Imports single or multiplane file(s) into Numpy format.
     
     For multichannel images, this import currently supports either a single
@@ -1051,27 +1050,23 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
     files to bypass keeping the full input or output image in RAM.
 
     Args:
-        chl_paths (dict[Any, List[str]]): Ordered dictionary of channel
+        chl_paths: Ordered dictionary of channel
             numbers to sequences of image file paths to import.
-        prefix (str): Ouput base path.
-        import_md (dict[:obj:`config.MetaKeys`]): Import metadata dictionary,
+        prefix: Ouput base path.
+        import_md: Import metadata dictionary,
             used to set up the shape, data type (for RAW file import), and
             output image metadata (resolutions, zoom, magnification).
-        series (int): Series index to load. Defaults to None, which will use 0.
-        offset (int): z-plane offset from which to start importing.
-            Defaults to 0.
-        channel (List[int]): Sequence of channel indices to import; defaults
+        series: Series index to load. Defaults to None, which will use 0.
+        offset: z-plane offset from which to start importing.
+        channel: Sequence of channel indices to import; defaults
             to None to import all channels.
-        fn_feedback (func): Callback function to give feedback strings
-            during import; defaults to None.
+        fn_feedback: Callback function to give feedback strings
+            during import.
 
     Returns:
-        :obj:`np_io.Image5d: The 5D image object.
+        The 5D image object.
     
     """
-    if not is_javabridge_loaded():
-        return None
-
     time_start = time()
     if series is None:
         series = 0
@@ -1117,8 +1112,20 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
         img_raw = None
         libmag.printcb(
             "Loading file {} for import".format(img_path), fn_feedback)
-        if not _is_raw(img_path):
-            # open non-RAW image with Python-Bioformats
+        if _is_tif(img_path):
+            # load TIF file
+            img5d = np_io.read_tif(img_path)
+            if img5d.img is not None:
+                img_raw = img5d.img[0]  # assume first series
+        
+        elif _is_raw(img_path):
+            # open image file as a RAW 3D array
+            img_raw = np.memmap(
+                img_path, dtype=import_md[config.MetaKeys.DTYPE],
+                shape=tuple(shape_in[1:]), mode="r")
+        
+        elif is_javabridge_loaded():
+            # open with Python-Bioformats
             try:
                 if not jb_attached:
                     # start JVM and attach to current thread
@@ -1128,11 +1135,6 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                 rdr = bf.ImageReader(img_path, perform_init=True)
             except (jb.JavaException, AttributeError) as err:
                 print(err)
-        if rdr is None:
-            # open image file as a RAW 3D array
-            img_raw = np.memmap(
-                img_path, dtype=import_md[config.MetaKeys.DTYPE],
-                shape=tuple(shape_in[1:]), mode="r")
         
         len_shape = len(shape)
         len_shape_in = len(shape_in)
@@ -1147,7 +1149,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                         "loading planes from time {}, z {}, channel {}"
                         .format(t, z, chl_load), fn_feedback)
                     if img_raw is not None:
-                        # access plane from RAW memmapped file
+                        # access plane from RAW or TIF file
                         img = (img_raw[z, ..., chl_load] if len_shape_in >= 5
                                else img_raw[z])
                     else:
@@ -1165,7 +1167,7 @@ def import_multiplane_images(chl_paths, prefix, import_md, series=None,
                             os.path.dirname(filename_image5d), exist_ok=True)
                         image5d = np.lib.format.open_memmap(
                             filename_image5d, mode="w+", dtype=img.dtype,
-                            shape=shape)
+                            shape=np_io.fix_memmap_shape(shape))
                         print("setting image5d array for series {} with shape: "
                               "{}".format(series, image5d.shape))
                     

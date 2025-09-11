@@ -918,68 +918,96 @@ def _is_raw(path):
     return os.path.splitext(path)[1].lower() == ".raw"
 
 
-def setup_import_metadata(chl_paths, channel=None, series=None, z_max=-1):
+def _is_tif(path):
+    """Check if a path is a TIF file based on extension.
+    
+    Args:
+        path (str): Path to check
+
+    Returns:
+        bool: True if ``path``'s extension is TIF, case insensitive.
+
+    """
+    return os.path.splitext(path)[1].lower() in (".tif", ".tiff")
+
+
+def setup_import_metadata(
+        chl_paths: Dict[Any, List[str]], channel: Optional[List[int]] = None,
+        series: Optional[int] = None, z_max: int =-1
+    ) -> Dict[config.MetaKeys, Any]:
     """Extract metadata and determine output image shape for importing
     multipage file(s).
     
     Args:
-        chl_paths (dict[Any, List[str]]): Ordered dictionary of channel
+        chl_paths: Ordered dictionary of channel
             numbers to sequences of image file paths to import.
-        channel (List[int]): Sequence of channel indices to import; defaults
+        channel: Sequence of channel indices to import; defaults
             to None to import all channels.
-        series (int): Series index to load. Defaults to None, which will use 0.
-        z_max (int): Number of z-planes to load; defaults to -1 to load all.
+        series: Series index to load. Defaults to None, which will use 0.
+        z_max: Number of z-planes to load; defaults to -1 to load all.
 
     Returns:
-        dict[:obj:`config.MetaKeys`]: Dictionary of metadata. RAW files will
+        Dictionary of metadata. RAW files will
         simply return a metadata dictionary populated with None values.
 
     """
-    print("Extracting metadata for image import, may take awhile...")
+    _logger.info("Extracting metadata for image import, may take awhile...")
     if series is None:
         series = 0
     path = tuple(chl_paths.values())[0][0]
     md = dict.fromkeys(config.MetaKeys)
-    if _is_raw(path) or not is_javabridge_loaded():
-        # RAW files will need to have metadata supplied manually; return
-        # based on this extension to avoid startup time for Javabridge
-        return md
-
-    start_jvm()
-    jb.attach()
-    shape = None
-    try:
-        # get available embedded metadata via Bioformats
-        names, sizes, md = parse_ome_raw(bf.get_omexml_metadata(path))
-        
-        # unlike config.resolutions, keep only single list for simplicity
-        res = md[config.MetaKeys.RESOLUTIONS]
-        if res and len(res) > series:
-            md[config.MetaKeys.RESOLUTIONS] = res[series]
-        if sizes and len(sizes) > series:
-            shape = list(sizes[series])
-    except jb.JavaException as err:
-        print(err)
+    if _is_tif(path):
+        # extract TIF metadata by loading the first file
+        img5d = np_io.read_tif(path)
+        md = img5d.meta
+        if img5d.img is not None and md is not None:
+            md[config.MetaKeys.DTYPE] = img5d.img.dtype
     
-    if shape is None:
+    elif _is_raw(path):
+        # RAW files will need to have metadata supplied manually
+        _logger.info("RAW file detected, skipping metadata extraction")
+    
+    elif is_javabridge_loaded():
+        # load metadata via Bioformats; Javabridge startup may take awhile
+        start_jvm()
+        jb.attach()
+        shape = None
         try:
-            # fall back to getting a subset of metadata, also through Bioformats
-            # TODO: see if necessary or improves performance
-            sizes, dtype = find_sizes(path)
-            if dtype:
-                md[config.MetaKeys.DTYPE] = dtype.name
-            shape = list(sizes[0])
-        except (jb.JavaException, AttributeError) as err:
-            # Python-Bioformats (v1.1) attempts to access currently non-existing
-            # message attribute in JavaException from Javabridge (v1.0.18)
+            # get available embedded metadata via Bioformats
+            names, sizes, md = parse_ome_raw(bf.get_omexml_metadata(path))
+            
+            # unlike config.resolutions, keep only single list for simplicity
+            # TODO: remove now that downstream expects full 2D res list?
+            res = md[config.MetaKeys.RESOLUTIONS]
+            if res and len(res) > series:
+                md[config.MetaKeys.RESOLUTIONS] = res[series]
+            if sizes and len(sizes) > series:
+                shape = list(sizes[series])
+        except jb.JavaException as err:
             print(err)
+        
+        if shape is None:
+            try:
+                # fall back to getting a subset of metadata via Bioformats
+                # TODO: see if necessary or improves performance
+                sizes, dtype = find_sizes(path)
+                if dtype:
+                    md[config.MetaKeys.DTYPE] = dtype.name
+                shape = list(sizes[0])
+            except (jb.JavaException, AttributeError) as err:
+                # Python-Bioformats (v1.1) gets currently non-existing
+                # message attribute in JavaException from Javabridge (v1.0.18)
+                print(err)
+        
+        if shape:
+            shape = _update_shape_for_channels(shape, chl_paths, channel)[1]
+            if z_max != -1:
+                shape[1] = z_max
+            md[config.MetaKeys.SHAPE] = shape
+        jb.detach()
     
-    if shape:
-        shape = _update_shape_for_channels(shape, chl_paths, channel)[1]
-        if z_max != -1:
-            shape[1] = z_max
-        md[config.MetaKeys.SHAPE] = shape
-    jb.detach()
+    else:
+        _logger.info("Metadata could not be extracted for %s", path)
     
     return md
 

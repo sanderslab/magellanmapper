@@ -4,7 +4,7 @@
 
 ### Highlights
 
-- Better multipage TIF file support, including import to NPY format without Javabridge/Bioformats
+- Javabridge/Bioformats has been replaced with multipage TIF file support
 - Minimum supported Python version is now 3.10 to reduce maintenance burden and improve testing on more recent versions of Python
 
 ### Changes
@@ -29,8 +29,9 @@
 
 #### I/O
 
-- TIF files can be imported without Javabridge/Bioformats by loading a TIF image directly with the flag, `--savefig npy` (#738, #753)
+- TIF files can be imported without Javabridge/Bioformats in the GUI ("Import" tab) or by loading a TIF image directly with the flag, `--savefig npy` (#738, #753, #756)
 - Read and write `PhysicalSpacingX`-style TIF resolutions (#753)
+- Exports to TIF are now multichannel TIF files (#756)
 - Fixed issues with loading certain TIF files' metadata (#738, #754)
 - Fixed saving/loading rescaled images using Numpy 2 (#738)
 

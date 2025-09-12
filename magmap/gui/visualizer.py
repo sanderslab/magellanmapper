@@ -4066,6 +4066,10 @@ class Visualization(HasTraits):
                 self._import_zoom = zoom
             shape = md[config.MetaKeys.SHAPE]
             if shape is not None:
+                shape = np.array(shape)
+                if len(shape) < 5:
+                    # expects channel dimension
+                    shape = np.append(shape, 1)
                 self._import_shape = [shape[::-1]]
             
             dtype_str = md[config.MetaKeys.DTYPE]
@@ -4093,7 +4097,7 @@ class Visualization(HasTraits):
                 except TypeError:
                     print("Could not find data type for {}".format(dtype_str))
             
-            if shape and dtype_str:
+            if shape is not None and dtype_str:
                 # signal ready import
                 self._update_import_feedback(
                     "Ready to import. Please check microscope metadata "

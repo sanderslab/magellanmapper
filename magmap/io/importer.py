@@ -1116,7 +1116,7 @@ def import_multiplane_images(
             # load TIF file
             img5d = np_io.read_tif(img_path)
             if img5d.img is not None:
-                img_raw = img5d.img[0]  # assume first series
+                img_raw = img5d.img[0]  # assume first time point
         
         elif _is_raw(img_path):
             # open image file as a RAW 3D array
@@ -1150,7 +1150,7 @@ def import_multiplane_images(
                         .format(t, z, chl_load), fn_feedback)
                     if img_raw is not None:
                         # access plane from RAW or TIF file
-                        img = (img_raw[z, ..., chl_load] if len_shape_in >= 5
+                        img = (img_raw[z, ..., chl_load] if img_raw.ndim >= 4
                                else img_raw[z])
                     else:
                         # read plane with Bioformats reader; chl_load may be

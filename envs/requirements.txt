@@ -14,7 +14,7 @@ imageio==2.37.0
 itk==5.4.3
 itk-core==5.4.3
 itk-elastix==0.20.0
-itk-filtering==5.4.3
+itk-filtering==5.4.4.post1
 itk-io==5.4.3
 itk-numerics==5.4.3
 itk-registration==5.4.3

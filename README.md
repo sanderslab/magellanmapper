@@ -24,7 +24,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 Install MagellanMapper with its graphical interface and registration tools:
 
 ```shell
-pip install "magellanmapper[gui,itk]"
+pip install "magellanmapper[most]"
 ```
 
 Then launch MagellanMapper:
@@ -33,9 +33,9 @@ Then launch MagellanMapper:
 mm
 ```
 
-## Full Install
+## Conda Install
 
-Alternatively, [Conda](https://docs.conda.io/en/latest/miniconda.html) can be used to install MagellanMapper along with support for importing proprietary image file formats (*note: not currently working on Apple Silicon (Mac M-chip) platforms*):
+Alternatively, [Conda](https://docs.conda.io/en/latest/miniconda.html) can be used to install MagellanMapper:
 
 ```shell
 conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
@@ -48,13 +48,7 @@ conda activate mag
 mm
 ```
 
-If you have [Java](https://www.azul.com/downloads/?package=jdk), you can do the same through Pip:
-
-```shell
-pip install "magellanmapper[most]" --extra-index-url https://pypi.fury.io/dd8/
-```
-
-The extra index accesses a few [customized dependencies](docs/install.md#custom-packages) for MagellanMapper.
+## Developer (or "latest and greatest") Install
 
 For the latest updates and fixes, download from Git and install:
 
@@ -68,16 +62,12 @@ python run.py
 Or for Pip, replace the `conda` line with:
 
 ```shell
-pip install -e ".[most]" --extra-index-url https://pypi.fury.io/dd8/
+pip install -e ".[most]"
 ```
 
+*UPDATE*: As of MM v1.7-pre, Java/Bioformats and a custom Python repo are no longer required to import image files. TIF files can be imported directly into MM.
 
-### More ways to install and run
-
-See the [install docs](docs/install.md) for more details, including:
-
-- [Installer scripts](docs/install.md#installer-scripts), which install Miniconda and MagellanMapper without requiring command-line usage
-- [Installer packages](docs/install.md#installer-packages), for point-and-click installation
+See the [install docs](docs/install.md) for more details and other install scenarios.
 
 ## Using MagellanMapper
 

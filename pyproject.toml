@@ -19,7 +19,7 @@ readme = "README.md"
 authors = [
     { name = "David Young", email = "david@textflex.com" }
 ]
-license = { file = "LICENSE" }
+license-files = ["LICENSE.txt"]
 requires-python = ">=3.10"
 urls = { Homepage = "https://github.com/sanderslab/magellanmapper" }
 

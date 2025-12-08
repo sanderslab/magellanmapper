@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 
 # specify source directory and discover packages
 [tool.setuptools.packages.find]
-where = ["magmap"]
+include = ["magmap*"]
 
 # Project metadata
 [project]

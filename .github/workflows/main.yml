@@ -61,7 +61,7 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          pip install -r ${{ env.REQS }}
+          pip install -r ${{ env.REQS }} .
       - name: Install fresh dependencies
         if: ${{ matrix.dependencies == 'fresh' }}
         env:

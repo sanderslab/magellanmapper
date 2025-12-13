@@ -120,7 +120,7 @@ def stop_jvm():
 
     """
     if not jb:
-        libmag.warn("Python-Javabridge not available, cannot stop JVM")
+        _logger.debug("Python-Javabridge not available, cannot stop JVM")
         return
     jb.kill_vm()
 

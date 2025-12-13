@@ -54,15 +54,14 @@ For the latest updates and fixes, download from Git and install:
 
 ```shell
 git clone https://github.com/sanderslab/magellanmapper.git
-cd magellanmapper
-conda env create -n mag -f environment.yml
-python run.py
+conda env create -n mag -f magellanmapper/environment.yml
+mm
 ```
 
 Or for Pip, replace the `conda` line with:
 
 ```shell
-pip install -e ".[most]"
+pip install -e "magellanmapper[most]"
 ```
 
 *UPDATE*: As of MM v1.7-pre, Java/Bioformats and a custom Python repo are no longer required to import image files. TIF files can be imported directly into MM.
@@ -79,9 +78,11 @@ Have a question? Found a bug? Want a feature? Please [ask](https://github.com/sa
 
 ### Image file import
 
-Large images or proprietary microscopy formats such as CZI can be imported by MagellanMapper into NumPy format, which allows on-the-fly loading to reduce memory requirements and initial loading time. In the "Import" tab, you can select files, view and update metadata, and import the files.
+MagellanMapper reads large images using on-the-fly loading to reduce memory requirements and load time. NumPy (`.npy`) is the default image format.
 
-Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) can be opened with the SimpleITK/SimpleElastix library and do not require separate import. 
+Large TIF files can also be opened. In the "Import" tab, you can select files, view and update metadata, and import these files. Proprietary microscopy formats such as CZI can separately converted to TIF in ImageJ/FIJI or the microscope's software. 
+
+Medical imaging formats such as `.mha` (or `.mhd/.raw`) and `.nii` (or `.nii.gz`) can also be opened. 
 
 ### Sample 3D data
 

@@ -24,7 +24,7 @@ MagellanMapper is a graphical imaging informatics suite for 3D reconstruction an
 Install MagellanMapper with its graphical interface and registration tools:
 
 ```shell
-pip install "magellanmapper[most]"
+pip install "magellanmapper[gui,itk]"
 ```
 
 Then launch MagellanMapper:
@@ -33,9 +33,9 @@ Then launch MagellanMapper:
 mm
 ```
 
-## Conda Install
+### Conda Install
 
-Alternatively, [Conda](https://docs.conda.io/en/latest/miniconda.html) can be used to install MagellanMapper:
+MagellanMapper can also be installed in [Conda](https://docs.conda.io/en/latest/miniconda.html):
 
 ```shell
 conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
@@ -48,7 +48,15 @@ conda activate mag
 mm
 ```
 
-## Developer (or "latest and greatest") Install
+### Pre-release
+
+*UPDATE*: As of MM v1.7-pre, Java/Bioformats and a custom Python repo are no longer required to import image files. TIF files can be imported directly into MM. To install the latest pre-release in regular or Conda environments, run:
+
+```shell
+ pip install --pre "magellanmapper[most]"
+ ```
+
+### Developer Install (ie "the latest and greatest")
 
 For the latest updates and fixes, download from Git and install:
 
@@ -63,8 +71,6 @@ Or for Pip, replace the `conda` line with:
 ```shell
 pip install -e "magellanmapper[most]"
 ```
-
-*UPDATE*: As of MM v1.7-pre, Java/Bioformats and a custom Python repo are no longer required to import image files. TIF files can be imported directly into MM.
 
 See the [install docs](docs/install.md) for more details and other install scenarios.
 

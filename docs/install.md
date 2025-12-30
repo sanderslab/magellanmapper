@@ -12,78 +12,11 @@
 
 ## Installation Options
 
-### Quick install with Pip
+### Quick install
 
-Install MagellanMapper with its graphical interface and registration tools with Python >= 3.10 (see [Python versions](#python-version-support); [virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended):
+See the [README quick install](https://github.com/sanderslab/magellanmapper/tree/tif_default_instructions?tab=readme-ov-file#quick-install) 
 
-```shell
-pip install "magellanmapper[most]"
-```
-
-Then launch MagellanMapper:
-
-```shell
-mm
-```
-
-Note: MM <1.7a1 installed import packages with `most`. For these versions, install with this command instead: `pip install "magellanmapper[gui,itk]"`
-
-See [below](#dependencies) for supported Python versions and adding install groups.
-
-See our [vignette](https://github.com/sanderslab/magellanmapper/blob/master/bin/sample_cmds_bash.ipynb) for getting started on MM!
-
-### Quick install with Conda
-
-If you use Conda (available [here](https://docs.conda.io/en/latest/miniconda.html)), you can install MagellanMapper into a new environment named `mag` (or replace with desired name):
-
-```shell
-conda env create -n mag -f https://raw.githubusercontent.com/sanderslab/magellanmapper/master/envs/environment_rel.yml
-```
-
-To run, activate the environment and launch MagellanMapper by `mm`:
-
-```shell
-conda activate mag
-mm
-```
-
-### Developer installs
-
-You can install directly from the source code, which lets you use the latest updates without reinstallation.
-
-First, download the repo:
-
-```shell
-git clone https://github.com/sanderslab/magellanmapper.git
-```
-
-Next, install it with Conda:
-
-```shell
-conda env create -n mag -f magellanmapper/environment.yml
-```
-
-or with Pip:
-
-```shell
-pip install -e "magellanmapper[most]"
-```
-
-MagellanMapper can be run as above.
-
-**Alternative:** Install with all extra packages in Conda. Java will be installed automatically in Conda to support more image formats.
-
-```shell
-conda env create -n mag -f magellanmapper/environment_all.yml
-```
-
-Or with Pip. Java needs to be installed before MM. Download Java from [here](https://www.azul.com/downloads/?package=jdk).
-
-```shell
-pip install -e "magellanmapper[all]" --extra-index-url https://pypi.fury.io/dd8/
-```
-
-The `all` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
+Python >= 3.10 supported. See below for [Python versions](#python-version-support)  and adding [install groups]((#dependencies)). [Virtual environment](https://realpython.com/python-virtual-environments-a-primer/) recommended).
 
 ### Optional installation groups
 
@@ -110,6 +43,26 @@ pip install -e ".[3d,gui]" # add two groups
 ```
 
 As of MM 1.6a2, the GUI can be excluded by installing the base group, eg without `[gui]` or `[most]`.
+
+### DEPRECATED: Install Bioformats/Javabridge support
+
+<details>
+
+Install with all extra packages in Conda. Java will be installed automatically in Conda to support more image formats.
+
+```shell
+conda env create -n mag -f magellanmapper/environment_all.yml
+```
+
+Or with Pip. Java needs to be installed before MM. Download Java from [here](https://www.azul.com/downloads/?package=jdk).
+
+```shell
+pip install -e "magellanmapper[all]" --extra-index-url https://pypi.fury.io/dd8/
+```
+
+The `all` group installs the GUI and file import tools (see [optional dependencies below](#optional-installation-groups)). The extra index accesses a few [customized dependencies](#custom-packages) for MagellanMapper.
+
+</details>
 
 ### DEPRECATED: Installer packages
 

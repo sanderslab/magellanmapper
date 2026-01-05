@@ -1,5 +1,5 @@
 appdirs==1.4.4
-brainglobe-atlasapi==2.1.0
+brainglobe-atlasapi==2.3.0
 brainglobe_space==1.0.3
 certifi==2025.11.12
 charset-normalizer==3.4.4

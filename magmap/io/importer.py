@@ -1008,20 +1008,28 @@ def setup_import_metadata(
     return md
 
 
-def _update_shape_for_channels(shape, chl_paths, channel):
+def _update_shape_for_channels(
+        shape: List[int], chl_paths: Dict[config.MetaKeys, Any],
+        channel: List[int]) -> Tuple[List[int], List[int]]:
     """Change image shape to match specified number of channels.
     
     Args:
-        shape (List[int]): Image shape, with last dimenion for channels.
-        chl_paths (dict): Dictionary of channels by files.
-        channel (List[int]): Sequence of channels to keep.
+        shape: Image shape, assumed to be in the format ``[t,z,y,x,c]``.
+            If ``c`` dimension is missing, it will be added.
+        chl_paths: Dictionary of channels by files.
+        channel: Sequence of channels to keep.
 
     Returns:
-        List[int], List[int]: Shape for input files; shape for output file
-        as a copy of ``shape`` with channel size adjusted.
+        List of:
+        - ``shape_in``: Shape for input files
+        - ``shape_out``: Shape for output file as a copy of ``shape`` with
+          channel size adjusted.
 
     """
     shape_out = list(shape)
+    if len(shape_out) < 5:
+        # add channel dimension if missing
+        shape_out.append(1)
     shape_in = shape_out
     if _KEY_ANY_CHANNEL in chl_paths:
         # file present with unspecified channel, potentially multichannel,

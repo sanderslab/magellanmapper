@@ -1137,7 +1137,6 @@ def import_multiplane_images(
                 print(err)
         
         len_shape = len(shape)
-        len_shape_in = len(shape_in)
         plane_shape = None
         for chl_load in chls_load:
             lows = []

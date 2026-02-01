@@ -1163,8 +1163,9 @@ def import_multiplane_images(
                         # open output file as memmap to directly write to disk,
                         # much faster than outputting to RAM first; supports
                         # NPY directly, unlike np.memmap
-                        os.makedirs(
-                            os.path.dirname(filename_image5d), exist_ok=True)
+                        path_dir = os.path.dirname(filename_image5d)
+                        if path_dir:
+                            os.makedirs(path_dir, exist_ok=True)
                         image5d = np.lib.format.open_memmap(
                             filename_image5d, mode="w+", dtype=img.dtype,
                             shape=np_io.fix_memmap_shape(shape))

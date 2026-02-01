@@ -1201,16 +1201,19 @@ def import_multiplane_images(
         if img_raw is not None:
             img_raw.flush()
     
-    # finalize import and save metadata
     image5d.flush()  # may not be necessary but ensure contents to disk
     print("file import time: {}".format(time() - time_start))
-    #print("lows: {}, highs: {}".format(lows, highs))
+    
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
+    res = import_md[config.MetaKeys.RESOLUTIONS]
+    if np.array(res).ndim == 1:
+        res = [res]
+    
+    # finalize import and save metadata
     md = save_image_info(
         filename_meta, [os.path.basename(prefix)], [shape],
-        [import_md[config.MetaKeys.RESOLUTIONS]],
-        import_md[config.MetaKeys.MAGNIFICATION],
+        res, import_md[config.MetaKeys.MAGNIFICATION],
         import_md[config.MetaKeys.ZOOM], near_mins, near_maxs)
     img5d = np_io.Image5d(
         image5d, filename_image5d, filename_meta, config.LoadIO.NP)

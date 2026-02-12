@@ -29,7 +29,7 @@
 
 #### I/O
 
-- TIF files can be imported without Javabridge/Bioformats in the GUI ("Import" tab) or by loading a TIF image directly with the flag, `--savefig npy` (#738, #753, #756)
+- TIF files can be imported without Javabridge/Bioformats in the GUI ("Import" tab) or by loading a TIF image directly with the flag, `--savefig npy` (#738, #753, #756, #765)
 - Read and write `PhysicalSpacingX`-style TIF resolutions (#753)
 - Exports to TIF are now multichannel TIF files (#756)
 - Fixed issues with loading certain TIF files' metadata (#738, #754)

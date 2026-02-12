@@ -1008,20 +1008,28 @@ def setup_import_metadata(
     return md
 
 
-def _update_shape_for_channels(shape, chl_paths, channel):
+def _update_shape_for_channels(
+        shape: List[int], chl_paths: Dict[config.MetaKeys, Any],
+        channel: List[int]) -> Tuple[List[int], List[int]]:
     """Change image shape to match specified number of channels.
     
     Args:
-        shape (List[int]): Image shape, with last dimenion for channels.
-        chl_paths (dict): Dictionary of channels by files.
-        channel (List[int]): Sequence of channels to keep.
+        shape: Image shape, assumed to be in the format ``[t,z,y,x,c]``.
+            If ``c`` dimension is missing, it will be added.
+        chl_paths: Dictionary of channels by files.
+        channel: Sequence of channels to keep.
 
     Returns:
-        List[int], List[int]: Shape for input files; shape for output file
-        as a copy of ``shape`` with channel size adjusted.
+        List of:
+        - ``shape_in``: Shape for input files
+        - ``shape_out``: Shape for output file as a copy of ``shape`` with
+          channel size adjusted.
 
     """
     shape_out = list(shape)
+    if len(shape_out) < 5:
+        # add channel dimension if missing
+        shape_out.append(1)
     shape_in = shape_out
     if _KEY_ANY_CHANNEL in chl_paths:
         # file present with unspecified channel, potentially multichannel,
@@ -1137,7 +1145,6 @@ def import_multiplane_images(
                 print(err)
         
         len_shape = len(shape)
-        len_shape_in = len(shape_in)
         plane_shape = None
         for chl_load in chls_load:
             lows = []
@@ -1163,8 +1170,9 @@ def import_multiplane_images(
                         # open output file as memmap to directly write to disk,
                         # much faster than outputting to RAM first; supports
                         # NPY directly, unlike np.memmap
-                        os.makedirs(
-                            os.path.dirname(filename_image5d), exist_ok=True)
+                        path_dir = os.path.dirname(filename_image5d)
+                        if path_dir:
+                            os.makedirs(path_dir, exist_ok=True)
                         image5d = np.lib.format.open_memmap(
                             filename_image5d, mode="w+", dtype=img.dtype,
                             shape=np_io.fix_memmap_shape(shape))
@@ -1193,16 +1201,19 @@ def import_multiplane_images(
         if img_raw is not None:
             img_raw.flush()
     
-    # finalize import and save metadata
     image5d.flush()  # may not be necessary but ensure contents to disk
     print("file import time: {}".format(time() - time_start))
-    #print("lows: {}, highs: {}".format(lows, highs))
+    
     # TODO: consider saving resolutions as 1D rather than 2D array
     # with single resolution tuple
+    res = import_md[config.MetaKeys.RESOLUTIONS]
+    if np.array(res).ndim == 1:
+        res = [res]
+    
+    # finalize import and save metadata
     md = save_image_info(
         filename_meta, [os.path.basename(prefix)], [shape],
-        [import_md[config.MetaKeys.RESOLUTIONS]],
-        import_md[config.MetaKeys.MAGNIFICATION],
+        res, import_md[config.MetaKeys.MAGNIFICATION],
         import_md[config.MetaKeys.ZOOM], near_mins, near_maxs)
     img5d = np_io.Image5d(
         image5d, filename_image5d, filename_meta, config.LoadIO.NP)

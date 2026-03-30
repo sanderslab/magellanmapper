@@ -34,7 +34,7 @@ pillow==12.0.0
 pyamg==5.3.0
 pyarrow==22.0.0
 pyface==8.0.0
-Pygments==2.19.2
+Pygments==2.20.0
 pyparsing==3.2.5
 PyQt5==5.15.11
 PyQt5_sip==12.17.2
